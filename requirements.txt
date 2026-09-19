@@ -1,0 +1,4 @@
+pyshacl>=0.26
+rdflib>=7.0
+litellm>=1.40      # only for running new models (study1-interpretation/harness/run.py)
+matplotlib>=3.8    # only for paper/figures.py

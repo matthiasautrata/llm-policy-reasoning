@@ -1,0 +1,737 @@
+You are answering questions about a procurement approval policy.
+Read the material, then answer the questions at the end. Treat the material as complete.
+
+RULES AND FACTS -- the policy as an OWL ontology with SHACL-AF rules and Turtle data
+
+@prefix ex:   <http://example.org/proc#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+# ---------- schema (OWL) ----------
+ex:CostCentre a owl:Class .  ex:Employee a owl:Class .  ex:Role a owl:Class .
+ex:Vendor a owl:Class .      ex:Request a owl:Class .
+ex:parent      a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain ex:CostCentre ; rdfs:range ex:CostCentre .
+ex:booked      a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:CostCentre ; rdfs:range xsd:integer .
+ex:cap         a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:CostCentre ; rdfs:range xsd:integer .
+ex:role        a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain ex:Employee ; rdfs:range ex:Role .
+ex:costCentre  a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain ex:Employee ; rdfs:range ex:CostCentre .
+ex:reportsTo   a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain ex:Employee ; rdfs:range ex:Employee .
+ex:limit       a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:Role ; rdfs:range xsd:integer .
+ex:status      a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:Vendor ; rdfs:range xsd:string .
+ex:requester   a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain ex:Request ; rdfs:range ex:Employee .
+ex:amount      a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:Request ; rdfs:range xsd:integer .
+ex:category    a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:Request ; rdfs:range xsd:string .
+ex:vendor      a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain ex:Request ; rdfs:range ex:Vendor .
+ex:violation   a owl:DatatypeProperty ; rdfs:domain ex:Employee ; rdfs:range xsd:boolean .
+ex:emergency   a owl:DatatypeProperty ; rdfs:domain ex:Request ; rdfs:range xsd:boolean .
+# derived by the SHACL rules below; boolean flags are asserted only when true
+ex:ancestor a owl:ObjectProperty , owl:TransitiveProperty .  ex:parent rdfs:subPropertyOf ex:ancestor .
+ex:inChainOf a owl:ObjectProperty , owl:TransitiveProperty .  ex:reportsTo rdfs:subPropertyOf ex:inChainOf .
+ex:bookedTotal a owl:DatatypeProperty .  ex:headroom a owl:DatatypeProperty .  ex:overCap a owl:DatatypeProperty .
+ex:charges a owl:ObjectProperty .  ex:capBreach a owl:DatatypeProperty .  ex:hasApprover a owl:DatatypeProperty .
+ex:bigCapital a owl:DatatypeProperty .
+ex:vendorOk a owl:DatatypeProperty .  ex:eligible a owl:DatatypeProperty .
+ex:denied a owl:DatatypeProperty .
+ex:approved a owl:DatatypeProperty .
+
+# ---------- rules (SHACL-AF). sh:order stratifies: a rule reads only properties derived at a lower order ----------
+ex:prefixes a owl:Ontology ; sh:declare [ sh:prefix "ex" ; sh:namespace "http://example.org/proc#"^^xsd:anyURI ] .
+ex:CostCentreRules a sh:NodeShape ; sh:targetClass ex:CostCentre ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 1 ; sh:prefixes ex:prefixes ;
+    sh:construct """CONSTRUCT { $this ex:ancestor ?a } WHERE { $this ex:parent+ ?a }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 2 ; sh:prefixes ex:prefixes ;
+    sh:construct """CONSTRUCT { $this ex:bookedTotal ?t } WHERE { { SELECT $this (SUM(?b) AS ?t) WHERE {
+      ?d ex:parent* $this . OPTIONAL { ?d ex:booked ?b0 } BIND(COALESCE(?b0, 0) AS ?b) } GROUP BY $this } }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 3 ; sh:prefixes ex:prefixes ;
+    sh:construct """CONSTRUCT { $this ex:headroom ?h } WHERE { $this ex:bookedTotal ?t ; ex:cap ?k . BIND(?k - ?t AS ?h) }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 3 ; sh:prefixes ex:prefixes ;
+    sh:construct """CONSTRUCT { $this ex:overCap true } WHERE { $this ex:bookedTotal ?t ; ex:cap ?k . FILTER(?t > ?k) }""" ] .
+ex:EmployeeRules a sh:NodeShape ; sh:targetClass ex:Employee ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 1 ; sh:prefixes ex:prefixes ;
+    sh:construct """CONSTRUCT { $this ex:inChainOf ?m } WHERE { $this ex:reportsTo+ ?m }""" ] .
+ex:RequestRules a sh:NodeShape ; sh:targetClass ex:Request ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 1 ; sh:prefixes ex:prefixes ;
+    sh:construct """CONSTRUCT { $this ex:bigCapital true } WHERE { $this ex:category "capital" ; ex:amount ?a . FILTER(?a > 50000) }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 1 ; sh:prefixes ex:prefixes ;
+    sh:construct """CONSTRUCT { $this ex:vendorOk true } WHERE { $this ex:vendor/ex:status "approved" }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 1 ; sh:prefixes ex:prefixes ;
+    sh:construct """CONSTRUCT { $this ex:denied true } WHERE { $this ex:requester/ex:violation true }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 2 ; sh:prefixes ex:prefixes ;
+    sh:construct """CONSTRUCT { $this ex:charges ?c } WHERE { $this ex:requester/ex:costCentre/ex:parent* ?c }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 2 ; sh:prefixes ex:prefixes ;
+    sh:construct """CONSTRUCT { $this ex:hasApprover true } WHERE { $this ex:requester/ex:inChainOf ?m ; ex:amount ?a .
+      ?m ex:role/ex:limit ?l . FILTER(?l >= ?a) }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 2 ; sh:prefixes ex:prefixes ;
+    sh:construct """CONSTRUCT { $this ex:vendorOk true } WHERE { $this ex:emergency true ; ex:vendor/ex:status "suspended" .
+      FILTER NOT EXISTS { $this ex:bigCapital true } }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 3 ; sh:prefixes ex:prefixes ;
+    sh:construct """CONSTRUCT { $this ex:capBreach true } WHERE { $this ex:charges ?c ; ex:amount ?a .
+      ?c ex:bookedTotal ?t ; ex:cap ?k . FILTER(?t + ?a > ?k) }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 4 ; sh:prefixes ex:prefixes ;
+    sh:construct """CONSTRUCT { $this ex:eligible true } WHERE { $this ex:hasApprover true ; ex:vendorOk true .
+      FILTER NOT EXISTS { $this ex:capBreach true } }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 5 ; sh:prefixes ex:prefixes ;
+    sh:construct """CONSTRUCT { $this ex:approved true } WHERE { $this ex:eligible true . FILTER NOT EXISTS { $this ex:denied true } }""" ] .
+
+# ---------- data ----------
+ex:company a ex:CostCentre ; ex:cap 10703000 .
+ex:cc1 a ex:CostCentre ; ex:parent ex:company ; ex:cap 2763000 .
+ex:cc1_1 a ex:CostCentre ; ex:parent ex:cc1 ; ex:cap 1227000 .
+ex:cc1_1_1 a ex:CostCentre ; ex:parent ex:cc1_1 ; ex:cap 397000 .
+ex:cc1_1_1_1 a ex:CostCentre ; ex:parent ex:cc1_1_1 ; ex:booked 57000 ; ex:cap 79000 .
+ex:cc1_1_1_2 a ex:CostCentre ; ex:parent ex:cc1_1_1 ; ex:booked 112000 ; ex:cap 156000 .
+ex:cc1_1_1_3 a ex:CostCentre ; ex:parent ex:cc1_1_1 ; ex:booked 137000 ; ex:cap 141000 .
+ex:cc1_1_2 a ex:CostCentre ; ex:parent ex:cc1_1 ; ex:cap 262000 .
+ex:cc1_1_2_1 a ex:CostCentre ; ex:parent ex:cc1_1_2 ; ex:booked 48000 ; ex:cap 57000 .
+ex:cc1_1_2_2 a ex:CostCentre ; ex:parent ex:cc1_1_2 ; ex:booked 72000 ; ex:cap 79000 .
+ex:cc1_1_2_3 a ex:CostCentre ; ex:parent ex:cc1_1_2 ; ex:booked 55000 ; ex:cap 66000 .
+ex:cc1_1_3 a ex:CostCentre ; ex:parent ex:cc1_1 ; ex:cap 438000 .
+ex:cc1_1_3_1 a ex:CostCentre ; ex:parent ex:cc1_1_3 ; ex:booked 103000 ; ex:cap 99000 .
+ex:cc1_1_3_2 a ex:CostCentre ; ex:parent ex:cc1_1_3 ; ex:booked 137000 ; ex:cap 191000 .
+ex:cc1_1_3_3 a ex:CostCentre ; ex:parent ex:cc1_1_3 ; ex:booked 97000 ; ex:cap 135000 .
+ex:cc1_2 a ex:CostCentre ; ex:parent ex:cc1 ; ex:cap 1043000 .
+ex:cc1_2_1 a ex:CostCentre ; ex:parent ex:cc1_2 ; ex:cap 466000 .
+ex:cc1_2_1_1 a ex:CostCentre ; ex:parent ex:cc1_2_1 ; ex:booked 100000 ; ex:cap 140000 .
+ex:cc1_2_1_2 a ex:CostCentre ; ex:parent ex:cc1_2_1 ; ex:booked 123000 ; ex:cap 119000 .
+ex:cc1_2_1_3 a ex:CostCentre ; ex:parent ex:cc1_2_1 ; ex:booked 88000 ; ex:cap 90000 .
+ex:cc1_2_2 a ex:CostCentre ; ex:parent ex:cc1_2 ; ex:cap 296000 .
+ex:cc1_2_2_1 a ex:CostCentre ; ex:parent ex:cc1_2_2 ; ex:booked 140000 ; ex:cap 196000 .
+ex:cc1_2_2_2 a ex:CostCentre ; ex:parent ex:cc1_2_2 ; ex:booked 66000 ; ex:cap 92000 .
+ex:cc1_2_2_3 a ex:CostCentre ; ex:parent ex:cc1_2_2 ; ex:booked 52000 ; ex:cap 53000 .
+ex:cc1_2_3 a ex:CostCentre ; ex:parent ex:cc1_2 ; ex:cap 245000 .
+ex:cc1_2_3_1 a ex:CostCentre ; ex:parent ex:cc1_2_3 ; ex:booked 102000 ; ex:cap 142000 .
+ex:cc1_2_3_2 a ex:CostCentre ; ex:parent ex:cc1_2_3 ; ex:booked 43000 ; ex:cap 47000 .
+ex:cc1_2_3_3 a ex:CostCentre ; ex:parent ex:cc1_2_3 ; ex:booked 89000 ; ex:cap 86000 .
+ex:cc1_3 a ex:CostCentre ; ex:parent ex:cc1 ; ex:booked 37000 ; ex:cap 1061000 .
+ex:cc1_3_1 a ex:CostCentre ; ex:parent ex:cc1_3 ; ex:booked 15000 ; ex:cap 382000 .
+ex:cc1_3_1_1 a ex:CostCentre ; ex:parent ex:cc1_3_1 ; ex:booked 95000 ; ex:cap 92000 .
+ex:cc1_3_1_2 a ex:CostCentre ; ex:parent ex:cc1_3_1 ; ex:booked 117000 ; ex:cap 140000 .
+ex:cc1_3_1_3 a ex:CostCentre ; ex:parent ex:cc1_3_1 ; ex:booked 137000 ; ex:cap 132000 .
+ex:cc1_3_2 a ex:CostCentre ; ex:parent ex:cc1_3 ; ex:cap 399000 .
+ex:cc1_3_2_1 a ex:CostCentre ; ex:parent ex:cc1_3_2 ; ex:booked 138000 ; ex:cap 142000 .
+ex:cc1_3_2_2 a ex:CostCentre ; ex:parent ex:cc1_3_2 ; ex:booked 40000 ; ex:cap 44000 .
+ex:cc1_3_2_3 a ex:CostCentre ; ex:parent ex:cc1_3_2 ; ex:booked 129000 ; ex:cap 125000 .
+ex:cc1_3_3 a ex:CostCentre ; ex:parent ex:cc1_3 ; ex:cap 348000 .
+ex:cc1_3_3_1 a ex:CostCentre ; ex:parent ex:cc1_3_3 ; ex:booked 97000 ; ex:cap 106000 .
+ex:cc1_3_3_2 a ex:CostCentre ; ex:parent ex:cc1_3_3 ; ex:booked 74000 ; ex:cap 81000 .
+ex:cc1_3_3_3 a ex:CostCentre ; ex:parent ex:cc1_3_3 ; ex:booked 132000 ; ex:cap 128000 .
+ex:cc2 a ex:CostCentre ; ex:parent ex:company ; ex:cap 2724000 .
+ex:cc2_1 a ex:CostCentre ; ex:parent ex:cc2 ; ex:booked 7000 ; ex:cap 786000 .
+ex:cc2_1_1 a ex:CostCentre ; ex:parent ex:cc2_1 ; ex:cap 308000 .
+ex:cc2_1_1_1 a ex:CostCentre ; ex:parent ex:cc2_1_1 ; ex:booked 69000 ; ex:cap 96000 .
+ex:cc2_1_1_2 a ex:CostCentre ; ex:parent ex:cc2_1_1 ; ex:booked 115000 ; ex:cap 118000 .
+ex:cc2_1_1_3 a ex:CostCentre ; ex:parent ex:cc2_1_1 ; ex:booked 53000 ; ex:cap 84000 .
+ex:cc2_1_2 a ex:CostCentre ; ex:parent ex:cc2_1 ; ex:cap 214000 .
+ex:cc2_1_2_1 a ex:CostCentre ; ex:parent ex:cc2_1_2 ; ex:booked 80000 ; ex:cap 128000 .
+ex:cc2_1_2_2 a ex:CostCentre ; ex:parent ex:cc2_1_2 ; ex:booked 43000 ; ex:cap 68000 .
+ex:cc2_1_2_3 a ex:CostCentre ; ex:parent ex:cc2_1_2 ; ex:booked 42000 ; ex:cap 46000 .
+ex:cc2_1_3 a ex:CostCentre ; ex:parent ex:cc2_1 ; ex:cap 412000 .
+ex:cc2_1_3_1 a ex:CostCentre ; ex:parent ex:cc2_1_3 ; ex:booked 43000 ; ex:cap 68000 .
+ex:cc2_1_3_2 a ex:CostCentre ; ex:parent ex:cc2_1_3 ; ex:booked 123000 ; ex:cap 135000 .
+ex:cc2_1_3_3 a ex:CostCentre ; ex:parent ex:cc2_1_3 ; ex:booked 109000 ; ex:cap 130000 .
+ex:cc2_2 a ex:CostCentre ; ex:parent ex:cc2 ; ex:cap 1179000 .
+ex:cc2_2_1 a ex:CostCentre ; ex:parent ex:cc2_2 ; ex:cap 268000 .
+ex:cc2_2_1_1 a ex:CostCentre ; ex:parent ex:cc2_2_1 ; ex:booked 41000 ; ex:cap 39000 .
+ex:cc2_2_1_2 a ex:CostCentre ; ex:parent ex:cc2_2_1 ; ex:booked 88000 ; ex:cap 96000 .
+ex:cc2_2_1_3 a ex:CostCentre ; ex:parent ex:cc2_2_1 ; ex:booked 127000 ; ex:cap 152000 .
+ex:cc2_2_2 a ex:CostCentre ; ex:parent ex:cc2_2 ; ex:booked 19000 ; ex:cap 405000 .
+ex:cc2_2_2_1 a ex:CostCentre ; ex:parent ex:cc2_2_2 ; ex:booked 67000 ; ex:cap 80000 .
+ex:cc2_2_2_2 a ex:CostCentre ; ex:parent ex:cc2_2_2 ; ex:booked 94000 ; ex:cap 96000 .
+ex:cc2_2_2_3 a ex:CostCentre ; ex:parent ex:cc2_2_2 ; ex:booked 132000 ; ex:cap 145000 .
+ex:cc2_2_3 a ex:CostCentre ; ex:parent ex:cc2_2 ; ex:cap 228000 .
+ex:cc2_2_3_1 a ex:CostCentre ; ex:parent ex:cc2_2_3 ; ex:booked 43000 ; ex:cap 47000 .
+ex:cc2_2_3_2 a ex:CostCentre ; ex:parent ex:cc2_2_3 ; ex:booked 107000 ; ex:cap 171000 .
+ex:cc2_2_3_3 a ex:CostCentre ; ex:parent ex:cc2_2_3 ; ex:booked 68000 ; ex:cap 95000 .
+ex:cc2_3 a ex:CostCentre ; ex:parent ex:cc2 ; ex:cap 1033000 .
+ex:cc2_3_1 a ex:CostCentre ; ex:parent ex:cc2_3 ; ex:cap 504000 .
+ex:cc2_3_1_1 a ex:CostCentre ; ex:parent ex:cc2_3_1 ; ex:booked 137000 ; ex:cap 132000 .
+ex:cc2_3_1_2 a ex:CostCentre ; ex:parent ex:cc2_3_1 ; ex:booked 96000 ; ex:cap 98000 .
+ex:cc2_3_1_3 a ex:CostCentre ; ex:parent ex:cc2_3_1 ; ex:booked 103000 ; ex:cap 99000 .
+ex:cc2_3_2 a ex:CostCentre ; ex:parent ex:cc2_3 ; ex:cap 394000 .
+ex:cc2_3_2_1 a ex:CostCentre ; ex:parent ex:cc2_3_2 ; ex:booked 110000 ; ex:cap 113000 .
+ex:cc2_3_2_2 a ex:CostCentre ; ex:parent ex:cc2_3_2 ; ex:booked 69000 ; ex:cap 66000 .
+ex:cc2_3_2_3 a ex:CostCentre ; ex:parent ex:cc2_3_2 ; ex:booked 84000 ; ex:cap 134000 .
+ex:cc2_3_3 a ex:CostCentre ; ex:parent ex:cc2_3 ; ex:booked 37000 ; ex:cap 345000 .
+ex:cc2_3_3_1 a ex:CostCentre ; ex:parent ex:cc2_3_3 ; ex:booked 69000 ; ex:cap 82000 .
+ex:cc2_3_3_2 a ex:CostCentre ; ex:parent ex:cc2_3_3 ; ex:booked 126000 ; ex:cap 201000 .
+ex:cc2_3_3_3 a ex:CostCentre ; ex:parent ex:cc2_3_3 ; ex:booked 68000 ; ex:cap 95000 .
+ex:cc3 a ex:CostCentre ; ex:parent ex:company ; ex:cap 3966000 .
+ex:cc3_1 a ex:CostCentre ; ex:parent ex:cc3 ; ex:cap 914000 .
+ex:cc3_1_1 a ex:CostCentre ; ex:parent ex:cc3_1 ; ex:cap 468000 .
+ex:cc3_1_1_1 a ex:CostCentre ; ex:parent ex:cc3_1_1 ; ex:booked 137000 ; ex:cap 141000 .
+ex:cc3_1_1_2 a ex:CostCentre ; ex:parent ex:cc3_1_1 ; ex:booked 98000 ; ex:cap 137000 .
+ex:cc3_1_1_3 a ex:CostCentre ; ex:parent ex:cc3_1_1 ; ex:booked 77000 ; ex:cap 123000 .
+ex:cc3_1_2 a ex:CostCentre ; ex:parent ex:cc3_1 ; ex:cap 258000 .
+ex:cc3_1_2_1 a ex:CostCentre ; ex:parent ex:cc3_1_2 ; ex:booked 42000 ; ex:cap 50000 .
+ex:cc3_1_2_2 a ex:CostCentre ; ex:parent ex:cc3_1_2 ; ex:booked 93000 ; ex:cap 148000 .
+ex:cc3_1_2_3 a ex:CostCentre ; ex:parent ex:cc3_1_2 ; ex:booked 111000 ; ex:cap 155000 .
+ex:cc3_1_3 a ex:CostCentre ; ex:parent ex:cc3_1 ; ex:cap 308000 .
+ex:cc3_1_3_1 a ex:CostCentre ; ex:parent ex:cc3_1_3 ; ex:booked 122000 ; ex:cap 195000 .
+ex:cc3_1_3_2 a ex:CostCentre ; ex:parent ex:cc3_1_3 ; ex:booked 52000 ; ex:cap 83000 .
+ex:cc3_1_3_3 a ex:CostCentre ; ex:parent ex:cc3_1_3 ; ex:booked 63000 ; ex:cap 75000 .
+ex:cc3_2 a ex:CostCentre ; ex:parent ex:cc3 ; ex:cap 1016000 .
+ex:cc3_2_1 a ex:CostCentre ; ex:parent ex:cc3_2 ; ex:cap 427000 .
+ex:cc3_2_1_1 a ex:CostCentre ; ex:parent ex:cc3_2_1 ; ex:booked 120000 ; ex:cap 123000 .
+ex:cc3_2_1_2 a ex:CostCentre ; ex:parent ex:cc3_2_1 ; ex:booked 132000 ; ex:cap 135000 .
+ex:cc3_2_1_3 a ex:CostCentre ; ex:parent ex:cc3_2_1 ; ex:booked 77000 ; ex:cap 74000 .
+ex:cc3_2_2 a ex:CostCentre ; ex:parent ex:cc3_2 ; ex:cap 353000 .
+ex:cc3_2_2_1 a ex:CostCentre ; ex:parent ex:cc3_2_2 ; ex:booked 55000 ; ex:cap 53000 .
+ex:cc3_2_2_2 a ex:CostCentre ; ex:parent ex:cc3_2_2 ; ex:booked 135000 ; ex:cap 130000 .
+ex:cc3_2_2_3 a ex:CostCentre ; ex:parent ex:cc3_2_2 ; ex:booked 82000 ; ex:cap 90000 .
+ex:cc3_2_3 a ex:CostCentre ; ex:parent ex:cc3_2 ; ex:cap 477000 .
+ex:cc3_2_3_1 a ex:CostCentre ; ex:parent ex:cc3_2_3 ; ex:booked 132000 ; ex:cap 211000 .
+ex:cc3_2_3_2 a ex:CostCentre ; ex:parent ex:cc3_2_3 ; ex:booked 131000 ; ex:cap 134000 .
+ex:cc3_2_3_3 a ex:CostCentre ; ex:parent ex:cc3_2_3 ; ex:booked 104000 ; ex:cap 124000 .
+ex:cc3_3 a ex:CostCentre ; ex:parent ex:cc3 ; ex:cap 1145000 .
+ex:cc3_3_1 a ex:CostCentre ; ex:parent ex:cc3_3 ; ex:cap 371000 .
+ex:cc3_3_1_1 a ex:CostCentre ; ex:parent ex:cc3_3_1 ; ex:booked 94000 ; ex:cap 91000 .
+ex:cc3_3_1_2 a ex:CostCentre ; ex:parent ex:cc3_3_1 ; ex:booked 104000 ; ex:cap 145000 .
+ex:cc3_3_1_3 a ex:CostCentre ; ex:parent ex:cc3_3_1 ; ex:booked 125000 ; ex:cap 121000 .
+ex:cc3_3_2 a ex:CostCentre ; ex:parent ex:cc3_3 ; ex:cap 250000 .
+ex:cc3_3_2_1 a ex:CostCentre ; ex:parent ex:cc3_3_2 ; ex:booked 64000 ; ex:cap 89000 .
+ex:cc3_3_2_2 a ex:CostCentre ; ex:parent ex:cc3_3_2 ; ex:booked 78000 ; ex:cap 93000 .
+ex:cc3_3_2_3 a ex:CostCentre ; ex:parent ex:cc3_3_2 ; ex:booked 76000 ; ex:cap 78000 .
+ex:cc3_3_3 a ex:CostCentre ; ex:parent ex:cc3_3 ; ex:booked 18000 ; ex:cap 357000 .
+ex:cc3_3_3_1 a ex:CostCentre ; ex:parent ex:cc3_3_3 ; ex:booked 115000 ; ex:cap 138000 .
+ex:cc3_3_3_2 a ex:CostCentre ; ex:parent ex:cc3_3_3 ; ex:booked 103000 ; ex:cap 106000 .
+ex:cc3_3_3_3 a ex:CostCentre ; ex:parent ex:cc3_3_3 ; ex:booked 104000 ; ex:cap 114000 .
+ex:vp a ex:Role ; ex:limit 500000 .
+ex:director a ex:Role ; ex:limit 100000 .
+ex:senior_manager a ex:Role ; ex:limit 50000 .
+ex:manager a ex:Role ; ex:limit 25000 .
+ex:analyst a ex:Role ; ex:limit 5000 .
+ex:acme a ex:Vendor ; ex:status "approved" .
+ex:bolt a ex:Vendor ; ex:status "suspended" .
+ex:cog a ex:Vendor ; ex:status "approved" .
+ex:dyne a ex:Vendor ; ex:status "suspended" .
+ex:edge a ex:Vendor ; ex:status "approved" .
+ex:e000 a ex:Employee ; ex:role ex:vp ; ex:costCentre ex:company .
+ex:e001 a ex:Employee ; ex:role ex:director ; ex:costCentre ex:cc1 ; ex:reportsTo ex:e000 .
+ex:e002 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc1_1 ; ex:reportsTo ex:e001 .
+ex:e003 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc1_1_1 ; ex:reportsTo ex:e002 .
+ex:e004 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_1_1_1 ; ex:reportsTo ex:e003 .
+ex:e005 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_1_1_2 ; ex:reportsTo ex:e003 .
+ex:e006 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_1_1_3 ; ex:reportsTo ex:e003 .
+ex:e007 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc1_1_2 ; ex:reportsTo ex:e002 .
+ex:e008 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_1_2_1 ; ex:reportsTo ex:e007 .
+ex:e009 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_1_2_2 ; ex:reportsTo ex:e007 .
+ex:e010 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_1_2_3 ; ex:reportsTo ex:e007 .
+ex:e011 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc1_1_3 ; ex:reportsTo ex:e002 .
+ex:e012 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_1_3_1 ; ex:reportsTo ex:e011 .
+ex:e013 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_1_3_2 ; ex:reportsTo ex:e011 .
+ex:e014 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_1_3_3 ; ex:reportsTo ex:e011 .
+ex:e015 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc1_2 ; ex:reportsTo ex:e001 .
+ex:e016 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc1_2_1 ; ex:reportsTo ex:e015 .
+ex:e017 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_2_1_1 ; ex:reportsTo ex:e016 .
+ex:e018 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_2_1_2 ; ex:reportsTo ex:e016 .
+ex:e019 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_2_1_3 ; ex:reportsTo ex:e016 .
+ex:e020 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc1_2_2 ; ex:reportsTo ex:e015 .
+ex:e021 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_2_2_1 ; ex:reportsTo ex:e020 .
+ex:e022 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_2_2_2 ; ex:reportsTo ex:e020 .
+ex:e023 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_2_2_3 ; ex:reportsTo ex:e020 .
+ex:e024 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc1_2_3 ; ex:reportsTo ex:e015 .
+ex:e025 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_2_3_1 ; ex:reportsTo ex:e024 .
+ex:e026 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_2_3_2 ; ex:reportsTo ex:e024 .
+ex:e027 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_2_3_3 ; ex:reportsTo ex:e024 .
+ex:e028 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc1_3 ; ex:reportsTo ex:e001 .
+ex:e029 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc1_3_1 ; ex:reportsTo ex:e028 .
+ex:e030 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_3_1_1 ; ex:reportsTo ex:e029 ; ex:violation true .
+ex:e031 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_3_1_2 ; ex:reportsTo ex:e029 .
+ex:e032 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_3_1_3 ; ex:reportsTo ex:e029 .
+ex:e033 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc1_3_2 ; ex:reportsTo ex:e028 .
+ex:e034 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_3_2_1 ; ex:reportsTo ex:e033 .
+ex:e035 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_3_2_2 ; ex:reportsTo ex:e033 .
+ex:e036 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_3_2_3 ; ex:reportsTo ex:e033 .
+ex:e037 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc1_3_3 ; ex:reportsTo ex:e028 .
+ex:e038 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_3_3_1 ; ex:reportsTo ex:e037 .
+ex:e039 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_3_3_2 ; ex:reportsTo ex:e037 .
+ex:e040 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_3_3_3 ; ex:reportsTo ex:e037 .
+ex:e041 a ex:Employee ; ex:role ex:director ; ex:costCentre ex:cc2 ; ex:reportsTo ex:e000 .
+ex:e042 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc2_1 ; ex:reportsTo ex:e041 .
+ex:e043 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc2_1_1 ; ex:reportsTo ex:e042 .
+ex:e044 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_1_1_1 ; ex:reportsTo ex:e043 .
+ex:e045 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_1_1_2 ; ex:reportsTo ex:e043 .
+ex:e046 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_1_1_3 ; ex:reportsTo ex:e043 ; ex:violation true .
+ex:e047 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc2_1_2 ; ex:reportsTo ex:e042 .
+ex:e048 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_1_2_1 ; ex:reportsTo ex:e047 .
+ex:e049 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_1_2_2 ; ex:reportsTo ex:e047 .
+ex:e050 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_1_2_3 ; ex:reportsTo ex:e047 .
+ex:e051 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc2_1_3 ; ex:reportsTo ex:e042 .
+ex:e052 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_1_3_1 ; ex:reportsTo ex:e051 .
+ex:e053 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_1_3_2 ; ex:reportsTo ex:e051 .
+ex:e054 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_1_3_3 ; ex:reportsTo ex:e051 .
+ex:e055 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc2_2 ; ex:reportsTo ex:e041 .
+ex:e056 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc2_2_1 ; ex:reportsTo ex:e055 .
+ex:e057 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_2_1_1 ; ex:reportsTo ex:e056 .
+ex:e058 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_2_1_2 ; ex:reportsTo ex:e056 .
+ex:e059 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_2_1_3 ; ex:reportsTo ex:e056 .
+ex:e060 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc2_2_2 ; ex:reportsTo ex:e055 .
+ex:e061 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_2_2_1 ; ex:reportsTo ex:e060 ; ex:violation true .
+ex:e062 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_2_2_2 ; ex:reportsTo ex:e060 .
+ex:e063 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_2_2_3 ; ex:reportsTo ex:e060 .
+ex:e064 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc2_2_3 ; ex:reportsTo ex:e055 .
+ex:e065 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_2_3_1 ; ex:reportsTo ex:e064 .
+ex:e066 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_2_3_2 ; ex:reportsTo ex:e064 ; ex:violation true .
+ex:e067 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_2_3_3 ; ex:reportsTo ex:e064 .
+ex:e068 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc2_3 ; ex:reportsTo ex:e041 .
+ex:e069 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc2_3_1 ; ex:reportsTo ex:e068 .
+ex:e070 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_3_1_1 ; ex:reportsTo ex:e069 ; ex:violation true .
+ex:e071 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_3_1_2 ; ex:reportsTo ex:e069 .
+ex:e072 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_3_1_3 ; ex:reportsTo ex:e069 ; ex:violation true .
+ex:e073 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc2_3_2 ; ex:reportsTo ex:e068 .
+ex:e074 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_3_2_1 ; ex:reportsTo ex:e073 .
+ex:e075 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_3_2_2 ; ex:reportsTo ex:e073 .
+ex:e076 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_3_2_3 ; ex:reportsTo ex:e073 .
+ex:e077 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc2_3_3 ; ex:reportsTo ex:e068 ; ex:violation true .
+ex:e078 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_3_3_1 ; ex:reportsTo ex:e077 .
+ex:e079 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_3_3_2 ; ex:reportsTo ex:e077 .
+ex:e080 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_3_3_3 ; ex:reportsTo ex:e077 .
+ex:e081 a ex:Employee ; ex:role ex:director ; ex:costCentre ex:cc3 ; ex:reportsTo ex:e000 .
+ex:e082 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc3_1 ; ex:reportsTo ex:e081 .
+ex:e083 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc3_1_1 ; ex:reportsTo ex:e082 .
+ex:e084 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc3_1_1_1 ; ex:reportsTo ex:e083 .
+ex:e085 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc3_1_1_2 ; ex:reportsTo ex:e083 .
+ex:e086 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc3_1_1_3 ; ex:reportsTo ex:e083 .
+ex:e087 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc3_1_2 ; ex:reportsTo ex:e082 .
+ex:e088 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc3_1_2_1 ; ex:reportsTo ex:e087 .
+ex:e089 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc3_1_2_2 ; ex:reportsTo ex:e087 .
+ex:e090 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc3_1_2_3 ; ex:reportsTo ex:e087 .
+ex:e091 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc3_1_3 ; ex:reportsTo ex:e082 ; ex:violation true .
+ex:e092 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc3_1_3_1 ; ex:reportsTo ex:e091 .
+ex:e093 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc3_1_3_2 ; ex:reportsTo ex:e091 ; ex:violation true .
+ex:e094 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc3_1_3_3 ; ex:reportsTo ex:e091 .
+ex:e095 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc3_2 ; ex:reportsTo ex:e081 .
+ex:e096 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc3_2_1 ; ex:reportsTo ex:e095 .
+ex:e097 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc3_2_1_1 ; ex:reportsTo ex:e096 .
+ex:e098 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc3_2_1_2 ; ex:reportsTo ex:e096 .
+ex:e099 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc3_2_1_3 ; ex:reportsTo ex:e096 .
+ex:e100 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc3_2_2 ; ex:reportsTo ex:e095 .
+ex:e101 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc3_2_2_1 ; ex:reportsTo ex:e100 .
+ex:e102 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc3_2_2_2 ; ex:reportsTo ex:e100 .
+ex:e103 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc3_2_2_3 ; ex:reportsTo ex:e100 .
+ex:e104 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc3_2_3 ; ex:reportsTo ex:e095 .
+ex:e105 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc3_2_3_1 ; ex:reportsTo ex:e104 .
+ex:e106 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc3_2_3_2 ; ex:reportsTo ex:e104 .
+ex:e107 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc3_2_3_3 ; ex:reportsTo ex:e104 .
+ex:e108 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc3_3 ; ex:reportsTo ex:e081 .
+ex:e109 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc3_3_1 ; ex:reportsTo ex:e108 .
+ex:e110 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc3_3_1_1 ; ex:reportsTo ex:e109 ; ex:violation true .
+ex:e111 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc3_3_1_2 ; ex:reportsTo ex:e109 .
+ex:e112 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc3_3_1_3 ; ex:reportsTo ex:e109 .
+ex:e113 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc3_3_2 ; ex:reportsTo ex:e108 .
+ex:e114 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc3_3_2_1 ; ex:reportsTo ex:e113 .
+ex:e115 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc3_3_2_2 ; ex:reportsTo ex:e113 .
+ex:e116 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc3_3_2_3 ; ex:reportsTo ex:e113 ; ex:violation true .
+ex:e117 a ex:Employee ; ex:role ex:senior_manager ; ex:costCentre ex:cc3_3_3 ; ex:reportsTo ex:e108 .
+ex:e118 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc3_3_3_1 ; ex:reportsTo ex:e117 .
+ex:e119 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc3_3_3_2 ; ex:reportsTo ex:e117 .
+ex:e120 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc3_3_3_3 ; ex:reportsTo ex:e117 .
+ex:e121 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_1_1_1 ; ex:reportsTo ex:e004 .
+ex:e122 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_1_1_1 ; ex:reportsTo ex:e004 .
+ex:e123 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_1_1_2 ; ex:reportsTo ex:e005 .
+ex:e124 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_1_1_2 ; ex:reportsTo ex:e005 ; ex:violation true .
+ex:e125 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_1_1_3 ; ex:reportsTo ex:e006 .
+ex:e126 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_1_1_3 ; ex:reportsTo ex:e006 .
+ex:e127 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_1_2_1 ; ex:reportsTo ex:e008 .
+ex:e128 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_1_2_1 ; ex:reportsTo ex:e008 .
+ex:e129 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_1_2_2 ; ex:reportsTo ex:e009 .
+ex:e130 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_1_2_2 ; ex:reportsTo ex:e009 .
+ex:e131 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_1_2_3 ; ex:reportsTo ex:e010 .
+ex:e132 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_1_2_3 ; ex:reportsTo ex:e010 ; ex:violation true .
+ex:e133 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_1_3_1 ; ex:reportsTo ex:e012 .
+ex:e134 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_1_3_1 ; ex:reportsTo ex:e012 .
+ex:e135 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_1_3_2 ; ex:reportsTo ex:e013 .
+ex:e136 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_1_3_2 ; ex:reportsTo ex:e013 .
+ex:e137 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_1_3_3 ; ex:reportsTo ex:e014 ; ex:violation true .
+ex:e138 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_1_3_3 ; ex:reportsTo ex:e014 .
+ex:e139 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_2_1_1 ; ex:reportsTo ex:e017 .
+ex:e140 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_2_1_1 ; ex:reportsTo ex:e017 .
+ex:e141 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_2_1_2 ; ex:reportsTo ex:e018 .
+ex:e142 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_2_1_2 ; ex:reportsTo ex:e018 .
+ex:e143 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_2_1_3 ; ex:reportsTo ex:e019 .
+ex:e144 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_2_1_3 ; ex:reportsTo ex:e019 .
+ex:e145 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_2_2_1 ; ex:reportsTo ex:e021 .
+ex:e146 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_2_2_1 ; ex:reportsTo ex:e021 .
+ex:e147 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_2_2_2 ; ex:reportsTo ex:e022 .
+ex:e148 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_2_2_2 ; ex:reportsTo ex:e022 .
+ex:e149 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_2_2_3 ; ex:reportsTo ex:e023 .
+ex:e150 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_2_2_3 ; ex:reportsTo ex:e023 .
+ex:e151 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_2_3_1 ; ex:reportsTo ex:e025 .
+ex:e152 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_2_3_1 ; ex:reportsTo ex:e025 .
+ex:e153 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_2_3_2 ; ex:reportsTo ex:e026 .
+ex:e154 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_2_3_2 ; ex:reportsTo ex:e026 .
+ex:e155 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_2_3_3 ; ex:reportsTo ex:e027 .
+ex:e156 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_2_3_3 ; ex:reportsTo ex:e027 .
+ex:e157 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_3_1_1 ; ex:reportsTo ex:e030 .
+ex:e158 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_3_1_1 ; ex:reportsTo ex:e030 .
+ex:e159 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_3_1_2 ; ex:reportsTo ex:e031 .
+ex:e160 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_3_1_2 ; ex:reportsTo ex:e031 .
+ex:e161 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_3_1_3 ; ex:reportsTo ex:e032 .
+ex:e162 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_3_1_3 ; ex:reportsTo ex:e032 ; ex:violation true .
+ex:e163 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_3_2_1 ; ex:reportsTo ex:e034 .
+ex:e164 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_3_2_1 ; ex:reportsTo ex:e034 .
+ex:e165 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_3_2_2 ; ex:reportsTo ex:e035 .
+ex:e166 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_3_2_2 ; ex:reportsTo ex:e035 .
+ex:e167 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_3_2_3 ; ex:reportsTo ex:e036 ; ex:violation true .
+ex:e168 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_3_2_3 ; ex:reportsTo ex:e036 .
+ex:e169 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_3_3_1 ; ex:reportsTo ex:e038 ; ex:violation true .
+ex:e170 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_3_3_1 ; ex:reportsTo ex:e038 .
+ex:e171 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_3_3_2 ; ex:reportsTo ex:e039 .
+ex:e172 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_3_3_2 ; ex:reportsTo ex:e039 .
+ex:e173 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_3_3_3 ; ex:reportsTo ex:e040 .
+ex:e174 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_3_3_3 ; ex:reportsTo ex:e040 ; ex:violation true .
+ex:e175 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_1_1_1 ; ex:reportsTo ex:e044 .
+ex:e176 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_1_1_1 ; ex:reportsTo ex:e044 .
+ex:e177 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_1_1_2 ; ex:reportsTo ex:e045 .
+ex:e178 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_1_1_2 ; ex:reportsTo ex:e045 .
+ex:e179 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_1_1_3 ; ex:reportsTo ex:e046 .
+ex:e180 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_1_1_3 ; ex:reportsTo ex:e046 .
+ex:e181 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_1_2_1 ; ex:reportsTo ex:e048 .
+ex:e182 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_1_2_1 ; ex:reportsTo ex:e048 .
+ex:e183 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_1_2_2 ; ex:reportsTo ex:e049 .
+ex:e184 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_1_2_2 ; ex:reportsTo ex:e049 .
+ex:e185 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_1_2_3 ; ex:reportsTo ex:e050 .
+ex:e186 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_1_2_3 ; ex:reportsTo ex:e050 .
+ex:e187 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_1_3_1 ; ex:reportsTo ex:e052 .
+ex:e188 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_1_3_1 ; ex:reportsTo ex:e052 .
+ex:e189 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_1_3_2 ; ex:reportsTo ex:e053 ; ex:violation true .
+ex:e190 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_1_3_2 ; ex:reportsTo ex:e053 .
+ex:e191 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_1_3_3 ; ex:reportsTo ex:e054 .
+ex:e192 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_1_3_3 ; ex:reportsTo ex:e054 .
+ex:e193 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_2_1_1 ; ex:reportsTo ex:e057 .
+ex:e194 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_2_1_1 ; ex:reportsTo ex:e057 .
+ex:e195 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_2_1_2 ; ex:reportsTo ex:e058 .
+ex:e196 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_2_1_2 ; ex:reportsTo ex:e058 .
+ex:e197 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_2_1_3 ; ex:reportsTo ex:e059 .
+ex:e198 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_2_1_3 ; ex:reportsTo ex:e059 .
+ex:e199 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_2_2_1 ; ex:reportsTo ex:e061 .
+ex:e200 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_2_2_1 ; ex:reportsTo ex:e061 .
+ex:e201 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_2_2_2 ; ex:reportsTo ex:e062 .
+ex:e202 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_2_2_2 ; ex:reportsTo ex:e062 .
+ex:e203 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_2_2_3 ; ex:reportsTo ex:e063 .
+ex:e204 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_2_2_3 ; ex:reportsTo ex:e063 .
+ex:e205 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_2_3_1 ; ex:reportsTo ex:e065 .
+ex:e206 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_2_3_1 ; ex:reportsTo ex:e065 .
+ex:e207 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_2_3_2 ; ex:reportsTo ex:e066 .
+ex:e208 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_2_3_2 ; ex:reportsTo ex:e066 .
+ex:e209 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_2_3_3 ; ex:reportsTo ex:e067 .
+ex:e210 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_2_3_3 ; ex:reportsTo ex:e067 .
+ex:e211 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_3_1_1 ; ex:reportsTo ex:e070 .
+ex:e212 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_3_1_1 ; ex:reportsTo ex:e070 .
+ex:e213 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_3_1_2 ; ex:reportsTo ex:e071 .
+ex:e214 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_3_1_2 ; ex:reportsTo ex:e071 .
+ex:e215 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_3_1_3 ; ex:reportsTo ex:e072 .
+ex:e216 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_3_1_3 ; ex:reportsTo ex:e072 .
+ex:e217 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_3_2_1 ; ex:reportsTo ex:e074 .
+ex:e218 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_3_2_1 ; ex:reportsTo ex:e074 .
+ex:e219 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_3_2_2 ; ex:reportsTo ex:e075 .
+ex:e220 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_3_2_2 ; ex:reportsTo ex:e075 .
+ex:e221 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_3_2_3 ; ex:reportsTo ex:e076 .
+ex:e222 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_3_2_3 ; ex:reportsTo ex:e076 .
+ex:e223 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_3_3_1 ; ex:reportsTo ex:e078 .
+ex:e224 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_3_3_1 ; ex:reportsTo ex:e078 .
+ex:e225 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_3_3_2 ; ex:reportsTo ex:e079 .
+ex:e226 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_3_3_2 ; ex:reportsTo ex:e079 .
+ex:e227 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_3_3_3 ; ex:reportsTo ex:e080 .
+ex:e228 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_3_3_3 ; ex:reportsTo ex:e080 .
+ex:e229 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_1_1_1 ; ex:reportsTo ex:e084 .
+ex:e230 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_1_1_1 ; ex:reportsTo ex:e084 .
+ex:e231 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_1_1_2 ; ex:reportsTo ex:e085 ; ex:violation true .
+ex:e232 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_1_1_2 ; ex:reportsTo ex:e085 .
+ex:e233 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_1_1_3 ; ex:reportsTo ex:e086 .
+ex:e234 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_1_1_3 ; ex:reportsTo ex:e086 .
+ex:e235 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_1_2_1 ; ex:reportsTo ex:e088 .
+ex:e236 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_1_2_1 ; ex:reportsTo ex:e088 .
+ex:e237 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_1_2_2 ; ex:reportsTo ex:e089 .
+ex:e238 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_1_2_2 ; ex:reportsTo ex:e089 .
+ex:e239 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_1_2_3 ; ex:reportsTo ex:e090 .
+ex:e240 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_1_2_3 ; ex:reportsTo ex:e090 .
+ex:e241 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_1_3_1 ; ex:reportsTo ex:e092 ; ex:violation true .
+ex:e242 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_1_3_1 ; ex:reportsTo ex:e092 .
+ex:e243 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_1_3_2 ; ex:reportsTo ex:e093 .
+ex:e244 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_1_3_2 ; ex:reportsTo ex:e093 .
+ex:e245 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_1_3_3 ; ex:reportsTo ex:e094 .
+ex:e246 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_1_3_3 ; ex:reportsTo ex:e094 ; ex:violation true .
+ex:e247 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_2_1_1 ; ex:reportsTo ex:e097 .
+ex:e248 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_2_1_1 ; ex:reportsTo ex:e097 .
+ex:e249 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_2_1_2 ; ex:reportsTo ex:e098 .
+ex:e250 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_2_1_2 ; ex:reportsTo ex:e098 .
+ex:e251 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_2_1_3 ; ex:reportsTo ex:e099 .
+ex:e252 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_2_1_3 ; ex:reportsTo ex:e099 ; ex:violation true .
+ex:e253 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_2_2_1 ; ex:reportsTo ex:e101 ; ex:violation true .
+ex:e254 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_2_2_1 ; ex:reportsTo ex:e101 .
+ex:e255 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_2_2_2 ; ex:reportsTo ex:e102 .
+ex:e256 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_2_2_2 ; ex:reportsTo ex:e102 ; ex:violation true .
+ex:e257 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_2_2_3 ; ex:reportsTo ex:e103 .
+ex:e258 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_2_2_3 ; ex:reportsTo ex:e103 .
+ex:e259 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_2_3_1 ; ex:reportsTo ex:e105 ; ex:violation true .
+ex:e260 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_2_3_1 ; ex:reportsTo ex:e105 .
+ex:e261 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_2_3_2 ; ex:reportsTo ex:e106 .
+ex:e262 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_2_3_2 ; ex:reportsTo ex:e106 .
+ex:e263 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_2_3_3 ; ex:reportsTo ex:e107 .
+ex:e264 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_2_3_3 ; ex:reportsTo ex:e107 .
+ex:e265 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_3_1_1 ; ex:reportsTo ex:e110 .
+ex:e266 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_3_1_1 ; ex:reportsTo ex:e110 .
+ex:e267 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_3_1_2 ; ex:reportsTo ex:e111 .
+ex:e268 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_3_1_2 ; ex:reportsTo ex:e111 .
+ex:e269 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_3_1_3 ; ex:reportsTo ex:e112 .
+ex:e270 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_3_1_3 ; ex:reportsTo ex:e112 .
+ex:e271 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_3_2_1 ; ex:reportsTo ex:e114 ; ex:violation true .
+ex:e272 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_3_2_1 ; ex:reportsTo ex:e114 .
+ex:e273 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_3_2_2 ; ex:reportsTo ex:e115 .
+ex:e274 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_3_2_2 ; ex:reportsTo ex:e115 ; ex:violation true .
+ex:e275 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_3_2_3 ; ex:reportsTo ex:e116 .
+ex:e276 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_3_2_3 ; ex:reportsTo ex:e116 .
+ex:e277 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_3_3_1 ; ex:reportsTo ex:e118 .
+ex:e278 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_3_3_1 ; ex:reportsTo ex:e118 .
+ex:e279 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_3_3_2 ; ex:reportsTo ex:e119 .
+ex:e280 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_3_3_2 ; ex:reportsTo ex:e119 .
+ex:e281 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_3_3_3 ; ex:reportsTo ex:e120 .
+ex:e282 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc3_3_3_3 ; ex:reportsTo ex:e120 .
+ex:r001 a ex:Request ; ex:requester ex:e051 ; ex:amount 20000 ; ex:category "capital" ; ex:vendor ex:edge .
+ex:r002 a ex:Request ; ex:requester ex:e100 ; ex:amount 90000 ; ex:category "software" ; ex:vendor ex:dyne .
+ex:r003 a ex:Request ; ex:requester ex:e152 ; ex:amount 120000 ; ex:category "capital" ; ex:vendor ex:acme ; ex:emergency true .
+ex:r004 a ex:Request ; ex:requester ex:e167 ; ex:amount 60000 ; ex:category "services" ; ex:vendor ex:acme ; ex:emergency true .
+ex:r005 a ex:Request ; ex:requester ex:e081 ; ex:amount 20000 ; ex:category "services" ; ex:vendor ex:edge ; ex:emergency true .
+ex:r006 a ex:Request ; ex:requester ex:e070 ; ex:amount 45000 ; ex:category "capital" ; ex:vendor ex:bolt .
+ex:r007 a ex:Request ; ex:requester ex:e137 ; ex:amount 9000 ; ex:category "capital" ; ex:vendor ex:edge .
+ex:r008 a ex:Request ; ex:requester ex:e177 ; ex:amount 120000 ; ex:category "capital" ; ex:vendor ex:edge .
+ex:r009 a ex:Request ; ex:requester ex:e121 ; ex:amount 9000 ; ex:category "software" ; ex:vendor ex:acme .
+ex:r010 a ex:Request ; ex:requester ex:e069 ; ex:amount 12000 ; ex:category "hardware" ; ex:vendor ex:edge .
+ex:r011 a ex:Request ; ex:requester ex:e110 ; ex:amount 30000 ; ex:category "services" ; ex:vendor ex:edge .
+ex:r012 a ex:Request ; ex:requester ex:e260 ; ex:amount 30000 ; ex:category "services" ; ex:vendor ex:cog .
+ex:r013 a ex:Request ; ex:requester ex:e175 ; ex:amount 9000 ; ex:category "services" ; ex:vendor ex:bolt .
+ex:r014 a ex:Request ; ex:requester ex:e251 ; ex:amount 12000 ; ex:category "software" ; ex:vendor ex:cog ; ex:emergency true .
+ex:r015 a ex:Request ; ex:requester ex:e021 ; ex:amount 60000 ; ex:category "software" ; ex:vendor ex:dyne .
+ex:r016 a ex:Request ; ex:requester ex:e076 ; ex:amount 12000 ; ex:category "services" ; ex:vendor ex:acme .
+ex:r017 a ex:Request ; ex:requester ex:e194 ; ex:amount 9000 ; ex:category "hardware" ; ex:vendor ex:edge .
+ex:r018 a ex:Request ; ex:requester ex:e042 ; ex:amount 30000 ; ex:category "services" ; ex:vendor ex:cog .
+ex:r019 a ex:Request ; ex:requester ex:e274 ; ex:amount 9000 ; ex:category "capital" ; ex:vendor ex:cog .
+ex:r020 a ex:Request ; ex:requester ex:e056 ; ex:amount 4000 ; ex:category "services" ; ex:vendor ex:acme .
+ex:r021 a ex:Request ; ex:requester ex:e008 ; ex:amount 9000 ; ex:category "capital" ; ex:vendor ex:acme .
+ex:r022 a ex:Request ; ex:requester ex:e021 ; ex:amount 20000 ; ex:category "hardware" ; ex:vendor ex:edge ; ex:emergency true .
+ex:r023 a ex:Request ; ex:requester ex:e216 ; ex:amount 12000 ; ex:category "software" ; ex:vendor ex:dyne .
+ex:r024 a ex:Request ; ex:requester ex:e086 ; ex:amount 20000 ; ex:category "hardware" ; ex:vendor ex:acme ; ex:emergency true .
+ex:r025 a ex:Request ; ex:requester ex:e223 ; ex:amount 60000 ; ex:category "services" ; ex:vendor ex:edge .
+ex:r026 a ex:Request ; ex:requester ex:e130 ; ex:amount 90000 ; ex:category "services" ; ex:vendor ex:acme ; ex:emergency true .
+ex:r027 a ex:Request ; ex:requester ex:e107 ; ex:amount 45000 ; ex:category "software" ; ex:vendor ex:acme .
+ex:r028 a ex:Request ; ex:requester ex:e006 ; ex:amount 30000 ; ex:category "services" ; ex:vendor ex:dyne .
+ex:r029 a ex:Request ; ex:requester ex:e201 ; ex:amount 45000 ; ex:category "capital" ; ex:vendor ex:acme ; ex:emergency true .
+ex:r030 a ex:Request ; ex:requester ex:e033 ; ex:amount 45000 ; ex:category "capital" ; ex:vendor ex:acme .
+ex:r031 a ex:Request ; ex:requester ex:e129 ; ex:amount 20000 ; ex:category "capital" ; ex:vendor ex:cog .
+ex:r032 a ex:Request ; ex:requester ex:e133 ; ex:amount 12000 ; ex:category "hardware" ; ex:vendor ex:cog ; ex:emergency true .
+ex:r033 a ex:Request ; ex:requester ex:e102 ; ex:amount 20000 ; ex:category "services" ; ex:vendor ex:acme .
+ex:r034 a ex:Request ; ex:requester ex:e144 ; ex:amount 9000 ; ex:category "capital" ; ex:vendor ex:acme .
+ex:r035 a ex:Request ; ex:requester ex:e174 ; ex:amount 20000 ; ex:category "capital" ; ex:vendor ex:cog ; ex:emergency true .
+ex:r036 a ex:Request ; ex:requester ex:e022 ; ex:amount 45000 ; ex:category "hardware" ; ex:vendor ex:cog .
+ex:r037 a ex:Request ; ex:requester ex:e156 ; ex:amount 20000 ; ex:category "services" ; ex:vendor ex:acme .
+ex:r038 a ex:Request ; ex:requester ex:e279 ; ex:amount 9000 ; ex:category "hardware" ; ex:vendor ex:bolt .
+ex:r039 a ex:Request ; ex:requester ex:e011 ; ex:amount 20000 ; ex:category "capital" ; ex:vendor ex:acme .
+ex:r040 a ex:Request ; ex:requester ex:e138 ; ex:amount 120000 ; ex:category "software" ; ex:vendor ex:acme ; ex:emergency true .
+ex:r041 a ex:Request ; ex:requester ex:e012 ; ex:amount 4000 ; ex:category "services" ; ex:vendor ex:cog .
+ex:r042 a ex:Request ; ex:requester ex:e253 ; ex:amount 90000 ; ex:category "hardware" ; ex:vendor ex:acme ; ex:emergency true .
+ex:r043 a ex:Request ; ex:requester ex:e257 ; ex:amount 45000 ; ex:category "software" ; ex:vendor ex:edge .
+ex:r044 a ex:Request ; ex:requester ex:e089 ; ex:amount 12000 ; ex:category "hardware" ; ex:vendor ex:bolt .
+ex:r045 a ex:Request ; ex:requester ex:e164 ; ex:amount 30000 ; ex:category "software" ; ex:vendor ex:edge ; ex:emergency true .
+ex:r046 a ex:Request ; ex:requester ex:e151 ; ex:amount 12000 ; ex:category "hardware" ; ex:vendor ex:bolt .
+ex:r047 a ex:Request ; ex:requester ex:e280 ; ex:amount 4000 ; ex:category "services" ; ex:vendor ex:edge .
+ex:r048 a ex:Request ; ex:requester ex:e106 ; ex:amount 12000 ; ex:category "services" ; ex:vendor ex:dyne .
+ex:r049 a ex:Request ; ex:requester ex:e276 ; ex:amount 12000 ; ex:category "software" ; ex:vendor ex:bolt ; ex:emergency true .
+ex:r050 a ex:Request ; ex:requester ex:e130 ; ex:amount 9000 ; ex:category "capital" ; ex:vendor ex:dyne .
+ex:r051 a ex:Request ; ex:requester ex:e282 ; ex:amount 30000 ; ex:category "capital" ; ex:vendor ex:edge .
+ex:r052 a ex:Request ; ex:requester ex:e233 ; ex:amount 4000 ; ex:category "capital" ; ex:vendor ex:cog ; ex:emergency true .
+ex:r053 a ex:Request ; ex:requester ex:e088 ; ex:amount 30000 ; ex:category "capital" ; ex:vendor ex:acme .
+ex:r054 a ex:Request ; ex:requester ex:e214 ; ex:amount 4000 ; ex:category "software" ; ex:vendor ex:cog .
+ex:r055 a ex:Request ; ex:requester ex:e071 ; ex:amount 12000 ; ex:category "hardware" ; ex:vendor ex:cog .
+ex:r056 a ex:Request ; ex:requester ex:e142 ; ex:amount 60000 ; ex:category "capital" ; ex:vendor ex:bolt .
+ex:r057 a ex:Request ; ex:requester ex:e046 ; ex:amount 20000 ; ex:category "capital" ; ex:vendor ex:acme .
+ex:r058 a ex:Request ; ex:requester ex:e091 ; ex:amount 120000 ; ex:category "services" ; ex:vendor ex:edge .
+ex:r059 a ex:Request ; ex:requester ex:e225 ; ex:amount 20000 ; ex:category "hardware" ; ex:vendor ex:cog ; ex:emergency true .
+ex:r060 a ex:Request ; ex:requester ex:e254 ; ex:amount 90000 ; ex:category "hardware" ; ex:vendor ex:dyne .
+ex:r061 a ex:Request ; ex:requester ex:e173 ; ex:amount 120000 ; ex:category "services" ; ex:vendor ex:bolt ; ex:emergency true .
+ex:r062 a ex:Request ; ex:requester ex:e025 ; ex:amount 9000 ; ex:category "services" ; ex:vendor ex:bolt .
+ex:r063 a ex:Request ; ex:requester ex:e262 ; ex:amount 20000 ; ex:category "services" ; ex:vendor ex:cog ; ex:emergency true .
+ex:r064 a ex:Request ; ex:requester ex:e154 ; ex:amount 120000 ; ex:category "services" ; ex:vendor ex:bolt ; ex:emergency true .
+ex:r065 a ex:Request ; ex:requester ex:e238 ; ex:amount 9000 ; ex:category "software" ; ex:vendor ex:edge .
+ex:r066 a ex:Request ; ex:requester ex:e264 ; ex:amount 60000 ; ex:category "hardware" ; ex:vendor ex:bolt .
+ex:r067 a ex:Request ; ex:requester ex:e129 ; ex:amount 60000 ; ex:category "hardware" ; ex:vendor ex:edge ; ex:emergency true .
+ex:r068 a ex:Request ; ex:requester ex:e027 ; ex:amount 90000 ; ex:category "capital" ; ex:vendor ex:cog .
+ex:r069 a ex:Request ; ex:requester ex:e197 ; ex:amount 120000 ; ex:category "hardware" ; ex:vendor ex:edge .
+ex:r070 a ex:Request ; ex:requester ex:e021 ; ex:amount 120000 ; ex:category "software" ; ex:vendor ex:cog .
+ex:r071 a ex:Request ; ex:requester ex:e052 ; ex:amount 30000 ; ex:category "software" ; ex:vendor ex:bolt ; ex:emergency true .
+ex:r072 a ex:Request ; ex:requester ex:e042 ; ex:amount 90000 ; ex:category "hardware" ; ex:vendor ex:dyne .
+ex:r073 a ex:Request ; ex:requester ex:e222 ; ex:amount 60000 ; ex:category "hardware" ; ex:vendor ex:cog .
+ex:r074 a ex:Request ; ex:requester ex:e225 ; ex:amount 12000 ; ex:category "capital" ; ex:vendor ex:bolt ; ex:emergency true .
+ex:r075 a ex:Request ; ex:requester ex:e062 ; ex:amount 60000 ; ex:category "capital" ; ex:vendor ex:acme .
+ex:r076 a ex:Request ; ex:requester ex:e152 ; ex:amount 30000 ; ex:category "hardware" ; ex:vendor ex:dyne .
+ex:r077 a ex:Request ; ex:requester ex:e003 ; ex:amount 20000 ; ex:category "capital" ; ex:vendor ex:edge .
+ex:r078 a ex:Request ; ex:requester ex:e011 ; ex:amount 4000 ; ex:category "hardware" ; ex:vendor ex:cog .
+ex:r079 a ex:Request ; ex:requester ex:e106 ; ex:amount 12000 ; ex:category "services" ; ex:vendor ex:bolt .
+ex:r080 a ex:Request ; ex:requester ex:e278 ; ex:amount 20000 ; ex:category "services" ; ex:vendor ex:cog .
+ex:r081 a ex:Request ; ex:requester ex:e129 ; ex:amount 90000 ; ex:category "hardware" ; ex:vendor ex:edge .
+ex:r082 a ex:Request ; ex:requester ex:e183 ; ex:amount 90000 ; ex:category "capital" ; ex:vendor ex:acme .
+ex:r083 a ex:Request ; ex:requester ex:e107 ; ex:amount 60000 ; ex:category "hardware" ; ex:vendor ex:cog ; ex:emergency true .
+ex:r084 a ex:Request ; ex:requester ex:e056 ; ex:amount 4000 ; ex:category "software" ; ex:vendor ex:edge ; ex:emergency true .
+ex:r085 a ex:Request ; ex:requester ex:e007 ; ex:amount 120000 ; ex:category "services" ; ex:vendor ex:bolt .
+ex:r086 a ex:Request ; ex:requester ex:e039 ; ex:amount 120000 ; ex:category "services" ; ex:vendor ex:edge .
+ex:r087 a ex:Request ; ex:requester ex:e160 ; ex:amount 60000 ; ex:category "services" ; ex:vendor ex:edge .
+ex:r088 a ex:Request ; ex:requester ex:e166 ; ex:amount 4000 ; ex:category "software" ; ex:vendor ex:dyne .
+ex:r089 a ex:Request ; ex:requester ex:e231 ; ex:amount 45000 ; ex:category "services" ; ex:vendor ex:edge .
+ex:r090 a ex:Request ; ex:requester ex:e205 ; ex:amount 45000 ; ex:category "capital" ; ex:vendor ex:acme .
+ex:r091 a ex:Request ; ex:requester ex:e194 ; ex:amount 60000 ; ex:category "hardware" ; ex:vendor ex:edge .
+ex:r092 a ex:Request ; ex:requester ex:e002 ; ex:amount 30000 ; ex:category "hardware" ; ex:vendor ex:dyne .
+ex:r093 a ex:Request ; ex:requester ex:e265 ; ex:amount 60000 ; ex:category "services" ; ex:vendor ex:bolt ; ex:emergency true .
+ex:r094 a ex:Request ; ex:requester ex:e231 ; ex:amount 120000 ; ex:category "hardware" ; ex:vendor ex:cog .
+ex:r095 a ex:Request ; ex:requester ex:e270 ; ex:amount 4000 ; ex:category "capital" ; ex:vendor ex:edge .
+ex:r096 a ex:Request ; ex:requester ex:e219 ; ex:amount 60000 ; ex:category "services" ; ex:vendor ex:edge .
+ex:r097 a ex:Request ; ex:requester ex:e035 ; ex:amount 90000 ; ex:category "hardware" ; ex:vendor ex:cog .
+ex:r098 a ex:Request ; ex:requester ex:e011 ; ex:amount 60000 ; ex:category "hardware" ; ex:vendor ex:dyne ; ex:emergency true .
+ex:r099 a ex:Request ; ex:requester ex:e139 ; ex:amount 12000 ; ex:category "software" ; ex:vendor ex:edge .
+ex:r100 a ex:Request ; ex:requester ex:e006 ; ex:amount 45000 ; ex:category "services" ; ex:vendor ex:dyne .
+ex:r101 a ex:Request ; ex:requester ex:e279 ; ex:amount 30000 ; ex:category "hardware" ; ex:vendor ex:dyne .
+ex:r102 a ex:Request ; ex:requester ex:e133 ; ex:amount 90000 ; ex:category "hardware" ; ex:vendor ex:dyne .
+ex:r103 a ex:Request ; ex:requester ex:e262 ; ex:amount 4000 ; ex:category "services" ; ex:vendor ex:edge .
+ex:r104 a ex:Request ; ex:requester ex:e051 ; ex:amount 60000 ; ex:category "software" ; ex:vendor ex:cog ; ex:emergency true .
+ex:r105 a ex:Request ; ex:requester ex:e035 ; ex:amount 90000 ; ex:category "software" ; ex:vendor ex:bolt .
+ex:r106 a ex:Request ; ex:requester ex:e260 ; ex:amount 12000 ; ex:category "software" ; ex:vendor ex:dyne ; ex:emergency true .
+ex:r107 a ex:Request ; ex:requester ex:e142 ; ex:amount 30000 ; ex:category "hardware" ; ex:vendor ex:edge .
+ex:r108 a ex:Request ; ex:requester ex:e107 ; ex:amount 20000 ; ex:category "services" ; ex:vendor ex:cog .
+ex:r109 a ex:Request ; ex:requester ex:e036 ; ex:amount 9000 ; ex:category "services" ; ex:vendor ex:dyne ; ex:emergency true .
+ex:r110 a ex:Request ; ex:requester ex:e262 ; ex:amount 120000 ; ex:category "software" ; ex:vendor ex:bolt ; ex:emergency true .
+ex:r111 a ex:Request ; ex:requester ex:e153 ; ex:amount 120000 ; ex:category "services" ; ex:vendor ex:cog .
+ex:r112 a ex:Request ; ex:requester ex:e119 ; ex:amount 60000 ; ex:category "capital" ; ex:vendor ex:bolt .
+ex:r113 a ex:Request ; ex:requester ex:e248 ; ex:amount 30000 ; ex:category "services" ; ex:vendor ex:bolt .
+ex:r114 a ex:Request ; ex:requester ex:e133 ; ex:amount 20000 ; ex:category "software" ; ex:vendor ex:edge .
+ex:r115 a ex:Request ; ex:requester ex:e207 ; ex:amount 45000 ; ex:category "capital" ; ex:vendor ex:bolt .
+ex:r116 a ex:Request ; ex:requester ex:e138 ; ex:amount 20000 ; ex:category "software" ; ex:vendor ex:bolt .
+ex:r117 a ex:Request ; ex:requester ex:e228 ; ex:amount 12000 ; ex:category "services" ; ex:vendor ex:dyne ; ex:emergency true .
+ex:r118 a ex:Request ; ex:requester ex:e270 ; ex:amount 12000 ; ex:category "hardware" ; ex:vendor ex:bolt .
+ex:r119 a ex:Request ; ex:requester ex:e226 ; ex:amount 45000 ; ex:category "services" ; ex:vendor ex:dyne .
+ex:r120 a ex:Request ; ex:requester ex:e124 ; ex:amount 9000 ; ex:category "hardware" ; ex:vendor ex:cog .
+ex:r121 a ex:Request ; ex:requester ex:e035 ; ex:amount 9000 ; ex:category "hardware" ; ex:vendor ex:dyne .
+ex:r122 a ex:Request ; ex:requester ex:e165 ; ex:amount 90000 ; ex:category "software" ; ex:vendor ex:bolt .
+ex:r123 a ex:Request ; ex:requester ex:e024 ; ex:amount 4000 ; ex:category "software" ; ex:vendor ex:bolt .
+ex:r124 a ex:Request ; ex:requester ex:e018 ; ex:amount 90000 ; ex:category "capital" ; ex:vendor ex:cog .
+ex:r125 a ex:Request ; ex:requester ex:e141 ; ex:amount 9000 ; ex:category "hardware" ; ex:vendor ex:acme .
+ex:r126 a ex:Request ; ex:requester ex:e114 ; ex:amount 60000 ; ex:category "hardware" ; ex:vendor ex:dyne .
+ex:r127 a ex:Request ; ex:requester ex:e231 ; ex:amount 60000 ; ex:category "hardware" ; ex:vendor ex:bolt .
+ex:r128 a ex:Request ; ex:requester ex:e121 ; ex:amount 30000 ; ex:category "capital" ; ex:vendor ex:edge .
+ex:r129 a ex:Request ; ex:requester ex:e200 ; ex:amount 20000 ; ex:category "capital" ; ex:vendor ex:cog .
+ex:r130 a ex:Request ; ex:requester ex:e170 ; ex:amount 90000 ; ex:category "software" ; ex:vendor ex:bolt .
+ex:r131 a ex:Request ; ex:requester ex:e041 ; ex:amount 4000 ; ex:category "software" ; ex:vendor ex:acme .
+ex:r132 a ex:Request ; ex:requester ex:e246 ; ex:amount 45000 ; ex:category "capital" ; ex:vendor ex:edge .
+ex:r133 a ex:Request ; ex:requester ex:e148 ; ex:amount 20000 ; ex:category "capital" ; ex:vendor ex:bolt .
+ex:r134 a ex:Request ; ex:requester ex:e078 ; ex:amount 4000 ; ex:category "software" ; ex:vendor ex:dyne .
+ex:r135 a ex:Request ; ex:requester ex:e075 ; ex:amount 120000 ; ex:category "software" ; ex:vendor ex:edge ; ex:emergency true .
+ex:r136 a ex:Request ; ex:requester ex:e195 ; ex:amount 30000 ; ex:category "hardware" ; ex:vendor ex:acme .
+ex:r137 a ex:Request ; ex:requester ex:e237 ; ex:amount 30000 ; ex:category "software" ; ex:vendor ex:acme .
+ex:r138 a ex:Request ; ex:requester ex:e275 ; ex:amount 4000 ; ex:category "hardware" ; ex:vendor ex:acme ; ex:emergency true .
+ex:r139 a ex:Request ; ex:requester ex:e141 ; ex:amount 9000 ; ex:category "capital" ; ex:vendor ex:acme ; ex:emergency true .
+ex:r140 a ex:Request ; ex:requester ex:e098 ; ex:amount 4000 ; ex:category "capital" ; ex:vendor ex:bolt .
+ex:r141 a ex:Request ; ex:requester ex:e143 ; ex:amount 20000 ; ex:category "capital" ; ex:vendor ex:dyne .
+ex:r142 a ex:Request ; ex:requester ex:e169 ; ex:amount 30000 ; ex:category "services" ; ex:vendor ex:bolt .
+ex:r143 a ex:Request ; ex:requester ex:e126 ; ex:amount 4000 ; ex:category "hardware" ; ex:vendor ex:cog .
+ex:r144 a ex:Request ; ex:requester ex:e220 ; ex:amount 120000 ; ex:category "software" ; ex:vendor ex:cog .
+ex:r145 a ex:Request ; ex:requester ex:e281 ; ex:amount 60000 ; ex:category "hardware" ; ex:vendor ex:edge .
+ex:r146 a ex:Request ; ex:requester ex:e218 ; ex:amount 9000 ; ex:category "services" ; ex:vendor ex:edge .
+ex:r147 a ex:Request ; ex:requester ex:e038 ; ex:amount 30000 ; ex:category "hardware" ; ex:vendor ex:acme .
+ex:r148 a ex:Request ; ex:requester ex:e078 ; ex:amount 4000 ; ex:category "hardware" ; ex:vendor ex:dyne .
+ex:r149 a ex:Request ; ex:requester ex:e023 ; ex:amount 4000 ; ex:category "software" ; ex:vendor ex:edge .
+ex:r150 a ex:Request ; ex:requester ex:e241 ; ex:amount 120000 ; ex:category "services" ; ex:vendor ex:acme .
+ex:r151 a ex:Request ; ex:requester ex:e161 ; ex:amount 4000 ; ex:category "hardware" ; ex:vendor ex:edge .
+ex:r152 a ex:Request ; ex:requester ex:e017 ; ex:amount 90000 ; ex:category "hardware" ; ex:vendor ex:dyne .
+ex:r153 a ex:Request ; ex:requester ex:e229 ; ex:amount 4000 ; ex:category "services" ; ex:vendor ex:acme ; ex:emergency true .
+ex:r154 a ex:Request ; ex:requester ex:e129 ; ex:amount 45000 ; ex:category "software" ; ex:vendor ex:cog .
+ex:r155 a ex:Request ; ex:requester ex:e018 ; ex:amount 60000 ; ex:category "software" ; ex:vendor ex:cog ; ex:emergency true .
+ex:r156 a ex:Request ; ex:requester ex:e161 ; ex:amount 12000 ; ex:category "services" ; ex:vendor ex:dyne .
+ex:r157 a ex:Request ; ex:requester ex:e060 ; ex:amount 30000 ; ex:category "software" ; ex:vendor ex:dyne ; ex:emergency true .
+ex:r158 a ex:Request ; ex:requester ex:e126 ; ex:amount 120000 ; ex:category "hardware" ; ex:vendor ex:cog .
+ex:r159 a ex:Request ; ex:requester ex:e174 ; ex:amount 120000 ; ex:category "capital" ; ex:vendor ex:edge .
+ex:r160 a ex:Request ; ex:requester ex:e247 ; ex:amount 9000 ; ex:category "hardware" ; ex:vendor ex:dyne .
+ex:r161 a ex:Request ; ex:requester ex:e269 ; ex:amount 120000 ; ex:category "software" ; ex:vendor ex:cog .
+ex:r162 a ex:Request ; ex:requester ex:e081 ; ex:amount 20000 ; ex:category "services" ; ex:vendor ex:dyne .
+ex:r163 a ex:Request ; ex:requester ex:e267 ; ex:amount 45000 ; ex:category "software" ; ex:vendor ex:dyne ; ex:emergency true .
+ex:r164 a ex:Request ; ex:requester ex:e177 ; ex:amount 12000 ; ex:category "software" ; ex:vendor ex:acme .
+ex:r165 a ex:Request ; ex:requester ex:e154 ; ex:amount 120000 ; ex:category "services" ; ex:vendor ex:dyne .
+ex:r166 a ex:Request ; ex:requester ex:e153 ; ex:amount 45000 ; ex:category "services" ; ex:vendor ex:cog ; ex:emergency true .
+ex:r167 a ex:Request ; ex:requester ex:e167 ; ex:amount 120000 ; ex:category "software" ; ex:vendor ex:edge .
+ex:r168 a ex:Request ; ex:requester ex:e063 ; ex:amount 12000 ; ex:category "services" ; ex:vendor ex:cog .
+ex:r169 a ex:Request ; ex:requester ex:e168 ; ex:amount 9000 ; ex:category "capital" ; ex:vendor ex:cog .
+ex:r170 a ex:Request ; ex:requester ex:e246 ; ex:amount 90000 ; ex:category "services" ; ex:vendor ex:dyne ; ex:emergency true .
+ex:r171 a ex:Request ; ex:requester ex:e041 ; ex:amount 4000 ; ex:category "hardware" ; ex:vendor ex:acme ; ex:emergency true .
+ex:r172 a ex:Request ; ex:requester ex:e269 ; ex:amount 90000 ; ex:category "services" ; ex:vendor ex:bolt .
+ex:r173 a ex:Request ; ex:requester ex:e174 ; ex:amount 45000 ; ex:category "services" ; ex:vendor ex:dyne .
+ex:r174 a ex:Request ; ex:requester ex:e158 ; ex:amount 90000 ; ex:category "services" ; ex:vendor ex:edge ; ex:emergency true .
+ex:r175 a ex:Request ; ex:requester ex:e260 ; ex:amount 12000 ; ex:category "software" ; ex:vendor ex:bolt .
+ex:r176 a ex:Request ; ex:requester ex:e129 ; ex:amount 20000 ; ex:category "hardware" ; ex:vendor ex:acme .
+ex:r177 a ex:Request ; ex:requester ex:e095 ; ex:amount 60000 ; ex:category "software" ; ex:vendor ex:acme .
+ex:r178 a ex:Request ; ex:requester ex:e280 ; ex:amount 30000 ; ex:category "software" ; ex:vendor ex:bolt .
+ex:r179 a ex:Request ; ex:requester ex:e134 ; ex:amount 9000 ; ex:category "software" ; ex:vendor ex:acme .
+ex:r180 a ex:Request ; ex:requester ex:e112 ; ex:amount 12000 ; ex:category "capital" ; ex:vendor ex:acme .
+ex:r181 a ex:Request ; ex:requester ex:e189 ; ex:amount 90000 ; ex:category "services" ; ex:vendor ex:bolt .
+ex:r182 a ex:Request ; ex:requester ex:e103 ; ex:amount 90000 ; ex:category "hardware" ; ex:vendor ex:dyne .
+ex:r183 a ex:Request ; ex:requester ex:e232 ; ex:amount 45000 ; ex:category "hardware" ; ex:vendor ex:dyne ; ex:emergency true .
+ex:r184 a ex:Request ; ex:requester ex:e038 ; ex:amount 30000 ; ex:category "capital" ; ex:vendor ex:bolt .
+ex:r185 a ex:Request ; ex:requester ex:e005 ; ex:amount 120000 ; ex:category "capital" ; ex:vendor ex:edge .
+ex:r186 a ex:Request ; ex:requester ex:e250 ; ex:amount 9000 ; ex:category "capital" ; ex:vendor ex:edge ; ex:emergency true .
+ex:r187 a ex:Request ; ex:requester ex:e262 ; ex:amount 60000 ; ex:category "software" ; ex:vendor ex:cog ; ex:emergency true .
+ex:r188 a ex:Request ; ex:requester ex:e235 ; ex:amount 4000 ; ex:category "hardware" ; ex:vendor ex:cog .
+ex:r189 a ex:Request ; ex:requester ex:e003 ; ex:amount 120000 ; ex:category "software" ; ex:vendor ex:cog .
+ex:r190 a ex:Request ; ex:requester ex:e263 ; ex:amount 45000 ; ex:category "services" ; ex:vendor ex:edge .
+ex:r191 a ex:Request ; ex:requester ex:e211 ; ex:amount 120000 ; ex:category "capital" ; ex:vendor ex:edge .
+ex:r192 a ex:Request ; ex:requester ex:e158 ; ex:amount 90000 ; ex:category "services" ; ex:vendor ex:bolt .
+ex:r193 a ex:Request ; ex:requester ex:e260 ; ex:amount 90000 ; ex:category "hardware" ; ex:vendor ex:edge .
+ex:r194 a ex:Request ; ex:requester ex:e084 ; ex:amount 30000 ; ex:category "software" ; ex:vendor ex:dyne .
+ex:r195 a ex:Request ; ex:requester ex:e019 ; ex:amount 45000 ; ex:category "capital" ; ex:vendor ex:dyne .
+ex:r196 a ex:Request ; ex:requester ex:e145 ; ex:amount 4000 ; ex:category "software" ; ex:vendor ex:acme .
+ex:r197 a ex:Request ; ex:requester ex:e003 ; ex:amount 60000 ; ex:category "services" ; ex:vendor ex:dyne ; ex:emergency true .
+ex:r198 a ex:Request ; ex:requester ex:e140 ; ex:amount 45000 ; ex:category "capital" ; ex:vendor ex:cog .
+ex:r199 a ex:Request ; ex:requester ex:e199 ; ex:amount 90000 ; ex:category "software" ; ex:vendor ex:dyne ; ex:emergency true .
+ex:r200 a ex:Request ; ex:requester ex:e182 ; ex:amount 12000 ; ex:category "capital" ; ex:vendor ex:bolt .
+ex:r201 a ex:Request ; ex:requester ex:e010 ; ex:amount 12000 ; ex:category "services" ; ex:vendor ex:cog .
+ex:r202 a ex:Request ; ex:requester ex:e066 ; ex:amount 30000 ; ex:category "capital" ; ex:vendor ex:cog .
+ex:r203 a ex:Request ; ex:requester ex:e264 ; ex:amount 30000 ; ex:category "capital" ; ex:vendor ex:cog .
+ex:r204 a ex:Request ; ex:requester ex:e222 ; ex:amount 45000 ; ex:category "capital" ; ex:vendor ex:bolt .
+ex:r205 a ex:Request ; ex:requester ex:e252 ; ex:amount 60000 ; ex:category "capital" ; ex:vendor ex:acme ; ex:emergency true .
+ex:r206 a ex:Request ; ex:requester ex:e033 ; ex:amount 12000 ; ex:category "hardware" ; ex:vendor ex:bolt .
+ex:r207 a ex:Request ; ex:requester ex:e118 ; ex:amount 4000 ; ex:category "software" ; ex:vendor ex:cog .
+ex:r208 a ex:Request ; ex:requester ex:e080 ; ex:amount 90000 ; ex:category "software" ; ex:vendor ex:dyne .
+ex:r209 a ex:Request ; ex:requester ex:e096 ; ex:amount 4000 ; ex:category "software" ; ex:vendor ex:dyne ; ex:emergency true .
+ex:r210 a ex:Request ; ex:requester ex:e027 ; ex:amount 120000 ; ex:category "hardware" ; ex:vendor ex:edge .
+ex:r211 a ex:Request ; ex:requester ex:e217 ; ex:amount 45000 ; ex:category "software" ; ex:vendor ex:acme ; ex:emergency true .
+ex:r212 a ex:Request ; ex:requester ex:e215 ; ex:amount 9000 ; ex:category "services" ; ex:vendor ex:cog ; ex:emergency true .
+ex:r213 a ex:Request ; ex:requester ex:e092 ; ex:amount 90000 ; ex:category "software" ; ex:vendor ex:bolt .
+ex:r214 a ex:Request ; ex:requester ex:e045 ; ex:amount 60000 ; ex:category "software" ; ex:vendor ex:dyne ; ex:emergency true .
+ex:r215 a ex:Request ; ex:requester ex:e151 ; ex:amount 120000 ; ex:category "capital" ; ex:vendor ex:dyne .
+ex:r216 a ex:Request ; ex:requester ex:e060 ; ex:amount 90000 ; ex:category "software" ; ex:vendor ex:bolt .
+ex:r217 a ex:Request ; ex:requester ex:e198 ; ex:amount 20000 ; ex:category "hardware" ; ex:vendor ex:edge ; ex:emergency true .
+ex:r218 a ex:Request ; ex:requester ex:e132 ; ex:amount 60000 ; ex:category "services" ; ex:vendor ex:dyne .
+ex:r219 a ex:Request ; ex:requester ex:e279 ; ex:amount 20000 ; ex:category "services" ; ex:vendor ex:dyne ; ex:emergency true .
+ex:r220 a ex:Request ; ex:requester ex:e053 ; ex:amount 4000 ; ex:category "services" ; ex:vendor ex:cog ; ex:emergency true .
+ex:r221 a ex:Request ; ex:requester ex:e029 ; ex:amount 120000 ; ex:category "capital" ; ex:vendor ex:cog ; ex:emergency true .
+ex:r222 a ex:Request ; ex:requester ex:e052 ; ex:amount 20000 ; ex:category "services" ; ex:vendor ex:cog ; ex:emergency true .
+ex:r223 a ex:Request ; ex:requester ex:e127 ; ex:amount 60000 ; ex:category "hardware" ; ex:vendor ex:bolt .
+ex:r224 a ex:Request ; ex:requester ex:e132 ; ex:amount 20000 ; ex:category "capital" ; ex:vendor ex:edge ; ex:emergency true .
+ex:r225 a ex:Request ; ex:requester ex:e030 ; ex:amount 120000 ; ex:category "hardware" ; ex:vendor ex:dyne .
+ex:r226 a ex:Request ; ex:requester ex:e139 ; ex:amount 30000 ; ex:category "capital" ; ex:vendor ex:cog .
+
+QUESTIONS
+
+Q1. Is request r009 approved?
+Q2. Is request r080 approved?
+Q3. What is the headroom of cost centre cc1?
+Q4. How many employees have e001 in their reporting chain?
+Q5. Which requests that charge cost centre cc1 are approved?
+Q6. Which requests breach a cap?
+Q7. Which cost centres are over cap?
+Q8. Does request r098 pass the vendor check?
+Q9. How many requests are approved in total?
+
+OUTPUT FORMAT -- reply with one JSON object and nothing else. Keys are the question ids.
+Values: yes/no -> true or false; number -> integer; list -> JSON array of ids (order irrelevant, [] if none).
+
+A SPARQL endpoint holding this data with every SHACL rule already applied is available. Query it from the shell with
+  ./sparql 'SELECT ?r WHERE { ?r ex:approved true }'     (the ex: prefix is predefined)
+Use it as much as you like.

@@ -1,0 +1,210 @@
+You are answering questions about a procurement approval process.
+Read the material, then answer the questions at the end.
+
+POLICY -- Procurement Approval Handbook (excerpt)
+
+P1. A purchase request must be approved by someone in the requester's management chain
+    whose approval limit is at least the amount of the request.
+    [interpretation] For this rule, where a rule has dated versions, the version that governs a request is the one in force ON THE REQUEST'S OWN DATE, not the one in force today.
+P2. Approval authority may be delegated for a fixed period. A delegate acts with the
+    delegator's limit while the delegation is active.
+    [interpretation] For this rule, where a rule has dated versions, the version that governs a request is the one in force ON THE REQUEST'S OWN DATE, not the one in force today.
+P3. A request must not take its cost centre's committed spend past that centre's
+    quarterly cap.
+    [interpretation] For this rule, "committed spend" means spend already BOOKED. Requests still pending do not count towards it.
+    [interpretation] For this rule, a request consumes its own centre's cap AND the cap of every ancestor centre; spend in a team therefore also counts against its division and against the company.
+P4. Cost centres form a tree: teams sit inside divisions, divisions inside the company.
+    Every level carries its own cap.
+    [interpretation] For this rule, a request consumes its own centre's cap AND the cap of every ancestor centre; spend in a team therefore also counts against its division and against the company.
+P5. The approval limit for the role 'manager' was 25,000 until 2026-07-31 and is 40,000
+    from 2026-08-01.
+    [interpretation] For this rule, where a rule has dated versions, the version that governs a request is the one in force ON THE REQUEST'S OWN DATE, not the one in force today.
+P6. A request must name a vendor that is approved. Vendor approval is granted and
+    withdrawn over time; 'bolt' was approved until 2026-07-31 and suspended from
+    2026-08-01, and 'dyne' was suspended until 2026-06-30 and approved from
+    2026-07-01.
+    [interpretation] For this rule, where a rule has dated versions, the version that governs a request is the one in force ON THE REQUEST'S OWN DATE, not the one in force today.
+P7. Capital expenditure used to be exempt from the cap. That exemption was withdrawn
+    effective 2026-08-01.
+    [interpretation] For this rule, where a rule has dated versions, the version that governs a request is the one in force ON THE REQUEST'S OWN DATE, not the one in force today.
+P8. A request from an employee with an open compliance violation is denied.
+P9. A software request under 10,000 is auto-approved.
+P10. Headroom for a cost centre is its cap less its committed spend.
+    [interpretation] For this rule, "committed spend" means spend already BOOKED. Requests still pending do not count towards it.
+    [interpretation] For this rule, a request consumes its own centre's cap AND the cap of every ancestor centre; spend in a team therefore also counts against its division and against the company.
+P11. A centre is over-committed when its committed spend exceeds its cap.
+    [interpretation] For this rule, "committed spend" means spend already BOOKED. Requests still pending do not count towards it.
+    [interpretation] For this rule, a request consumes its own centre's cap AND the cap of every ancestor centre; spend in a team therefore also counts against its division and against the company.
+P12. Budget totals and headcount are reported per department.
+    [interpretation] For this rule, "department" means the COST CENTRE, not the org unit.
+P13. A department's exposure is the total amount of all pending requests raised within
+    it.
+    [interpretation] For this rule, "department" means the COST CENTRE, not the org unit.
+    [interpretation] For this rule, "committed spend" means spend already BOOKED. Requests still pending do not count towards it.
+P14. An escalation is required when no one in the requester's own department can approve
+    the request.
+    [interpretation] For this rule, "department" means the COST CENTRE, not the org unit.
+    [interpretation] For this rule, where a rule has dated versions, the version that governs a request is the one in force ON THE REQUEST'S OWN DATE, not the one in force today.
+
+DATA
+
+Cost centres (id, parent, org unit):
+  company      -            leadership
+  ops          company      leadership
+  ops_field    ops          delivery
+  ops_supply   ops          support
+  ops_qa       ops          support
+  eng          company      leadership
+  eng_core     eng          delivery
+  eng_data     eng          support
+  eng_infra    eng          support
+  sales        company      leadership
+  sales_emea   sales        delivery
+  sales_amer   sales        support
+  sales_apac   sales        support
+  corp         company      leadership
+  corp_fin     corp         delivery
+  corp_hr      corp         support
+  corp_legal   corp         support
+
+Employees (id, name, role, cost centre):
+  e000   Ada Vance        vp        company
+  e001   Dir Ops          director  ops
+  e002   Mgr Ops_Field    manager   ops_field
+  e003   An Ops_Field1    analyst   ops_field
+  e004   An Ops_Field2    analyst   ops_field
+  e005   Mgr Ops_Supply   manager   ops_supply
+  e006   An Ops_Supply1   analyst   ops_supply
+  e007   An Ops_Supply2   analyst   ops_supply
+  e008   Mgr Ops_Qa       manager   ops_qa
+  e009   An Ops_Qa1       analyst   ops_qa
+  e010   An Ops_Qa2       analyst   ops_qa
+  e011   Dir Eng          director  eng
+  e012   Mgr Eng_Core     manager   eng_core
+  e013   An Eng_Core1     analyst   eng_core
+  e014   An Eng_Core2     analyst   eng_core
+  e015   Mgr Eng_Data     manager   eng_data
+  e016   An Eng_Data1     analyst   eng_data
+  e017   An Eng_Data2     analyst   eng_data
+  e018   Mgr Eng_Infra    manager   eng_infra
+  e019   An Eng_Infra1    analyst   eng_infra
+  e020   An Eng_Infra2    analyst   eng_infra
+  e021   Dir Sales        director  sales
+  e022   Mgr Sales_Emea   manager   sales_emea
+  e023   An Sales_Emea1   analyst   sales_emea
+  e024   An Sales_Emea2   analyst   sales_emea
+  e025   Mgr Sales_Amer   manager   sales_amer
+  e026   An Sales_Amer1   analyst   sales_amer
+  e027   An Sales_Amer2   analyst   sales_amer
+  e028   Mgr Sales_Apac   manager   sales_apac
+  e029   An Sales_Apac1   analyst   sales_apac
+  e030   An Sales_Apac2   analyst   sales_apac
+  e031   Dir Corp         director  corp
+  e032   Mgr Corp_Fin     manager   corp_fin
+  e033   An Corp_Fin1     analyst   corp_fin
+  e034   An Corp_Fin2     analyst   corp_fin
+  e035   Mgr Corp_Hr      manager   corp_hr
+  e036   An Corp_Hr1      analyst   corp_hr
+  e037   An Corp_Hr2      analyst   corp_hr
+  e038   Mgr Corp_Legal   manager   corp_legal
+  e039   An Corp_Legal1   analyst   corp_legal
+  e040   An Corp_Legal2   analyst   corp_legal
+
+Reports-to (employee, manager):
+  e001 -> e000; e002 -> e001; e003 -> e002; e004 -> e002; e005 -> e001; e006 -> e005; e007 -> e005; e008 -> e001; e009 -> e008; e010 -> e008; e011 -> e000; e012 -> e011; e013 -> e012; e014 -> e012; e015 -> e011; e016 -> e015; e017 -> e015; e018 -> e011; e019 -> e018; e020 -> e018; e021 -> e000; e022 -> e021; e023 -> e022; e024 -> e022; e025 -> e021; e026 -> e025; e027 -> e025; e028 -> e021; e029 -> e028; e030 -> e028; e031 -> e000; e032 -> e031; e033 -> e032; e034 -> e032; e035 -> e031; e036 -> e035; e037 -> e035; e038 -> e031; e039 -> e038; e040 -> e038
+
+Role approval limits (role, limit, from, to):
+  analyst      5000  2026-01-01  2026-12-31
+  manager     25000  2026-01-01  2026-07-31
+  manager     40000  2026-08-01  2026-12-31
+  director   100000  2026-01-01  2026-12-31
+  vp         500000  2026-01-01  2026-12-31
+
+Requests (id, requester, amount, category, vendor, date, status):
+  r01  e015      9000 services  dyne  2026-09-10 pending
+  r02  e007     12000 capital   acme  2026-07-20 pending
+  r03  e024     20000 hardware  dyne  2026-07-20 pending
+  r04  e037      9000 services  edge  2026-08-05 pending
+  r05  e005      9000 software  edge  2026-07-12 pending
+  r06  e003      9000 services  acme  2026-08-05 pending
+  r07  e029     30000 software  cog   2026-08-05 pending
+  r08  e039     12000 capital   edge  2026-07-12 pending
+  r09  e035     12000 services  cog   2026-07-12 pending
+  r10  e033     12000 software  bolt  2026-07-20 pending
+  r11  e026     12000 software  acme  2026-07-20 pending
+  r12  e029     20000 hardware  edge  2026-08-20 pending
+  r13  e009     30000 hardware  bolt  2026-08-05 pending
+  r14  e040     30000 software  edge  2026-07-20 pending
+  r15  e038     12000 hardware  cog   2026-08-05 pending
+  r16  e006     12000 software  dyne  2026-09-10 pending
+  r17  e039     30000 software  bolt  2026-09-10 pending
+  r18  e008     20000 software  dyne  2026-07-05 pending
+  r19  e005      4000 hardware  edge  2026-08-05 pending
+  r20  e030     12000 services  acme  2026-08-20 pending
+  r21  e037     12000 software  dyne  2026-07-12 pending
+  r22  e009     12000 services  acme  2026-08-20 pending
+  r23  e015      4000 services  acme  2026-07-20 pending
+  r24  e012      4000 hardware  edge  2026-08-05 pending
+  r25  e039     20000 capital   cog   2026-07-20 pending
+  r26  e022     20000 capital   dyne  2026-08-05 pending
+  r27  e028     12000 hardware  cog   2026-08-05 pending
+  r28  e027     20000 services  bolt  2026-08-05 pending
+  r29  e035     12000 software  acme  2026-08-05 pending
+  r30  e022      4000 capital   dyne  2026-07-05 pending
+  r31  e038     12000 services  acme  2026-09-10 pending
+  r32  e022     30000 hardware  cog   2026-08-20 pending
+  r33  e002      4000 software  edge  2026-07-05 pending
+  r34  e028      9000 capital   dyne  2026-07-05 pending
+  r35  e012     12000 hardware  cog   2026-09-10 pending
+  r36  e016     20000 capital   edge  2026-07-20 pending
+  r37  e009      9000 software  acme  2026-08-05 pending
+
+Vendor approval periods (vendor, status, from, to):
+  acme  approved   2026-01-01  2026-12-31
+  bolt  approved   2026-01-01  2026-07-31
+  bolt  suspended  2026-08-01  2026-12-31
+  cog   approved   2026-01-01  2026-12-31
+  dyne  suspended  2026-01-01  2026-06-30
+  dyne  approved   2026-07-01  2026-12-31
+  edge  approved   2026-01-01  2026-12-31
+
+Booked spend 2026Q3 (cost centre, amount):
+  corp_fin 88000; corp_hr 118000; corp_legal 104000; eng_core 118000; eng_data 88000; eng_infra 95000; ops_field 95000; ops_qa 76000; ops_supply 95000; sales_amer 88000; sales_apac 76000; sales_emea 76000
+
+Quarterly caps 2026Q3 (cost centre, cap):
+  company 2000000; corp 600000; corp_fin 150000; corp_hr 150000; corp_legal 150000; eng 600000; eng_core 150000; eng_data 150000; eng_infra 150000; ops 600000; ops_field 150000; ops_qa 150000; ops_supply 150000; sales 600000; sales_amer 150000; sales_apac 150000; sales_emea 150000
+
+Open compliance violations: e009, e021, e024, e027, e029, e038
+Capital-expenditure cap exemption withdrawn effective 2026-08-01
+Today's date: 2026-08-31
+
+QUESTIONS
+
+S1. Which cost centres are over-committed for 2026Q3? List them.
+
+S2. How much headroom does the eng division have for 2026Q3?
+
+S3. Request r10 is dated 2026-07-20 and names vendor 'bolt'. Is its vendor approved?
+
+S4. Request r14 is for 30,000, dated 2026-07-20, from an analyst in cost centre corp_legal. Does it require escalation?
+
+S5. How many people are in An Corp_Legal1's department?
+
+S6. What is the total pending exposure of An Corp_Legal1's department?
+
+S7. Request r37 is a 9,000 software request from an employee with an open compliance violation. What happens to it?
+
+S8. How many employees report to Ada Vance, directly or indirectly?
+
+OUTPUT FORMAT -- answer every scenario in exactly this shape, nothing else:
+
+SCENARIO: <id>
+STATUS: ANSWER or AMBIGUOUS or CONFLICT
+ANSWER: <the answer, or -- if you cannot give one>
+READINGS: <if AMBIGUOUS or CONFLICT: each reading and the answer it produces, on one
+           line, separated by " | ". Otherwise: -->
+
+Use STATUS: ANSWER only when the material determines exactly one answer.
+Use STATUS: AMBIGUOUS when the wording admits more than one reading that would give
+different answers. Use STATUS: CONFLICT when two rules both apply and nothing says
+which wins.

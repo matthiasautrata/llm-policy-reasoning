@@ -1,0 +1,141 @@
+You are answering questions about a procurement approval policy.
+Read the material, then answer the questions at the end. Treat the material as complete.
+
+RULES AND FACTS -- the policy as a Datalog program (Souffle syntax)
+
+.decl cc(c:symbol)
+.decl cc_parent(c:symbol, p:symbol)
+.decl emp(e:symbol, role:symbol, c:symbol)
+.decl reports(e:symbol, m:symbol)
+.decl role_limit(role:symbol, l:number)
+.decl vendor(v:symbol, status:symbol)
+.decl req(r:symbol, e:symbol, a:number, category:symbol, v:symbol)
+.decl booked(c:symbol, b:number)
+.decl cap(c:symbol, k:number)
+
+.decl cc_anc(c:symbol, a:symbol)
+.decl chain(e:symbol, m:symbol)
+.decl spend_item(c:symbol, src:symbol, b:number)
+.decl booked_total(c:symbol, t:number)
+.decl headroom(c:symbol, h:number)
+.decl over_cap(c:symbol)
+.decl charges(r:symbol, c:symbol)
+.decl cap_breach(r:symbol)
+.decl has_approver(r:symbol)
+.decl vendor_ok(r:symbol)
+.decl eligible(r:symbol)
+.decl denied(r:symbol)
+.decl approved(r:symbol)
+
+cc_anc(C,P) :- cc_parent(C,P).
+cc_anc(C,A) :- cc_parent(C,P), cc_anc(P,A).
+chain(E,M) :- reports(E,M).
+chain(E,M) :- reports(E,X), chain(X,M).
+spend_item(C,C,B) :- booked(C,B).
+spend_item(A,C,B) :- booked(C,B), cc_anc(C,A).
+booked_total(C,T) :- cc(C), T = sum B : { spend_item(C,_,B) }.
+headroom(C,H) :- booked_total(C,T), cap(C,K), H = K - T.
+over_cap(C) :- booked_total(C,T), cap(C,K), T > K.
+charges(R,C) :- req(R,E,_,_,_), emp(E,_,C).
+charges(R,A) :- req(R,E,_,_,_), emp(E,_,C), cc_anc(C,A).
+cap_breach(R) :- charges(R,C), req(R,_,A,_,_), booked_total(C,T), cap(C,K), T + A > K.
+has_approver(R) :- req(R,Q,A,_,_), chain(Q,M), emp(M,Role,_), role_limit(Role,L), L >= A.
+vendor_ok(R) :- req(R,_,_,_,V), vendor(V,"approved").
+eligible(R) :- has_approver(R), !cap_breach(R), vendor_ok(R).
+approved(R) :- eligible(R), !denied(R).
+
+cc("company").
+cc("cc1").
+cc("cc1_1").
+cc("cc1_2").
+cc("cc2").
+cc("cc2_1").
+cc("cc2_2").
+cc_parent("cc1","company").
+cc_parent("cc1_1","cc1").
+cc_parent("cc1_2","cc1").
+cc_parent("cc2","company").
+cc_parent("cc2_1","cc2").
+cc_parent("cc2_2","cc2").
+emp("e000","vp","company").
+emp("e001","director","cc1").
+emp("e002","manager","cc1_1").
+emp("e003","manager","cc1_2").
+emp("e004","director","cc2").
+emp("e005","manager","cc2_1").
+emp("e006","manager","cc2_2").
+emp("e007","analyst","cc1_1").
+emp("e008","analyst","cc1_1").
+emp("e009","analyst","cc1_2").
+emp("e010","analyst","cc1_2").
+emp("e011","analyst","cc2_1").
+emp("e012","analyst","cc2_1").
+emp("e013","analyst","cc2_2").
+emp("e014","analyst","cc2_2").
+reports("e001","e000").
+reports("e002","e001").
+reports("e003","e001").
+reports("e004","e000").
+reports("e005","e004").
+reports("e006","e004").
+reports("e007","e002").
+reports("e008","e002").
+reports("e009","e003").
+reports("e010","e003").
+reports("e011","e005").
+reports("e012","e005").
+reports("e013","e006").
+reports("e014","e006").
+role_limit("vp",500000).
+role_limit("director",100000).
+role_limit("senior_manager",50000).
+role_limit("manager",25000).
+role_limit("analyst",5000).
+vendor("acme","approved").
+vendor("bolt","suspended").
+vendor("cog","approved").
+vendor("dyne","suspended").
+vendor("edge","approved").
+req("r001","e010",4000,"capital","cog").
+req("r002","e012",20000,"software","cog").
+req("r003","e001",4000,"software","edge").
+req("r004","e001",60000,"hardware","dyne").
+req("r005","e012",4000,"hardware","dyne").
+req("r006","e008",120000,"hardware","cog").
+req("r007","e004",20000,"capital","cog").
+req("r008","e001",60000,"software","bolt").
+req("r009","e011",30000,"software","cog").
+req("r010","e012",120000,"capital","edge").
+req("r011","e014",20000,"services","cog").
+req("r012","e010",90000,"capital","edge").
+booked("cc1_1",57000).
+booked("cc1_2",112000).
+booked("cc2_1",137000).
+booked("cc2_2",48000).
+booked("company",36000).
+cap("company",546000).
+cap("cc1",194000).
+cap("cc1_1",55000).
+cap("cc1_2",134000).
+cap("cc2",194000).
+cap("cc2_1",164000).
+cap("cc2_2",57000).
+
+QUESTIONS
+
+Q1. Is request r001 approved?
+Q2. Is request r002 approved?
+Q3. What is the headroom of cost centre cc1?
+Q4. How many employees have e001 in their reporting chain?
+Q5. Which requests that charge cost centre cc1 are approved?
+Q6. Which requests breach a cap?
+Q7. Which cost centres are over cap?
+Q8. Does request r004 pass the vendor check?
+Q9. How many requests are approved in total?
+
+OUTPUT FORMAT -- reply with one JSON object and nothing else. Keys are the question ids.
+Values: yes/no -> true or false; number -> integer; list -> JSON array of ids (order irrelevant, [] if none).
+
+A Datalog engine holding exactly this program is available. Query it from the shell with
+  ./ask 'approved(R)'      or   ./ask 'headroom("cc1", H)'
+(capitalised words are variables; any relation above may be queried). Use it as much as you like.

@@ -1,0 +1,28 @@
+@prefix ex:   <http://example.org/proc#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+# ---------- schema (OWL) ----------
+ex:CostCentre a owl:Class .  ex:Employee a owl:Class .  ex:Role a owl:Class .
+ex:Vendor a owl:Class .      ex:Request a owl:Class .
+ex:parent      a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain ex:CostCentre ; rdfs:range ex:CostCentre .
+ex:booked      a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:CostCentre ; rdfs:range xsd:integer .
+ex:cap         a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:CostCentre ; rdfs:range xsd:integer .
+ex:role        a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain ex:Employee ; rdfs:range ex:Role .
+ex:costCentre  a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain ex:Employee ; rdfs:range ex:CostCentre .
+ex:reportsTo   a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain ex:Employee ; rdfs:range ex:Employee .
+ex:limit       a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:Role ; rdfs:range xsd:integer .
+ex:status      a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:Vendor ; rdfs:range xsd:string .
+ex:requester   a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain ex:Request ; rdfs:range ex:Employee .
+ex:amount      a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:Request ; rdfs:range xsd:integer .
+ex:category    a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:Request ; rdfs:range xsd:string .
+ex:vendor      a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain ex:Request ; rdfs:range ex:Vendor .
+# derived by the SHACL rules below; boolean flags are asserted only when true
+ex:ancestor a owl:ObjectProperty , owl:TransitiveProperty .  ex:parent rdfs:subPropertyOf ex:ancestor .
+ex:inChainOf a owl:ObjectProperty , owl:TransitiveProperty .  ex:reportsTo rdfs:subPropertyOf ex:inChainOf .
+ex:bookedTotal a owl:DatatypeProperty .  ex:headroom a owl:DatatypeProperty .  ex:overCap a owl:DatatypeProperty .
+ex:charges a owl:ObjectProperty .  ex:capBreach a owl:DatatypeProperty .  ex:hasApprover a owl:DatatypeProperty .
+ex:vendorOk a owl:DatatypeProperty .  ex:eligible a owl:DatatypeProperty .
+ex:approved a owl:DatatypeProperty .

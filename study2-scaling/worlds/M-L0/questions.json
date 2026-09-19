@@ -1,0 +1,56 @@
+[
+ {
+  "id": "Q1",
+  "type": "bool",
+  "text": "Is request r004 approved?",
+  "kind": "approved-yes"
+ },
+ {
+  "id": "Q2",
+  "type": "bool",
+  "text": "Is request r066 approved?",
+  "kind": "approved-no"
+ },
+ {
+  "id": "Q3",
+  "type": "int",
+  "text": "What is the headroom of cost centre cc1?",
+  "kind": "aggregate"
+ },
+ {
+  "id": "Q4",
+  "type": "int",
+  "text": "How many employees have e001 in their reporting chain?",
+  "kind": "count-chain"
+ },
+ {
+  "id": "Q5",
+  "type": "set",
+  "text": "Which requests that charge cost centre cc1 are approved?",
+  "kind": "set-subtree"
+ },
+ {
+  "id": "Q6",
+  "type": "set",
+  "text": "Which requests breach a cap?",
+  "kind": "set-all"
+ },
+ {
+  "id": "Q7",
+  "type": "set",
+  "text": "Which cost centres are over cap?",
+  "kind": "set-all"
+ },
+ {
+  "id": "Q8",
+  "type": "bool",
+  "text": "Does request r024 pass the vendor check?",
+  "kind": "lookup"
+ },
+ {
+  "id": "Q9",
+  "type": "int",
+  "text": "How many requests are approved in total?",
+  "kind": "count-all"
+ }
+]

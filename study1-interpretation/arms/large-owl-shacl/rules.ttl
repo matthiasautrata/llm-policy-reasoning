@@ -1,0 +1,89 @@
+@prefix ex:   <http://example.org/proc#> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+# SHACL-AF rules. Flags (xsd:boolean) are asserted only when true; absence means false.
+# sh:order stratifies the rules: a rule reads only properties derived at a lower order.
+
+ex:prefixes a owl:Ontology ;
+  sh:declare [ sh:prefix "ex" ; sh:namespace "http://example.org/proc#"^^xsd:anyURI ] ,
+             [ sh:prefix "xsd" ; sh:namespace "http://www.w3.org/2001/XMLSchema#"^^xsd:anyURI ] .
+
+# ---------- cost centres and budgets ----------
+ex:CostCentreRules a sh:NodeShape ; sh:targetClass ex:CostCentre ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 1 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:ancestorCostCentre ?a . } WHERE { $this ex:parentCostCentre+ ?a . }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 2 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:bookedSpend ?t . } WHERE {
+      { SELECT $this (SUM(?b) AS ?t) WHERE {
+          ?d ex:parentCostCentre* $this .
+          OPTIONAL { ?l ex:costCentre ?d ; ex:quarter "2026Q3" ; ex:booked ?b0 . }
+          BIND(COALESCE(?b0, 0) AS ?b)
+        } GROUP BY $this } }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 3 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:headroom ?h . } WHERE {
+      $this ex:bookedSpend ?t . ?l ex:costCentre $this ; ex:quarter "2026Q3" ; ex:cap ?k .
+      BIND(?k - ?t AS ?h) }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 3 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:overCommitted true . } WHERE {
+      $this ex:bookedSpend ?t . ?l ex:costCentre $this ; ex:quarter "2026Q3" ; ex:cap ?k .
+      FILTER(?t > ?k) }""" ] .
+
+# ---------- employees ----------
+ex:EmployeeRules a sh:NodeShape ; sh:targetClass ex:Employee ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 1 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:inReportingChainOf ?m . } WHERE { $this ex:reportsTo+ ?m . }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 1 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:department ?c . } WHERE { $this ex:costCentre ?c . }""" ] .
+
+# ---------- departments ----------
+ex:DepartmentRules a sh:NodeShape ; sh:targetClass ex:CostCentre ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 2 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:headcount ?n . } WHERE {
+      { SELECT $this (COUNT(DISTINCT ?e) AS ?n) WHERE { ?e ex:department $this . } GROUP BY $this } }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 2 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:pendingExposure ?s . } WHERE {
+      { SELECT $this (SUM(?a) AS ?s) WHERE {
+          OPTIONAL {
+            ?r ex:requester ?e ; ex:status "pending" ; ex:amount ?a0 . ?e ex:department $this . }
+          BIND(COALESCE(?a0, 0) AS ?a)
+        } GROUP BY $this } }""" ] .
+
+# ---------- purchase requests ----------
+ex:RequestRules a sh:NodeShape ; sh:targetClass ex:PurchaseRequest ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 2 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:charges ?c . } WHERE {
+      $this ex:requester/ex:costCentre/ex:parentCostCentre* ?c . }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 3 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:breachesCapOf ?c . } WHERE {
+      $this ex:charges ?c ; ex:amount ?a . ?c ex:bookedSpend ?t .
+      ?l ex:costCentre ?c ; ex:quarter "2026Q3" ; ex:cap ?k .
+      FILTER(?t + ?a > ?k) }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 1 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:vendorCheckPassed true . } WHERE {
+      $this ex:vendor ?v ; ex:requestDate ?d .
+      ?p ex:forVendor ?v ; ex:vendorStatus "approved" ; ex:validFrom ?f ; ex:validTo ?u .
+      FILTER(?f <= ?d && ?d <= ?u) }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 2 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:eligibleApprover ?e . } WHERE {
+      $this ex:requester ?q ; ex:amount ?a ; ex:requestDate ?d .
+      ?q ex:inReportingChainOf ?e . ?e ex:role ?role .
+      ?p ex:forRole ?role ; ex:limit ?l ; ex:validFrom ?f ; ex:validTo ?u .
+      FILTER(?f <= ?d && ?d <= ?u && ?l >= ?a) }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 3 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:requiresEscalation true . } WHERE {
+      $this ex:eligibleApprover ?any .
+      FILTER NOT EXISTS {
+        $this ex:requester/ex:department ?dep ; ex:eligibleApprover ?e . ?e ex:department ?dep . } }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 1 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:denied true . } WHERE { $this ex:requester/ex:hasPolicyViolation true . }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 1 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:autoApproved true . } WHERE {
+      $this ex:category "software" ; ex:amount ?a . FILTER(?a < 10000) }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 2 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:inConflict true . } WHERE { $this ex:denied true ; ex:autoApproved true . }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 1 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:exempt true . } WHERE {
+      $this ex:category "capital" ; ex:requestDate ?d . ?ctx ex:exemptionWithdrawnOn ?w .
+      FILTER(?d < ?w) }""" ] .

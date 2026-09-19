@@ -1,0 +1,599 @@
+You are answering questions about a procurement approval policy.
+Read the material, then answer the questions at the end. Treat the material as complete.
+
+RULES AND FACTS -- the policy as a Datalog program (Souffle syntax)
+
+// Scaling-test policy. Lines tagged
+.decl cc(c:symbol)
+.decl cc_parent(c:symbol, p:symbol)
+.decl emp(e:symbol, role:symbol, c:symbol)
+.decl reports(e:symbol, m:symbol)
+.decl role_limit(role:symbol, l:number)
+.decl vendor(v:symbol, status:symbol)
+.decl req(r:symbol, e:symbol, a:number, category:symbol, v:symbol)
+.decl booked(c:symbol, b:number)
+.decl cap(c:symbol, k:number)
+.decl violation(e:symbol)
+.decl emergency(r:symbol)
+
+.decl cc_anc(c:symbol, a:symbol)
+.decl chain(e:symbol, m:symbol)
+.decl spend_item(c:symbol, src:symbol, b:number)
+.decl booked_total(c:symbol, t:number)
+.decl headroom(c:symbol, h:number)
+.decl over_cap(c:symbol)
+.decl charges(r:symbol, c:symbol)
+.decl cap_breach(r:symbol)
+.decl has_approver(r:symbol)
+.decl big_capital(r:symbol)
+.decl vendor_ok(r:symbol)
+.decl eligible(r:symbol)
+.decl denied(r:symbol)
+.decl approved(r:symbol)
+
+cc_anc(C,P) :- cc_parent(C,P).
+cc_anc(C,A) :- cc_parent(C,P), cc_anc(P,A).
+chain(E,M) :- reports(E,M).
+chain(E,M) :- reports(E,X), chain(X,M).
+spend_item(C,C,B) :- booked(C,B).
+spend_item(A,C,B) :- booked(C,B), cc_anc(C,A).
+booked_total(C,T) :- cc(C), T = sum B : { spend_item(C,_,B) }.
+headroom(C,H) :- booked_total(C,T), cap(C,K), H = K - T.
+over_cap(C) :- booked_total(C,T), cap(C,K), T > K.
+charges(R,C) :- req(R,E,_,_,_), emp(E,_,C).
+charges(R,A) :- req(R,E,_,_,_), emp(E,_,C), cc_anc(C,A).
+cap_breach(R) :- charges(R,C), req(R,_,A,_,_), booked_total(C,T), cap(C,K), T + A > K.
+has_approver(R) :- req(R,Q,A,_,_), chain(Q,M), emp(M,Role,_), role_limit(Role,L), L >= A.
+big_capital(R) :- req(R,_,A,"capital",_), A > 50000.
+vendor_ok(R) :- req(R,_,_,_,V), vendor(V,"approved").
+vendor_ok(R) :- req(R,_,_,_,V), vendor(V,"suspended"), emergency(R), !big_capital(R).
+eligible(R) :- has_approver(R), !cap_breach(R), vendor_ok(R).
+denied(R) :- req(R,E,_,_,_), violation(E).
+approved(R) :- eligible(R), !denied(R).
+
+cc("company").
+cc("cc1").
+cc("cc1_1").
+cc("cc1_1_1").
+cc("cc1_1_2").
+cc("cc1_1_3").
+cc("cc1_2").
+cc("cc1_2_1").
+cc("cc1_2_2").
+cc("cc1_2_3").
+cc("cc1_3").
+cc("cc1_3_1").
+cc("cc1_3_2").
+cc("cc1_3_3").
+cc("cc2").
+cc("cc2_1").
+cc("cc2_1_1").
+cc("cc2_1_2").
+cc("cc2_1_3").
+cc("cc2_2").
+cc("cc2_2_1").
+cc("cc2_2_2").
+cc("cc2_2_3").
+cc("cc2_3").
+cc("cc2_3_1").
+cc("cc2_3_2").
+cc("cc2_3_3").
+cc("cc3").
+cc("cc3_1").
+cc("cc3_1_1").
+cc("cc3_1_2").
+cc("cc3_1_3").
+cc("cc3_2").
+cc("cc3_2_1").
+cc("cc3_2_2").
+cc("cc3_2_3").
+cc("cc3_3").
+cc("cc3_3_1").
+cc("cc3_3_2").
+cc("cc3_3_3").
+cc_parent("cc1","company").
+cc_parent("cc1_1","cc1").
+cc_parent("cc1_1_1","cc1_1").
+cc_parent("cc1_1_2","cc1_1").
+cc_parent("cc1_1_3","cc1_1").
+cc_parent("cc1_2","cc1").
+cc_parent("cc1_2_1","cc1_2").
+cc_parent("cc1_2_2","cc1_2").
+cc_parent("cc1_2_3","cc1_2").
+cc_parent("cc1_3","cc1").
+cc_parent("cc1_3_1","cc1_3").
+cc_parent("cc1_3_2","cc1_3").
+cc_parent("cc1_3_3","cc1_3").
+cc_parent("cc2","company").
+cc_parent("cc2_1","cc2").
+cc_parent("cc2_1_1","cc2_1").
+cc_parent("cc2_1_2","cc2_1").
+cc_parent("cc2_1_3","cc2_1").
+cc_parent("cc2_2","cc2").
+cc_parent("cc2_2_1","cc2_2").
+cc_parent("cc2_2_2","cc2_2").
+cc_parent("cc2_2_3","cc2_2").
+cc_parent("cc2_3","cc2").
+cc_parent("cc2_3_1","cc2_3").
+cc_parent("cc2_3_2","cc2_3").
+cc_parent("cc2_3_3","cc2_3").
+cc_parent("cc3","company").
+cc_parent("cc3_1","cc3").
+cc_parent("cc3_1_1","cc3_1").
+cc_parent("cc3_1_2","cc3_1").
+cc_parent("cc3_1_3","cc3_1").
+cc_parent("cc3_2","cc3").
+cc_parent("cc3_2_1","cc3_2").
+cc_parent("cc3_2_2","cc3_2").
+cc_parent("cc3_2_3","cc3_2").
+cc_parent("cc3_3","cc3").
+cc_parent("cc3_3_1","cc3_3").
+cc_parent("cc3_3_2","cc3_3").
+cc_parent("cc3_3_3","cc3_3").
+emp("e000","vp","company").
+emp("e001","director","cc1").
+emp("e002","senior_manager","cc1_1").
+emp("e003","manager","cc1_1_1").
+emp("e004","manager","cc1_1_2").
+emp("e005","manager","cc1_1_3").
+emp("e006","senior_manager","cc1_2").
+emp("e007","manager","cc1_2_1").
+emp("e008","manager","cc1_2_2").
+emp("e009","manager","cc1_2_3").
+emp("e010","senior_manager","cc1_3").
+emp("e011","manager","cc1_3_1").
+emp("e012","manager","cc1_3_2").
+emp("e013","manager","cc1_3_3").
+emp("e014","director","cc2").
+emp("e015","senior_manager","cc2_1").
+emp("e016","manager","cc2_1_1").
+emp("e017","manager","cc2_1_2").
+emp("e018","manager","cc2_1_3").
+emp("e019","senior_manager","cc2_2").
+emp("e020","manager","cc2_2_1").
+emp("e021","manager","cc2_2_2").
+emp("e022","manager","cc2_2_3").
+emp("e023","senior_manager","cc2_3").
+emp("e024","manager","cc2_3_1").
+emp("e025","manager","cc2_3_2").
+emp("e026","manager","cc2_3_3").
+emp("e027","director","cc3").
+emp("e028","senior_manager","cc3_1").
+emp("e029","manager","cc3_1_1").
+emp("e030","manager","cc3_1_2").
+emp("e031","manager","cc3_1_3").
+emp("e032","senior_manager","cc3_2").
+emp("e033","manager","cc3_2_1").
+emp("e034","manager","cc3_2_2").
+emp("e035","manager","cc3_2_3").
+emp("e036","senior_manager","cc3_3").
+emp("e037","manager","cc3_3_1").
+emp("e038","manager","cc3_3_2").
+emp("e039","manager","cc3_3_3").
+emp("e040","analyst","cc1_1_1").
+emp("e041","analyst","cc1_1_1").
+emp("e042","analyst","cc1_1_1").
+emp("e043","analyst","cc1_1_2").
+emp("e044","analyst","cc1_1_2").
+emp("e045","analyst","cc1_1_2").
+emp("e046","analyst","cc1_1_3").
+emp("e047","analyst","cc1_1_3").
+emp("e048","analyst","cc1_1_3").
+emp("e049","analyst","cc1_2_1").
+emp("e050","analyst","cc1_2_1").
+emp("e051","analyst","cc1_2_1").
+emp("e052","analyst","cc1_2_2").
+emp("e053","analyst","cc1_2_2").
+emp("e054","analyst","cc1_2_2").
+emp("e055","analyst","cc1_2_3").
+emp("e056","analyst","cc1_2_3").
+emp("e057","analyst","cc1_2_3").
+emp("e058","analyst","cc1_3_1").
+emp("e059","analyst","cc1_3_1").
+emp("e060","analyst","cc1_3_1").
+emp("e061","analyst","cc1_3_2").
+emp("e062","analyst","cc1_3_2").
+emp("e063","analyst","cc1_3_2").
+emp("e064","analyst","cc1_3_3").
+emp("e065","analyst","cc1_3_3").
+emp("e066","analyst","cc1_3_3").
+emp("e067","analyst","cc2_1_1").
+emp("e068","analyst","cc2_1_1").
+emp("e069","analyst","cc2_1_1").
+emp("e070","analyst","cc2_1_2").
+emp("e071","analyst","cc2_1_2").
+emp("e072","analyst","cc2_1_2").
+emp("e073","analyst","cc2_1_3").
+emp("e074","analyst","cc2_1_3").
+emp("e075","analyst","cc2_1_3").
+emp("e076","analyst","cc2_2_1").
+emp("e077","analyst","cc2_2_1").
+emp("e078","analyst","cc2_2_1").
+emp("e079","analyst","cc2_2_2").
+emp("e080","analyst","cc2_2_2").
+emp("e081","analyst","cc2_2_2").
+emp("e082","analyst","cc2_2_3").
+emp("e083","analyst","cc2_2_3").
+emp("e084","analyst","cc2_2_3").
+emp("e085","analyst","cc2_3_1").
+emp("e086","analyst","cc2_3_1").
+emp("e087","analyst","cc2_3_1").
+emp("e088","analyst","cc2_3_2").
+emp("e089","analyst","cc2_3_2").
+emp("e090","analyst","cc2_3_2").
+emp("e091","analyst","cc2_3_3").
+emp("e092","analyst","cc2_3_3").
+emp("e093","analyst","cc2_3_3").
+emp("e094","analyst","cc3_1_1").
+emp("e095","analyst","cc3_1_1").
+emp("e096","analyst","cc3_1_1").
+emp("e097","analyst","cc3_1_2").
+emp("e098","analyst","cc3_1_2").
+emp("e099","analyst","cc3_1_2").
+emp("e100","analyst","cc3_1_3").
+emp("e101","analyst","cc3_1_3").
+emp("e102","analyst","cc3_1_3").
+emp("e103","analyst","cc3_2_1").
+emp("e104","analyst","cc3_2_1").
+emp("e105","analyst","cc3_2_1").
+emp("e106","analyst","cc3_2_2").
+emp("e107","analyst","cc3_2_2").
+emp("e108","analyst","cc3_2_2").
+emp("e109","analyst","cc3_2_3").
+emp("e110","analyst","cc3_2_3").
+emp("e111","analyst","cc3_2_3").
+emp("e112","analyst","cc3_3_1").
+emp("e113","analyst","cc3_3_1").
+emp("e114","analyst","cc3_3_1").
+emp("e115","analyst","cc3_3_2").
+emp("e116","analyst","cc3_3_2").
+emp("e117","analyst","cc3_3_2").
+emp("e118","analyst","cc3_3_3").
+emp("e119","analyst","cc3_3_3").
+emp("e120","analyst","cc3_3_3").
+reports("e001","e000").
+reports("e002","e001").
+reports("e003","e002").
+reports("e004","e002").
+reports("e005","e002").
+reports("e006","e001").
+reports("e007","e006").
+reports("e008","e006").
+reports("e009","e006").
+reports("e010","e001").
+reports("e011","e010").
+reports("e012","e010").
+reports("e013","e010").
+reports("e014","e000").
+reports("e015","e014").
+reports("e016","e015").
+reports("e017","e015").
+reports("e018","e015").
+reports("e019","e014").
+reports("e020","e019").
+reports("e021","e019").
+reports("e022","e019").
+reports("e023","e014").
+reports("e024","e023").
+reports("e025","e023").
+reports("e026","e023").
+reports("e027","e000").
+reports("e028","e027").
+reports("e029","e028").
+reports("e030","e028").
+reports("e031","e028").
+reports("e032","e027").
+reports("e033","e032").
+reports("e034","e032").
+reports("e035","e032").
+reports("e036","e027").
+reports("e037","e036").
+reports("e038","e036").
+reports("e039","e036").
+reports("e040","e003").
+reports("e041","e003").
+reports("e042","e003").
+reports("e043","e004").
+reports("e044","e004").
+reports("e045","e004").
+reports("e046","e005").
+reports("e047","e005").
+reports("e048","e005").
+reports("e049","e007").
+reports("e050","e007").
+reports("e051","e007").
+reports("e052","e008").
+reports("e053","e008").
+reports("e054","e008").
+reports("e055","e009").
+reports("e056","e009").
+reports("e057","e009").
+reports("e058","e011").
+reports("e059","e011").
+reports("e060","e011").
+reports("e061","e012").
+reports("e062","e012").
+reports("e063","e012").
+reports("e064","e013").
+reports("e065","e013").
+reports("e066","e013").
+reports("e067","e016").
+reports("e068","e016").
+reports("e069","e016").
+reports("e070","e017").
+reports("e071","e017").
+reports("e072","e017").
+reports("e073","e018").
+reports("e074","e018").
+reports("e075","e018").
+reports("e076","e020").
+reports("e077","e020").
+reports("e078","e020").
+reports("e079","e021").
+reports("e080","e021").
+reports("e081","e021").
+reports("e082","e022").
+reports("e083","e022").
+reports("e084","e022").
+reports("e085","e024").
+reports("e086","e024").
+reports("e087","e024").
+reports("e088","e025").
+reports("e089","e025").
+reports("e090","e025").
+reports("e091","e026").
+reports("e092","e026").
+reports("e093","e026").
+reports("e094","e029").
+reports("e095","e029").
+reports("e096","e029").
+reports("e097","e030").
+reports("e098","e030").
+reports("e099","e030").
+reports("e100","e031").
+reports("e101","e031").
+reports("e102","e031").
+reports("e103","e033").
+reports("e104","e033").
+reports("e105","e033").
+reports("e106","e034").
+reports("e107","e034").
+reports("e108","e034").
+reports("e109","e035").
+reports("e110","e035").
+reports("e111","e035").
+reports("e112","e037").
+reports("e113","e037").
+reports("e114","e037").
+reports("e115","e038").
+reports("e116","e038").
+reports("e117","e038").
+reports("e118","e039").
+reports("e119","e039").
+reports("e120","e039").
+role_limit("vp",500000).
+role_limit("director",100000).
+role_limit("senior_manager",50000).
+role_limit("manager",25000).
+role_limit("analyst",5000).
+vendor("acme","approved").
+vendor("bolt","suspended").
+vendor("cog","approved").
+vendor("dyne","suspended").
+vendor("edge","approved").
+req("r001","e095",45000,"software","dyne").
+req("r002","e085",120000,"software","bolt").
+req("r003","e067",60000,"services","dyne").
+req("r004","e094",4000,"capital","acme").
+req("r005","e040",60000,"hardware","bolt").
+req("r006","e065",20000,"software","bolt").
+req("r007","e070",120000,"hardware","dyne").
+req("r008","e066",45000,"services","dyne").
+req("r009","e117",30000,"software","dyne").
+req("r010","e101",120000,"hardware","edge").
+req("r011","e100",120000,"hardware","dyne").
+req("r012","e008",90000,"services","edge").
+req("r013","e071",20000,"capital","dyne").
+req("r014","e105",45000,"capital","cog").
+req("r015","e001",120000,"services","dyne").
+req("r016","e077",4000,"hardware","bolt").
+req("r017","e071",12000,"software","edge").
+req("r018","e103",30000,"software","acme").
+req("r019","e011",4000,"capital","acme").
+req("r020","e097",30000,"hardware","cog").
+req("r021","e015",12000,"services","cog").
+req("r022","e009",12000,"hardware","cog").
+req("r023","e068",12000,"services","cog").
+req("r024","e059",45000,"capital","dyne").
+req("r025","e015",4000,"services","dyne").
+req("r026","e044",60000,"hardware","cog").
+req("r027","e014",30000,"hardware","edge").
+req("r028","e056",4000,"hardware","acme").
+req("r029","e051",12000,"software","bolt").
+req("r030","e058",120000,"capital","edge").
+req("r031","e107",20000,"capital","bolt").
+req("r032","e068",4000,"capital","edge").
+req("r033","e103",45000,"capital","acme").
+req("r034","e095",30000,"hardware","bolt").
+req("r035","e113",4000,"services","acme").
+req("r036","e110",9000,"services","cog").
+req("r037","e096",12000,"capital","edge").
+req("r038","e033",12000,"software","edge").
+req("r039","e113",4000,"hardware","edge").
+req("r040","e059",12000,"software","dyne").
+req("r041","e026",45000,"software","bolt").
+req("r042","e074",60000,"hardware","dyne").
+req("r043","e014",60000,"services","edge").
+req("r044","e064",4000,"services","edge").
+req("r045","e112",60000,"services","acme").
+req("r046","e021",20000,"services","edge").
+req("r047","e101",12000,"services","dyne").
+req("r048","e028",30000,"software","dyne").
+req("r049","e120",120000,"services","edge").
+req("r050","e063",120000,"hardware","acme").
+req("r051","e093",4000,"software","bolt").
+req("r052","e022",12000,"hardware","cog").
+req("r053","e098",45000,"services","cog").
+req("r054","e044",45000,"software","cog").
+req("r055","e031",90000,"hardware","edge").
+req("r056","e071",9000,"services","acme").
+req("r057","e053",9000,"capital","bolt").
+req("r058","e107",12000,"services","acme").
+req("r059","e079",60000,"software","edge").
+req("r060","e071",20000,"software","cog").
+req("r061","e047",30000,"software","dyne").
+req("r062","e115",30000,"software","acme").
+req("r063","e106",30000,"software","edge").
+req("r064","e086",4000,"software","dyne").
+req("r065","e015",4000,"hardware","bolt").
+req("r066","e101",60000,"hardware","acme").
+req("r067","e058",12000,"hardware","bolt").
+req("r068","e096",9000,"capital","dyne").
+req("r069","e104",120000,"services","edge").
+req("r070","e033",90000,"services","acme").
+req("r071","e027",45000,"software","acme").
+req("r072","e002",30000,"services","dyne").
+req("r073","e051",45000,"capital","acme").
+req("r074","e009",45000,"capital","acme").
+req("r075","e033",20000,"capital","cog").
+req("r076","e034",12000,"hardware","cog").
+req("r077","e026",20000,"services","acme").
+req("r078","e105",30000,"software","dyne").
+req("r079","e012",45000,"hardware","dyne").
+req("r080","e040",4000,"services","bolt").
+req("r081","e041",30000,"hardware","cog").
+req("r082","e013",120000,"software","bolt").
+req("r083","e029",4000,"hardware","dyne").
+req("r084","e010",30000,"software","acme").
+req("r085","e003",4000,"services","cog").
+req("r086","e064",90000,"hardware","acme").
+req("r087","e065",45000,"software","edge").
+req("r088","e086",12000,"hardware","bolt").
+req("r089","e019",45000,"services","acme").
+req("r090","e091",120000,"services","bolt").
+req("r091","e115",20000,"hardware","edge").
+req("r092","e117",4000,"services","edge").
+req("r093","e103",120000,"hardware","bolt").
+req("r094","e039",60000,"hardware","acme").
+req("r095","e092",20000,"services","acme").
+req("r096","e088",90000,"capital","edge").
+booked("cc1_1_1",57000).
+booked("cc1_1_2",112000).
+booked("cc1_1_3",137000).
+booked("cc1_2_1",48000).
+booked("cc1_2_2",72000).
+booked("cc1_2_3",55000).
+booked("cc1_3_1",103000).
+booked("cc1_3_2",137000).
+booked("cc1_3_3",97000).
+booked("cc2_1_1",100000).
+booked("cc2_1_2",123000).
+booked("cc2_1_3",88000).
+booked("cc2_2_1",140000).
+booked("cc2_2_2",66000).
+booked("cc2_2_3",52000).
+booked("cc2_3_1",102000).
+booked("cc2_3_2",43000).
+booked("cc2_3_3",89000).
+booked("cc3_1_1",95000).
+booked("cc3_1_2",117000).
+booked("cc3_1_3",137000).
+booked("cc3_2_1",138000).
+booked("cc3_2_2",40000).
+booked("cc3_2_3",129000).
+booked("cc3_3_1",97000).
+booked("cc3_3_2",74000).
+booked("cc3_3_3",132000).
+booked("cc1_1",25000).
+booked("cc1_2",6000).
+booked("cc2",29000).
+cap("company",3695000).
+cap("cc1",976000).
+cap("cc1_1",380000).
+cap("cc1_1_1",68000).
+cap("cc1_1_2",123000).
+cap("cc1_1_3",132000).
+cap("cc1_2",271000).
+cap("cc1_2_1",67000).
+cap("cc1_2_2",115000).
+cap("cc1_2_3",53000).
+cap("cc1_3",387000).
+cap("cc1_3_1",164000).
+cap("cc1_3_2",219000).
+cap("cc1_3_3",106000).
+cap("cc2",873000).
+cap("cc2_1",404000).
+cap("cc2_1_1",160000).
+cap("cc2_1_2",196000).
+cap("cc2_1_3",123000).
+cap("cc2_2",387000).
+cap("cc2_2_1",196000).
+cap("cc2_2_2",105000).
+cap("cc2_2_3",53000).
+cap("cc2_3",304000).
+cap("cc2_3_1",112000).
+cap("cc2_3_2",60000).
+cap("cc2_3_3",106000).
+cap("cc3",1438000).
+cap("cc3_1",366000).
+cap("cc3_1_1",114000).
+cap("cc3_1_2",120000).
+cap("cc3_1_3",219000).
+cap("cc3_2",460000).
+cap("cc3_2_1",165000).
+cap("cc3_2_2",64000).
+cap("cc3_2_3",132000).
+cap("cc3_3",393000).
+cap("cc3_3_1",135000).
+cap("cc3_3_2",118000).
+cap("cc3_3_3",211000).
+violation("e002").
+violation("e022").
+violation("e033").
+violation("e034").
+violation("e044").
+violation("e051").
+violation("e057").
+violation("e059").
+violation("e069").
+violation("e070").
+violation("e108").
+violation("e109").
+emergency("r005").
+emergency("r009").
+emergency("r013").
+emergency("r014").
+emergency("r016").
+emergency("r022").
+emergency("r032").
+emergency("r039").
+emergency("r043").
+emergency("r046").
+emergency("r047").
+emergency("r051").
+emergency("r064").
+emergency("r066").
+emergency("r068").
+emergency("r074").
+emergency("r076").
+emergency("r085").
+emergency("r096").
+
+QUESTIONS
+
+Q1. Is request r004 approved?
+Q2. Is request r066 approved?
+Q3. What is the headroom of cost centre cc1?
+Q4. How many employees have e001 in their reporting chain?
+Q5. Which requests that charge cost centre cc1 are approved?
+Q6. Which requests breach a cap?
+Q7. Which cost centres are over cap?
+Q8. Does request r016 pass the vendor check?
+Q9. How many requests are approved in total?
+
+OUTPUT FORMAT -- reply with one JSON object and nothing else. Keys are the question ids.
+Values: yes/no -> true or false; number -> integer; list -> JSON array of ids (order irrelevant, [] if none).
+
+A Datalog engine holding exactly this program is available. Query it from the shell with
+  ./ask 'approved(R)'      or   ./ask 'headroom("cc1", H)'
+(capitalised words are variables; any relation above may be queried). Use it as much as you like.

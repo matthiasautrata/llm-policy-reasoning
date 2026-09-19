@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.DS_Store
+paper/*.aux
+paper/*.log
+study1-interpretation/results/runs.jsonl
+study1-interpretation/results/runs.scored.csv

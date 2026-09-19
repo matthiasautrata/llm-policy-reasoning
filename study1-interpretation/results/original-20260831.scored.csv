@@ -1,0 +1,347 @@
+prompt,arm,model,run,scenario,expected,status,answer,outcome,correct
+p01,A:text,deepseek/deepseek-v4-pro-0813,20260831_125258_ce74dc,S1,AMBIGUOUS,ANSWER,"PASS. r4 (Bo Chen, cost centre ""ops"") adds 80,000 on top of the 34,000 already committed, giving 114,000, which is under",overreach,0
+p01,A:text,deepseek/deepseek-v4-pro-0813,20260831_125258_ce74dc,S2,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p01,A:text,deepseek/deepseek-v4-pro-0813,20260831_125258_ce74dc,S3,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p01,A:text,deepseek/deepseek-v4-pro-0813,20260831_125258_ce74dc,S4,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p01,A:text,deepseek/deepseek-v4-pro-0813,20260831_125258_ce74dc,S5,CONFLICT,CONFLICT,--,ok,1
+p02,A:text+notes,deepseek/deepseek-v4-pro-0813,20260831_125304_bef64d,S1,ANSWER,ANSWER,"PASS — committed ops spend is 34,000; adding r4's 80,000 gives 114,000, which is under the 150,000 quarterly cap.",ok,1
+p02,A:text+notes,deepseek/deepseek-v4-pro-0813,20260831_125304_bef64d,S2,ANSWER,ANSWER,"Yes. r4 is exempt — it is a capital request dated 2026-07-20, before the 2026-08-01 withdrawal, and per M2 the rule in f",ok,1
+p02,A:text+notes,deepseek/deepseek-v4-pro-0813,20260831_125304_bef64d,S3,ANSWER,ANSWER,"630,000 — Cy Novak's department is cost centre ops (M3). Its members are ann (5,000), bo (25,000), cy (100,000), di (500",ok,1
+p02,A:text+notes,deepseek/deepseek-v4-pro-0813,20260831_125304_bef64d,S4,ANSWER,ANSWER,"No. r2 is dated 2026-07-12, when the manager limit was 25,000 (M4: the limit in force on the request's date governs). Bo",ok,1
+p02,A:text+notes,deepseek/deepseek-v4-pro-0813,20260831_125304_bef64d,S5,CONFLICT,CONFLICT,--,ok,1
+p03,A:datalog,deepseek/deepseek-v4-pro-0813,20260831_125340_41d99d,S1,ANSWER,ANSWER,"PASS — cap_total(r4) = committed(ops,2026Q3) 34000 + r4 amount 80000 = 114000, which is ≤ cap(ops,2026Q3) 150000.",ok,1
+p03,A:datalog,deepseek/deepseek-v4-pro-0813,20260831_125340_41d99d,S2,ANSWER,ANSWER,"YES — r4 is a capital request dated 20260720, and 20260720 < 20260801 (exemption withdrawal date), so exempt(r4) holds. ",ok,1
+p03,A:datalog,deepseek/deepseek-v4-pro-0813,20260831_125340_41d99d,S3,ANSWER,ANSWER,"630000. Cy's cost centre is ""ops"" (DECISION 3: ""department"" = cost centre). Members with CC ""ops"": ann 5000 + bo 25000 +",ok,1
+p03,A:datalog,deepseek/deepseek-v4-pro-0813,20260831_125340_41d99d,S4,ANSWER,ANSWER,NO. r2 is dated 20260712. The manager limit in force on that date is 25000 (the 40000 limit only starts 20260801). chain,ok,1
+p03,A:datalog,deepseek/deepseek-v4-pro-0813,20260831_125340_41d99d,S5,CONFLICT,CONFLICT,--,ok,1
+p04,A:datalog+oracle,deepseek/deepseek-v4-pro-0813,20260831_125358_74f2f9,S1,ANSWER,ANSWER,"PASS — cap_total(""r4"") = committed 34000 + 80000 = 114000, which is ≤ cap(""ops"") = 150000",ok,1
+p04,A:datalog+oracle,deepseek/deepseek-v4-pro-0813,20260831_125358_74f2f9,S2,ANSWER,ANSWER,"Yes — exempt(""r4"") holds, because 20260720 < exemption_withdrawn(20260801)",ok,1
+p04,A:datalog+oracle,deepseek/deepseek-v4-pro-0813,20260831_125358_74f2f9,S3,ANSWER,ANSWER,"630000 — Cy is in cost centre ""ops""; members ann(5000) + bo(25000) + cy(100000) + di(500000)",ok,1
+p04,A:datalog+oracle,deepseek/deepseek-v4-pro-0813,20260831_125358_74f2f9,S4,ANSWER,ANSWER,No — r2 request date 20260712 gives Bo the manager limit 25000 (< 30000); the 40000 limit only starts 20260801,ok,1
+p04,A:datalog+oracle,deepseek/deepseek-v4-pro-0813,20260831_125358_74f2f9,S5,CONFLICT,CONFLICT,--,ok,1
+p05,A:owl,deepseek/deepseek-v4-pro-0813,20260831_125428_a11efe,S1,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p05,A:owl,deepseek/deepseek-v4-pro-0813,20260831_125428_a11efe,S2,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p05,A:owl,deepseek/deepseek-v4-pro-0813,20260831_125428_a11efe,S3,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p05,A:owl,deepseek/deepseek-v4-pro-0813,20260831_125428_a11efe,S4,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p05,A:owl,deepseek/deepseek-v4-pro-0813,20260831_125428_a11efe,S5,CONFLICT,CONFLICT,--,ok,1
+p06,A:owl,deepseek/deepseek-v4-pro-0813,20260831_130356_967a2f,S1,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p06,A:owl,deepseek/deepseek-v4-pro-0813,20260831_130356_967a2f,S2,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p06,A:owl,deepseek/deepseek-v4-pro-0813,20260831_130356_967a2f,S3,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p06,A:owl,deepseek/deepseek-v4-pro-0813,20260831_130356_967a2f,S4,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p06,A:owl,deepseek/deepseek-v4-pro-0813,20260831_130356_967a2f,S5,CONFLICT,CONFLICT,--,ok,1
+p07,A:text,deepseek/deepseek-v4-pro-0813,20260831_133126_5916b8,S1,AMBIGUOUS,ANSWER,"PASS — requested 80,000 added to ops committed 34,000 = 114,000, under the 150,000 cap.",overreach,0
+p07,A:text,deepseek/deepseek-v4-pro-0813,20260831_133126_5916b8,S2,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p07,A:text,deepseek/deepseek-v4-pro-0813,20260831_133126_5916b8,S3,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p07,A:text,deepseek/deepseek-v4-pro-0813,20260831_133126_5916b8,S4,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p07,A:text,deepseek/deepseek-v4-pro-0813,20260831_133126_5916b8,S5,CONFLICT,CONFLICT,--,ok,1
+p07,A:text,deepseek/deepseek-v4-pro-0813,20260831_133126_5916b8,S6,ANSWER,ANSWER,"cy (Cy Novak, 100,000) and di (Di Okafor, 500,000).",ok,1
+p08,A:text+notes,deepseek/deepseek-v4-pro-0813,20260831_133319_1f2746,S1,ANSWER,ANSWER,"PASS — committed spend 34,000 + 80,000 = 114,000, which is under the 150,000 ops cap.",ok,1
+p08,A:text+notes,deepseek/deepseek-v4-pro-0813,20260831_133319_1f2746,S2,ANSWER,ANSWER,"Yes, r4 is exempt from the cap. Under M2 the rule in force on the request's own date governs, and r4 (dated 2026-07-20) ",ok,1
+p08,A:text+notes,deepseek/deepseek-v4-pro-0813,20260831_133319_1f2746,S3,ANSWER,ANSWER,"630,000 (Ann 5,000 + Bo 25,000 + Cy 100,000 + Di 500,000). Per M3, Cy's department = cost centre ops.",ok,1
+p08,A:text+notes,deepseek/deepseek-v4-pro-0813,20260831_133319_1f2746,S4,ANSWER,ANSWER,"No. Per M4, the limit in force on r2's date (2026-07-12) governs — that is 25,000, which is below the 30,000 request.",ok,1
+p08,A:text+notes,deepseek/deepseek-v4-pro-0813,20260831_133319_1f2746,S5,CONFLICT,CONFLICT,--,ok,1
+p08,A:text+notes,deepseek/deepseek-v4-pro-0813,20260831_133319_1f2746,S6,ANSWER,ANSWER,"Cy Novak (100,000) and Di Okafor (500,000).",ok,1
+p09,A:text-inline,deepseek/deepseek-v4-pro-0813,20260831_133409_a4080f,S1,ANSWER,ANSWER,"PASS — committed spend 34000 + 80000 = 114000, under the 150000 cap",ok,1
+p09,A:text-inline,deepseek/deepseek-v4-pro-0813,20260831_133409_a4080f,S2,ANSWER,ANSWER,"Yes, r4 is exempt. The exemption was withdrawn 2026-08-01, but the rule in force on a request's own date governs; r4 is ",ok,1
+p09,A:text-inline,deepseek/deepseek-v4-pro-0813,20260831_133409_a4080f,S3,ANSWER,ANSWER,"630000 (department = cost centre ""ops"": ann 5000 + bo 25000 + cy 100000 + di 500000; ed is in ""finance"")",ok,1
+p09,A:text-inline,deepseek/deepseek-v4-pro-0813,20260831_133409_a4080f,S4,ANSWER,ANSWER,"No. Bo is in ann's management chain, but Bo's manager limit in force on r2's date (2026-07-12) is 25000, which is below ",ok,1
+p09,A:text-inline,deepseek/deepseek-v4-pro-0813,20260831_133409_a4080f,S5,CONFLICT,CONFLICT,--,ok,1
+p09,A:text-inline,deepseek/deepseek-v4-pro-0813,20260831_133409_a4080f,S6,ANSWER,ANSWER,"Cy Novak (100000), Di Okafor (500000)",ok,1
+p10,A:datalog,deepseek/deepseek-v4-pro-0813,20260831_133505_0c5507,S1,ANSWER,ANSWER,"pass, 114000 (committed 34000 + r4 amount 80000 = 114000 ≤ cap 150000)",ok,1
+p10,A:datalog,deepseek/deepseek-v4-pro-0813,20260831_133505_0c5507,S2,ANSWER,ANSWER,"yes — r4 is exempt. Its request date 20260720 is before the withdrawal date 20260801, so the exemption still governs it.",ok,1
+p10,A:datalog,deepseek/deepseek-v4-pro-0813,20260831_133505_0c5507,S3,ANSWER,ANSWER,"600000 (Cy Novak's department = cost centre ""leadership"": cy 100000 + di 500000)",wrong-value,0
+p10,A:datalog,deepseek/deepseek-v4-pro-0813,20260831_133505_0c5507,S4,ANSWER,ANSWER,"no — the limit in force on r2's request date 20260712 is the manager limit 25000, which is < 30000. Today's 40000 manage",ok,1
+p10,A:datalog,deepseek/deepseek-v4-pro-0813,20260831_133505_0c5507,S5,CONFLICT,CONFLICT,--,ok,1
+p10,A:datalog,deepseek/deepseek-v4-pro-0813,20260831_133505_0c5507,S6,ANSWER,ANSWER,"cy and di (100000 and 500000, both > 40000)",ok,1
+p11,A:datalog+oracle,deepseek/deepseek-v4-pro-0813,20260831_133546_2e6129,S1,ANSWER,ANSWER,"pass — cap_total(r4) = 114000 (committed ops 34000 + amount 80000), which is <= cap(ops, 150000)",ok,1
+p11,A:datalog+oracle,deepseek/deepseek-v4-pro-0813,20260831_133546_2e6129,S2,ANSWER,ANSWER,"exempt — r4 is capital, dated 20260720, which is < withdrawal date 20260801",ok,1
+p11,A:datalog+oracle,deepseek/deepseek-v4-pro-0813,20260831_133546_2e6129,S3,ANSWER,ANSWER,630000,ok,1
+p11,A:datalog+oracle,deepseek/deepseek-v4-pro-0813,20260831_133546_2e6129,S4,ANSWER,ANSWER,"no — chain(ann, bo) holds, but bo's manager limit in force on r2's date (20260712) is 25000, which is < 30000",ok,1
+p11,A:datalog+oracle,deepseek/deepseek-v4-pro-0813,20260831_133546_2e6129,S5,CONFLICT,CONFLICT,--,ok,1
+p11,A:datalog+oracle,deepseek/deepseek-v4-pro-0813,20260831_133546_2e6129,S6,ANSWER,ANSWER,cy (100000) and di (500000),ok,1
+p12,A:owl,deepseek/deepseek-v4-pro-0813,20260831_133657_7c8955,S1,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p12,A:owl,deepseek/deepseek-v4-pro-0813,20260831_133657_7c8955,S2,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p12,A:owl,deepseek/deepseek-v4-pro-0813,20260831_133657_7c8955,S3,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p12,A:owl,deepseek/deepseek-v4-pro-0813,20260831_133657_7c8955,S4,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p12,A:owl,deepseek/deepseek-v4-pro-0813,20260831_133657_7c8955,S5,CONFLICT,CONFLICT,--,ok,1
+p12,A:owl,deepseek/deepseek-v4-pro-0813,20260831_133657_7c8955,S6,ANSWER,AMBIGUOUS,--,overcaution,0
+p07,A:text,deepseek/deepseek-v4-pro-0813,20260831_133846_b5d55a,S1,AMBIGUOUS,ANSWER,"PASS — 114000 (ops committed 34000 + 80000 = 114000, under the 150000 cap)",overreach,0
+p07,A:text,deepseek/deepseek-v4-pro-0813,20260831_133846_b5d55a,S2,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p07,A:text,deepseek/deepseek-v4-pro-0813,20260831_133846_b5d55a,S3,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p07,A:text,deepseek/deepseek-v4-pro-0813,20260831_133846_b5d55a,S4,AMBIGUOUS,ANSWER,"Yes — as of today (2026-08-31) manager limit is 40000, which covers r2's 30000",overreach,0
+p07,A:text,deepseek/deepseek-v4-pro-0813,20260831_133846_b5d55a,S5,CONFLICT,CONFLICT,--,ok,1
+p07,A:text,deepseek/deepseek-v4-pro-0813,20260831_133846_b5d55a,S6,ANSWER,ANSWER,Cy Novak (100000) and Di Okafor (500000),ok,1
+p08,A:text+notes,deepseek/deepseek-v4-pro-0813,20260831_134203_50b0e1,S1,ANSWER,ANSWER,"PASS — 114000 (committed 34000 + 80000 = 114000, under the 150000 cap)",ok,1
+p08,A:text+notes,deepseek/deepseek-v4-pro-0813,20260831_134203_50b0e1,S2,ANSWER,ANSWER,"Yes, r4 is exempt from the cap — it was filed 2026-07-20, before the 2026-08-01 withdrawal, and M2 holds that the rule i",ok,1
+p08,A:text+notes,deepseek/deepseek-v4-pro-0813,20260831_134203_50b0e1,S3,ANSWER,ANSWER,"630000 (ann 5000 + bo 25000 + cy 100000 + di 500000, ops cost centre per M3)",ok,1
+p08,A:text+notes,deepseek/deepseek-v4-pro-0813,20260831_134203_50b0e1,S4,ANSWER,ANSWER,"No — on r2's date (2026-07-12) Bo's manager limit was 25000, below the 30000 request (M4)",ok,1
+p08,A:text+notes,deepseek/deepseek-v4-pro-0813,20260831_134203_50b0e1,S5,CONFLICT,CONFLICT,--,ok,1
+p08,A:text+notes,deepseek/deepseek-v4-pro-0813,20260831_134203_50b0e1,S6,ANSWER,ANSWER,Cy Novak (100000) and Di Okafor (500000),ok,1
+p09,A:text-inline,deepseek/deepseek-v4-pro-0813,20260831_134307_916c08,S1,ANSWER,ANSWER,"PASS — 114,000 (34,000 committed + 80,000 = 114,000 ≤ 150,000 cap)",ok,1
+p09,A:text-inline,deepseek/deepseek-v4-pro-0813,20260831_134307_916c08,S2,ANSWER,ANSWER,"Yes — exempt. Capital request filed 2026-07-20, before the 2026-08-01 withdrawal; the rule in force on its own date (exe",ok,1
+p09,A:text-inline,deepseek/deepseek-v4-pro-0813,20260831_134307_916c08,S3,ANSWER,ANSWER,"645,000 (ann 5,000 + bo 40,000 + cy 100,000 + di 500,000)",wrong-value,0
+p09,A:text-inline,deepseek/deepseek-v4-pro-0813,20260831_134307_916c08,S4,ANSWER,ANSWER,"No — Bo's limit in force on r2's own date (2026-07-12) is 25,000, below r2's 30,000.",ok,1
+p09,A:text-inline,deepseek/deepseek-v4-pro-0813,20260831_134307_916c08,S5,CONFLICT,CONFLICT,--,ok,1
+p09,A:text-inline,deepseek/deepseek-v4-pro-0813,20260831_134307_916c08,S6,ANSWER,ANSWER,"Cy Novak (100,000), Di Okafor (500,000)",ok,1
+p10,A:datalog,deepseek/deepseek-v4-pro-0813,20260831_134445_49d1e2,S1,ANSWER,ANSWER,"pass — cap_total = 34000 (committed) + 80000 (r4) = 114000, which is ≤ cap 150000.",ok,1
+p10,A:datalog,deepseek/deepseek-v4-pro-0813,20260831_134445_49d1e2,S2,ANSWER,ANSWER,"yes, exempt — r4 is capital dated 2026-07-20, and the withdrawal (2026-08-01) only applies to requests filed on/after it",ok,1
+p10,A:datalog,deepseek/deepseek-v4-pro-0813,20260831_134445_49d1e2,S3,ANSWER,ANSWER,"630000 — cost centre ""ops"": ann 5000 + bo 25000 + cy 100000 + di 500000.",ok,1
+p10,A:datalog,deepseek/deepseek-v4-pro-0813,20260831_134445_49d1e2,S4,ANSWER,ANSWER,"no — the limit in force on r2's request date (2026-07-12) is 25000, which is < r2's amount 30000; today's 40000 manager ",ok,1
+p10,A:datalog,deepseek/deepseek-v4-pro-0813,20260831_134445_49d1e2,S5,CONFLICT,CONFLICT,--,ok,1
+p10,A:datalog,deepseek/deepseek-v4-pro-0813,20260831_134445_49d1e2,S6,ANSWER,ANSWER,cy (100000) and di (500000).,ok,1
+p11,A:datalog+oracle,deepseek/deepseek-v4-pro-0813,20260831_134552_48b1ef,S1,ANSWER,ANSWER,"PASS at 114000 (cap_total = committed 34000 + r4 amount 80000 = 114000, which is <= cap 150000 for cost centre ""ops"")",ok,1
+p11,A:datalog+oracle,deepseek/deepseek-v4-pro-0813,20260831_134552_48b1ef,S2,ANSWER,ANSWER,"Yes, r4 IS exempt. Its request date 20260720 is < withdrawal date 20260801, so exempt(""r4"") holds. (Pending status is ir",ok,1
+p11,A:datalog+oracle,deepseek/deepseek-v4-pro-0813,20260831_134552_48b1ef,S3,ANSWER,ANSWER,"630000 (Cy Novak's cost centre is ""ops""; sum of limits ann 5000 + bo 25000 + cy 100000 + di 500000). DECISION 3 resolves",ok,1
+p11,A:datalog+oracle,deepseek/deepseek-v4-pro-0813,20260831_134552_48b1ef,S4,ANSWER,ANSWER,"No. DECISION 4 uses the limit in force on the request date. r2 is dated 20260712, when the manager limit was 25000 (the ",ok,1
+p11,A:datalog+oracle,deepseek/deepseek-v4-pro-0813,20260831_134552_48b1ef,S5,CONFLICT,CONFLICT,--,ok,1
+p11,A:datalog+oracle,deepseek/deepseek-v4-pro-0813,20260831_134552_48b1ef,S6,ANSWER,ANSWER,"cy (Cy Novak, director, 100000) and di (vp, 500000)",ok,1
+p12,A:owl,deepseek/deepseek-v4-pro-0813,20260831_134825_143f4c,S1,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p12,A:owl,deepseek/deepseek-v4-pro-0813,20260831_134825_143f4c,S2,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p12,A:owl,deepseek/deepseek-v4-pro-0813,20260831_134825_143f4c,S3,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p12,A:owl,deepseek/deepseek-v4-pro-0813,20260831_134825_143f4c,S4,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p12,A:owl,deepseek/deepseek-v4-pro-0813,20260831_134825_143f4c,S5,CONFLICT,CONFLICT,--,ok,1
+p12,A:owl,deepseek/deepseek-v4-pro-0813,20260831_134825_143f4c,S6,ANSWER,AMBIGUOUS,--,overcaution,0
+p07,A:text,deepseek/deepseek-v4-pro-0813,20260831_135059_2e7200,S1,AMBIGUOUS,ANSWER,"Pass. r4 (bo, ops) adds 80000 to committed 34000 = 114000, under the 150000 cap.",overreach,0
+p07,A:text,deepseek/deepseek-v4-pro-0813,20260831_135059_2e7200,S2,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p07,A:text,deepseek/deepseek-v4-pro-0813,20260831_135059_2e7200,S3,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p07,A:text,deepseek/deepseek-v4-pro-0813,20260831_135059_2e7200,S4,AMBIGUOUS,ANSWER,"Yes. Bo's manager limit is 40000 as of 2026-08-01; r2 is 30000, so 40000 >= 30000, and Bo is ann's manager (in her chain",overreach,0
+p07,A:text,deepseek/deepseek-v4-pro-0813,20260831_135059_2e7200,S5,CONFLICT,CONFLICT,--,ok,1
+p07,A:text,deepseek/deepseek-v4-pro-0813,20260831_135059_2e7200,S6,ANSWER,ANSWER,"Cy Novak (100000) and Di Okafor (500000). (Bo and ed sit at 40000, not strictly greater; ann is 5000.)",ok,1
+p08,A:text+notes,deepseek/deepseek-v4-pro-0813,20260831_135302_8a4413,S1,ANSWER,ANSWER,PASS — 114000 (34000 committed + 80000 = 114000 ≤ 150000 cap),ok,1
+p08,A:text+notes,deepseek/deepseek-v4-pro-0813,20260831_135302_8a4413,S2,ANSWER,ANSWER,"Yes, exempt — r4 is capital and dated 2026-07-20, before the 2026-08-01 withdrawal; M2 governs by the request's own date",ok,1
+p08,A:text+notes,deepseek/deepseek-v4-pro-0813,20260831_135302_8a4413,S3,ANSWER,ANSWER,630000 (ops cost centre: 5000 + 25000 + 100000 + 500000),ok,1
+p08,A:text+notes,deepseek/deepseek-v4-pro-0813,20260831_135302_8a4413,S4,ANSWER,ANSWER,"No — Bo's manager limit on r2's date (2026-07-12) is 25000, below the 30000 amount (M4 governs by request date)",ok,1
+p08,A:text+notes,deepseek/deepseek-v4-pro-0813,20260831_135302_8a4413,S5,CONFLICT,CONFLICT,--,ok,1
+p08,A:text+notes,deepseek/deepseek-v4-pro-0813,20260831_135302_8a4413,S6,ANSWER,ANSWER,"Cy Novak (100000), Di Okafor (500000)",ok,1
+p09,A:text-inline,deepseek/deepseek-v4-pro-0813,20260831_135450_a078ed,S1,ANSWER,ANSWER,"PASS; 114000 (34000 committed + 80000 = 114000, under the 150000 cap)",ok,1
+p09,A:text-inline,deepseek/deepseek-v4-pro-0813,20260831_135450_a078ed,S2,ANSWER,ANSWER,"Yes, r4 is exempt. The withdrawal is effective 2026-08-01, and r4 is dated 2026-07-20; the rule in force on the request'",ok,1
+p09,A:text-inline,deepseek/deepseek-v4-pro-0813,20260831_135450_a078ed,S3,ANSWER,ANSWER,"630000 (Cy Novak's cost centre is ""ops""; ops members are ann 5000 + bo 25000 + cy 100000 + di 500000)",ok,1
+p09,A:text-inline,deepseek/deepseek-v4-pro-0813,20260831_135450_a078ed,S4,ANSWER,ANSWER,"No. r2 is dated 2026-07-12, so the manager limit in force on that date (25000) governs; r2's 30000 exceeds 25000.",ok,1
+p09,A:text-inline,deepseek/deepseek-v4-pro-0813,20260831_135450_a078ed,S5,CONFLICT,CONFLICT,--,ok,1
+p09,A:text-inline,deepseek/deepseek-v4-pro-0813,20260831_135450_a078ed,S6,ANSWER,ANSWER,"cy (100000), di (500000)",ok,1
+p10,A:datalog,deepseek/deepseek-v4-pro-0813,20260831_135534_419ede,S1,ANSWER,ANSWER,"pass — cap_total = 34,000 (committed) + 80,000 = 114,000, which is ≤ the 150,000 cap for ops/2026Q3.",ok,1
+p10,A:datalog,deepseek/deepseek-v4-pro-0813,20260831_135534_419ede,S2,ANSWER,ANSWER,"exempt — request date 2026-07-20 < withdrawal date 2026-08-01, so the capital exemption still applies (the later withdra",ok,1
+p10,A:datalog,deepseek/deepseek-v4-pro-0813,20260831_135534_419ede,S3,ANSWER,ANSWER,"630,000 — Cy Novak's cost centre is ""ops"": 5,000 + 25,000 + 100,000 + 500,000.",ok,1
+p10,A:datalog,deepseek/deepseek-v4-pro-0813,20260831_135534_419ede,S4,ANSWER,ANSWER,"no — r2's request date 2026-07-12 falls in the 25,000 manager-limit period, and 25,000 < 30,000.",ok,1
+p10,A:datalog,deepseek/deepseek-v4-pro-0813,20260831_135534_419ede,S5,CONFLICT,CONFLICT,--,ok,1
+p10,A:datalog,deepseek/deepseek-v4-pro-0813,20260831_135534_419ede,S6,ANSWER,ANSWER,"Cy Novak (cy, 100,000) and Di (di, 500,000).",ok,1
+p11,A:datalog+oracle,deepseek/deepseek-v4-pro-0813,20260831_135634_7177e0,S1,ANSWER,ANSWER,"PASS. cap_total(""r4"") = committed(ops,34000) + 80000 = 114000; 114000 <= cap(ops,150000)",ok,1
+p11,A:datalog+oracle,deepseek/deepseek-v4-pro-0813,20260831_135634_7177e0,S2,ANSWER,ANSWER,"Yes, exempt. Request date 20260720 < exemption_withdrawn 20260801, so exempt(""r4"") holds.",ok,1
+p11,A:datalog+oracle,deepseek/deepseek-v4-pro-0813,20260831_135634_7177e0,S3,ANSWER,ANSWER,"630000 (dept_total(""ops"") = 5000+25000+100000+500000; ""department"" = cost centre ""ops"")",ok,1
+p11,A:datalog+oracle,deepseek/deepseek-v4-pro-0813,20260831_135634_7177e0,S4,ANSWER,ANSWER,"No. limit_at(""bo"", 20260712) = 25000 (manager period valid through 20260731); 25000 < 30000, so Bo is not qualified for ",ok,1
+p11,A:datalog+oracle,deepseek/deepseek-v4-pro-0813,20260831_135634_7177e0,S5,CONFLICT,CONFLICT,--,ok,1
+p11,A:datalog+oracle,deepseek/deepseek-v4-pro-0813,20260831_135634_7177e0,S6,ANSWER,ANSWER,cy (100000) and di (500000),ok,1
+p12,A:owl,deepseek/deepseek-v4-pro-0813,20260831_135741_191a26,S1,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p12,A:owl,deepseek/deepseek-v4-pro-0813,20260831_135741_191a26,S2,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p12,A:owl,deepseek/deepseek-v4-pro-0813,20260831_135741_191a26,S3,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p12,A:owl,deepseek/deepseek-v4-pro-0813,20260831_135741_191a26,S4,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p12,A:owl,deepseek/deepseek-v4-pro-0813,20260831_135741_191a26,S5,CONFLICT,CONFLICT,--,ok,1
+p12,A:owl,deepseek/deepseek-v4-pro-0813,20260831_135741_191a26,S6,ANSWER,AMBIGUOUS,--,overcaution,0
+p13,B:text+notes,deepseek/deepseek-v4-pro-0813,20260831_140023_479c8d,S1,ANSWER,ANSWER,none,ok,1
+p13,B:text+notes,deepseek/deepseek-v4-pro-0813,20260831_140023_479c8d,S2,ANSWER,ANSWER,"299,000",ok,1
+p13,B:text+notes,deepseek/deepseek-v4-pro-0813,20260831_140023_479c8d,S3,ANSWER,ANSWER,yes (bolt was approved until 2026-07-31; r10's date 2026-07-20 falls in the approved period),ok,1
+p13,B:text+notes,deepseek/deepseek-v4-pro-0813,20260831_140023_479c8d,S4,ANSWER,ANSWER,"yes (requester e040 is in corp_legal; the only in-chain approver there is e038 the manager, whose 2026-07-20 limit is 25",ok,1
+p13,B:text+notes,deepseek/deepseek-v4-pro-0813,20260831_140023_479c8d,S5,ANSWER,ANSWER,3,ok,1
+p13,B:text+notes,deepseek/deepseek-v4-pro-0813,20260831_140023_479c8d,S6,ANSWER,ANSWER,"116,000",ok,1
+p13,B:text+notes,deepseek/deepseek-v4-pro-0813,20260831_140023_479c8d,S7,CONFLICT,CONFLICT,--,ok,1
+p13,B:text+notes,deepseek/deepseek-v4-pro-0813,20260831_140023_479c8d,S8,ANSWER,ANSWER,40,ok,1
+p14,B:text-inline,deepseek/deepseek-v4-pro-0813,20260831_140154_3cc701,S1,ANSWER,ANSWER,None. No cost centre is over-committed for 2026Q3.,ok,1
+p14,B:text-inline,deepseek/deepseek-v4-pro-0813,20260831_140154_3cc701,S2,ANSWER,ANSWER,"299,000 (cap 600,000 − committed spend 301,000 = 118,000 eng_core + 88,000 eng_data + 95,000 eng_infra).",ok,1
+p14,B:text-inline,deepseek/deepseek-v4-pro-0813,20260831_140154_3cc701,S3,ANSWER,ANSWER,Yes. On 2026-07-20 bolt was approved (approved through 2026-07-31).,ok,1
+p14,B:text-inline,deepseek/deepseek-v4-pro-0813,20260831_140154_3cc701,S4,ANSWER,ANSWER,"Yes, escalation is required. On 2026-07-20 no one in corp_legal can approve 30,000 — the manager (e038) holds a 25,000 l",ok,1
+p14,B:text-inline,deepseek/deepseek-v4-pro-0813,20260831_140154_3cc701,S5,ANSWER,ANSWER,"3 (e038 Mgr Corp_Legal, e039 An Corp_Legal1, e040 An Corp_Legal2 — all in the corp_legal cost centre).",ok,1
+p14,B:text-inline,deepseek/deepseek-v4-pro-0813,20260831_140154_3cc701,S6,ANSWER,ANSWER,"116,000 (corp_legal pending requests: r15 12,000 + r31 12,000 [e038]; r08 12,000 + r17 30,000 + r25 20,000 [e039]; r14 3",ok,1
+p14,B:text-inline,deepseek/deepseek-v4-pro-0813,20260831_140154_3cc701,S7,CONFLICT,CONFLICT,--,ok,1
+p14,B:text-inline,deepseek/deepseek-v4-pro-0813,20260831_140154_3cc701,S8,ANSWER,ANSWER,40 (all employees e001–e040 roll up to Ada Vance; all four directors report to her directly).,ok,1
+p15,B:text-inline-flip,deepseek/deepseek-v4-pro-0813,20260831_140247_7af1d3,S1,ANSWER,ANSWER,none — no cost centre is over-committed for 2026Q3,ok,1
+p15,B:text-inline-flip,deepseek/deepseek-v4-pro-0813,20260831_140247_7af1d3,S2,ANSWER,ANSWER,"299,000",ok,1
+p15,B:text-inline-flip,deepseek/deepseek-v4-pro-0813,20260831_140247_7af1d3,S3,ANSWER,ANSWER,"no — 'bolt' is suspended as of today (2026-08-31), and vendor approval is judged on today's date",ok,1
+p15,B:text-inline-flip,deepseek/deepseek-v4-pro-0813,20260831_140247_7af1d3,S4,ANSWER,ANSWER,"yes — on the request's date (2026-07-20) the manager limit is 25,000, so no one in cost centre corp_legal can approve 30",ok,1
+p15,B:text-inline-flip,deepseek/deepseek-v4-pro-0813,20260831_140247_7af1d3,S5,ANSWER,ANSWER,3,ok,1
+p15,B:text-inline-flip,deepseek/deepseek-v4-pro-0813,20260831_140247_7af1d3,S6,ANSWER,ANSWER,"116,000",ok,1
+p15,B:text-inline-flip,deepseek/deepseek-v4-pro-0813,20260831_140247_7af1d3,S7,CONFLICT,CONFLICT,--,ok,1
+p15,B:text-inline-flip,deepseek/deepseek-v4-pro-0813,20260831_140247_7af1d3,S8,ANSWER,ANSWER,40,ok,1
+p16,B:datalog,deepseek/deepseek-v4-pro-0813,20260831_140414_d0e9ef,S1,ANSWER,ANSWER,None — no cost centre is over-committed for 2026Q3 (every centre's booked spend is within its cap; the highest leaf book,ok,1
+p16,B:datalog,deepseek/deepseek-v4-pro-0813,20260831_140414_d0e9ef,S2,ANSWER,ANSWER,"299,000 (cap 600,000 minus committed 301,000 = 118,000 + 88,000 + 95,000)",ok,1
+p16,B:datalog,deepseek/deepseek-v4-pro-0813,20260831_140414_d0e9ef,S3,ANSWER,ANSWER,"Yes — bolt is ""approved"" 20260101–20260731, and 2026-07-20 falls inside that window",ok,1
+p16,B:datalog,deepseek/deepseek-v4-pro-0813,20260831_140414_d0e9ef,S4,ANSWER,ANSWER,"Yes — the request has an approver (director e031 and vp e000, both with limit ≥ 30,000) but no approver inside corp_lega",ok,1
+p16,B:datalog,deepseek/deepseek-v4-pro-0813,20260831_140414_d0e9ef,S5,ANSWER,ANSWER,"3 (e038, e039, e040 in cost centre corp_legal)",ok,1
+p16,B:datalog,deepseek/deepseek-v4-pro-0813,20260831_140414_d0e9ef,S6,ANSWER,ANSWER,"116,000 (r14: 30,000 + r15: 12,000 + r08: 12,000 + r17: 30,000 + r25: 20,000 + r31: 12,000)",ok,1
+p16,B:datalog,deepseek/deepseek-v4-pro-0813,20260831_140414_d0e9ef,S7,CONFLICT,CONFLICT,--,ok,1
+p16,B:datalog,deepseek/deepseek-v4-pro-0813,20260831_140414_d0e9ef,S8,ANSWER,ANSWER,"40 (all employees e001–e040 chain up to Ada Vance, e000; she has no manager)",ok,1
+p17,B:datalog+clarify,deepseek/deepseek-v4-pro-0813,20260831_140509_6afea2,S1,ANSWER,ANSWER,none (no cost centre is over-committed for 2026Q3),ok,1
+p17,B:datalog+clarify,deepseek/deepseek-v4-pro-0813,20260831_140509_6afea2,S2,ANSWER,ANSWER,"299,000 (cap 600,000 − committed 301,000)",ok,1
+p17,B:datalog+clarify,deepseek/deepseek-v4-pro-0813,20260831_140509_6afea2,S3,ANSWER,ANSWER,"yes, approved (bolt's approved period 20260101–20260731 covers 20260720; suspension starts 20260801)",ok,1
+p17,B:datalog+clarify,deepseek/deepseek-v4-pro-0813,20260831_140509_6afea2,S4,ANSWER,ANSWER,"yes, requires escalation",ok,1
+p17,B:datalog+clarify,deepseek/deepseek-v4-pro-0813,20260831_140509_6afea2,S5,ANSWER,ANSWER,"3 (e038, e039, e040)",ok,1
+p17,B:datalog+clarify,deepseek/deepseek-v4-pro-0813,20260831_140509_6afea2,S6,ANSWER,ANSWER,"116,000 (e038: 12,000+12,000; e039: 12,000+30,000+20,000; e040: 30,000)",ok,1
+p17,B:datalog+clarify,deepseek/deepseek-v4-pro-0813,20260831_140509_6afea2,S7,CONFLICT,CONFLICT,--,ok,1
+p17,B:datalog+clarify,deepseek/deepseek-v4-pro-0813,20260831_140509_6afea2,S8,ANSWER,ANSWER,40 (all employees besides Ada Vance herself),ok,1
+p13,B:text+notes,deepseek/deepseek-v4-pro-0813,20260831_140555_dae9bb,S1,ANSWER,ANSWER,None — no cost centre is over-committed for 2026Q3.,ok,1
+p13,B:text+notes,deepseek/deepseek-v4-pro-0813,20260831_140555_dae9bb,S2,ANSWER,ANSWER,"299,000 (eng cap 600,000 − committed spend 301,000, which is eng_core 118,000 + eng_data 88,000 + eng_infra 95,000).",ok,1
+p13,B:text+notes,deepseek/deepseek-v4-pro-0813,20260831_140555_dae9bb,S3,ANSWER,ANSWER,Yes. Bolt was approved through 2026-07-31; the request date 2026-07-20 falls in the approved period.,ok,1
+p13,B:text+notes,deepseek/deepseek-v4-pro-0813,20260831_140555_dae9bb,S4,ANSWER,ANSWER,"Yes, escalation is required. r14 (30,000) is from e040 (analyst, corp_legal). Using the request's own date (2026-07-20),",ok,1
+p13,B:text+notes,deepseek/deepseek-v4-pro-0813,20260831_140555_dae9bb,S5,ANSWER,ANSWER,"3 (e038, e039, e040 in the corp_legal cost centre).",ok,1
+p13,B:text+notes,deepseek/deepseek-v4-pro-0813,20260831_140555_dae9bb,S6,ANSWER,ANSWER,"116,000 (r08 12,000 + r14 30,000 + r15 12,000 + r17 30,000 + r25 20,000 + r31 12,000).",ok,1
+p13,B:text+notes,deepseek/deepseek-v4-pro-0813,20260831_140555_dae9bb,S7,CONFLICT,CONFLICT,--,ok,1
+p13,B:text+notes,deepseek/deepseek-v4-pro-0813,20260831_140555_dae9bb,S8,ANSWER,ANSWER,"40 (e001 through e040 all trace back to e000, directly or through the director/manager chain).",ok,1
+p14,B:text-inline,deepseek/deepseek-v4-pro-0813,20260831_140700_d1e179,S1,ANSWER,ANSWER,"None. No cost centre is over-committed for 2026Q3 (committed spend never exceeds cap at any level: leaves all ≤ 150,000;",ok,1
+p14,B:text-inline,deepseek/deepseek-v4-pro-0813,20260831_140700_d1e179,S2,ANSWER,ANSWER,"299,000 (eng cap 600,000 less committed spend 301,000).",ok,1
+p14,B:text-inline,deepseek/deepseek-v4-pro-0813,20260831_140700_d1e179,S3,ANSWER,ANSWER,"Yes. 'bolt' was approved until 2026-07-31 and r10 is dated 2026-07-20, so the vendor is approved on the request's own da",ok,1
+p14,B:text-inline,deepseek/deepseek-v4-pro-0813,20260831_140700_d1e179,S4,ANSWER,ANSWER,"Yes. The requester (e040, analyst) is in corp_legal; on the request date 2026-07-20 the only approvers in that cost cent",ok,1
+p14,B:text-inline,deepseek/deepseek-v4-pro-0813,20260831_140700_d1e179,S5,ANSWER,ANSWER,"3 (e038, e039, e040 — cost centre corp_legal).",ok,1
+p14,B:text-inline,deepseek/deepseek-v4-pro-0813,20260831_140700_d1e179,S6,ANSWER,ANSWER,"116,000 (pending requests raised in corp_legal: r08 12,000 + r14 30,000 + r15 12,000 + r17 30,000 + r25 20,000 + r31 12,",ok,1
+p14,B:text-inline,deepseek/deepseek-v4-pro-0813,20260831_140700_d1e179,S7,CONFLICT,CONFLICT,--,ok,1
+p14,B:text-inline,deepseek/deepseek-v4-pro-0813,20260831_140700_d1e179,S8,ANSWER,ANSWER,40 (all employees e001–e040 roll up to Ada Vance through the reports-to chains).,ok,1
+p15,B:text-inline-flip,deepseek/deepseek-v4-pro-0813,20260831_140800_a28249,S1,ANSWER,ANSWER,None,ok,1
+p15,B:text-inline-flip,deepseek/deepseek-v4-pro-0813,20260831_140800_a28249,S2,ANSWER,ANSWER,299000,ok,1
+p15,B:text-inline-flip,deepseek/deepseek-v4-pro-0813,20260831_140800_a28249,S3,ANSWER,ANSWER,No — 'bolt' is suspended as of today (2026-08-31),ok,1
+p15,B:text-inline-flip,deepseek/deepseek-v4-pro-0813,20260831_140800_a28249,S4,ANSWER,ANSWER,Yes,ok,1
+p15,B:text-inline-flip,deepseek/deepseek-v4-pro-0813,20260831_140800_a28249,S5,ANSWER,ANSWER,3,ok,1
+p15,B:text-inline-flip,deepseek/deepseek-v4-pro-0813,20260831_140800_a28249,S6,ANSWER,ANSWER,116000,ok,1
+p15,B:text-inline-flip,deepseek/deepseek-v4-pro-0813,20260831_140800_a28249,S7,CONFLICT,CONFLICT,--,ok,1
+p15,B:text-inline-flip,deepseek/deepseek-v4-pro-0813,20260831_140800_a28249,S8,ANSWER,ANSWER,40,ok,1
+p16,B:datalog,deepseek/deepseek-v4-pro-0813,20260831_140848_5aedcb,S1,ANSWER,ANSWER,None — no cost centre is over-committed for 2026Q3.,ok,1
+p16,B:datalog,deepseek/deepseek-v4-pro-0813,20260831_140848_5aedcb,S2,ANSWER,ANSWER,"299,000 (cap 600,000 − committed 301,000)",ok,1
+p16,B:datalog,deepseek/deepseek-v4-pro-0813,20260831_140848_5aedcb,S3,ANSWER,ANSWER,"Yes — approved. 'bolt' has vendor_period(""approved"", 20260101, 20260731), and the request date 20260720 falls inside it.",ok,1
+p16,B:datalog,deepseek/deepseek-v4-pro-0813,20260831_140848_5aedcb,S4,ANSWER,ANSWER,Yes — escalation is required.,ok,1
+p16,B:datalog,deepseek/deepseek-v4-pro-0813,20260831_140848_5aedcb,S5,ANSWER,ANSWER,3,ok,1
+p16,B:datalog,deepseek/deepseek-v4-pro-0813,20260831_140848_5aedcb,S6,ANSWER,ANSWER,"116,000",ok,1
+p16,B:datalog,deepseek/deepseek-v4-pro-0813,20260831_140848_5aedcb,S7,CONFLICT,CONFLICT,--,ok,1
+p16,B:datalog,deepseek/deepseek-v4-pro-0813,20260831_140848_5aedcb,S8,ANSWER,ANSWER,40,ok,1
+p17,B:datalog+clarify,deepseek/deepseek-v4-pro-0813,20260831_140956_790c32,S1,ANSWER,ANSWER,none (no cost centre is over-committed for 2026Q3),ok,1
+p17,B:datalog+clarify,deepseek/deepseek-v4-pro-0813,20260831_140956_790c32,S2,ANSWER,ANSWER,"299,000",ok,1
+p17,B:datalog+clarify,deepseek/deepseek-v4-pro-0813,20260831_140956_790c32,S3,ANSWER,ANSWER,yes (approved),ok,1
+p17,B:datalog+clarify,deepseek/deepseek-v4-pro-0813,20260831_140956_790c32,S4,ANSWER,ANSWER,yes (requires escalation),ok,1
+p17,B:datalog+clarify,deepseek/deepseek-v4-pro-0813,20260831_140956_790c32,S5,ANSWER,ANSWER,3,ok,1
+p17,B:datalog+clarify,deepseek/deepseek-v4-pro-0813,20260831_140956_790c32,S6,ANSWER,ANSWER,"116,000",ok,1
+p17,B:datalog+clarify,deepseek/deepseek-v4-pro-0813,20260831_140956_790c32,S7,CONFLICT,CONFLICT,--,ok,1
+p17,B:datalog+clarify,deepseek/deepseek-v4-pro-0813,20260831_140956_790c32,S8,ANSWER,ANSWER,40,ok,1
+p13,B:text+notes,deepseek/deepseek-v4-pro-0813,20260831_141055_d3149f,S1,ANSWER,ANSWER,none (no cost centre is over-committed for 2026Q3),ok,1
+p13,B:text+notes,deepseek/deepseek-v4-pro-0813,20260831_141055_d3149f,S2,ANSWER,ANSWER,"299,000 (cap 600,000 minus committed spend 301,000 = eng_core 118,000 + eng_data 88,000 + eng_infra 95,000)",ok,1
+p13,B:text+notes,deepseek/deepseek-v4-pro-0813,20260831_141055_d3149f,S3,ANSWER,ANSWER,"Yes — 'bolt' was approved through 2026-07-31, and r10 is dated 2026-07-20, so the version in force on the request's own ",ok,1
+p13,B:text+notes,deepseek/deepseek-v4-pro-0813,20260831_141055_d3149f,S4,ANSWER,ANSWER,"Yes. corp_legal's only managers/analysts sit in cost centre corp_legal (e038 manager limit 25,000 as of 2026-07-20, anal",ok,1
+p13,B:text+notes,deepseek/deepseek-v4-pro-0813,20260831_141055_d3149f,S5,ANSWER,ANSWER,"3 (e038 Mgr Corp_Legal, e039 An Corp_Legal1, e040 An Corp_Legal2)",ok,1
+p13,B:text+notes,deepseek/deepseek-v4-pro-0813,20260831_141055_d3149f,S6,ANSWER,ANSWER,"116,000 (r08 12,000 + r14 30,000 + r15 12,000 + r17 30,000 + r25 20,000 + r31 12,000)",ok,1
+p13,B:text+notes,deepseek/deepseek-v4-pro-0813,20260831_141055_d3149f,S7,CONFLICT,CONFLICT,--,ok,1
+p13,B:text+notes,deepseek/deepseek-v4-pro-0813,20260831_141055_d3149f,S8,ANSWER,ANSWER,"40 (every employee except Ada herself reports to her, directly or through the director/manager chain)",ok,1
+p14,B:text-inline,deepseek/deepseek-v4-pro-0813,20260831_141149_6b4ae1,S1,ANSWER,ANSWER,"None. No cost centre is over-committed for 2026Q3. (Every leaf centre's booked spend is below its 150,000 cap; the large",ok,1
+p14,B:text-inline,deepseek/deepseek-v4-pro-0813,20260831_141149_6b4ae1,S2,ANSWER,ANSWER,"299,000. (eng cap 600,000 minus committed/booked spend 118,000+88,000+95,000 = 301,000.)",ok,1
+p14,B:text-inline,deepseek/deepseek-v4-pro-0813,20260831_141149_6b4ae1,S3,ANSWER,ANSWER,"Yes. On 2026-07-20 the request's own date, 'bolt' was approved (approved until 2026-07-31; the suspension only began 202",ok,1
+p14,B:text-inline,deepseek/deepseek-v4-pro-0813,20260831_141149_6b4ae1,S4,ANSWER,ANSWER,"Yes, escalation is required. The requester's department (cost centre corp_legal) contains only a manager (e038) and two ",ok,1
+p14,B:text-inline,deepseek/deepseek-v4-pro-0813,20260831_141149_6b4ae1,S5,ANSWER,ANSWER,"3. (Department = cost centre corp_legal: e038, e039, e040.)",ok,1
+p14,B:text-inline,deepseek/deepseek-v4-pro-0813,20260831_141149_6b4ae1,S6,ANSWER,ANSWER,"116,000. (Pending requests raised in corp_legal: r08=12,000, r14=30,000, r15=12,000, r17=30,000, r25=20,000, r31=12,000.",ok,1
+p14,B:text-inline,deepseek/deepseek-v4-pro-0813,20260831_141149_6b4ae1,S7,CONFLICT,CONFLICT,--,ok,1
+p14,B:text-inline,deepseek/deepseek-v4-pro-0813,20260831_141149_6b4ae1,S8,ANSWER,ANSWER,"40. (All employees other than Ada Vance herself — e001 through e040 — report to her, directly or via the director/manage",ok,1
+p15,B:text-inline-flip,deepseek/deepseek-v4-pro-0813,20260831_141254_8ff3ce,S1,ANSWER,ANSWER,"None. No cost centre is over-committed. Leaf booked spend all sit under their 150,000 caps, and every aggregate (corp 31",ok,1
+p15,B:text-inline-flip,deepseek/deepseek-v4-pro-0813,20260831_141254_8ff3ce,S2,ANSWER,ANSWER,"299,000. eng committed spend = 118,000 + 88,000 + 95,000 = 301,000; cap 600,000 − 301,000 = 299,000.",ok,1
+p15,B:text-inline-flip,deepseek/deepseek-v4-pro-0813,20260831_141254_8ff3ce,S3,ANSWER,ANSWER,"No. Vendor approval is judged as of today (P6): bolt was suspended from 2026-08-01 and today is 2026-08-31, so bolt is s",ok,1
+p15,B:text-inline-flip,deepseek/deepseek-v4-pro-0813,20260831_141254_8ff3ce,S4,ANSWER,ANSWER,"Yes. Requester e040 (corp_legal). Its department = cost centre corp_legal, whose only management-chain member is manager",ok,1
+p15,B:text-inline-flip,deepseek/deepseek-v4-pro-0813,20260831_141254_8ff3ce,S5,ANSWER,ANSWER,"3. An Corp_Legal1 (e039) is in cost centre corp_legal, which holds e038, e039, e040.",ok,1
+p15,B:text-inline-flip,deepseek/deepseek-v4-pro-0813,20260831_141254_8ff3ce,S6,ANSWER,ANSWER,"116,000. Pending requests from corp_legal: r08 (12,000), r14 (30,000), r15 (12,000), r17 (30,000), r25 (20,000), r31 (12",ok,1
+p15,B:text-inline-flip,deepseek/deepseek-v4-pro-0813,20260831_141254_8ff3ce,S7,CONFLICT,CONFLICT,--,ok,1
+p15,B:text-inline-flip,deepseek/deepseek-v4-pro-0813,20260831_141254_8ff3ce,S8,ANSWER,ANSWER,"40. All 40 employees below Ada Vance (e000) — 4 directors, 12 managers, 24 analysts — report to her directly or indirect",ok,1
+p16,B:datalog,deepseek/deepseek-v4-pro-0813,20260831_141358_ee3842,S1,ANSWER,ANSWER,none (no cost centre is over-committed for 2026Q3; only booked spend counts — the largest committed value is company at ,ok,1
+p16,B:datalog,deepseek/deepseek-v4-pro-0813,20260831_141358_ee3842,S2,ANSWER,ANSWER,"299,000 (eng committed = eng_core 118,000 + eng_data 88,000 + eng_infra 95,000 = 301,000; cap 600,000 − 301,000)",ok,1
+p16,B:datalog,deepseek/deepseek-v4-pro-0813,20260831_141358_ee3842,S3,ANSWER,ANSWER,"approved (bolt is ""approved"" 2026-01-01 to 2026-07-31; r10's date 2026-07-20 falls inside that period, so the dated vers",ok,1
+p16,B:datalog,deepseek/deepseek-v4-pro-0813,20260831_141358_ee3842,S4,ANSWER,ANSWER,"yes (r14 = 30,000 from e040, cost centre corp_legal; e040's manager e038 has limit 25,000 on 2026-07-20 so cannot approv",ok,1
+p16,B:datalog,deepseek/deepseek-v4-pro-0813,20260831_141358_ee3842,S5,ANSWER,ANSWER,"3 (An Corp_Legal1 is e039, cost centre corp_legal; employees e038, e039, e040)",ok,1
+p16,B:datalog,deepseek/deepseek-v4-pro-0813,20260831_141358_ee3842,S6,ANSWER,ANSWER,"116,000 (corp_legal pending requests: e038 r15 12,000 + r31 12,000; e039 r08 12,000 + r17 30,000 + r25 20,000; e040 r14 ",ok,1
+p16,B:datalog,deepseek/deepseek-v4-pro-0813,20260831_141358_ee3842,S7,CONFLICT,CONFLICT,--,ok,1
+p16,B:datalog,deepseek/deepseek-v4-pro-0813,20260831_141358_ee3842,S8,ANSWER,ANSWER,"40 (all employees e001–e040 report to Ada Vance/e000 directly or indirectly; the 4 directors direct, everyone else throu",ok,1
+p17,B:datalog+clarify,deepseek/deepseek-v4-pro-0813,20260831_141513_a8ee9a,S1,ANSWER,ANSWER,none — no cost centre is over-committed for 2026Q3,ok,1
+p17,B:datalog+clarify,deepseek/deepseek-v4-pro-0813,20260831_141513_a8ee9a,S2,ANSWER,ANSWER,"299,000 (committed 301,000 against an eng cap of 600,000)",ok,1
+p17,B:datalog+clarify,deepseek/deepseek-v4-pro-0813,20260831_141513_a8ee9a,S3,ANSWER,ANSWER,"yes — on r10's date 2026-07-20, bolt is within its approved period (2026-01-01 to 2026-07-31)",ok,1
+p17,B:datalog+clarify,deepseek/deepseek-v4-pro-0813,20260831_141513_a8ee9a,S4,ANSWER,ANSWER,"yes — r14 has approvers (e031 and e000) but none in the requester's cost centre corp_legal, so it escalates",ok,1
+p17,B:datalog+clarify,deepseek/deepseek-v4-pro-0813,20260831_141513_a8ee9a,S5,ANSWER,ANSWER,3,ok,1
+p17,B:datalog+clarify,deepseek/deepseek-v4-pro-0813,20260831_141513_a8ee9a,S6,ANSWER,ANSWER,"116,000",ok,1
+p17,B:datalog+clarify,deepseek/deepseek-v4-pro-0813,20260831_141513_a8ee9a,S7,CONFLICT,CONFLICT,--,ok,1
+p17,B:datalog+clarify,deepseek/deepseek-v4-pro-0813,20260831_141513_a8ee9a,S8,ANSWER,ANSWER,40,ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_160120_c22935,S1,ANSWER,ANSWER,none (no cost centre is over-committed for 2026Q3),ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_160120_c22935,S2,ANSWER,ANSWER,299000,ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_160120_c22935,S3,ANSWER,ANSWER,yes (bolt is approved on 2026-07-20),ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_160120_c22935,S4,ANSWER,ANSWER,yes (escalation applies),ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_160120_c22935,S5,ANSWER,ANSWER,3,ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_160120_c22935,S6,ANSWER,ANSWER,116000,ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_160120_c22935,S7,CONFLICT,CONFLICT,--,ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_160120_c22935,S8,ANSWER,ANSWER,40,ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_160337_606eb5,S1,ANSWER,ANSWER,"none — no cost centre is over-committed for 2026Q3 (over_committed set is empty; e.g. company booked 1,117,000 vs cap 2,",ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_160337_606eb5,S2,ANSWER,ANSWER,"299,000 (eng committed = 118,000 + 88,000 + 95,000 = 301,000; headroom = 600,000 − 301,000)",ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_160337_606eb5,S3,ANSWER,ANSWER,"yes, approved (date 2026-07-20 falls within bolt's ""approved"" period 2026-01-01..2026-07-31; the ""suspended"" period star",ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_160337_606eb5,S4,ANSWER,ANSWER,"yes, requires escalation (request has approvers in its chain, but none share cost centre corp_legal with the requester e",ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_160337_606eb5,S5,ANSWER,ANSWER,"3 (cost centre corp_legal has three employees: e038, e039, e040)",ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_160337_606eb5,S6,ANSWER,ANSWER,"116,000 (pending requests r08=12,000 + r14=30,000 + r15=12,000 + r17=30,000 + r25=20,000 + r31=12,000)",ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_160337_606eb5,S7,CONFLICT,CONFLICT,--,ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_160337_606eb5,S8,ANSWER,ANSWER,40 (e001..e040 all report to Ada Vance directly or indirectly; e000 herself is excluded),ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_160549_019117,S1,ANSWER,ANSWER,none (no cost centres are over-committed for 2026Q3),ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_160549_019117,S2,ANSWER,ANSWER,"299,000 (cap 600,000 minus committed 301,000)",ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_160549_019117,S3,ANSWER,ANSWER,"yes — bolt is approved on 2026-07-20 (approved window 20260101–20260731), so vendor_ok(r10) holds",ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_160549_019117,S4,ANSWER,ANSWER,"yes — r14 has an approver but no same-department approver, so escalation(r14) holds",ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_160549_019117,S5,ANSWER,ANSWER,"3 (An Corp_Legal1's department = cost centre corp_legal: e038, e039, e040)",ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_160549_019117,S6,ANSWER,ANSWER,"116,000",ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_160549_019117,S7,CONFLICT,CONFLICT,--,ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_160549_019117,S8,ANSWER,ANSWER,40 (every employee except Ada Vance herself reports to her directly or indirectly),ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165553_a7a338,S1,ANSWER,ANSWER,none — no cost centre is over-committed for 2026Q3,ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165553_a7a338,S2,ANSWER,ANSWER,"299,000",ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165553_a7a338,S3,ANSWER,ANSWER,"yes — vendor ""bolt"" is approved on 2026-07-20 (approved window 20260101–20260731)",ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165553_a7a338,S4,ANSWER,ANSWER,yes — r14 requires escalation (approvers e000/e031 are outside corp_legal; no same-centre approver),ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165553_a7a338,S5,ANSWER,ANSWER,"3 (e038, e039, e040)",ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165553_a7a338,S6,ANSWER,ANSWER,"116,000",ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165553_a7a338,S7,CONFLICT,CONFLICT,--,ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165553_a7a338,S8,ANSWER,ANSWER,40,ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165553_abd74f,S1,ANSWER,ANSWER,none — no cost centre is over-committed for 2026Q3,ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165553_abd74f,S2,ANSWER,ANSWER,"299,000",ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165553_abd74f,S3,ANSWER,ANSWER,"yes — vendor ""bolt"" is approved on 2026-07-20 (approved period 20260101–20260731)",ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165553_abd74f,S4,ANSWER,ANSWER,yes — r14 requires escalation,ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165553_abd74f,S5,ANSWER,ANSWER,3,ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165553_abd74f,S6,ANSWER,ANSWER,"116,000",ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165553_abd74f,S7,CONFLICT,CONFLICT,--,ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165553_abd74f,S8,ANSWER,ANSWER,40,ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165554_7c598c,S1,ANSWER,ANSWER,none (no cost centre is over-committed for 2026Q3),ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165554_7c598c,S2,ANSWER,ANSWER,"299,000 (eng headroom; committed 301,000 against cap 600,000)",ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165554_7c598c,S3,ANSWER,ANSWER,"Yes (bolt is ""approved"" 20260101–20260731; r10's date 20260720 falls inside)",ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165554_7c598c,S4,ANSWER,ANSWER,"Yes (r14 has an approver but no approver in its own cost centre corp_legal, so it escalates)",ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165554_7c598c,S5,ANSWER,ANSWER,"3 (e038 manager, e039, e040 — corp_legal)",ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165554_7c598c,S6,ANSWER,ANSWER,"116,000 (total pending exposure of cost centre corp_legal)",ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165554_7c598c,S7,CONFLICT,CONFLICT,--,ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165554_7c598c,S8,ANSWER,ANSWER,40 (every employee e001–e040 reports up to Ada Vance; e000 herself is the root),ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165615_a54c3d,S1,ANSWER,ANSWER,none — no cost centre is over-committed for 2026Q3,ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165615_a54c3d,S2,ANSWER,ANSWER,"299,000",ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165615_a54c3d,S3,ANSWER,ANSWER,yes — vendor 'bolt' is approved on 2026-07-20 (its approved period 20260101–20260731 covers that date),ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165615_a54c3d,S4,ANSWER,ANSWER,"yes — r14 requires escalation (it has an approver, but no approver within the requester's own cost centre corp_legal)",ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165615_a54c3d,S5,ANSWER,ANSWER,3,ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165615_a54c3d,S6,ANSWER,ANSWER,"116,000",ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165615_a54c3d,S7,CONFLICT,CONFLICT,--,ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165615_a54c3d,S8,ANSWER,ANSWER,40,ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165753_01b643,S1,ANSWER,ANSWER,none,ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165753_01b643,S2,ANSWER,ANSWER,299000,ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165753_01b643,S3,ANSWER,ANSWER,yes,ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165753_01b643,S4,ANSWER,ANSWER,yes,ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165753_01b643,S5,ANSWER,ANSWER,3,ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165753_01b643,S6,ANSWER,ANSWER,116000,ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165753_01b643,S7,CONFLICT,CONFLICT,--,ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_165753_01b643,S8,ANSWER,ANSWER,40,ok,1
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_170223_421eaa,S1,ANSWER,,,missing,0
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_170223_421eaa,S2,ANSWER,,,missing,0
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_170223_421eaa,S3,ANSWER,,,missing,0
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_170223_421eaa,S4,ANSWER,,,missing,0
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_170223_421eaa,S5,ANSWER,,,missing,0
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_170223_421eaa,S6,ANSWER,,,missing,0
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_170223_421eaa,S7,CONFLICT,,,missing,0
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_170223_421eaa,S8,ANSWER,,,missing,0
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_170804_a51f36,S1,ANSWER,,,missing,0
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_170804_a51f36,S2,ANSWER,,,missing,0
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_170804_a51f36,S3,ANSWER,,,missing,0
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_170804_a51f36,S4,ANSWER,,,missing,0
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_170804_a51f36,S5,ANSWER,,,missing,0
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_170804_a51f36,S6,ANSWER,,,missing,0
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_170804_a51f36,S7,CONFLICT,,,missing,0
+p18,B:datalog+oracle-required,deepseek/deepseek-v4-pro-0813,20260831_170804_a51f36,S8,ANSWER,,,missing,0
+p18,B:datalog+oracle-required,z-ai/glm-5.3,20260831_172259_b1b0a9,S1,ANSWER,ANSWER,None — no cost centre is over-committed for 2026Q3 (the over_committed relation is empty),ok,1
+p18,B:datalog+oracle-required,z-ai/glm-5.3,20260831_172259_b1b0a9,S2,ANSWER,ANSWER,299000 (committed 301000 against a 600000 cap),ok,1
+p18,B:datalog+oracle-required,z-ai/glm-5.3,20260831_172259_b1b0a9,S3,ANSWER,ANSWER,"Yes — bolt's approved period runs 2026-01-01 to 2026-07-31 and the request date 2026-07-20 falls inside it, so vendor_ok",ok,1
+p18,B:datalog+oracle-required,z-ai/glm-5.3,20260831_172259_b1b0a9,S4,ANSWER,ANSWER,"Yes — approver(r14) holds only for Ada Vance (e000) and Dir Corp (e031), neither in cost centre corp_legal, so no dept_a",ok,1
+p18,B:datalog+oracle-required,z-ai/glm-5.3,20260831_172259_b1b0a9,S5,ANSWER,ANSWER,"3 (An Corp_Legal1 sits in cost centre corp_legal, which has a headcount of 3)",ok,1
+p18,B:datalog+oracle-required,z-ai/glm-5.3,20260831_172259_b1b0a9,S6,ANSWER,ANSWER,116000 (pending exposure of cost centre corp_legal),ok,1
+p18,B:datalog+oracle-required,z-ai/glm-5.3,20260831_172259_b1b0a9,S7,CONFLICT,CONFLICT,--,ok,1
+p18,B:datalog+oracle-required,z-ai/glm-5.3,20260831_172259_b1b0a9,S8,ANSWER,ANSWER,40,ok,1

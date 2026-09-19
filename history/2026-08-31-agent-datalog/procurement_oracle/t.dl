@@ -1,0 +1,10 @@
+.decl A(x: symbol, y: number)
+.decl S1(x: symbol, s: number)
+.decl S2(x: symbol, s: number)
+A("a",1).
+A("a",2).
+A("b",5).
+S1(x, s) :- A(x, _), s = sum y : { A(x, y) }.
+S2(x, s) :- s = sum y : A(x, y).
+.output S1
+.output S2

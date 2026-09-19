@@ -1,0 +1,146 @@
+You are answering questions about a procurement approval process.
+Read the material, then answer the questions at the end.
+
+The policy is given as an OWL 2 ontology.
+
+```turtle
+@prefix :    <http://example.org/proc#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:<http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<http://example.org/proc> a owl:Ontology .
+
+# ---------- TBox: what OWL genuinely does well ----------
+:Employee a owl:Class . :Department a owl:Class . :Vendor a owl:Class .
+:Request  a owl:Class . :Role a owl:Class .
+:Analyst a owl:Class ; rdfs:subClassOf :Role . :Manager a owl:Class ; rdfs:subClassOf :Role .
+:Director a owl:Class ; rdfs:subClassOf :Role . :VP a owl:Class ; rdfs:subClassOf :Role .
+[] a owl:AllDisjointClasses ; owl:members ( :Analyst :Manager :Director :VP ) .
+[] a owl:AllDisjointClasses ; owl:members ( :Employee :Vendor :Request :Department ) .
+
+:reportsTo a owl:ObjectProperty , owl:FunctionalProperty ;
+    rdfs:domain :Employee ; rdfs:range :Employee ;
+    rdfs:subPropertyOf :reportsToTransitive .
+:reportsToTransitive a owl:ObjectProperty , owl:TransitiveProperty ;
+    rdfs:domain :Employee ; rdfs:range :Employee .
+:hasRole a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain :Employee ; rdfs:range :Role .
+:inDepartment a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain :Employee ; rdfs:range :Department .
+:approvalLimit a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain :Employee ; rdfs:range xsd:decimal .
+:requestedBy a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain :Request ; rdfs:range :Employee .
+:amount a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain :Request ; rdfs:range xsd:decimal .
+:fromVendor a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain :Request ; rdfs:range :Vendor .
+:requestDate a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain :Request ; rdfs:range xsd:date .
+
+# n-ary facts have no direct RDF form; each needs a reifying individual
+:VendorStatusPeriod a owl:Class .
+:ofVendor a owl:ObjectProperty ; rdfs:domain :VendorStatusPeriod ; rdfs:range :Vendor .
+:statusValue a owl:DatatypeProperty ; rdfs:domain :VendorStatusPeriod .
+:Delegation a owl:Class .
+:delegator a owl:ObjectProperty ; rdfs:domain :Delegation ; rdfs:range :Employee .
+:delegate  a owl:ObjectProperty ; rdfs:domain :Delegation ; rdfs:range :Employee .
+:SpendRecord a owl:Class .
+:ofDepartment a owl:ObjectProperty ; rdfs:domain :SpendRecord ; rdfs:range :Department .
+:quarter a owl:DatatypeProperty . :committed a owl:DatatypeProperty . :capAmount a owl:DatatypeProperty .
+:validFrom a owl:DatatypeProperty ; rdfs:range xsd:date .
+:validTo a owl:DatatypeProperty ; rdfs:range xsd:date .
+
+# a genuine OWL axiom: a large request is one needing director sign-off
+:LargeRequest a owl:Class ; rdfs:subClassOf :Request .
+:hasApprover a owl:ObjectProperty ; rdfs:domain :Request ; rdfs:range :Employee .
+:LargeRequest rdfs:subClassOf [ a owl:Restriction ;
+    owl:onProperty :hasApprover ; owl:minCardinality "2"^^xsd:nonNegativeInteger ] .
+
+# ---------- ABox ----------
+:ops a :Department . :finance a :Department .
+:ann a :Employee ; :hasRole :analystRole ; :inDepartment :ops ; :approvalLimit 5000 ; :reportsTo :bo .
+:bo  a :Employee ; :hasRole :managerRole ; :inDepartment :ops ; :approvalLimit 25000 ; :reportsTo :cy .
+:cy  a :Employee ; :hasRole :directorRole ; :inDepartment :ops ; :approvalLimit 100000 ; :reportsTo :di .
+:di  a :Employee ; :hasRole :vpRole ; :inDepartment :ops ; :approvalLimit 500000 .
+:ed  a :Employee ; :hasRole :managerRole ; :inDepartment :finance ; :approvalLimit 25000 ; :reportsTo :cy .
+:analystRole a :Analyst . :managerRole a :Manager . :directorRole a :Director . :vpRole a :VP .
+[] a owl:AllDifferent ; owl:members ( :ann :bo :cy :di :ed ) .
+
+:acme a :Vendor . :bolt a :Vendor . :cog a :Vendor .
+:vs1 a :VendorStatusPeriod ; :ofVendor :acme ; :statusValue "approved" ; :validFrom "2026-01-01"^^xsd:date ; :validTo "2026-12-31"^^xsd:date .
+:vs2 a :VendorStatusPeriod ; :ofVendor :bolt ; :statusValue "approved" ; :validFrom "2026-01-01"^^xsd:date ; :validTo "2026-05-31"^^xsd:date .
+:vs3 a :VendorStatusPeriod ; :ofVendor :bolt ; :statusValue "suspended" ; :validFrom "2026-06-01"^^xsd:date ; :validTo "2026-12-31"^^xsd:date .
+:vs4 a :VendorStatusPeriod ; :ofVendor :cog ; :statusValue "approved" ; :validFrom "2026-03-01"^^xsd:date ; :validTo "2026-12-31"^^xsd:date .
+
+:r1 a :Request ; :requestedBy :ann ; :amount 4000 ; :fromVendor :acme ; :requestDate "2026-07-10"^^xsd:date .
+:r2 a :Request ; :requestedBy :ann ; :amount 30000 ; :fromVendor :acme ; :requestDate "2026-07-12"^^xsd:date .
+:r3 a :Request ; :requestedBy :ann ; :amount 12000 ; :fromVendor :bolt ; :requestDate "2026-07-15"^^xsd:date .
+:r4 a :Request ; :requestedBy :bo ; :amount 80000 ; :fromVendor :cog ; :requestDate "2026-08-01"^^xsd:date .
+:r5 a :Request ; :requestedBy :ed ; :amount 9000 ; :fromVendor :acme ; :requestDate "2026-08-05"^^xsd:date .
+:r6 a :Request ; :requestedBy :ann ; :amount 20000 ; :fromVendor :cog ; :requestDate "2026-09-20"^^xsd:date .
+
+:ov1 :violationOf :ed .
+:dg1 a :Delegation ; :delegator :cy ; :delegate :di ; :validFrom "2026-07-11"^^xsd:date ; :validTo "2026-07-20"^^xsd:date .
+:sp1 a :SpendRecord ; :ofDepartment :ops ; :quarter "2026Q3" ; :committed 34000 ; :capAmount 100000 .
+:sp2 a :SpendRecord ; :ofDepartment :finance ; :quarter "2026Q3" ; :committed 5000 ; :capAmount 40000 .
+```
+
+This is an OWL 2 ontology. OWL is a description logic: it does
+subsumption, property characteristics and cardinality. It has no arithmetic
+comparison, no negation-as-failure, no rule precedence, and its consequence relation
+is monotonic -- an axiom, once entailed, cannot be withdrawn by adding facts.
+
+An OWL reasoner is available as an oracle (ASK: as above). If a scenario cannot be
+decided by this ontology at all, say so: STATUS: AMBIGUOUS with
+READINGS: not expressible in OWL -- <one line on which feature is missing>.
+
+DATA
+
+Employees (id, name, role, cost centre, org unit, approval limit):
+  ann, Ann Reyes, analyst, ops, operations, 5000
+  bo, Bo Chen, manager, ops, operations, 25000
+  cy, Cy Novak, director, ops, leadership, 100000
+  di, Di Okafor, vp, ops, leadership, 500000
+  ed, Ed Marsh, manager, finance, finance, 25000
+
+Reports-to (employee, manager):
+  ann -> bo
+  bo -> cy
+  cy -> di
+  ed -> cy
+
+Requests (id, requester, amount, category, vendor, request date, status):
+  r1, ann, 4000, software, acme, 2026-07-10, pending
+  r2, ann, 30000, hardware, acme, 2026-07-12, pending
+  r3, ann, 12000, services, bolt, 2026-07-15, pending
+  r4, bo, 80000, capital, cog, 2026-07-20, pending
+  r5, ed, 9000, software, acme, 2026-08-05, pending
+  r6, ann, 20000, services, cog, 2026-09-20, pending
+
+Open compliance violations: ed
+Committed spend 2026Q3: ops 34000; finance 5000
+Quarterly cap 2026Q3: ops 150000; finance 40000
+Today's date: 2026-08-31
+
+QUESTIONS
+
+S1. Does request r4 pass the cost-centre cap check for 2026Q3? Give the verdict and the number.
+
+S2. The capital-expenditure exemption from the cap was withdrawn effective 2026-08-01. r4 is a capital request dated 2026-07-20 and is still pending. Is r4 exempt from the cap?
+
+S3. What is the total approval limit of everyone in Cy Novak's department?
+
+S4. The approval limit for the role 'manager' was 25000 until 2026-07-31 and 40000 from 2026-08-01. Today is 2026-08-31. Is Bo Chen a qualified approver for r2?
+
+S5. Two rules both apply to r5: requests from an employee with an open compliance violation are denied, and software requests under 10000 are auto-approved. What happens to r5?
+
+S6. Which employees have an approval limit strictly greater than 25000?
+
+OUTPUT FORMAT -- answer every scenario in exactly this shape, nothing else:
+
+SCENARIO: <id>
+STATUS: ANSWER or AMBIGUOUS or CONFLICT
+ANSWER: <the answer, or -- if you cannot give one>
+READINGS: <if AMBIGUOUS or CONFLICT: each reading and the answer it produces, on one
+           line, separated by " | ". Otherwise: -->
+
+Use STATUS: ANSWER only when the material determines exactly one answer.
+Use STATUS: AMBIGUOUS when the wording admits more than one reading that would give
+different answers. Use STATUS: CONFLICT when two rules both apply and nothing says
+which wins.

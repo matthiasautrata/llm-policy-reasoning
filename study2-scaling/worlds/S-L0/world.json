@@ -1,0 +1,1 @@
+{"depth": 2, "branch": 2, "analysts": 2, "level": 0, "seed": 1, "cost_centres": 7, "employees": 15, "requests": 12, "facts": 76, "prompt_chars": {"text": 3270, "datalog": 4504, "tool": 4751, "shacl": 9636, "shacl-tool": 9870}, "shacl_engine_seconds": 0.72}

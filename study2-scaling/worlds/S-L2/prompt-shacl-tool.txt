@@ -1,0 +1,141 @@
+You are answering questions about a procurement approval policy.
+Read the material, then answer the questions at the end. Treat the material as complete.
+
+RULES AND FACTS -- the policy as an OWL ontology with SHACL-AF rules and Turtle data
+
+@prefix ex:   <http://example.org/proc#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+# ---------- schema (OWL) ----------
+ex:CostCentre a owl:Class .  ex:Employee a owl:Class .  ex:Role a owl:Class .
+ex:Vendor a owl:Class .      ex:Request a owl:Class .
+ex:parent      a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain ex:CostCentre ; rdfs:range ex:CostCentre .
+ex:booked      a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:CostCentre ; rdfs:range xsd:integer .
+ex:cap         a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:CostCentre ; rdfs:range xsd:integer .
+ex:role        a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain ex:Employee ; rdfs:range ex:Role .
+ex:costCentre  a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain ex:Employee ; rdfs:range ex:CostCentre .
+ex:reportsTo   a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain ex:Employee ; rdfs:range ex:Employee .
+ex:limit       a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:Role ; rdfs:range xsd:integer .
+ex:status      a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:Vendor ; rdfs:range xsd:string .
+ex:requester   a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain ex:Request ; rdfs:range ex:Employee .
+ex:amount      a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:Request ; rdfs:range xsd:integer .
+ex:category    a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:Request ; rdfs:range xsd:string .
+ex:vendor      a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain ex:Request ; rdfs:range ex:Vendor .
+ex:violation   a owl:DatatypeProperty ; rdfs:domain ex:Employee ; rdfs:range xsd:boolean .
+ex:emergency   a owl:DatatypeProperty ; rdfs:domain ex:Request ; rdfs:range xsd:boolean .
+# derived by the SHACL rules below; boolean flags are asserted only when true
+ex:ancestor a owl:ObjectProperty , owl:TransitiveProperty .  ex:parent rdfs:subPropertyOf ex:ancestor .
+ex:inChainOf a owl:ObjectProperty , owl:TransitiveProperty .  ex:reportsTo rdfs:subPropertyOf ex:inChainOf .
+ex:bookedTotal a owl:DatatypeProperty .  ex:headroom a owl:DatatypeProperty .  ex:overCap a owl:DatatypeProperty .
+ex:charges a owl:ObjectProperty .  ex:capBreach a owl:DatatypeProperty .  ex:hasApprover a owl:DatatypeProperty .
+ex:bigCapital a owl:DatatypeProperty .
+ex:vendorOk a owl:DatatypeProperty .  ex:eligible a owl:DatatypeProperty .
+ex:denied a owl:DatatypeProperty .
+ex:approved a owl:DatatypeProperty .
+
+# ---------- rules (SHACL-AF). sh:order stratifies: a rule reads only properties derived at a lower order ----------
+ex:prefixes a owl:Ontology ; sh:declare [ sh:prefix "ex" ; sh:namespace "http://example.org/proc#"^^xsd:anyURI ] .
+ex:CostCentreRules a sh:NodeShape ; sh:targetClass ex:CostCentre ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 1 ; sh:prefixes ex:prefixes ;
+    sh:construct """CONSTRUCT { $this ex:ancestor ?a } WHERE { $this ex:parent+ ?a }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 2 ; sh:prefixes ex:prefixes ;
+    sh:construct """CONSTRUCT { $this ex:bookedTotal ?t } WHERE { { SELECT $this (SUM(?b) AS ?t) WHERE {
+      ?d ex:parent* $this . OPTIONAL { ?d ex:booked ?b0 } BIND(COALESCE(?b0, 0) AS ?b) } GROUP BY $this } }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 3 ; sh:prefixes ex:prefixes ;
+    sh:construct """CONSTRUCT { $this ex:headroom ?h } WHERE { $this ex:bookedTotal ?t ; ex:cap ?k . BIND(?k - ?t AS ?h) }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 3 ; sh:prefixes ex:prefixes ;
+    sh:construct """CONSTRUCT { $this ex:overCap true } WHERE { $this ex:bookedTotal ?t ; ex:cap ?k . FILTER(?t > ?k) }""" ] .
+ex:EmployeeRules a sh:NodeShape ; sh:targetClass ex:Employee ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 1 ; sh:prefixes ex:prefixes ;
+    sh:construct """CONSTRUCT { $this ex:inChainOf ?m } WHERE { $this ex:reportsTo+ ?m }""" ] .
+ex:RequestRules a sh:NodeShape ; sh:targetClass ex:Request ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 1 ; sh:prefixes ex:prefixes ;
+    sh:construct """CONSTRUCT { $this ex:bigCapital true } WHERE { $this ex:category "capital" ; ex:amount ?a . FILTER(?a > 50000) }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 1 ; sh:prefixes ex:prefixes ;
+    sh:construct """CONSTRUCT { $this ex:vendorOk true } WHERE { $this ex:vendor/ex:status "approved" }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 1 ; sh:prefixes ex:prefixes ;
+    sh:construct """CONSTRUCT { $this ex:denied true } WHERE { $this ex:requester/ex:violation true }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 2 ; sh:prefixes ex:prefixes ;
+    sh:construct """CONSTRUCT { $this ex:charges ?c } WHERE { $this ex:requester/ex:costCentre/ex:parent* ?c }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 2 ; sh:prefixes ex:prefixes ;
+    sh:construct """CONSTRUCT { $this ex:hasApprover true } WHERE { $this ex:requester/ex:inChainOf ?m ; ex:amount ?a .
+      ?m ex:role/ex:limit ?l . FILTER(?l >= ?a) }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 2 ; sh:prefixes ex:prefixes ;
+    sh:construct """CONSTRUCT { $this ex:vendorOk true } WHERE { $this ex:emergency true ; ex:vendor/ex:status "suspended" .
+      FILTER NOT EXISTS { $this ex:bigCapital true } }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 3 ; sh:prefixes ex:prefixes ;
+    sh:construct """CONSTRUCT { $this ex:capBreach true } WHERE { $this ex:charges ?c ; ex:amount ?a .
+      ?c ex:bookedTotal ?t ; ex:cap ?k . FILTER(?t + ?a > ?k) }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 4 ; sh:prefixes ex:prefixes ;
+    sh:construct """CONSTRUCT { $this ex:eligible true } WHERE { $this ex:hasApprover true ; ex:vendorOk true .
+      FILTER NOT EXISTS { $this ex:capBreach true } }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 5 ; sh:prefixes ex:prefixes ;
+    sh:construct """CONSTRUCT { $this ex:approved true } WHERE { $this ex:eligible true . FILTER NOT EXISTS { $this ex:denied true } }""" ] .
+
+# ---------- data ----------
+ex:company a ex:CostCentre ; ex:booked 36000 ; ex:cap 546000 .
+ex:cc1 a ex:CostCentre ; ex:parent ex:company ; ex:cap 194000 .
+ex:cc1_1 a ex:CostCentre ; ex:parent ex:cc1 ; ex:booked 57000 ; ex:cap 55000 .
+ex:cc1_2 a ex:CostCentre ; ex:parent ex:cc1 ; ex:booked 112000 ; ex:cap 134000 .
+ex:cc2 a ex:CostCentre ; ex:parent ex:company ; ex:cap 194000 .
+ex:cc2_1 a ex:CostCentre ; ex:parent ex:cc2 ; ex:booked 137000 ; ex:cap 164000 .
+ex:cc2_2 a ex:CostCentre ; ex:parent ex:cc2 ; ex:booked 48000 ; ex:cap 57000 .
+ex:vp a ex:Role ; ex:limit 500000 .
+ex:director a ex:Role ; ex:limit 100000 .
+ex:senior_manager a ex:Role ; ex:limit 50000 .
+ex:manager a ex:Role ; ex:limit 25000 .
+ex:analyst a ex:Role ; ex:limit 5000 .
+ex:acme a ex:Vendor ; ex:status "approved" .
+ex:bolt a ex:Vendor ; ex:status "suspended" .
+ex:cog a ex:Vendor ; ex:status "approved" .
+ex:dyne a ex:Vendor ; ex:status "suspended" .
+ex:edge a ex:Vendor ; ex:status "approved" .
+ex:e000 a ex:Employee ; ex:role ex:vp ; ex:costCentre ex:company .
+ex:e001 a ex:Employee ; ex:role ex:director ; ex:costCentre ex:cc1 ; ex:reportsTo ex:e000 .
+ex:e002 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_1 ; ex:reportsTo ex:e001 .
+ex:e003 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_2 ; ex:reportsTo ex:e001 .
+ex:e004 a ex:Employee ; ex:role ex:director ; ex:costCentre ex:cc2 ; ex:reportsTo ex:e000 .
+ex:e005 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_1 ; ex:reportsTo ex:e004 .
+ex:e006 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_2 ; ex:reportsTo ex:e004 .
+ex:e007 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_1 ; ex:reportsTo ex:e002 .
+ex:e008 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_1 ; ex:reportsTo ex:e002 .
+ex:e009 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_2 ; ex:reportsTo ex:e003 .
+ex:e010 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_2 ; ex:reportsTo ex:e003 .
+ex:e011 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_1 ; ex:reportsTo ex:e005 .
+ex:e012 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_1 ; ex:reportsTo ex:e005 .
+ex:e013 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_2 ; ex:reportsTo ex:e006 .
+ex:e014 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_2 ; ex:reportsTo ex:e006 ; ex:violation true .
+ex:r001 a ex:Request ; ex:requester ex:e010 ; ex:amount 4000 ; ex:category "capital" ; ex:vendor ex:cog ; ex:emergency true .
+ex:r002 a ex:Request ; ex:requester ex:e012 ; ex:amount 20000 ; ex:category "software" ; ex:vendor ex:cog ; ex:emergency true .
+ex:r003 a ex:Request ; ex:requester ex:e001 ; ex:amount 4000 ; ex:category "software" ; ex:vendor ex:edge .
+ex:r004 a ex:Request ; ex:requester ex:e001 ; ex:amount 60000 ; ex:category "hardware" ; ex:vendor ex:dyne .
+ex:r005 a ex:Request ; ex:requester ex:e012 ; ex:amount 4000 ; ex:category "hardware" ; ex:vendor ex:dyne ; ex:emergency true .
+ex:r006 a ex:Request ; ex:requester ex:e008 ; ex:amount 120000 ; ex:category "hardware" ; ex:vendor ex:cog .
+ex:r007 a ex:Request ; ex:requester ex:e004 ; ex:amount 20000 ; ex:category "capital" ; ex:vendor ex:cog .
+ex:r008 a ex:Request ; ex:requester ex:e001 ; ex:amount 60000 ; ex:category "software" ; ex:vendor ex:bolt .
+ex:r009 a ex:Request ; ex:requester ex:e011 ; ex:amount 30000 ; ex:category "software" ; ex:vendor ex:cog .
+ex:r010 a ex:Request ; ex:requester ex:e012 ; ex:amount 120000 ; ex:category "capital" ; ex:vendor ex:edge .
+ex:r011 a ex:Request ; ex:requester ex:e014 ; ex:amount 20000 ; ex:category "services" ; ex:vendor ex:cog .
+ex:r012 a ex:Request ; ex:requester ex:e010 ; ex:amount 90000 ; ex:category "capital" ; ex:vendor ex:edge .
+
+QUESTIONS
+
+Q1. Is request r001 approved?
+Q2. Is request r002 approved?
+Q3. What is the headroom of cost centre cc1?
+Q4. How many employees have e001 in their reporting chain?
+Q5. Which requests that charge cost centre cc1 are approved?
+Q6. Which requests breach a cap?
+Q7. Which cost centres are over cap?
+Q8. Does request r005 pass the vendor check?
+Q9. How many requests are approved in total?
+
+OUTPUT FORMAT -- reply with one JSON object and nothing else. Keys are the question ids.
+Values: yes/no -> true or false; number -> integer; list -> JSON array of ids (order irrelevant, [] if none).
+
+A SPARQL endpoint holding this data with every SHACL rule already applied is available. Query it from the shell with
+  ./sparql 'SELECT ?r WHERE { ?r ex:approved true }'     (the ex: prefix is predefined)
+Use it as much as you like.

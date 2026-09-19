@@ -1,0 +1,79 @@
+You are answering questions about a procurement approval policy.
+Read the material, then answer the questions at the end. Treat the material as complete.
+
+POLICY
+
+1. Cost centres form a tree. The ancestors of a cost centre are its parent, its parent's parent, and so on.
+2. An employee's reporting chain is their manager, their manager's manager, and so on. It does not include the employee.
+3. The booked total of a cost centre is its own booked amount (zero if none) plus the booked amounts of all its descendants. Requests never count towards booked totals.
+4. The headroom of a cost centre is its cap minus its booked total. A cost centre is over cap if its booked total exceeds its cap.
+5. A request charges its requester's cost centre and every ancestor of that cost centre. A request breaches a cap if, for any cost centre it charges, that centre's booked total plus the request amount exceeds that centre's cap.
+6. A request has an approver if someone in the requester's reporting chain has a role limit at least equal to the request amount.
+7. A request passes the vendor check if its vendor's status is approved.
+7a. Exception to 7: an emergency request also passes the vendor check when its vendor is suspended.
+7b. Exception to 7a: 7a does not apply to a capital request whose amount is over 50000.
+8. A request is approved if and only if it has an approver, breaches no cap, passes the vendor check, and is not denied.
+9. A request is denied if its requester has a recorded policy violation. Denial overrides everything else: a denied request is never approved.
+
+DATA
+
+Cost centres (id: parent; booked; cap):
+  company: -; booked 36000; cap 546000
+  cc1: company; booked 0; cap 194000
+  cc1_1: cc1; booked 57000; cap 55000
+  cc1_2: cc1; booked 112000; cap 134000
+  cc2: company; booked 0; cap 194000
+  cc2_1: cc2; booked 137000; cap 164000
+  cc2_2: cc2; booked 48000; cap 57000
+
+Employees (id: role; cost centre; manager):
+  e000: vp; company; -
+  e001: director; cc1; e000
+  e002: manager; cc1_1; e001
+  e003: manager; cc1_2; e001
+  e004: director; cc2; e000
+  e005: manager; cc2_1; e004
+  e006: manager; cc2_2; e004
+  e007: analyst; cc1_1; e002
+  e008: analyst; cc1_1; e002
+  e009: analyst; cc1_2; e003
+  e010: analyst; cc1_2; e003
+  e011: analyst; cc2_1; e005
+  e012: analyst; cc2_1; e005
+  e013: analyst; cc2_2; e006
+  e014: analyst; cc2_2; e006
+
+Role limits: vp 500000; director 100000; senior_manager 50000; manager 25000; analyst 5000
+Vendor status: acme approved; bolt suspended; cog approved; dyne suspended; edge approved
+
+Requests (id: requester; amount; category; vendor):
+  r001: e010; 4000; capital; cog
+  r002: e012; 20000; software; cog
+  r003: e001; 4000; software; edge
+  r004: e001; 60000; hardware; dyne
+  r005: e012; 4000; hardware; dyne
+  r006: e008; 120000; hardware; cog
+  r007: e004; 20000; capital; cog
+  r008: e001; 60000; software; bolt
+  r009: e011; 30000; software; cog
+  r010: e012; 120000; capital; edge
+  r011: e014; 20000; services; cog
+  r012: e010; 90000; capital; edge
+
+Employees with a recorded policy violation: e014
+Emergency requests: r001, r002, r005
+
+QUESTIONS
+
+Q1. Is request r001 approved?
+Q2. Is request r002 approved?
+Q3. What is the headroom of cost centre cc1?
+Q4. How many employees have e001 in their reporting chain?
+Q5. Which requests that charge cost centre cc1 are approved?
+Q6. Which requests breach a cap?
+Q7. Which cost centres are over cap?
+Q8. Does request r005 pass the vendor check?
+Q9. How many requests are approved in total?
+
+OUTPUT FORMAT -- reply with one JSON object and nothing else. Keys are the question ids.
+Values: yes/no -> true or false; number -> integer; list -> JSON array of ids (order irrelevant, [] if none).

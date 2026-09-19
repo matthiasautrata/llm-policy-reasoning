@@ -1,0 +1,102 @@
+You are answering questions about a procurement approval process.
+Read the material, then answer the questions at the end.
+
+The policy is given as a Datalog program.
+
+```
+% Procurement approval rules. Every interpretation fork the English text
+% leaves open is RESOLVED HERE -- that is the whole point of writing it down.
+% Facts: emp(Id, Role, CostCentre, OrgUnit, Limit)
+
+emp("ann","analyst","ops","operations",5000).
+emp("bo","manager","ops","operations",25000).
+emp("cy","director","ops","leadership",100000).
+emp("di","vp","ops","leadership",500000).
+emp("ed","manager","finance","finance",25000).
+
+reports("ann","bo").
+reports("bo","cy").
+reports("cy","di").
+reports("ed","cy").
+
+% req(Id, Requester, Amount, Category, Vendor, RequestDate, Status)
+req("r1","ann",4000,"software","acme",20260710,"pending").
+req("r2","ann",30000,"hardware","acme",20260712,"pending").
+req("r3","ann",12000,"services","bolt",20260715,"pending").
+req("r4","bo",80000,"capital","cog",20260720,"pending").
+req("r5","ed",9000,"software","acme",20260805,"pending").
+req("r6","ann",20000,"services","cog",20260920,"pending").
+
+violation("ed").
+committed("ops","2026Q3",34000).
+committed("finance","2026Q3",5000).
+cap("ops","2026Q3",150000).
+cap("finance","2026Q3",40000).
+
+% role_limit_period(Role, Limit, ValidFrom, ValidTo) -- the RULE is time-scoped
+role_limit_period("analyst",5000,20260101,20261231).
+role_limit_period("manager",25000,20260101,20260731).
+role_limit_period("manager",40000,20260801,20261231).
+role_limit_period("director",100000,20260101,20261231).
+role_limit_period("vp",500000,20260101,20261231).
+
+exemption_withdrawn(20260801).
+today(20260831).
+% --- DECISION 1 (cap basis): "committed spend" means spend already booked.
+% Other pending requests are NOT counted. The English text does not say this.
+requester_cc(R,C) :- req(R,E,_,_,_,_,_), emp(E,_,C,_,_).
+cap_total(R,T) :- req(R,_,A,_,_,_,_), requester_cc(R,C), committed(C,"2026Q3",B), T = B + A.
+cap_pass(R) :- cap_total(R,T), requester_cc(R,C), cap(C,"2026Q3",K), T <= K.
+cap_fail(R) :- cap_total(R,T), requester_cc(R,C), cap(C,"2026Q3",K), T > K.
+
+% --- DECISION 2 (defeasibility): the rule in force on the REQUEST DATE governs.
+% A later withdrawal does not reach back to requests already filed.
+exempt(R) :- req(R,_,_,"capital",_,D,_), exemption_withdrawn(W), D < W.
+
+% --- DECISION 3 (contested term): "department" means COST CENTRE, not org unit.
+dept(E,C) :- emp(E,_,C,_,_).
+dept_total(D,sum(L)) :- dept(E,D), emp(E,_,_,_,L).
+
+% --- DECISION 4 (rule effective-dating): the limit in force on the REQUEST DATE.
+chain(E,M) :- reports(E,M).
+chain(E,M) :- reports(E,X), chain(X,M).
+relevant_date(D) :- req(_,_,_,_,_,D,_).
+relevant_date(D) :- today(D).
+limit_at(E,Lim,D) :- emp(E,Role,_,_,_), role_limit_period(Role,Lim,F,T), relevant_date(D), F <= D, D <= T.
+qualified_approver(R,E) :- req(R,Q,A,_,_,D,_), chain(Q,E), limit_at(E,Lim,D), Lim >= A.
+
+% --- NOT DECIDED (deliberately): both rules are stated, no precedence between them.
+deny(R) :- req(R,E,_,_,_,_,_), violation(E).
+auto_approve(R) :- req(R,_,A,"software",_,_,_), A < 10000.
+conflict(R) :- deny(R), auto_approve(R).
+
+% --- determined
+over_25k(E) :- emp(E,_,_,_,L), L > 25000.
+```
+
+QUESTIONS
+
+S1. Does request r4 pass the cost-centre cap check for 2026Q3? Give the verdict and the number.
+
+S2. The capital-expenditure exemption from the cap was withdrawn effective 2026-08-01. r4 is a capital request dated 2026-07-20 and is still pending. Is r4 exempt from the cap?
+
+S3. What is the total approval limit of everyone in Cy Novak's department?
+
+S4. The approval limit for the role 'manager' was 25000 until 2026-07-31 and 40000 from 2026-08-01. Today is 2026-08-31. Is Bo Chen a qualified approver for r2?
+
+S5. Two rules both apply to r5: requests from an employee with an open compliance violation are denied, and software requests under 10000 are auto-approved. What happens to r5?
+
+S6. Which employees have an approval limit strictly greater than 25000?
+
+OUTPUT FORMAT -- answer every scenario in exactly this shape, nothing else:
+
+SCENARIO: <id>
+STATUS: ANSWER or AMBIGUOUS or CONFLICT
+ANSWER: <the answer, or -- if you cannot give one>
+READINGS: <if AMBIGUOUS or CONFLICT: each reading and the answer it produces, on one
+           line, separated by " | ". Otherwise: -->
+
+Use STATUS: ANSWER only when the material determines exactly one answer.
+Use STATUS: AMBIGUOUS when the wording admits more than one reading that would give
+different answers. Use STATUS: CONFLICT when two rules both apply and nothing says
+which wins.

@@ -1,0 +1,347 @@
+You are answering questions about a procurement approval process.
+Read the material, then answer the questions at the end.
+
+RULES -- the policy as an OWL 2 ontology with SHACL-AF rules (Turtle)
+
+# Decisions taken when this ontology was written, one per commitment:
+# C1 -- committed spend: "committed spend" means spend already BOOKED. Requests still pending do not count towards it.
+# C2 -- which dated version governs: where a rule has dated versions, the version that governs a request is the one in force ON THE REQUEST'S OWN DATE, not the one in force today.
+# C3 -- department: "department" means the COST CENTRE, not the org unit.
+# C4 -- how caps apply up the tree: a request consumes its own centre's cap AND the cap of every ancestor centre; spend in a team therefore also counts against its division and against the company.
+# C5 -- precedence between the deny rule and the auto-approve rule: NOT DECIDED.
+
+# ---------- schema.ttl ----------
+@prefix ex:   <http://example.org/proc#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+<http://example.org/proc> a owl:Ontology .
+
+# ---------- classes ----------
+ex:CostCentre         a owl:Class .
+ex:BudgetLine         a owl:Class .
+ex:Employee           a owl:Class .
+ex:Role               a owl:Class .
+ex:RoleLimitPeriod    a owl:Class .
+ex:Vendor             a owl:Class .
+ex:VendorStatusPeriod a owl:Class .
+ex:PurchaseRequest    a owl:Class .
+ex:PolicyContext      a owl:Class .
+ex:AllDisjoint a owl:AllDisjointClasses ; owl:members ( ex:CostCentre ex:BudgetLine ex:Employee ex:Role
+    ex:RoleLimitPeriod ex:Vendor ex:VendorStatusPeriod ex:PurchaseRequest ex:PolicyContext ) .
+
+# ---------- asserted properties ----------
+ex:parentCostCentre a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain ex:CostCentre ; rdfs:range ex:CostCentre .
+ex:orgUnit          a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:CostCentre ; rdfs:range xsd:string .
+ex:costCentre       a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:range ex:CostCentre .   # of BudgetLine or Employee
+ex:quarter          a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:BudgetLine ; rdfs:range xsd:string .
+ex:booked           a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:BudgetLine ; rdfs:range xsd:integer .
+ex:cap              a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:BudgetLine ; rdfs:range xsd:integer .
+ex:name             a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:Employee ; rdfs:range xsd:string .
+ex:role             a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain ex:Employee ; rdfs:range ex:Role .
+ex:reportsTo        a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain ex:Employee ; rdfs:range ex:Employee .
+ex:hasPolicyViolation a owl:DatatypeProperty ; rdfs:domain ex:Employee ; rdfs:range xsd:boolean .
+ex:forRole          a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain ex:RoleLimitPeriod ; rdfs:range ex:Role .
+ex:limit            a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:RoleLimitPeriod ; rdfs:range xsd:integer .
+ex:forVendor        a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain ex:VendorStatusPeriod ; rdfs:range ex:Vendor .
+ex:vendorStatus     a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:VendorStatusPeriod ; rdfs:range xsd:string .
+ex:validFrom        a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:range xsd:date .
+ex:validTo          a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:range xsd:date .
+ex:requester        a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain ex:PurchaseRequest ; rdfs:range ex:Employee .
+ex:amount           a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:PurchaseRequest ; rdfs:range xsd:integer .
+ex:category         a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:PurchaseRequest ; rdfs:range xsd:string .
+ex:vendor           a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain ex:PurchaseRequest ; rdfs:range ex:Vendor .
+ex:requestDate      a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:PurchaseRequest ; rdfs:range xsd:date .
+ex:status           a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:PurchaseRequest ; rdfs:range xsd:string .
+ex:today            a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:PolicyContext ; rdfs:range xsd:date .
+ex:exemptionWithdrawnOn a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:PolicyContext ; rdfs:range xsd:date .
+
+# ---------- derived properties (populated by the SHACL rules in rules.ttl) ----------
+ex:ancestorCostCentre a owl:ObjectProperty , owl:TransitiveProperty ; rdfs:domain ex:CostCentre ; rdfs:range ex:CostCentre .
+ex:parentCostCentre rdfs:subPropertyOf ex:ancestorCostCentre .
+ex:inReportingChainOf a owl:ObjectProperty , owl:TransitiveProperty ; rdfs:domain ex:Employee ; rdfs:range ex:Employee .
+ex:reportsTo rdfs:subPropertyOf ex:inReportingChainOf .
+ex:bookedSpend      a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:CostCentre ; rdfs:range xsd:integer .
+ex:headroom         a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:CostCentre ; rdfs:range xsd:integer .
+ex:overCommitted    a owl:DatatypeProperty ; rdfs:domain ex:CostCentre ; rdfs:range xsd:boolean .
+ex:charges          a owl:ObjectProperty ; rdfs:domain ex:PurchaseRequest ; rdfs:range ex:CostCentre .
+ex:breachesCapOf    a owl:ObjectProperty ; rdfs:subPropertyOf ex:charges .
+ex:vendorCheckPassed a owl:DatatypeProperty ; rdfs:domain ex:PurchaseRequest ; rdfs:range xsd:boolean .
+ex:eligibleApprover a owl:ObjectProperty ; rdfs:domain ex:PurchaseRequest ; rdfs:range ex:Employee .
+ex:department       a owl:ObjectProperty , owl:FunctionalProperty ; rdfs:domain ex:Employee ; rdfs:range ex:CostCentre .
+ex:headcount        a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:CostCentre ; rdfs:range xsd:integer .
+ex:pendingExposure  a owl:DatatypeProperty , owl:FunctionalProperty ; rdfs:domain ex:CostCentre ; rdfs:range xsd:integer .
+ex:requiresEscalation a owl:DatatypeProperty ; rdfs:domain ex:PurchaseRequest ; rdfs:range xsd:boolean .
+ex:denied           a owl:DatatypeProperty ; rdfs:domain ex:PurchaseRequest ; rdfs:range xsd:boolean .
+ex:autoApproved     a owl:DatatypeProperty ; rdfs:domain ex:PurchaseRequest ; rdfs:range xsd:boolean .
+ex:inConflict       a owl:DatatypeProperty ; rdfs:domain ex:PurchaseRequest ; rdfs:range xsd:boolean .
+ex:exempt           a owl:DatatypeProperty ; rdfs:domain ex:PurchaseRequest ; rdfs:range xsd:boolean .
+
+# ---------- rules.ttl ----------
+@prefix ex:   <http://example.org/proc#> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+# SHACL-AF rules. Flags (xsd:boolean) are asserted only when true; absence means false.
+# sh:order stratifies the rules: a rule reads only properties derived at a lower order.
+
+ex:prefixes a owl:Ontology ;
+  sh:declare [ sh:prefix "ex" ; sh:namespace "http://example.org/proc#"^^xsd:anyURI ] ,
+             [ sh:prefix "xsd" ; sh:namespace "http://www.w3.org/2001/XMLSchema#"^^xsd:anyURI ] .
+
+# ---------- cost centres and budgets ----------
+ex:CostCentreRules a sh:NodeShape ; sh:targetClass ex:CostCentre ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 1 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:ancestorCostCentre ?a . } WHERE { $this ex:parentCostCentre+ ?a . }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 2 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:bookedSpend ?t . } WHERE {
+      { SELECT $this (SUM(?b) AS ?t) WHERE {
+          ?d ex:parentCostCentre* $this .
+          OPTIONAL { ?l ex:costCentre ?d ; ex:quarter "2026Q3" ; ex:booked ?b0 . }
+          BIND(COALESCE(?b0, 0) AS ?b)
+        } GROUP BY $this } }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 3 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:headroom ?h . } WHERE {
+      $this ex:bookedSpend ?t . ?l ex:costCentre $this ; ex:quarter "2026Q3" ; ex:cap ?k .
+      BIND(?k - ?t AS ?h) }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 3 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:overCommitted true . } WHERE {
+      $this ex:bookedSpend ?t . ?l ex:costCentre $this ; ex:quarter "2026Q3" ; ex:cap ?k .
+      FILTER(?t > ?k) }""" ] .
+
+# ---------- employees ----------
+ex:EmployeeRules a sh:NodeShape ; sh:targetClass ex:Employee ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 1 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:inReportingChainOf ?m . } WHERE { $this ex:reportsTo+ ?m . }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 1 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:department ?c . } WHERE { $this ex:costCentre ?c . }""" ] .
+
+# ---------- departments ----------
+ex:DepartmentRules a sh:NodeShape ; sh:targetClass ex:CostCentre ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 2 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:headcount ?n . } WHERE {
+      { SELECT $this (COUNT(DISTINCT ?e) AS ?n) WHERE { ?e ex:department $this . } GROUP BY $this } }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 2 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:pendingExposure ?s . } WHERE {
+      { SELECT $this (SUM(?a) AS ?s) WHERE {
+          OPTIONAL {
+            ?r ex:requester ?e ; ex:status "pending" ; ex:amount ?a0 . ?e ex:department $this . }
+          BIND(COALESCE(?a0, 0) AS ?a)
+        } GROUP BY $this } }""" ] .
+
+# ---------- purchase requests ----------
+ex:RequestRules a sh:NodeShape ; sh:targetClass ex:PurchaseRequest ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 2 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:charges ?c . } WHERE {
+      $this ex:requester/ex:costCentre/ex:parentCostCentre* ?c . }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 3 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:breachesCapOf ?c . } WHERE {
+      $this ex:charges ?c ; ex:amount ?a . ?c ex:bookedSpend ?t .
+      ?l ex:costCentre ?c ; ex:quarter "2026Q3" ; ex:cap ?k .
+      FILTER(?t + ?a > ?k) }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 1 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:vendorCheckPassed true . } WHERE {
+      $this ex:vendor ?v ; ex:requestDate ?d .
+      ?p ex:forVendor ?v ; ex:vendorStatus "approved" ; ex:validFrom ?f ; ex:validTo ?u .
+      FILTER(?f <= ?d && ?d <= ?u) }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 2 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:eligibleApprover ?e . } WHERE {
+      $this ex:requester ?q ; ex:amount ?a ; ex:requestDate ?d .
+      ?q ex:inReportingChainOf ?e . ?e ex:role ?role .
+      ?p ex:forRole ?role ; ex:limit ?l ; ex:validFrom ?f ; ex:validTo ?u .
+      FILTER(?f <= ?d && ?d <= ?u && ?l >= ?a) }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 3 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:requiresEscalation true . } WHERE {
+      $this ex:eligibleApprover ?any .
+      FILTER NOT EXISTS {
+        $this ex:requester/ex:department ?dep ; ex:eligibleApprover ?e . ?e ex:department ?dep . } }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 1 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:denied true . } WHERE { $this ex:requester/ex:hasPolicyViolation true . }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 1 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:autoApproved true . } WHERE {
+      $this ex:category "software" ; ex:amount ?a . FILTER(?a < 10000) }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 2 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:inConflict true . } WHERE { $this ex:denied true ; ex:autoApproved true . }""" ] ;
+  sh:rule [ a sh:SPARQLRule ; sh:order 1 ; sh:prefixes ex:prefixes ; sh:construct """
+    CONSTRUCT { $this ex:exempt true . } WHERE {
+      $this ex:category "capital" ; ex:requestDate ?d . ?ctx ex:exemptionWithdrawnOn ?w .
+      FILTER(?d < ?w) }""" ] .
+
+FACTS
+
+# ---------- data.ttl ----------
+@prefix ex: <http://example.org/proc#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+ex:policy a ex:PolicyContext ; ex:today "2026-08-31"^^xsd:date ; ex:exemptionWithdrawnOn "2026-08-01"^^xsd:date .
+
+ex:company a ex:CostCentre ; ex:orgUnit "leadership" .
+ex:company_2026Q3 a ex:BudgetLine ; ex:costCentre ex:company ; ex:quarter "2026Q3" ; ex:cap 2000000 .
+ex:ops a ex:CostCentre ; ex:orgUnit "leadership" ; ex:parentCostCentre ex:company .
+ex:ops_2026Q3 a ex:BudgetLine ; ex:costCentre ex:ops ; ex:quarter "2026Q3" ; ex:cap 600000 .
+ex:ops_field a ex:CostCentre ; ex:orgUnit "delivery" ; ex:parentCostCentre ex:ops .
+ex:ops_field_2026Q3 a ex:BudgetLine ; ex:costCentre ex:ops_field ; ex:quarter "2026Q3" ; ex:cap 150000 ; ex:booked 95000 .
+ex:ops_supply a ex:CostCentre ; ex:orgUnit "support" ; ex:parentCostCentre ex:ops .
+ex:ops_supply_2026Q3 a ex:BudgetLine ; ex:costCentre ex:ops_supply ; ex:quarter "2026Q3" ; ex:cap 150000 ; ex:booked 95000 .
+ex:ops_qa a ex:CostCentre ; ex:orgUnit "support" ; ex:parentCostCentre ex:ops .
+ex:ops_qa_2026Q3 a ex:BudgetLine ; ex:costCentre ex:ops_qa ; ex:quarter "2026Q3" ; ex:cap 150000 ; ex:booked 76000 .
+ex:eng a ex:CostCentre ; ex:orgUnit "leadership" ; ex:parentCostCentre ex:company .
+ex:eng_2026Q3 a ex:BudgetLine ; ex:costCentre ex:eng ; ex:quarter "2026Q3" ; ex:cap 600000 .
+ex:eng_core a ex:CostCentre ; ex:orgUnit "delivery" ; ex:parentCostCentre ex:eng .
+ex:eng_core_2026Q3 a ex:BudgetLine ; ex:costCentre ex:eng_core ; ex:quarter "2026Q3" ; ex:cap 150000 ; ex:booked 118000 .
+ex:eng_data a ex:CostCentre ; ex:orgUnit "support" ; ex:parentCostCentre ex:eng .
+ex:eng_data_2026Q3 a ex:BudgetLine ; ex:costCentre ex:eng_data ; ex:quarter "2026Q3" ; ex:cap 150000 ; ex:booked 88000 .
+ex:eng_infra a ex:CostCentre ; ex:orgUnit "support" ; ex:parentCostCentre ex:eng .
+ex:eng_infra_2026Q3 a ex:BudgetLine ; ex:costCentre ex:eng_infra ; ex:quarter "2026Q3" ; ex:cap 150000 ; ex:booked 95000 .
+ex:sales a ex:CostCentre ; ex:orgUnit "leadership" ; ex:parentCostCentre ex:company .
+ex:sales_2026Q3 a ex:BudgetLine ; ex:costCentre ex:sales ; ex:quarter "2026Q3" ; ex:cap 600000 .
+ex:sales_emea a ex:CostCentre ; ex:orgUnit "delivery" ; ex:parentCostCentre ex:sales .
+ex:sales_emea_2026Q3 a ex:BudgetLine ; ex:costCentre ex:sales_emea ; ex:quarter "2026Q3" ; ex:cap 150000 ; ex:booked 76000 .
+ex:sales_amer a ex:CostCentre ; ex:orgUnit "support" ; ex:parentCostCentre ex:sales .
+ex:sales_amer_2026Q3 a ex:BudgetLine ; ex:costCentre ex:sales_amer ; ex:quarter "2026Q3" ; ex:cap 150000 ; ex:booked 88000 .
+ex:sales_apac a ex:CostCentre ; ex:orgUnit "support" ; ex:parentCostCentre ex:sales .
+ex:sales_apac_2026Q3 a ex:BudgetLine ; ex:costCentre ex:sales_apac ; ex:quarter "2026Q3" ; ex:cap 150000 ; ex:booked 76000 .
+ex:corp a ex:CostCentre ; ex:orgUnit "leadership" ; ex:parentCostCentre ex:company .
+ex:corp_2026Q3 a ex:BudgetLine ; ex:costCentre ex:corp ; ex:quarter "2026Q3" ; ex:cap 600000 .
+ex:corp_fin a ex:CostCentre ; ex:orgUnit "delivery" ; ex:parentCostCentre ex:corp .
+ex:corp_fin_2026Q3 a ex:BudgetLine ; ex:costCentre ex:corp_fin ; ex:quarter "2026Q3" ; ex:cap 150000 ; ex:booked 88000 .
+ex:corp_hr a ex:CostCentre ; ex:orgUnit "support" ; ex:parentCostCentre ex:corp .
+ex:corp_hr_2026Q3 a ex:BudgetLine ; ex:costCentre ex:corp_hr ; ex:quarter "2026Q3" ; ex:cap 150000 ; ex:booked 118000 .
+ex:corp_legal a ex:CostCentre ; ex:orgUnit "support" ; ex:parentCostCentre ex:corp .
+ex:corp_legal_2026Q3 a ex:BudgetLine ; ex:costCentre ex:corp_legal ; ex:quarter "2026Q3" ; ex:cap 150000 ; ex:booked 104000 .
+
+ex:analyst a ex:Role .
+ex:director a ex:Role .
+ex:manager a ex:Role .
+ex:vp a ex:Role .
+ex:e000 a ex:Employee ; ex:name "Ada Vance" ; ex:role ex:vp ; ex:costCentre ex:company .
+ex:e001 a ex:Employee ; ex:name "Dir Ops" ; ex:role ex:director ; ex:costCentre ex:ops ; ex:reportsTo ex:e000 .
+ex:e002 a ex:Employee ; ex:name "Mgr Ops_Field" ; ex:role ex:manager ; ex:costCentre ex:ops_field ; ex:reportsTo ex:e001 .
+ex:e003 a ex:Employee ; ex:name "An Ops_Field1" ; ex:role ex:analyst ; ex:costCentre ex:ops_field ; ex:reportsTo ex:e002 .
+ex:e004 a ex:Employee ; ex:name "An Ops_Field2" ; ex:role ex:analyst ; ex:costCentre ex:ops_field ; ex:reportsTo ex:e002 .
+ex:e005 a ex:Employee ; ex:name "Mgr Ops_Supply" ; ex:role ex:manager ; ex:costCentre ex:ops_supply ; ex:reportsTo ex:e001 .
+ex:e006 a ex:Employee ; ex:name "An Ops_Supply1" ; ex:role ex:analyst ; ex:costCentre ex:ops_supply ; ex:reportsTo ex:e005 .
+ex:e007 a ex:Employee ; ex:name "An Ops_Supply2" ; ex:role ex:analyst ; ex:costCentre ex:ops_supply ; ex:reportsTo ex:e005 .
+ex:e008 a ex:Employee ; ex:name "Mgr Ops_Qa" ; ex:role ex:manager ; ex:costCentre ex:ops_qa ; ex:reportsTo ex:e001 .
+ex:e009 a ex:Employee ; ex:name "An Ops_Qa1" ; ex:role ex:analyst ; ex:costCentre ex:ops_qa ; ex:reportsTo ex:e008 ; ex:hasPolicyViolation true .
+ex:e010 a ex:Employee ; ex:name "An Ops_Qa2" ; ex:role ex:analyst ; ex:costCentre ex:ops_qa ; ex:reportsTo ex:e008 .
+ex:e011 a ex:Employee ; ex:name "Dir Eng" ; ex:role ex:director ; ex:costCentre ex:eng ; ex:reportsTo ex:e000 .
+ex:e012 a ex:Employee ; ex:name "Mgr Eng_Core" ; ex:role ex:manager ; ex:costCentre ex:eng_core ; ex:reportsTo ex:e011 .
+ex:e013 a ex:Employee ; ex:name "An Eng_Core1" ; ex:role ex:analyst ; ex:costCentre ex:eng_core ; ex:reportsTo ex:e012 .
+ex:e014 a ex:Employee ; ex:name "An Eng_Core2" ; ex:role ex:analyst ; ex:costCentre ex:eng_core ; ex:reportsTo ex:e012 .
+ex:e015 a ex:Employee ; ex:name "Mgr Eng_Data" ; ex:role ex:manager ; ex:costCentre ex:eng_data ; ex:reportsTo ex:e011 .
+ex:e016 a ex:Employee ; ex:name "An Eng_Data1" ; ex:role ex:analyst ; ex:costCentre ex:eng_data ; ex:reportsTo ex:e015 .
+ex:e017 a ex:Employee ; ex:name "An Eng_Data2" ; ex:role ex:analyst ; ex:costCentre ex:eng_data ; ex:reportsTo ex:e015 .
+ex:e018 a ex:Employee ; ex:name "Mgr Eng_Infra" ; ex:role ex:manager ; ex:costCentre ex:eng_infra ; ex:reportsTo ex:e011 .
+ex:e019 a ex:Employee ; ex:name "An Eng_Infra1" ; ex:role ex:analyst ; ex:costCentre ex:eng_infra ; ex:reportsTo ex:e018 .
+ex:e020 a ex:Employee ; ex:name "An Eng_Infra2" ; ex:role ex:analyst ; ex:costCentre ex:eng_infra ; ex:reportsTo ex:e018 .
+ex:e021 a ex:Employee ; ex:name "Dir Sales" ; ex:role ex:director ; ex:costCentre ex:sales ; ex:reportsTo ex:e000 ; ex:hasPolicyViolation true .
+ex:e022 a ex:Employee ; ex:name "Mgr Sales_Emea" ; ex:role ex:manager ; ex:costCentre ex:sales_emea ; ex:reportsTo ex:e021 .
+ex:e023 a ex:Employee ; ex:name "An Sales_Emea1" ; ex:role ex:analyst ; ex:costCentre ex:sales_emea ; ex:reportsTo ex:e022 .
+ex:e024 a ex:Employee ; ex:name "An Sales_Emea2" ; ex:role ex:analyst ; ex:costCentre ex:sales_emea ; ex:reportsTo ex:e022 ; ex:hasPolicyViolation true .
+ex:e025 a ex:Employee ; ex:name "Mgr Sales_Amer" ; ex:role ex:manager ; ex:costCentre ex:sales_amer ; ex:reportsTo ex:e021 .
+ex:e026 a ex:Employee ; ex:name "An Sales_Amer1" ; ex:role ex:analyst ; ex:costCentre ex:sales_amer ; ex:reportsTo ex:e025 .
+ex:e027 a ex:Employee ; ex:name "An Sales_Amer2" ; ex:role ex:analyst ; ex:costCentre ex:sales_amer ; ex:reportsTo ex:e025 ; ex:hasPolicyViolation true .
+ex:e028 a ex:Employee ; ex:name "Mgr Sales_Apac" ; ex:role ex:manager ; ex:costCentre ex:sales_apac ; ex:reportsTo ex:e021 .
+ex:e029 a ex:Employee ; ex:name "An Sales_Apac1" ; ex:role ex:analyst ; ex:costCentre ex:sales_apac ; ex:reportsTo ex:e028 ; ex:hasPolicyViolation true .
+ex:e030 a ex:Employee ; ex:name "An Sales_Apac2" ; ex:role ex:analyst ; ex:costCentre ex:sales_apac ; ex:reportsTo ex:e028 .
+ex:e031 a ex:Employee ; ex:name "Dir Corp" ; ex:role ex:director ; ex:costCentre ex:corp ; ex:reportsTo ex:e000 .
+ex:e032 a ex:Employee ; ex:name "Mgr Corp_Fin" ; ex:role ex:manager ; ex:costCentre ex:corp_fin ; ex:reportsTo ex:e031 .
+ex:e033 a ex:Employee ; ex:name "An Corp_Fin1" ; ex:role ex:analyst ; ex:costCentre ex:corp_fin ; ex:reportsTo ex:e032 .
+ex:e034 a ex:Employee ; ex:name "An Corp_Fin2" ; ex:role ex:analyst ; ex:costCentre ex:corp_fin ; ex:reportsTo ex:e032 .
+ex:e035 a ex:Employee ; ex:name "Mgr Corp_Hr" ; ex:role ex:manager ; ex:costCentre ex:corp_hr ; ex:reportsTo ex:e031 .
+ex:e036 a ex:Employee ; ex:name "An Corp_Hr1" ; ex:role ex:analyst ; ex:costCentre ex:corp_hr ; ex:reportsTo ex:e035 .
+ex:e037 a ex:Employee ; ex:name "An Corp_Hr2" ; ex:role ex:analyst ; ex:costCentre ex:corp_hr ; ex:reportsTo ex:e035 .
+ex:e038 a ex:Employee ; ex:name "Mgr Corp_Legal" ; ex:role ex:manager ; ex:costCentre ex:corp_legal ; ex:reportsTo ex:e031 ; ex:hasPolicyViolation true .
+ex:e039 a ex:Employee ; ex:name "An Corp_Legal1" ; ex:role ex:analyst ; ex:costCentre ex:corp_legal ; ex:reportsTo ex:e038 .
+ex:e040 a ex:Employee ; ex:name "An Corp_Legal2" ; ex:role ex:analyst ; ex:costCentre ex:corp_legal ; ex:reportsTo ex:e038 .
+
+ex:limit1 a ex:RoleLimitPeriod ; ex:forRole ex:analyst ; ex:limit 5000 ; ex:validFrom "2026-01-01"^^xsd:date ; ex:validTo "2026-12-31"^^xsd:date .
+ex:limit2 a ex:RoleLimitPeriod ; ex:forRole ex:manager ; ex:limit 25000 ; ex:validFrom "2026-01-01"^^xsd:date ; ex:validTo "2026-07-31"^^xsd:date .
+ex:limit3 a ex:RoleLimitPeriod ; ex:forRole ex:manager ; ex:limit 40000 ; ex:validFrom "2026-08-01"^^xsd:date ; ex:validTo "2026-12-31"^^xsd:date .
+ex:limit4 a ex:RoleLimitPeriod ; ex:forRole ex:director ; ex:limit 100000 ; ex:validFrom "2026-01-01"^^xsd:date ; ex:validTo "2026-12-31"^^xsd:date .
+ex:limit5 a ex:RoleLimitPeriod ; ex:forRole ex:vp ; ex:limit 500000 ; ex:validFrom "2026-01-01"^^xsd:date ; ex:validTo "2026-12-31"^^xsd:date .
+
+ex:acme a ex:Vendor .
+ex:bolt a ex:Vendor .
+ex:cog a ex:Vendor .
+ex:dyne a ex:Vendor .
+ex:edge a ex:Vendor .
+ex:vstatus1 a ex:VendorStatusPeriod ; ex:forVendor ex:acme ; ex:vendorStatus "approved" ; ex:validFrom "2026-01-01"^^xsd:date ; ex:validTo "2026-12-31"^^xsd:date .
+ex:vstatus2 a ex:VendorStatusPeriod ; ex:forVendor ex:bolt ; ex:vendorStatus "approved" ; ex:validFrom "2026-01-01"^^xsd:date ; ex:validTo "2026-07-31"^^xsd:date .
+ex:vstatus3 a ex:VendorStatusPeriod ; ex:forVendor ex:bolt ; ex:vendorStatus "suspended" ; ex:validFrom "2026-08-01"^^xsd:date ; ex:validTo "2026-12-31"^^xsd:date .
+ex:vstatus4 a ex:VendorStatusPeriod ; ex:forVendor ex:cog ; ex:vendorStatus "approved" ; ex:validFrom "2026-01-01"^^xsd:date ; ex:validTo "2026-12-31"^^xsd:date .
+ex:vstatus5 a ex:VendorStatusPeriod ; ex:forVendor ex:dyne ; ex:vendorStatus "suspended" ; ex:validFrom "2026-01-01"^^xsd:date ; ex:validTo "2026-06-30"^^xsd:date .
+ex:vstatus6 a ex:VendorStatusPeriod ; ex:forVendor ex:dyne ; ex:vendorStatus "approved" ; ex:validFrom "2026-07-01"^^xsd:date ; ex:validTo "2026-12-31"^^xsd:date .
+ex:vstatus7 a ex:VendorStatusPeriod ; ex:forVendor ex:edge ; ex:vendorStatus "approved" ; ex:validFrom "2026-01-01"^^xsd:date ; ex:validTo "2026-12-31"^^xsd:date .
+
+ex:r01 a ex:PurchaseRequest ; ex:requester ex:e015 ; ex:amount 9000 ; ex:category "services" ; ex:vendor ex:dyne ; ex:requestDate "2026-09-10"^^xsd:date ; ex:status "pending" .
+ex:r02 a ex:PurchaseRequest ; ex:requester ex:e007 ; ex:amount 12000 ; ex:category "capital" ; ex:vendor ex:acme ; ex:requestDate "2026-07-20"^^xsd:date ; ex:status "pending" .
+ex:r03 a ex:PurchaseRequest ; ex:requester ex:e024 ; ex:amount 20000 ; ex:category "hardware" ; ex:vendor ex:dyne ; ex:requestDate "2026-07-20"^^xsd:date ; ex:status "pending" .
+ex:r04 a ex:PurchaseRequest ; ex:requester ex:e037 ; ex:amount 9000 ; ex:category "services" ; ex:vendor ex:edge ; ex:requestDate "2026-08-05"^^xsd:date ; ex:status "pending" .
+ex:r05 a ex:PurchaseRequest ; ex:requester ex:e005 ; ex:amount 9000 ; ex:category "software" ; ex:vendor ex:edge ; ex:requestDate "2026-07-12"^^xsd:date ; ex:status "pending" .
+ex:r06 a ex:PurchaseRequest ; ex:requester ex:e003 ; ex:amount 9000 ; ex:category "services" ; ex:vendor ex:acme ; ex:requestDate "2026-08-05"^^xsd:date ; ex:status "pending" .
+ex:r07 a ex:PurchaseRequest ; ex:requester ex:e029 ; ex:amount 30000 ; ex:category "software" ; ex:vendor ex:cog ; ex:requestDate "2026-08-05"^^xsd:date ; ex:status "pending" .
+ex:r08 a ex:PurchaseRequest ; ex:requester ex:e039 ; ex:amount 12000 ; ex:category "capital" ; ex:vendor ex:edge ; ex:requestDate "2026-07-12"^^xsd:date ; ex:status "pending" .
+ex:r09 a ex:PurchaseRequest ; ex:requester ex:e035 ; ex:amount 12000 ; ex:category "services" ; ex:vendor ex:cog ; ex:requestDate "2026-07-12"^^xsd:date ; ex:status "pending" .
+ex:r10 a ex:PurchaseRequest ; ex:requester ex:e033 ; ex:amount 12000 ; ex:category "software" ; ex:vendor ex:bolt ; ex:requestDate "2026-07-20"^^xsd:date ; ex:status "pending" .
+ex:r11 a ex:PurchaseRequest ; ex:requester ex:e026 ; ex:amount 12000 ; ex:category "software" ; ex:vendor ex:acme ; ex:requestDate "2026-07-20"^^xsd:date ; ex:status "pending" .
+ex:r12 a ex:PurchaseRequest ; ex:requester ex:e029 ; ex:amount 20000 ; ex:category "hardware" ; ex:vendor ex:edge ; ex:requestDate "2026-08-20"^^xsd:date ; ex:status "pending" .
+ex:r13 a ex:PurchaseRequest ; ex:requester ex:e009 ; ex:amount 30000 ; ex:category "hardware" ; ex:vendor ex:bolt ; ex:requestDate "2026-08-05"^^xsd:date ; ex:status "pending" .
+ex:r14 a ex:PurchaseRequest ; ex:requester ex:e040 ; ex:amount 30000 ; ex:category "software" ; ex:vendor ex:edge ; ex:requestDate "2026-07-20"^^xsd:date ; ex:status "pending" .
+ex:r15 a ex:PurchaseRequest ; ex:requester ex:e038 ; ex:amount 12000 ; ex:category "hardware" ; ex:vendor ex:cog ; ex:requestDate "2026-08-05"^^xsd:date ; ex:status "pending" .
+ex:r16 a ex:PurchaseRequest ; ex:requester ex:e006 ; ex:amount 12000 ; ex:category "software" ; ex:vendor ex:dyne ; ex:requestDate "2026-09-10"^^xsd:date ; ex:status "pending" .
+ex:r17 a ex:PurchaseRequest ; ex:requester ex:e039 ; ex:amount 30000 ; ex:category "software" ; ex:vendor ex:bolt ; ex:requestDate "2026-09-10"^^xsd:date ; ex:status "pending" .
+ex:r18 a ex:PurchaseRequest ; ex:requester ex:e008 ; ex:amount 20000 ; ex:category "software" ; ex:vendor ex:dyne ; ex:requestDate "2026-07-05"^^xsd:date ; ex:status "pending" .
+ex:r19 a ex:PurchaseRequest ; ex:requester ex:e005 ; ex:amount 4000 ; ex:category "hardware" ; ex:vendor ex:edge ; ex:requestDate "2026-08-05"^^xsd:date ; ex:status "pending" .
+ex:r20 a ex:PurchaseRequest ; ex:requester ex:e030 ; ex:amount 12000 ; ex:category "services" ; ex:vendor ex:acme ; ex:requestDate "2026-08-20"^^xsd:date ; ex:status "pending" .
+ex:r21 a ex:PurchaseRequest ; ex:requester ex:e037 ; ex:amount 12000 ; ex:category "software" ; ex:vendor ex:dyne ; ex:requestDate "2026-07-12"^^xsd:date ; ex:status "pending" .
+ex:r22 a ex:PurchaseRequest ; ex:requester ex:e009 ; ex:amount 12000 ; ex:category "services" ; ex:vendor ex:acme ; ex:requestDate "2026-08-20"^^xsd:date ; ex:status "pending" .
+ex:r23 a ex:PurchaseRequest ; ex:requester ex:e015 ; ex:amount 4000 ; ex:category "services" ; ex:vendor ex:acme ; ex:requestDate "2026-07-20"^^xsd:date ; ex:status "pending" .
+ex:r24 a ex:PurchaseRequest ; ex:requester ex:e012 ; ex:amount 4000 ; ex:category "hardware" ; ex:vendor ex:edge ; ex:requestDate "2026-08-05"^^xsd:date ; ex:status "pending" .
+ex:r25 a ex:PurchaseRequest ; ex:requester ex:e039 ; ex:amount 20000 ; ex:category "capital" ; ex:vendor ex:cog ; ex:requestDate "2026-07-20"^^xsd:date ; ex:status "pending" .
+ex:r26 a ex:PurchaseRequest ; ex:requester ex:e022 ; ex:amount 20000 ; ex:category "capital" ; ex:vendor ex:dyne ; ex:requestDate "2026-08-05"^^xsd:date ; ex:status "pending" .
+ex:r27 a ex:PurchaseRequest ; ex:requester ex:e028 ; ex:amount 12000 ; ex:category "hardware" ; ex:vendor ex:cog ; ex:requestDate "2026-08-05"^^xsd:date ; ex:status "pending" .
+ex:r28 a ex:PurchaseRequest ; ex:requester ex:e027 ; ex:amount 20000 ; ex:category "services" ; ex:vendor ex:bolt ; ex:requestDate "2026-08-05"^^xsd:date ; ex:status "pending" .
+ex:r29 a ex:PurchaseRequest ; ex:requester ex:e035 ; ex:amount 12000 ; ex:category "software" ; ex:vendor ex:acme ; ex:requestDate "2026-08-05"^^xsd:date ; ex:status "pending" .
+ex:r30 a ex:PurchaseRequest ; ex:requester ex:e022 ; ex:amount 4000 ; ex:category "capital" ; ex:vendor ex:dyne ; ex:requestDate "2026-07-05"^^xsd:date ; ex:status "pending" .
+ex:r31 a ex:PurchaseRequest ; ex:requester ex:e038 ; ex:amount 12000 ; ex:category "services" ; ex:vendor ex:acme ; ex:requestDate "2026-09-10"^^xsd:date ; ex:status "pending" .
+ex:r32 a ex:PurchaseRequest ; ex:requester ex:e022 ; ex:amount 30000 ; ex:category "hardware" ; ex:vendor ex:cog ; ex:requestDate "2026-08-20"^^xsd:date ; ex:status "pending" .
+ex:r33 a ex:PurchaseRequest ; ex:requester ex:e002 ; ex:amount 4000 ; ex:category "software" ; ex:vendor ex:edge ; ex:requestDate "2026-07-05"^^xsd:date ; ex:status "pending" .
+ex:r34 a ex:PurchaseRequest ; ex:requester ex:e028 ; ex:amount 9000 ; ex:category "capital" ; ex:vendor ex:dyne ; ex:requestDate "2026-07-05"^^xsd:date ; ex:status "pending" .
+ex:r35 a ex:PurchaseRequest ; ex:requester ex:e012 ; ex:amount 12000 ; ex:category "hardware" ; ex:vendor ex:cog ; ex:requestDate "2026-09-10"^^xsd:date ; ex:status "pending" .
+ex:r36 a ex:PurchaseRequest ; ex:requester ex:e016 ; ex:amount 20000 ; ex:category "capital" ; ex:vendor ex:edge ; ex:requestDate "2026-07-20"^^xsd:date ; ex:status "pending" .
+ex:r37 a ex:PurchaseRequest ; ex:requester ex:e009 ; ex:amount 9000 ; ex:category "software" ; ex:vendor ex:acme ; ex:requestDate "2026-08-05"^^xsd:date ; ex:status "pending" .
+
+QUESTIONS
+
+S1. Which cost centres are over-committed for 2026Q3? List them.
+
+S2. How much headroom does the eng division have for 2026Q3?
+
+S3. Request r10 is dated 2026-07-20 and names vendor 'bolt'. Is its vendor approved?
+
+S4. Request r14 is for 30,000, dated 2026-07-20, from an analyst in cost centre corp_legal. Does it require escalation?
+
+S5. How many people are in An Corp_Legal1's department?
+
+S6. What is the total pending exposure of An Corp_Legal1's department?
+
+S7. Request r37 is a 9,000 software request from an employee with an open compliance violation. What happens to it?
+
+S8. How many employees report to Ada Vance, directly or indirectly?
+
+OUTPUT FORMAT -- answer every scenario in exactly this shape, nothing else:
+
+SCENARIO: <id>
+STATUS: ANSWER or AMBIGUOUS or CONFLICT
+ANSWER: <the answer, or -- if you cannot give one>
+READINGS: <if AMBIGUOUS or CONFLICT: each reading and the answer it produces, on one
+           line, separated by " | ". Otherwise: -->
+
+Use STATUS: ANSWER only when the material determines exactly one answer.
+Use STATUS: AMBIGUOUS when the wording admits more than one reading that would give
+different answers. Use STATUS: CONFLICT when two rules both apply and nothing says
+which wins.

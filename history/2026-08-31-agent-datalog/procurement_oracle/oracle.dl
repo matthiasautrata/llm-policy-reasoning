@@ -1,0 +1,319 @@
+// ---------------- EDB declarations ----------------
+.decl cc(c: symbol)
+.decl cc_parent(x: symbol, y: symbol)
+.decl org_unit(u: symbol, o: symbol)
+.decl emp(e: symbol, n: symbol, r: symbol, c: symbol)
+.decl reports(e: symbol, m: symbol)
+.decl role_limit_period(role: symbol, l: number, f: number, t: number)
+.decl req(id: symbol, e: symbol, a: number, category: symbol, v: symbol, d: number, st: symbol)
+.decl vendor_period(v: symbol, st: symbol, f: number, t: number)
+.decl booked(c: symbol, q: symbol, b: number)
+.decl cap(c: symbol, q: symbol, k: number)
+.decl violation(e: symbol)
+.decl today(d: number)
+.decl exemption_withdrawn(d: number)
+
+// ---------------- IDB declarations ----------------
+.decl emp_cc(e: symbol, c: symbol)
+.decl req_cc(r: symbol, c: symbol)
+.decl cc_anc(x: symbol, y: symbol)
+.decl charges(r: symbol, c: symbol)
+.decl spend_item(a: symbol, k: symbol, v: number)
+.decl booked_at(c: symbol, t: number)
+.decl committed(c: symbol, t: number)
+.decl headroom(c: symbol, h: number)
+.decl over_committed(c: symbol)
+.decl cap_total(r: symbol, c: symbol, t: number)
+.decl cap_breach(r: symbol, c: symbol)
+.decl cap_ok(r: symbol)
+.decl cap_breach_any(r: symbol)
+.decl req_date(r: symbol, d: number)
+.decl eff_date(r: symbol, d: number)
+.decl vendor_ok(r: symbol)
+.decl limit_at(e: symbol, l: number, d: number)
+.decl exempt(r: symbol)
+.decl chain(e: symbol, m: symbol)
+.decl approver(r: symbol, e: symbol)
+.decl has_approver(r: symbol)
+.decl dept(e: symbol, c: symbol)
+.decl dept_headcount(c: symbol, n: number)
+.decl dept_exposure(c: symbol, s: number)
+.decl dept_approver(r: symbol, e: symbol)
+.decl escalation(r: symbol)
+.decl dept_approver_any(r: symbol)
+.decl deny(r: symbol)
+.decl auto_approve(r: symbol)
+.decl conflict(r: symbol)
+.decl ada_chain(e: symbol)
+.decl ada_count(n: number)
+
+// ---------------- Rules ----------------
+emp_cc(E,C) :- emp(E,_,_,C).
+req_cc(R,C) :- req(R,E,_,_,_,_,_), emp_cc(E,C).
+cc_anc(X,Y) :- cc_parent(X,Y).
+cc_anc(X,Z) :- cc_parent(X,Y), cc_anc(Y,Z).
+charges(R,C) :- req_cc(R,C).
+charges(R,A) :- req_cc(R,C), cc_anc(C,A).
+spend_item(C,"zero",0) :- cc(C).
+spend_item(C,"booked",B) :- booked(C,"2026Q3",B).
+spend_item(P,C,B) :- booked(C,"2026Q3",B), cc_anc(C,P).
+booked_at(C,S) :- spend_item(C,_,_), S = sum B : { spend_item(C,_,B) }.
+committed(C,T) :- booked_at(C,T).
+headroom(C,H) :- committed(C,T), cap(C,"2026Q3",K), H = K - T.
+over_committed(C) :- committed(C,T), cap(C,"2026Q3",K), T > K.
+cap_total(R,C,T) :- charges(R,C), req(R,_,A,_,_,_,_), committed(C,B), T = B + A.
+cap_breach(R,C) :- cap_total(R,C,T), cap(C,"2026Q3",K), T > K.
+cap_ok(R) :- req(R,_,_,_,_,_,_), !cap_breach_any(R).
+cap_breach_any(R) :- cap_breach(R,_).
+req_date(R,D) :- req(R,_,_,_,_,D,_).
+eff_date(R,D) :- req_date(R,D).
+vendor_ok(R) :- req(R,_,_,_,V,_,_), eff_date(R,D), vendor_period(V,"approved",F,T), F <= D, D <= T.
+limit_at(E,L,D) :- emp(E,_,Role,_), role_limit_period(Role,L,F,T), eff_date(_,D), F <= D, D <= T.
+exempt(R) :- req(R,_,_,"capital",_,_,_), eff_date(R,D), exemption_withdrawn(W), D < W.
+chain(E,M) :- reports(E,M).
+chain(E,M) :- reports(E,X), chain(X,M).
+approver(R,E) :- req(R,Q,A,_,_,_,_), chain(Q,E), eff_date(R,D), limit_at(E,L,D), L >= A.
+has_approver(R) :- approver(R,_).
+dept(E,C) :- emp(E,_,_,C).
+dept_headcount(D,N) :- dept(_,D), N = count : { dept(E,D) }.
+dept_exposure(D,S) :- dept(_,D), S = sum A : { req(R,E,A,_,_,_,"pending"), dept(E,D) }.
+dept_approver(R,E) :- approver(R,E), req(R,Q,_,_,_,_,_), dept(Q,D), dept(E,D).
+escalation(R) :- has_approver(R), !dept_approver_any(R).
+dept_approver_any(R) :- dept_approver(R,_).
+deny(R) :- req(R,E,_,_,_,_,_), violation(E).
+auto_approve(R) :- req(R,_,A,"software",_,_,_), A < 10000.
+conflict(R) :- deny(R), auto_approve(R).
+ada_chain(e) :- chain(e, "e000").
+ada_count(n) :- n = count : { ada_chain(_) }.
+
+// ---------------- Facts ----------------
+cc("company").
+cc("ops").
+cc_parent("ops","company").
+cc("ops_field").
+cc_parent("ops_field","ops").
+cc("ops_supply").
+cc_parent("ops_supply","ops").
+cc("ops_qa").
+cc_parent("ops_qa","ops").
+cc("eng").
+cc_parent("eng","company").
+cc("eng_core").
+cc_parent("eng_core","eng").
+cc("eng_data").
+cc_parent("eng_data","eng").
+cc("eng_infra").
+cc_parent("eng_infra","eng").
+cc("sales").
+cc_parent("sales","company").
+cc("sales_emea").
+cc_parent("sales_emea","sales").
+cc("sales_amer").
+cc_parent("sales_amer","sales").
+cc("sales_apac").
+cc_parent("sales_apac","sales").
+cc("corp").
+cc_parent("corp","company").
+cc("corp_fin").
+cc_parent("corp_fin","corp").
+cc("corp_hr").
+cc_parent("corp_hr","corp").
+cc("corp_legal").
+cc_parent("corp_legal","corp").
+org_unit("company","leadership").
+org_unit("ops","leadership").
+org_unit("ops_field","delivery").
+org_unit("ops_supply","support").
+org_unit("ops_qa","support").
+org_unit("eng","leadership").
+org_unit("eng_core","delivery").
+org_unit("eng_data","support").
+org_unit("eng_infra","support").
+org_unit("sales","leadership").
+org_unit("sales_emea","delivery").
+org_unit("sales_amer","support").
+org_unit("sales_apac","support").
+org_unit("corp","leadership").
+org_unit("corp_fin","delivery").
+org_unit("corp_hr","support").
+org_unit("corp_legal","support").
+emp("e000","Ada Vance","vp","company").
+emp("e001","Dir Ops","director","ops").
+emp("e002","Mgr Ops_Field","manager","ops_field").
+emp("e003","An Ops_Field1","analyst","ops_field").
+emp("e004","An Ops_Field2","analyst","ops_field").
+emp("e005","Mgr Ops_Supply","manager","ops_supply").
+emp("e006","An Ops_Supply1","analyst","ops_supply").
+emp("e007","An Ops_Supply2","analyst","ops_supply").
+emp("e008","Mgr Ops_Qa","manager","ops_qa").
+emp("e009","An Ops_Qa1","analyst","ops_qa").
+emp("e010","An Ops_Qa2","analyst","ops_qa").
+emp("e011","Dir Eng","director","eng").
+emp("e012","Mgr Eng_Core","manager","eng_core").
+emp("e013","An Eng_Core1","analyst","eng_core").
+emp("e014","An Eng_Core2","analyst","eng_core").
+emp("e015","Mgr Eng_Data","manager","eng_data").
+emp("e016","An Eng_Data1","analyst","eng_data").
+emp("e017","An Eng_Data2","analyst","eng_data").
+emp("e018","Mgr Eng_Infra","manager","eng_infra").
+emp("e019","An Eng_Infra1","analyst","eng_infra").
+emp("e020","An Eng_Infra2","analyst","eng_infra").
+emp("e021","Dir Sales","director","sales").
+emp("e022","Mgr Sales_Emea","manager","sales_emea").
+emp("e023","An Sales_Emea1","analyst","sales_emea").
+emp("e024","An Sales_Emea2","analyst","sales_emea").
+emp("e025","Mgr Sales_Amer","manager","sales_amer").
+emp("e026","An Sales_Amer1","analyst","sales_amer").
+emp("e027","An Sales_Amer2","analyst","sales_amer").
+emp("e028","Mgr Sales_Apac","manager","sales_apac").
+emp("e029","An Sales_Apac1","analyst","sales_apac").
+emp("e030","An Sales_Apac2","analyst","sales_apac").
+emp("e031","Dir Corp","director","corp").
+emp("e032","Mgr Corp_Fin","manager","corp_fin").
+emp("e033","An Corp_Fin1","analyst","corp_fin").
+emp("e034","An Corp_Fin2","analyst","corp_fin").
+emp("e035","Mgr Corp_Hr","manager","corp_hr").
+emp("e036","An Corp_Hr1","analyst","corp_hr").
+emp("e037","An Corp_Hr2","analyst","corp_hr").
+emp("e038","Mgr Corp_Legal","manager","corp_legal").
+emp("e039","An Corp_Legal1","analyst","corp_legal").
+emp("e040","An Corp_Legal2","analyst","corp_legal").
+reports("e001","e000").
+reports("e002","e001").
+reports("e003","e002").
+reports("e004","e002").
+reports("e005","e001").
+reports("e006","e005").
+reports("e007","e005").
+reports("e008","e001").
+reports("e009","e008").
+reports("e010","e008").
+reports("e011","e000").
+reports("e012","e011").
+reports("e013","e012").
+reports("e014","e012").
+reports("e015","e011").
+reports("e016","e015").
+reports("e017","e015").
+reports("e018","e011").
+reports("e019","e018").
+reports("e020","e018").
+reports("e021","e000").
+reports("e022","e021").
+reports("e023","e022").
+reports("e024","e022").
+reports("e025","e021").
+reports("e026","e025").
+reports("e027","e025").
+reports("e028","e021").
+reports("e029","e028").
+reports("e030","e028").
+reports("e031","e000").
+reports("e032","e031").
+reports("e033","e032").
+reports("e034","e032").
+reports("e035","e031").
+reports("e036","e035").
+reports("e037","e035").
+reports("e038","e031").
+reports("e039","e038").
+reports("e040","e038").
+role_limit_period("analyst",5000,20260101,20261231).
+role_limit_period("manager",25000,20260101,20260731).
+role_limit_period("manager",40000,20260801,20261231).
+role_limit_period("director",100000,20260101,20261231).
+role_limit_period("vp",500000,20260101,20261231).
+req("r01","e015",9000,"services","dyne",20260910,"pending").
+req("r02","e007",12000,"capital","acme",20260720,"pending").
+req("r03","e024",20000,"hardware","dyne",20260720,"pending").
+req("r04","e037",9000,"services","edge",20260805,"pending").
+req("r05","e005",9000,"software","edge",20260712,"pending").
+req("r06","e003",9000,"services","acme",20260805,"pending").
+req("r07","e029",30000,"software","cog",20260805,"pending").
+req("r08","e039",12000,"capital","edge",20260712,"pending").
+req("r09","e035",12000,"services","cog",20260712,"pending").
+req("r10","e033",12000,"software","bolt",20260720,"pending").
+req("r11","e026",12000,"software","acme",20260720,"pending").
+req("r12","e029",20000,"hardware","edge",20260820,"pending").
+req("r13","e009",30000,"hardware","bolt",20260805,"pending").
+req("r14","e040",30000,"software","edge",20260720,"pending").
+req("r15","e038",12000,"hardware","cog",20260805,"pending").
+req("r16","e006",12000,"software","dyne",20260910,"pending").
+req("r17","e039",30000,"software","bolt",20260910,"pending").
+req("r18","e008",20000,"software","dyne",20260705,"pending").
+req("r19","e005",4000,"hardware","edge",20260805,"pending").
+req("r20","e030",12000,"services","acme",20260820,"pending").
+req("r21","e037",12000,"software","dyne",20260712,"pending").
+req("r22","e009",12000,"services","acme",20260820,"pending").
+req("r23","e015",4000,"services","acme",20260720,"pending").
+req("r24","e012",4000,"hardware","edge",20260805,"pending").
+req("r25","e039",20000,"capital","cog",20260720,"pending").
+req("r26","e022",20000,"capital","dyne",20260805,"pending").
+req("r27","e028",12000,"hardware","cog",20260805,"pending").
+req("r28","e027",20000,"services","bolt",20260805,"pending").
+req("r29","e035",12000,"software","acme",20260805,"pending").
+req("r30","e022",4000,"capital","dyne",20260705,"pending").
+req("r31","e038",12000,"services","acme",20260910,"pending").
+req("r32","e022",30000,"hardware","cog",20260820,"pending").
+req("r33","e002",4000,"software","edge",20260705,"pending").
+req("r34","e028",9000,"capital","dyne",20260705,"pending").
+req("r35","e012",12000,"hardware","cog",20260910,"pending").
+req("r36","e016",20000,"capital","edge",20260720,"pending").
+req("r37","e009",9000,"software","acme",20260805,"pending").
+vendor_period("acme","approved",20260101,20261231).
+vendor_period("bolt","approved",20260101,20260731).
+vendor_period("bolt","suspended",20260801,20261231).
+vendor_period("cog","approved",20260101,20261231).
+vendor_period("dyne","suspended",20260101,20260630).
+vendor_period("dyne","approved",20260701,20261231).
+vendor_period("edge","approved",20260101,20261231).
+booked("corp_fin","2026Q3",88000).
+booked("corp_hr","2026Q3",118000).
+booked("corp_legal","2026Q3",104000).
+booked("eng_core","2026Q3",118000).
+booked("eng_data","2026Q3",88000).
+booked("eng_infra","2026Q3",95000).
+booked("ops_field","2026Q3",95000).
+booked("ops_qa","2026Q3",76000).
+booked("ops_supply","2026Q3",95000).
+booked("sales_amer","2026Q3",88000).
+booked("sales_apac","2026Q3",76000).
+booked("sales_emea","2026Q3",76000).
+cap("company","2026Q3",2000000).
+cap("corp","2026Q3",600000).
+cap("corp_fin","2026Q3",150000).
+cap("corp_hr","2026Q3",150000).
+cap("corp_legal","2026Q3",150000).
+cap("eng","2026Q3",600000).
+cap("eng_core","2026Q3",150000).
+cap("eng_data","2026Q3",150000).
+cap("eng_infra","2026Q3",150000).
+cap("ops","2026Q3",600000).
+cap("ops_field","2026Q3",150000).
+cap("ops_qa","2026Q3",150000).
+cap("ops_supply","2026Q3",150000).
+cap("sales","2026Q3",600000).
+cap("sales_amer","2026Q3",150000).
+cap("sales_apac","2026Q3",150000).
+cap("sales_emea","2026Q3",150000).
+violation("e009").
+violation("e021").
+violation("e024").
+violation("e027").
+violation("e029").
+violation("e038").
+today(20260831).
+exemption_withdrawn(20260801).
+
+// ---------------- Outputs ----------------
+.output over_committed
+.output headroom
+.output vendor_ok
+.output escalation
+.output dept_headcount
+.output dept_exposure
+.output deny
+.output auto_approve
+.output conflict
+.output ada_chain
+.output ada_count

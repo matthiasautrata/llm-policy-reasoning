@@ -1,0 +1,211 @@
+prompt,arm,model,run,scenario,expected,status,answer,outcome,correct
+p07,A:text,claude-haiku,claude-haiku|p07|20260918,S1,AMBIGUOUS,ANSWER,"Yes, 114000",overreach,0
+p07,A:text,claude-haiku,claude-haiku|p07|20260918,S2,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p07,A:text,claude-haiku,claude-haiku|p07|20260918,S3,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p07,A:text,claude-haiku,claude-haiku|p07|20260918,S4,AMBIGUOUS,ANSWER,Yes,overreach,0
+p07,A:text,claude-haiku,claude-haiku|p07|20260918,S5,CONFLICT,CONFLICT,--,ok,1
+p07,A:text,claude-haiku,claude-haiku|p07|20260918,S6,ANSWER,ANSWER,"Cy Novak, Di Okafor",ok,1
+p08,A:text+notes,claude-haiku,claude-haiku|p08|20260918,S1,ANSWER,ANSWER,"Yes, 114000",ok,1
+p08,A:text+notes,claude-haiku,claude-haiku|p08|20260918,S2,ANSWER,ANSWER,Yes,ok,1
+p08,A:text+notes,claude-haiku,claude-haiku|p08|20260918,S3,ANSWER,ANSWER,630000,ok,1
+p08,A:text+notes,claude-haiku,claude-haiku|p08|20260918,S4,ANSWER,ANSWER,No,ok,1
+p08,A:text+notes,claude-haiku,claude-haiku|p08|20260918,S5,CONFLICT,CONFLICT,--,ok,1
+p08,A:text+notes,claude-haiku,claude-haiku|p08|20260918,S6,ANSWER,ANSWER,"Cy Novak, Di Okafor",ok,1
+p09,A:text-inline,claude-haiku,claude-haiku|p09|20260918,S1,ANSWER,ANSWER,"Yes, 114000",ok,1
+p09,A:text-inline,claude-haiku,claude-haiku|p09|20260918,S2,ANSWER,ANSWER,Yes,ok,1
+p09,A:text-inline,claude-haiku,claude-haiku|p09|20260918,S3,ANSWER,ANSWER,630000,ok,1
+p09,A:text-inline,claude-haiku,claude-haiku|p09|20260918,S4,ANSWER,ANSWER,No,ok,1
+p09,A:text-inline,claude-haiku,claude-haiku|p09|20260918,S5,CONFLICT,CONFLICT,--,ok,1
+p09,A:text-inline,claude-haiku,claude-haiku|p09|20260918,S6,ANSWER,ANSWER,"Cy Novak, Di Okafor",ok,1
+p10,A:datalog,claude-haiku,claude-haiku|p10|20260918,S1,ANSWER,ANSWER,"YES, 114000",ok,1
+p10,A:datalog,claude-haiku,claude-haiku|p10|20260918,S2,ANSWER,ANSWER,YES,ok,1
+p10,A:datalog,claude-haiku,claude-haiku|p10|20260918,S3,ANSWER,ANSWER,630000,ok,1
+p10,A:datalog,claude-haiku,claude-haiku|p10|20260918,S4,ANSWER,ANSWER,NO,ok,1
+p10,A:datalog,claude-haiku,claude-haiku|p10|20260918,S5,CONFLICT,CONFLICT,--,ok,1
+p10,A:datalog,claude-haiku,claude-haiku|p10|20260918,S6,ANSWER,ANSWER,"cy, di",ok,1
+p12,A:owl,claude-haiku,claude-haiku|p12|20260918,S1,AMBIGUOUS,ANSWER,Yes; 114000 of 150000,overreach,0
+p12,A:owl,claude-haiku,claude-haiku|p12|20260918,S2,AMBIGUOUS,AMBIGUOUS,,ok,1
+p12,A:owl,claude-haiku,claude-haiku|p12|20260918,S3,AMBIGUOUS,ANSWER,645000,overreach,0
+p12,A:owl,claude-haiku,claude-haiku|p12|20260918,S4,AMBIGUOUS,ANSWER,Yes,overreach,0
+p12,A:owl,claude-haiku,claude-haiku|p12|20260918,S5,CONFLICT,CONFLICT,--,ok,1
+p12,A:owl,claude-haiku,claude-haiku|p12|20260918,S6,ANSWER,ANSWER,Cy Novak and Di Okafor,ok,1
+p13,B:text+notes,claude-haiku,claude-haiku|p13|20260918,S1,ANSWER,ANSWER,None,ok,1
+p13,B:text+notes,claude-haiku,claude-haiku|p13|20260918,S2,ANSWER,ANSWER,"299,000",ok,1
+p13,B:text+notes,claude-haiku,claude-haiku|p13|20260918,S3,ANSWER,ANSWER,Yes,ok,1
+p13,B:text+notes,claude-haiku,claude-haiku|p13|20260918,S4,ANSWER,ANSWER,Yes,ok,1
+p13,B:text+notes,claude-haiku,claude-haiku|p13|20260918,S5,ANSWER,ANSWER,3,ok,1
+p13,B:text+notes,claude-haiku,claude-haiku|p13|20260918,S6,ANSWER,ANSWER,"116,000",ok,1
+p13,B:text+notes,claude-haiku,claude-haiku|p13|20260918,S7,CONFLICT,CONFLICT,--,ok,1
+p13,B:text+notes,claude-haiku,claude-haiku|p13|20260918,S8,ANSWER,ANSWER,40,ok,1
+p14,B:text-inline,claude-haiku,claude-haiku|p14|20260918,S1,ANSWER,ANSWER,None,ok,1
+p14,B:text-inline,claude-haiku,claude-haiku|p14|20260918,S2,ANSWER,ANSWER,299000,ok,1
+p14,B:text-inline,claude-haiku,claude-haiku|p14|20260918,S3,ANSWER,ANSWER,Yes,ok,1
+p14,B:text-inline,claude-haiku,claude-haiku|p14|20260918,S4,ANSWER,ANSWER,Yes,ok,1
+p14,B:text-inline,claude-haiku,claude-haiku|p14|20260918,S5,ANSWER,ANSWER,3,ok,1
+p14,B:text-inline,claude-haiku,claude-haiku|p14|20260918,S6,ANSWER,ANSWER,116000,ok,1
+p14,B:text-inline,claude-haiku,claude-haiku|p14|20260918,S7,CONFLICT,CONFLICT,--,ok,1
+p14,B:text-inline,claude-haiku,claude-haiku|p14|20260918,S8,ANSWER,ANSWER,40,ok,1
+p15,B:text-inline-flip,claude-haiku,claude-haiku|p15|20260918,S1,ANSWER,ANSWER,None,ok,1
+p15,B:text-inline-flip,claude-haiku,claude-haiku|p15|20260918,S2,ANSWER,ANSWER,299000,ok,1
+p15,B:text-inline-flip,claude-haiku,claude-haiku|p15|20260918,S3,ANSWER,ANSWER,No,ok,1
+p15,B:text-inline-flip,claude-haiku,claude-haiku|p15|20260918,S4,ANSWER,ANSWER,Yes,ok,1
+p15,B:text-inline-flip,claude-haiku,claude-haiku|p15|20260918,S5,ANSWER,ANSWER,3,ok,1
+p15,B:text-inline-flip,claude-haiku,claude-haiku|p15|20260918,S6,ANSWER,ANSWER,116000,ok,1
+p15,B:text-inline-flip,claude-haiku,claude-haiku|p15|20260918,S7,CONFLICT,CONFLICT,,ok,1
+p15,B:text-inline-flip,claude-haiku,claude-haiku|p15|20260918,S8,ANSWER,ANSWER,40,ok,1
+p16,B:datalog,claude-haiku,claude-haiku|p16|20260918,S1,ANSWER,ANSWER,None,ok,1
+p16,B:datalog,claude-haiku,claude-haiku|p16|20260918,S2,ANSWER,ANSWER,299000,ok,1
+p16,B:datalog,claude-haiku,claude-haiku|p16|20260918,S3,ANSWER,ANSWER,Yes,ok,1
+p16,B:datalog,claude-haiku,claude-haiku|p16|20260918,S4,ANSWER,ANSWER,Yes,ok,1
+p16,B:datalog,claude-haiku,claude-haiku|p16|20260918,S5,ANSWER,ANSWER,3,ok,1
+p16,B:datalog,claude-haiku,claude-haiku|p16|20260918,S6,ANSWER,ANSWER,104000,wrong-value,0
+p16,B:datalog,claude-haiku,claude-haiku|p16|20260918,S7,CONFLICT,CONFLICT,,ok,1
+p16,B:datalog,claude-haiku,claude-haiku|p16|20260918,S8,ANSWER,ANSWER,40,ok,1
+x01,B:owl+shacl (new),claude-haiku,claude-haiku|x01|20260918,S1,ANSWER,ANSWER,None,ok,1
+x01,B:owl+shacl (new),claude-haiku,claude-haiku|x01|20260918,S2,ANSWER,ANSWER,"299,000",ok,1
+x01,B:owl+shacl (new),claude-haiku,claude-haiku|x01|20260918,S3,ANSWER,ANSWER,Yes,ok,1
+x01,B:owl+shacl (new),claude-haiku,claude-haiku|x01|20260918,S4,ANSWER,ANSWER,Yes,ok,1
+x01,B:owl+shacl (new),claude-haiku,claude-haiku|x01|20260918,S5,ANSWER,ANSWER,3,ok,1
+x01,B:owl+shacl (new),claude-haiku,claude-haiku|x01|20260918,S6,ANSWER,ANSWER,"86,000",wrong-value,0
+x01,B:owl+shacl (new),claude-haiku,claude-haiku|x01|20260918,S7,CONFLICT,CONFLICT,--,ok,1
+x01,B:owl+shacl (new),claude-haiku,claude-haiku|x01|20260918,S8,ANSWER,ANSWER,40,ok,1
+p07,A:text,claude-sonnet,claude-sonnet|p07|20260918,S1,AMBIGUOUS,ANSWER,"Passes. Committed spend 34,000 + request 80,000 = 114,000, within the ops Q3 cap of 150,000.",overreach,0
+p07,A:text,claude-sonnet,claude-sonnet|p07|20260918,S2,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p07,A:text,claude-sonnet,claude-sonnet|p07|20260918,S3,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p07,A:text,claude-sonnet,claude-sonnet|p07|20260918,S4,AMBIGUOUS,ANSWER,"Yes. as of today the manager limit is 40,000 >= 30,000.",overreach,0
+p07,A:text,claude-sonnet,claude-sonnet|p07|20260918,S5,CONFLICT,CONFLICT,--,ok,1
+p07,A:text,claude-sonnet,claude-sonnet|p07|20260918,S6,ANSWER,ANSWER,"Cy Novak (100,000) and Di Okafor (500,000).",ok,1
+p08,A:text+notes,claude-sonnet,claude-sonnet|p08|20260918,S1,ANSWER,ANSWER,"Passes. 34,000 + 80,000 = 114,000, under the 150,000 cap.",ok,1
+p08,A:text+notes,claude-sonnet,claude-sonnet|p08|20260918,S2,ANSWER,ANSWER,"Yes, r4 is exempt.",ok,1
+p08,A:text+notes,claude-sonnet,claude-sonnet|p08|20260918,S3,ANSWER,ANSWER,"630,000",ok,1
+p08,A:text+notes,claude-sonnet,claude-sonnet|p08|20260918,S4,ANSWER,ANSWER,"No. limit on 2026-07-12 was 25,000.",ok,1
+p08,A:text+notes,claude-sonnet,claude-sonnet|p08|20260918,S5,CONFLICT,CONFLICT,--,ok,1
+p08,A:text+notes,claude-sonnet,claude-sonnet|p08|20260918,S6,ANSWER,ANSWER,"cy (100,000) and di (500,000).",ok,1
+p09,A:text-inline,claude-sonnet,claude-sonnet|p09|20260918,S1,ANSWER,ANSWER,"Pass -- 34,000 + 80,000 = 114,000, does not exceed 150,000.",ok,1
+p09,A:text-inline,claude-sonnet,claude-sonnet|p09|20260918,S2,ANSWER,ANSWER,"Yes, r4 is exempt.",ok,1
+p09,A:text-inline,claude-sonnet,claude-sonnet|p09|20260918,S3,ANSWER,ANSWER,"630,000.",ok,1
+p09,A:text-inline,claude-sonnet,claude-sonnet|p09|20260918,S4,ANSWER,ANSWER,"No. limit on request date 25,000.",ok,1
+p09,A:text-inline,claude-sonnet,claude-sonnet|p09|20260918,S5,CONFLICT,CONFLICT,--,ok,1
+p09,A:text-inline,claude-sonnet,claude-sonnet|p09|20260918,S6,ANSWER,ANSWER,"Cy Novak (100,000) and Di Okafor (500,000).",ok,1
+p10,A:datalog,claude-sonnet,claude-sonnet|p10|20260918,S1,ANSWER,ANSWER,"r4 passes the cap check; cap_total = 34000 + 80000 = 114000, <= cap 150000.",ok,1
+p10,A:datalog,claude-sonnet,claude-sonnet|p10|20260918,S2,ANSWER,ANSWER,"Yes, r4 is exempt",ok,1
+p10,A:datalog,claude-sonnet,claude-sonnet|p10|20260918,S3,ANSWER,ANSWER,630000,ok,1
+p10,A:datalog,claude-sonnet,claude-sonnet|p10|20260918,S4,ANSWER,ANSWER,"No, Bo Chen is not a qualified approver for r2.",ok,1
+p10,A:datalog,claude-sonnet,claude-sonnet|p10|20260918,S5,CONFLICT,CONFLICT,--,ok,1
+p10,A:datalog,claude-sonnet,claude-sonnet|p10|20260918,S6,ANSWER,ANSWER,cy (100000) and di (500000).,ok,1
+p12,A:owl,claude-sonnet,claude-sonnet|p12|20260918,S1,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p12,A:owl,claude-sonnet,claude-sonnet|p12|20260918,S2,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p12,A:owl,claude-sonnet,claude-sonnet|p12|20260918,S3,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p12,A:owl,claude-sonnet,claude-sonnet|p12|20260918,S4,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p12,A:owl,claude-sonnet,claude-sonnet|p12|20260918,S5,CONFLICT,CONFLICT,--,ok,1
+p12,A:owl,claude-sonnet,claude-sonnet|p12|20260918,S6,ANSWER,AMBIGUOUS,--,overcaution,0
+p13,B:text+notes,claude-sonnet,claude-sonnet|p13|20260918,S1,ANSWER,ANSWER,None,ok,1
+p13,B:text+notes,claude-sonnet,claude-sonnet|p13|20260918,S2,ANSWER,ANSWER,"299,000",ok,1
+p13,B:text+notes,claude-sonnet,claude-sonnet|p13|20260918,S3,ANSWER,ANSWER,Yes,ok,1
+p13,B:text+notes,claude-sonnet,claude-sonnet|p13|20260918,S4,ANSWER,ANSWER,"Yes, escalation is required",ok,1
+p13,B:text+notes,claude-sonnet,claude-sonnet|p13|20260918,S5,ANSWER,ANSWER,3,ok,1
+p13,B:text+notes,claude-sonnet,claude-sonnet|p13|20260918,S6,ANSWER,ANSWER,"116,000",ok,1
+p13,B:text+notes,claude-sonnet,claude-sonnet|p13|20260918,S7,CONFLICT,CONFLICT,--,ok,1
+p13,B:text+notes,claude-sonnet,claude-sonnet|p13|20260918,S8,ANSWER,ANSWER,40,ok,1
+p14,B:text-inline,claude-sonnet,claude-sonnet|p14|20260918,S1,ANSWER,ANSWER,None,ok,1
+p14,B:text-inline,claude-sonnet,claude-sonnet|p14|20260918,S2,ANSWER,ANSWER,"299,000",ok,1
+p14,B:text-inline,claude-sonnet,claude-sonnet|p14|20260918,S3,ANSWER,ANSWER,Yes.,ok,1
+p14,B:text-inline,claude-sonnet,claude-sonnet|p14|20260918,S4,ANSWER,ANSWER,"Yes, escalation is required.",ok,1
+p14,B:text-inline,claude-sonnet,claude-sonnet|p14|20260918,S5,ANSWER,ANSWER,3,ok,1
+p14,B:text-inline,claude-sonnet,claude-sonnet|p14|20260918,S6,ANSWER,ANSWER,"116,000",ok,1
+p14,B:text-inline,claude-sonnet,claude-sonnet|p14|20260918,S7,CONFLICT,CONFLICT,--,ok,1
+p14,B:text-inline,claude-sonnet,claude-sonnet|p14|20260918,S8,ANSWER,ANSWER,40,ok,1
+p15,B:text-inline-flip,claude-sonnet,claude-sonnet|p15|20260918,S1,ANSWER,ANSWER,None,ok,1
+p15,B:text-inline-flip,claude-sonnet,claude-sonnet|p15|20260918,S2,ANSWER,ANSWER,"299,000",ok,1
+p15,B:text-inline-flip,claude-sonnet,claude-sonnet|p15|20260918,S3,ANSWER,ANSWER,No. P6 uses the version in force TODAY; bolt suspended since 2026-08-01.,ok,1
+p15,B:text-inline-flip,claude-sonnet,claude-sonnet|p15|20260918,S4,ANSWER,ANSWER,"Yes, escalation is required.",ok,1
+p15,B:text-inline-flip,claude-sonnet,claude-sonnet|p15|20260918,S5,ANSWER,ANSWER,3,ok,1
+p15,B:text-inline-flip,claude-sonnet,claude-sonnet|p15|20260918,S6,ANSWER,ANSWER,"116,000",ok,1
+p15,B:text-inline-flip,claude-sonnet,claude-sonnet|p15|20260918,S7,CONFLICT,CONFLICT,--,ok,1
+p15,B:text-inline-flip,claude-sonnet,claude-sonnet|p15|20260918,S8,ANSWER,ANSWER,40,ok,1
+p16,B:datalog,claude-sonnet,claude-sonnet|p16|20260918,S1,ANSWER,ANSWER,None,ok,1
+p16,B:datalog,claude-sonnet,claude-sonnet|p16|20260918,S2,ANSWER,ANSWER,"299,000",ok,1
+p16,B:datalog,claude-sonnet,claude-sonnet|p16|20260918,S3,ANSWER,ANSWER,Yes,ok,1
+p16,B:datalog,claude-sonnet,claude-sonnet|p16|20260918,S4,ANSWER,ANSWER,"Yes, escalation is required.",ok,1
+p16,B:datalog,claude-sonnet,claude-sonnet|p16|20260918,S5,ANSWER,ANSWER,3,ok,1
+p16,B:datalog,claude-sonnet,claude-sonnet|p16|20260918,S6,ANSWER,ANSWER,"116,000",ok,1
+p16,B:datalog,claude-sonnet,claude-sonnet|p16|20260918,S7,CONFLICT,CONFLICT,--,ok,1
+p16,B:datalog,claude-sonnet,claude-sonnet|p16|20260918,S8,ANSWER,ANSWER,40,ok,1
+x01,B:owl+shacl (new),claude-sonnet,claude-sonnet|x01|20260918,S1,ANSWER,ANSWER,None.,ok,1
+x01,B:owl+shacl (new),claude-sonnet,claude-sonnet|x01|20260918,S2,ANSWER,ANSWER,"299,000",ok,1
+x01,B:owl+shacl (new),claude-sonnet,claude-sonnet|x01|20260918,S3,ANSWER,ANSWER,Yes.,ok,1
+x01,B:owl+shacl (new),claude-sonnet,claude-sonnet|x01|20260918,S4,ANSWER,ANSWER,"Yes, escalation is required.",ok,1
+x01,B:owl+shacl (new),claude-sonnet,claude-sonnet|x01|20260918,S5,ANSWER,ANSWER,3,ok,1
+x01,B:owl+shacl (new),claude-sonnet,claude-sonnet|x01|20260918,S6,ANSWER,ANSWER,"116,000",ok,1
+x01,B:owl+shacl (new),claude-sonnet,claude-sonnet|x01|20260918,S7,CONFLICT,CONFLICT,--,ok,1
+x01,B:owl+shacl (new),claude-sonnet,claude-sonnet|x01|20260918,S8,ANSWER,ANSWER,40,ok,1
+p07,A:text,claude-opus,claude-opus|p07|20260918,S1,AMBIGUOUS,ANSWER,"Yes, r4 passes. 34000 + 80000 = 114000, within 150000. It passes whether or not the exemption applies.",overreach,0
+p07,A:text,claude-opus,claude-opus|p07|20260918,S2,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p07,A:text,claude-opus,claude-opus|p07|20260918,S3,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p07,A:text,claude-opus,claude-opus|p07|20260918,S4,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p07,A:text,claude-opus,claude-opus|p07|20260918,S5,CONFLICT,CONFLICT,--,ok,1
+p07,A:text,claude-opus,claude-opus|p07|20260918,S6,ANSWER,ANSWER,Cy Novak (100000) and Di Okafor (500000),ok,1
+p08,A:text+notes,claude-opus,claude-opus|p08|20260918,S1,ANSWER,ANSWER,"Pass. 34000 + 80000 = 114000, within 150000.",ok,1
+p08,A:text+notes,claude-opus,claude-opus|p08|20260918,S2,ANSWER,ANSWER,Yes.,ok,1
+p08,A:text+notes,claude-opus,claude-opus|p08|20260918,S3,ANSWER,ANSWER,630000.,ok,1
+p08,A:text+notes,claude-opus,claude-opus|p08|20260918,S4,ANSWER,ANSWER,No.,ok,1
+p08,A:text+notes,claude-opus,claude-opus|p08|20260918,S5,CONFLICT,CONFLICT,--,ok,1
+p08,A:text+notes,claude-opus,claude-opus|p08|20260918,S6,ANSWER,ANSWER,"Cy Novak (100000), Di Okafor (500000)",ok,1
+p09,A:text-inline,claude-opus,claude-opus|p09|20260918,S1,ANSWER,ANSWER,"Yes, it passes. exempt; even if the cap applied, 34000 + 80000 = 114000, within 150000.",ok,1
+p09,A:text-inline,claude-opus,claude-opus|p09|20260918,S2,ANSWER,ANSWER,Yes.,ok,1
+p09,A:text-inline,claude-opus,claude-opus|p09|20260918,S3,ANSWER,ANSWER,630000.,ok,1
+p09,A:text-inline,claude-opus,claude-opus|p09|20260918,S4,ANSWER,ANSWER,No.,ok,1
+p09,A:text-inline,claude-opus,claude-opus|p09|20260918,S5,CONFLICT,CONFLICT,--,ok,1
+p09,A:text-inline,claude-opus,claude-opus|p09|20260918,S6,ANSWER,ANSWER,Cy Novak (100000) and Di Okafor (500000),ok,1
+p10,A:datalog,claude-opus,claude-opus|p10|20260918,S1,ANSWER,ANSWER,"Yes, r4 passes. 34000 + 80000 = 114000, within 150000.",ok,1
+p10,A:datalog,claude-opus,claude-opus|p10|20260918,S2,ANSWER,ANSWER,"Yes, r4 is exempt.",ok,1
+p10,A:datalog,claude-opus,claude-opus|p10|20260918,S3,ANSWER,ANSWER,630000.,ok,1
+p10,A:datalog,claude-opus,claude-opus|p10|20260918,S4,ANSWER,ANSWER,No.,ok,1
+p10,A:datalog,claude-opus,claude-opus|p10|20260918,S5,CONFLICT,CONFLICT,--,ok,1
+p10,A:datalog,claude-opus,claude-opus|p10|20260918,S6,ANSWER,ANSWER,cy (100000) and di (500000),ok,1
+p12,A:owl,claude-opus,claude-opus|p12|20260918,S1,AMBIGUOUS,ANSWER,"Yes, r4 passes. 34000 + 80000 = 114000 within 150000. OWL cannot do the addition, worked out by hand.",overreach,0
+p12,A:owl,claude-opus,claude-opus|p12|20260918,S2,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p12,A:owl,claude-opus,claude-opus|p12|20260918,S3,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p12,A:owl,claude-opus,claude-opus|p12|20260918,S4,AMBIGUOUS,AMBIGUOUS,--,ok,1
+p12,A:owl,claude-opus,claude-opus|p12|20260918,S5,CONFLICT,CONFLICT,--,ok,1
+p12,A:owl,claude-opus,claude-opus|p12|20260918,S6,ANSWER,ANSWER,Cy Novak (100000) and Di Okafor (500000).,ok,1
+p13,B:text+notes,claude-opus,claude-opus|p13|20260918,S1,ANSWER,ANSWER,None.,ok,1
+p13,B:text+notes,claude-opus,claude-opus|p13|20260918,S2,ANSWER,ANSWER,"299,000",ok,1
+p13,B:text+notes,claude-opus,claude-opus|p13|20260918,S3,ANSWER,ANSWER,Yes.,ok,1
+p13,B:text+notes,claude-opus,claude-opus|p13|20260918,S4,ANSWER,ANSWER,Yes.,ok,1
+p13,B:text+notes,claude-opus,claude-opus|p13|20260918,S5,ANSWER,ANSWER,3,ok,1
+p13,B:text+notes,claude-opus,claude-opus|p13|20260918,S6,ANSWER,ANSWER,"116,000",ok,1
+p13,B:text+notes,claude-opus,claude-opus|p13|20260918,S7,CONFLICT,CONFLICT,--,ok,1
+p13,B:text+notes,claude-opus,claude-opus|p13|20260918,S8,ANSWER,ANSWER,40,ok,1
+p14,B:text-inline,claude-opus,claude-opus|p14|20260918,S1,ANSWER,ANSWER,None.,ok,1
+p14,B:text-inline,claude-opus,claude-opus|p14|20260918,S2,ANSWER,ANSWER,"299,000",ok,1
+p14,B:text-inline,claude-opus,claude-opus|p14|20260918,S3,ANSWER,ANSWER,Yes.,ok,1
+p14,B:text-inline,claude-opus,claude-opus|p14|20260918,S4,ANSWER,ANSWER,Yes.,ok,1
+p14,B:text-inline,claude-opus,claude-opus|p14|20260918,S5,ANSWER,ANSWER,"3 (e038, e039, e040)",ok,1
+p14,B:text-inline,claude-opus,claude-opus|p14|20260918,S6,ANSWER,ANSWER,"116,000",ok,1
+p14,B:text-inline,claude-opus,claude-opus|p14|20260918,S7,CONFLICT,CONFLICT,--,ok,1
+p14,B:text-inline,claude-opus,claude-opus|p14|20260918,S8,ANSWER,ANSWER,40,ok,1
+p15,B:text-inline-flip,claude-opus,claude-opus|p15|20260918,S1,ANSWER,ANSWER,None.,ok,1
+p15,B:text-inline-flip,claude-opus,claude-opus|p15|20260918,S2,ANSWER,ANSWER,"299,000",ok,1
+p15,B:text-inline-flip,claude-opus,claude-opus|p15|20260918,S3,ANSWER,ANSWER,No. judged as of today; bolt suspended.,ok,1
+p15,B:text-inline-flip,claude-opus,claude-opus|p15|20260918,S4,ANSWER,ANSWER,Yes.,ok,1
+p15,B:text-inline-flip,claude-opus,claude-opus|p15|20260918,S5,ANSWER,ANSWER,3,ok,1
+p15,B:text-inline-flip,claude-opus,claude-opus|p15|20260918,S6,ANSWER,ANSWER,"116,000",ok,1
+p15,B:text-inline-flip,claude-opus,claude-opus|p15|20260918,S7,CONFLICT,CONFLICT,--,ok,1
+p15,B:text-inline-flip,claude-opus,claude-opus|p15|20260918,S8,ANSWER,ANSWER,40,ok,1
+p16,B:datalog,claude-opus,claude-opus|p16|20260918,S1,ANSWER,ANSWER,None.,ok,1
+p16,B:datalog,claude-opus,claude-opus|p16|20260918,S2,ANSWER,ANSWER,"299,000",ok,1
+p16,B:datalog,claude-opus,claude-opus|p16|20260918,S3,ANSWER,ANSWER,Yes.,ok,1
+p16,B:datalog,claude-opus,claude-opus|p16|20260918,S4,ANSWER,ANSWER,Yes.,ok,1
+p16,B:datalog,claude-opus,claude-opus|p16|20260918,S5,ANSWER,ANSWER,3,ok,1
+p16,B:datalog,claude-opus,claude-opus|p16|20260918,S6,ANSWER,ANSWER,"116,000",ok,1
+p16,B:datalog,claude-opus,claude-opus|p16|20260918,S7,CONFLICT,CONFLICT,--,ok,1
+p16,B:datalog,claude-opus,claude-opus|p16|20260918,S8,ANSWER,ANSWER,40,ok,1
+x01,B:owl+shacl (new),claude-opus,claude-opus|x01|20260918,S1,ANSWER,ANSWER,None.,ok,1
+x01,B:owl+shacl (new),claude-opus,claude-opus|x01|20260918,S2,ANSWER,ANSWER,"299,000",ok,1
+x01,B:owl+shacl (new),claude-opus,claude-opus|x01|20260918,S3,ANSWER,ANSWER,Yes.,ok,1
+x01,B:owl+shacl (new),claude-opus,claude-opus|x01|20260918,S4,ANSWER,ANSWER,Yes.,ok,1
+x01,B:owl+shacl (new),claude-opus,claude-opus|x01|20260918,S5,ANSWER,ANSWER,3,ok,1
+x01,B:owl+shacl (new),claude-opus,claude-opus|x01|20260918,S6,ANSWER,ANSWER,"116,000",ok,1
+x01,B:owl+shacl (new),claude-opus,claude-opus|x01|20260918,S7,CONFLICT,CONFLICT,--,ok,1
+x01,B:owl+shacl (new),claude-opus,claude-opus|x01|20260918,S8,ANSWER,ANSWER,40,ok,1

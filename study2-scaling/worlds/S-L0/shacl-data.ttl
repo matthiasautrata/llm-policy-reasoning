@@ -1,0 +1,51 @@
+@prefix ex:   <http://example.org/proc#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+# ---------- data ----------
+ex:company a ex:CostCentre ; ex:booked 36000 ; ex:cap 546000 .
+ex:cc1 a ex:CostCentre ; ex:parent ex:company ; ex:cap 194000 .
+ex:cc1_1 a ex:CostCentre ; ex:parent ex:cc1 ; ex:booked 57000 ; ex:cap 55000 .
+ex:cc1_2 a ex:CostCentre ; ex:parent ex:cc1 ; ex:booked 112000 ; ex:cap 134000 .
+ex:cc2 a ex:CostCentre ; ex:parent ex:company ; ex:cap 194000 .
+ex:cc2_1 a ex:CostCentre ; ex:parent ex:cc2 ; ex:booked 137000 ; ex:cap 164000 .
+ex:cc2_2 a ex:CostCentre ; ex:parent ex:cc2 ; ex:booked 48000 ; ex:cap 57000 .
+ex:vp a ex:Role ; ex:limit 500000 .
+ex:director a ex:Role ; ex:limit 100000 .
+ex:senior_manager a ex:Role ; ex:limit 50000 .
+ex:manager a ex:Role ; ex:limit 25000 .
+ex:analyst a ex:Role ; ex:limit 5000 .
+ex:acme a ex:Vendor ; ex:status "approved" .
+ex:bolt a ex:Vendor ; ex:status "suspended" .
+ex:cog a ex:Vendor ; ex:status "approved" .
+ex:dyne a ex:Vendor ; ex:status "suspended" .
+ex:edge a ex:Vendor ; ex:status "approved" .
+ex:e000 a ex:Employee ; ex:role ex:vp ; ex:costCentre ex:company .
+ex:e001 a ex:Employee ; ex:role ex:director ; ex:costCentre ex:cc1 ; ex:reportsTo ex:e000 .
+ex:e002 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_1 ; ex:reportsTo ex:e001 .
+ex:e003 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc1_2 ; ex:reportsTo ex:e001 .
+ex:e004 a ex:Employee ; ex:role ex:director ; ex:costCentre ex:cc2 ; ex:reportsTo ex:e000 .
+ex:e005 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_1 ; ex:reportsTo ex:e004 .
+ex:e006 a ex:Employee ; ex:role ex:manager ; ex:costCentre ex:cc2_2 ; ex:reportsTo ex:e004 .
+ex:e007 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_1 ; ex:reportsTo ex:e002 .
+ex:e008 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_1 ; ex:reportsTo ex:e002 .
+ex:e009 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_2 ; ex:reportsTo ex:e003 .
+ex:e010 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc1_2 ; ex:reportsTo ex:e003 .
+ex:e011 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_1 ; ex:reportsTo ex:e005 .
+ex:e012 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_1 ; ex:reportsTo ex:e005 .
+ex:e013 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_2 ; ex:reportsTo ex:e006 .
+ex:e014 a ex:Employee ; ex:role ex:analyst ; ex:costCentre ex:cc2_2 ; ex:reportsTo ex:e006 .
+ex:r001 a ex:Request ; ex:requester ex:e010 ; ex:amount 4000 ; ex:category "capital" ; ex:vendor ex:cog .
+ex:r002 a ex:Request ; ex:requester ex:e012 ; ex:amount 20000 ; ex:category "software" ; ex:vendor ex:cog .
+ex:r003 a ex:Request ; ex:requester ex:e001 ; ex:amount 4000 ; ex:category "software" ; ex:vendor ex:edge .
+ex:r004 a ex:Request ; ex:requester ex:e001 ; ex:amount 60000 ; ex:category "hardware" ; ex:vendor ex:dyne .
+ex:r005 a ex:Request ; ex:requester ex:e012 ; ex:amount 4000 ; ex:category "hardware" ; ex:vendor ex:dyne .
+ex:r006 a ex:Request ; ex:requester ex:e008 ; ex:amount 120000 ; ex:category "hardware" ; ex:vendor ex:cog .
+ex:r007 a ex:Request ; ex:requester ex:e004 ; ex:amount 20000 ; ex:category "capital" ; ex:vendor ex:cog .
+ex:r008 a ex:Request ; ex:requester ex:e001 ; ex:amount 60000 ; ex:category "software" ; ex:vendor ex:bolt .
+ex:r009 a ex:Request ; ex:requester ex:e011 ; ex:amount 30000 ; ex:category "software" ; ex:vendor ex:cog .
+ex:r010 a ex:Request ; ex:requester ex:e012 ; ex:amount 120000 ; ex:category "capital" ; ex:vendor ex:edge .
+ex:r011 a ex:Request ; ex:requester ex:e014 ; ex:amount 20000 ; ex:category "services" ; ex:vendor ex:cog .
+ex:r012 a ex:Request ; ex:requester ex:e010 ; ex:amount 90000 ; ex:category "capital" ; ex:vendor ex:edge .
