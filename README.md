@@ -34,5 +34,17 @@ paper/        v2 paper sources; paper/v1/ holds the frozen v1 report
 - For `make verify-v1` only: [Soufflé](https://souffle-lang.github.io) 2.4+ on `PATH`, and `pip install pyshacl rdflib`
 
 ```
+make worlds       # regenerate worlds/ (sizes S M L × seeds 1 2 3): relations, L0 projections, questions, keys
+make verify       # worlds/ is fresh, and the Python reference reproduces every engine key
 make verify-v1    # check the frozen v1 tree (tag v1) still verifies
 ```
+
+The engine can be queried directly; this is the tool the compile mode will give a model:
+
+```
+engine/ask --world worlds/S-s1 --layer 1 'headroom(cc1, V)'
+engine/ask --world worlds/S-s1 --layer 1 --reading c1=with_pending 'headroom(cc1, V)'
+engine/ask --capabilities --layer 2        # predicates available at a layer, with their meaning
+```
+
+It prints one line of bindings per solution (or `true` / `false`). It exits 2 on an error, for example a predicate that is not defined at the requested layer. Every call is logged as JSONL to `$ASK_LOG` or `WORLD/ask.log.jsonl`.

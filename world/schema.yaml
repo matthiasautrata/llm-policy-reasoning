@@ -1,0 +1,113 @@
+# Base relations of the procurement world. One record per relation:
+#   layer    the layer whose projection first shows the relation (layers are cumulative)
+#   columns  [name, type] in argument order; types: id, int, date, enum
+#   key      primary-key columns; fks: column -> referenced relation (its first column)
+#   doc      one-line meaning, used by every projection and by the capability registry
+# Dates are integers YYYYMMDD in the formal projection and ISO strings elsewhere.
+# L0 shows the *current* value of things that L2 later shows with their history and sources
+# (role_limit vs role_limit_version, vendor vs vendor_status, emp.cc vs assignment).
+
+relations:
+  - name: cc
+    layer: 0
+    columns: [[cc, id]]
+    key: [cc]
+    doc: A cost centre.
+  - name: cc_parent
+    layer: 0
+    columns: [[cc, id], [parent, id]]
+    key: [cc]
+    fks: {cc: cc, parent: cc}
+    doc: The parent of a cost centre. The root cost centre has no row.
+  - name: org_unit
+    layer: 0
+    columns: [[cc, id], [unit, enum]]
+    key: [cc]
+    fks: {cc: cc}
+    doc: The organisational unit a cost centre belongs to.
+  - name: emp
+    layer: 0
+    columns: [[emp, id], [role, enum], [cc, id]]
+    key: [emp]
+    fks: {cc: cc}
+    doc: An employee, their role, and their cost centre in the finance system of record.
+  - name: reports
+    layer: 0
+    columns: [[emp, id], [manager, id]]
+    key: [emp]
+    fks: {emp: emp, manager: emp}
+    doc: An employee's direct manager.
+  - name: role_limit
+    layer: 0
+    columns: [[role, enum], [limit, int]]
+    key: [role]
+    doc: The approval limit currently attached to a role.
+  - name: vendor
+    layer: 0
+    columns: [[vendor, id], [status, enum]]
+    key: [vendor]
+    doc: A vendor and its current status (approved or suspended).
+  - name: req
+    layer: 0
+    columns: [[req, id], [requester, id], [amount, int], [category, enum], [vendor, id], [date, date], [status, enum]]
+    key: [req]
+    fks: {requester: emp, vendor: vendor}
+    doc: A purchase request, raised on the given date; status is pending or cancelled.
+  - name: emergency
+    layer: 0
+    columns: [[req, id]]
+    key: [req]
+    fks: {req: req}
+    doc: A request flagged as an emergency.
+  - name: violation
+    layer: 0
+    columns: [[emp, id]]
+    key: [emp]
+    fks: {emp: emp}
+    doc: An employee with a recorded policy violation.
+  - name: booked
+    layer: 0
+    columns: [[cc, id], [amount, int]]
+    key: [cc]
+    fks: {cc: cc}
+    doc: Spend booked directly on a cost centre this quarter. A cost centre with no row has booked nothing.
+  - name: cap
+    layer: 0
+    columns: [[cc, id], [amount, int]]
+    key: [cc]
+    fks: {cc: cc}
+    doc: The spending cap of a cost centre this quarter.
+
+  - name: today
+    layer: 2
+    columns: [[date, date]]
+    key: [date]
+    doc: The date on which the material was compiled.
+  - name: role_limit_version
+    layer: 2
+    columns: [[role, enum], [limit, int], [valid_from, date], [valid_to, date]]
+    key: [role, valid_from]
+    doc: A dated version of a role's approval limit, valid from and to the given dates inclusive.
+  - name: vendor_status
+    layer: 2
+    columns: [[vendor, id], [status, enum], [valid_from, date], [valid_to, date]]
+    key: [vendor, valid_from]
+    fks: {vendor: vendor}
+    doc: A vendor's status during a period, from and to the given dates inclusive.
+  - name: assignment
+    layer: 2
+    columns: [[emp, id], [cc, id], [source, enum], [effective, date]]
+    key: [emp, source, effective]
+    fks: {emp: emp, cc: cc}
+    doc: A source's record (hr or finance) that an employee belongs to a cost centre from the effective date on.
+  - name: exemption
+    layer: 2
+    columns: [[exemption, id], [category, enum], [granted, date]]
+    key: [exemption]
+    doc: An exemption from the cap check for one request category, granted on a date.
+  - name: exemption_withdrawn
+    layer: 2
+    columns: [[exemption, id], [date, date]]
+    key: [exemption]
+    fks: {exemption: exemption}
+    doc: The date an exemption was withdrawn; it no longer applies from that date on.

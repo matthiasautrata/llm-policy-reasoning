@@ -1,0 +1,3 @@
+#!/bin/sh
+# ask: run one Prolog goal against a world (see ask.pl for usage).
+exec swipl "$(dirname "$0")/ask.pl" "$@"

@@ -1,0 +1,214 @@
+# Question templates. Every world gets two instances per template (questions/sample.py), keyed per
+# layer by the engine (engine/keys.pl) and re-derived by verify/reference.py.
+#   kind       fact | structure | permission | fitness   (explain questions come with why/2, M5)
+#   min_layer  lowest layer whose material settles the question; null = no layer does (out of scope)
+#   forks      interpretation forks the answer may depend on
+#   type       bool | int | sym | set
+#   params     name -> sampler (see sample.py); text uses ISO dates, goals YYYYMMDD
+#   goal       Prolog goal; V is the answer variable (int, sym, set); bool = does the goal hold
+#   conflict   optional goal: if it holds, the material contradicts itself on this question
+#   resolve    optional goal that settles the conflict where its predicates exist (a precedence rule)
+# min_layer and forks are declarations: verify/check.py compares them with what the engine derives
+# from the dependency closure of goal and conflict.
+
+templates:
+  - id: Q01
+    kind: structure
+    min_layer: 0
+    forks: []
+    type: set
+    params: {rel: referenced_relation}
+    text: Which relations have a column that refers to {rel}?
+    goal: fk(V, _, {rel})
+  - id: Q02
+    kind: fact
+    min_layer: 0
+    forks: []
+    type: set
+    params: {m: manager}
+    text: Which employees report directly to {m}?
+    goal: reports(V, {m})
+  - id: Q03
+    kind: fact
+    min_layer: 0
+    forks: []
+    type: int
+    params: {c: leaf_cc}
+    text: How many pending requests have been raised by employees of cost centre {c}?
+    goal: aggregate_all(count, (emp(E, _, {c}), req(_, E, _, _, _, _, pending)), V)
+  - id: Q04
+    kind: fact
+    min_layer: 0
+    forks: []
+    type: int
+    params: {c: cc}
+    text: How much spend is booked directly on cost centre {c} (not counting its descendants)?
+    goal: (booked({c}, V) -> true ; V = 0)
+  - id: Q05
+    kind: fact
+    min_layer: 0
+    forks: []
+    type: sym
+    params: {v: vendor}
+    text: What is the current status of vendor {v}?
+    goal: vendor({v}, V)
+
+  - id: Q11
+    kind: fact
+    min_layer: 1
+    forks: []
+    type: int
+    params: {c: internal_cc}
+    text: What is the booked total of cost centre {c}?
+    goal: booked_total({c}, V)
+  - id: Q12
+    kind: fact
+    min_layer: 1
+    forks: [c1]
+    type: int
+    params: {c: cc}
+    text: What is the headroom of cost centre {c}?
+    goal: headroom({c}, V)
+  - id: Q13
+    kind: fact
+    min_layer: 1
+    forks: [c1]
+    type: set
+    params: {c: internal_cc}
+    text: Which cost centres in the subtree of {c} (including {c}) are over cap?
+    goal: (in_subtree(V, {c}), over_cap(V))
+  - id: Q14
+    kind: fact
+    min_layer: 1
+    forks: [c1, c4]
+    type: bool
+    params: {r: req}
+    text: Would approving request {r} breach a cap?
+    goal: cap_breach({r})
+  - id: Q15
+    kind: fact
+    min_layer: 1
+    forks: [c3]
+    type: int
+    params: {e: analyst}
+    text: How many employees belong to the department of employee {e}?
+    goal: (dept({e}, D), headcount(D, V))
+  - id: Q16
+    kind: fact
+    min_layer: 1
+    forks: []
+    type: int
+    params: {m: manager}
+    text: How many employees have {m} in their reporting chain?
+    goal: aggregate_all(count, chain(_, {m}), V)
+
+  - id: Q21
+    kind: fact
+    min_layer: 2
+    forks: []
+    type: bool
+    params: {v: changing_vendor, d: date}
+    text: Was vendor {v} approved on {d}?
+    goal: vendor_status_on({v}, approved, {d})
+  - id: Q22
+    kind: fact
+    min_layer: 2
+    forks: [c2]
+    type: int
+    params: {r: req, m: chain_member}
+    text: Which approval limit applies to {m} when deciding request {r}?
+    goal: (emp({m}, Role, _), governing_date({r}, D), limit_on(Role, V, D))
+  - id: Q23
+    kind: fact
+    min_layer: 2
+    forks: []
+    type: sym
+    params: {e: moved, src: source, d: move_date}
+    text: According to {src}, which cost centre did employee {e} belong to on {d}?
+    goal: cc_on({e}, V, {src}, {d})
+  - id: Q24
+    kind: fitness
+    min_layer: 2
+    forks: []
+    type: bool
+    params: {e: moved, d: move_date}
+    text: Do hr and finance disagree about employee {e}'s cost centre on {d}?
+    goal: disputed_on({e}, {d})
+  - id: Q25
+    kind: fact
+    min_layer: 2
+    forks: []
+    type: sym
+    params: {e: moved, d: move_date}
+    text: Which cost centre did employee {e} belong to on {d}?
+    goal: cc_on({e}, V, _, {d})
+    conflict: disputed_on({e}, {d})
+    resolve: authoritative_cc_on({e}, V, {d})
+  - id: Q26
+    kind: fact
+    min_layer: 2
+    forks: []
+    type: bool
+    params: {d: date}
+    text: Was an exemption for capital requests in force on {d}?
+    goal: exemption_in_force(_, capital, {d})
+
+  - id: Q31
+    kind: permission
+    min_layer: 3
+    forks: [c2]
+    type: bool
+    params: {r: req, m: chain_member}
+    text: May {m} approve request {r}?
+    goal: approver({r}, {m})
+  - id: Q32
+    kind: fact
+    min_layer: 3
+    forks: [c2]
+    type: bool
+    params: {r: req}
+    text: Does request {r} pass the vendor check?
+    goal: vendor_cleared({r})
+  - id: Q33
+    kind: permission
+    min_layer: 3
+    forks: [c1, c2, c4]
+    type: bool
+    params: {r: req}
+    text: Is request {r} approved?
+    goal: approved({r})
+    conflict: (denied({r}), auto_approved({r}))
+  - id: Q34
+    kind: permission
+    min_layer: 3
+    forks: [c1, c2, c4]
+    type: set
+    params: {c: internal_cc}
+    text: Which requests raised by employees in the subtree of {c} are approved?
+    goal: (req(V, E, _, _, _, _, _), emp(E, _, D), in_subtree(D, {c}), approved(V))
+    conflict: (req(R, E, _, _, _, _, _), emp(E, _, D), in_subtree(D, {c}), denied(R), auto_approved(R))
+  - id: Q35
+    kind: permission
+    min_layer: 3
+    forks: []
+    type: bool
+    params: {r: req}
+    text: Is request {r} denied?
+    goal: denied({r})
+  - id: Q36
+    kind: fact
+    min_layer: 3
+    forks: [c1, c2, c4]
+    type: bool
+    params: {r: req}
+    text: Does request {r} pass the cap check?
+    goal: cap_ok({r})
+
+  - id: Q91
+    kind: fact
+    min_layer: null
+    forks: []
+    type: int
+    params: {c: cc}
+    text: What is the travel budget of cost centre {c}?
+    goal: travel_budget({c}, V)

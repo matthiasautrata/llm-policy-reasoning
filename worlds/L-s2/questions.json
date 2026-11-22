@@ -1,0 +1,640 @@
+[
+ {
+  "template": "Q01",
+  "kind": "structure",
+  "type": "set",
+  "text": "Which relations have a column that refers to exemption?",
+  "goal": "fk(V, _, exemption)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "rel": "exemption"
+  },
+  "id": "Q01-1"
+ },
+ {
+  "template": "Q01",
+  "kind": "structure",
+  "type": "set",
+  "text": "Which relations have a column that refers to emp?",
+  "goal": "fk(V, _, emp)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "rel": "emp"
+  },
+  "id": "Q01-2"
+ },
+ {
+  "template": "Q02",
+  "kind": "fact",
+  "type": "set",
+  "text": "Which employees report directly to e086?",
+  "goal": "reports(V, e086)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "m": "e086"
+  },
+  "id": "Q02-1"
+ },
+ {
+  "template": "Q02",
+  "kind": "fact",
+  "type": "set",
+  "text": "Which employees report directly to e069?",
+  "goal": "reports(V, e069)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "m": "e069"
+  },
+  "id": "Q02-2"
+ },
+ {
+  "template": "Q03",
+  "kind": "fact",
+  "type": "int",
+  "text": "How many pending requests have been raised by employees of cost centre cc2_3_1_2?",
+  "goal": "aggregate_all(count, (emp(E, _, cc2_3_1_2), req(_, E, _, _, _, _, pending)), V)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "c": "cc2_3_1_2"
+  },
+  "id": "Q03-1"
+ },
+ {
+  "template": "Q03",
+  "kind": "fact",
+  "type": "int",
+  "text": "How many pending requests have been raised by employees of cost centre cc2_2_2_3?",
+  "goal": "aggregate_all(count, (emp(E, _, cc2_2_2_3), req(_, E, _, _, _, _, pending)), V)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "c": "cc2_2_2_3"
+  },
+  "id": "Q03-2"
+ },
+ {
+  "template": "Q04",
+  "kind": "fact",
+  "type": "int",
+  "text": "How much spend is booked directly on cost centre cc2_3 (not counting its descendants)?",
+  "goal": "(booked(cc2_3, V) -> true ; V = 0)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "c": "cc2_3"
+  },
+  "id": "Q04-1"
+ },
+ {
+  "template": "Q04",
+  "kind": "fact",
+  "type": "int",
+  "text": "How much spend is booked directly on cost centre cc2_2_1_2 (not counting its descendants)?",
+  "goal": "(booked(cc2_2_1_2, V) -> true ; V = 0)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "c": "cc2_2_1_2"
+  },
+  "id": "Q04-2"
+ },
+ {
+  "template": "Q05",
+  "kind": "fact",
+  "type": "sym",
+  "text": "What is the current status of vendor dyne?",
+  "goal": "vendor(dyne, V)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "v": "dyne"
+  },
+  "id": "Q05-1"
+ },
+ {
+  "template": "Q05",
+  "kind": "fact",
+  "type": "sym",
+  "text": "What is the current status of vendor fern?",
+  "goal": "vendor(fern, V)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "v": "fern"
+  },
+  "id": "Q05-2"
+ },
+ {
+  "template": "Q11",
+  "kind": "fact",
+  "type": "int",
+  "text": "What is the booked total of cost centre cc1_1_3?",
+  "goal": "booked_total(cc1_1_3, V)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "c": "cc1_1_3"
+  },
+  "id": "Q11-1"
+ },
+ {
+  "template": "Q11",
+  "kind": "fact",
+  "type": "int",
+  "text": "What is the booked total of cost centre cc3_1_2?",
+  "goal": "booked_total(cc3_1_2, V)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "c": "cc3_1_2"
+  },
+  "id": "Q11-2"
+ },
+ {
+  "template": "Q12",
+  "kind": "fact",
+  "type": "int",
+  "text": "What is the headroom of cost centre cc1_3_2?",
+  "goal": "headroom(cc1_3_2, V)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "c": "cc1_3_2"
+  },
+  "id": "Q12-1"
+ },
+ {
+  "template": "Q12",
+  "kind": "fact",
+  "type": "int",
+  "text": "What is the headroom of cost centre cc3_2_2_3?",
+  "goal": "headroom(cc3_2_2_3, V)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "c": "cc3_2_2_3"
+  },
+  "id": "Q12-2"
+ },
+ {
+  "template": "Q13",
+  "kind": "fact",
+  "type": "set",
+  "text": "Which cost centres in the subtree of cc1_1_2 (including cc1_1_2) are over cap?",
+  "goal": "(in_subtree(V, cc1_1_2), over_cap(V))",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "c": "cc1_1_2"
+  },
+  "id": "Q13-1"
+ },
+ {
+  "template": "Q13",
+  "kind": "fact",
+  "type": "set",
+  "text": "Which cost centres in the subtree of cc1_1_1 (including cc1_1_1) are over cap?",
+  "goal": "(in_subtree(V, cc1_1_1), over_cap(V))",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "c": "cc1_1_1"
+  },
+  "id": "Q13-2"
+ },
+ {
+  "template": "Q14",
+  "kind": "fact",
+  "type": "bool",
+  "text": "Would approving request r191 breach a cap?",
+  "goal": "cap_breach(r191)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "r": "r191"
+  },
+  "id": "Q14-1"
+ },
+ {
+  "template": "Q14",
+  "kind": "fact",
+  "type": "bool",
+  "text": "Would approving request r006 breach a cap?",
+  "goal": "cap_breach(r006)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "r": "r006"
+  },
+  "id": "Q14-2"
+ },
+ {
+  "template": "Q15",
+  "kind": "fact",
+  "type": "int",
+  "text": "How many employees belong to the department of employee e204?",
+  "goal": "(dept(e204, D), headcount(D, V))",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "e": "e204"
+  },
+  "id": "Q15-1"
+ },
+ {
+  "template": "Q15",
+  "kind": "fact",
+  "type": "int",
+  "text": "How many employees belong to the department of employee e171?",
+  "goal": "(dept(e171, D), headcount(D, V))",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "e": "e171"
+  },
+  "id": "Q15-2"
+ },
+ {
+  "template": "Q16",
+  "kind": "fact",
+  "type": "int",
+  "text": "How many employees have e013 in their reporting chain?",
+  "goal": "aggregate_all(count, chain(_, e013), V)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "m": "e013"
+  },
+  "id": "Q16-1"
+ },
+ {
+  "template": "Q16",
+  "kind": "fact",
+  "type": "int",
+  "text": "How many employees have e087 in their reporting chain?",
+  "goal": "aggregate_all(count, chain(_, e087), V)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "m": "e087"
+  },
+  "id": "Q16-2"
+ },
+ {
+  "template": "Q21",
+  "kind": "fact",
+  "type": "bool",
+  "text": "Was vendor dyne approved on 2026-08-12?",
+  "goal": "vendor_status_on(dyne, approved, 20260812)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "v": "dyne",
+   "d": "2026-08-12"
+  },
+  "id": "Q21-1"
+ },
+ {
+  "template": "Q21",
+  "kind": "fact",
+  "type": "bool",
+  "text": "Was vendor dyne approved on 2026-06-25?",
+  "goal": "vendor_status_on(dyne, approved, 20260625)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "v": "dyne",
+   "d": "2026-06-25"
+  },
+  "id": "Q21-2"
+ },
+ {
+  "template": "Q22",
+  "kind": "fact",
+  "type": "int",
+  "text": "Which approval limit applies to e041 when deciding request r144?",
+  "goal": "(emp(e041, Role, _), governing_date(r144, D), limit_on(Role, V, D))",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "r": "r144",
+   "m": "e041"
+  },
+  "id": "Q22-1"
+ },
+ {
+  "template": "Q22",
+  "kind": "fact",
+  "type": "int",
+  "text": "Which approval limit applies to e069 when deciding request r013?",
+  "goal": "(emp(e069, Role, _), governing_date(r013, D), limit_on(Role, V, D))",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "r": "r013",
+   "m": "e069"
+  },
+  "id": "Q22-2"
+ },
+ {
+  "template": "Q23",
+  "kind": "fact",
+  "type": "sym",
+  "text": "According to hr, which cost centre did employee e213 belong to on 2026-09-03?",
+  "goal": "cc_on(e213, V, hr, 20260903)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "e": "e213",
+   "src": "hr",
+   "d": "2026-09-03"
+  },
+  "id": "Q23-1"
+ },
+ {
+  "template": "Q23",
+  "kind": "fact",
+  "type": "sym",
+  "text": "According to hr, which cost centre did employee e156 belong to on 2026-09-15?",
+  "goal": "cc_on(e156, V, hr, 20260915)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "e": "e156",
+   "src": "hr",
+   "d": "2026-09-15"
+  },
+  "id": "Q23-2"
+ },
+ {
+  "template": "Q24",
+  "kind": "fitness",
+  "type": "bool",
+  "text": "Do hr and finance disagree about employee e156's cost centre on 2026-09-13?",
+  "goal": "disputed_on(e156, 20260913)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "e": "e156",
+   "d": "2026-09-13"
+  },
+  "id": "Q24-1"
+ },
+ {
+  "template": "Q24",
+  "kind": "fitness",
+  "type": "bool",
+  "text": "Do hr and finance disagree about employee e229's cost centre on 2026-07-26?",
+  "goal": "disputed_on(e229, 20260726)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "e": "e229",
+   "d": "2026-07-26"
+  },
+  "id": "Q24-2"
+ },
+ {
+  "template": "Q25",
+  "kind": "fact",
+  "type": "sym",
+  "text": "Which cost centre did employee e198 belong to on 2026-06-27?",
+  "goal": "cc_on(e198, V, _, 20260627)",
+  "conflict": "disputed_on(e198, 20260627)",
+  "resolve": "authoritative_cc_on(e198, V, 20260627)",
+  "params": {
+   "e": "e198",
+   "d": "2026-06-27"
+  },
+  "id": "Q25-1"
+ },
+ {
+  "template": "Q25",
+  "kind": "fact",
+  "type": "sym",
+  "text": "Which cost centre did employee e229 belong to on 2026-07-23?",
+  "goal": "cc_on(e229, V, _, 20260723)",
+  "conflict": "disputed_on(e229, 20260723)",
+  "resolve": "authoritative_cc_on(e229, V, 20260723)",
+  "params": {
+   "e": "e229",
+   "d": "2026-07-23"
+  },
+  "id": "Q25-2"
+ },
+ {
+  "template": "Q26",
+  "kind": "fact",
+  "type": "bool",
+  "text": "Was an exemption for capital requests in force on 2026-06-24?",
+  "goal": "exemption_in_force(_, capital, 20260624)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "d": "2026-06-24"
+  },
+  "id": "Q26-1"
+ },
+ {
+  "template": "Q26",
+  "kind": "fact",
+  "type": "bool",
+  "text": "Was an exemption for capital requests in force on 2026-09-15?",
+  "goal": "exemption_in_force(_, capital, 20260915)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "d": "2026-09-15"
+  },
+  "id": "Q26-2"
+ },
+ {
+  "template": "Q31",
+  "kind": "permission",
+  "type": "bool",
+  "text": "May e081 approve request r051?",
+  "goal": "approver(r051, e081)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "r": "r051",
+   "m": "e081"
+  },
+  "id": "Q31-1"
+ },
+ {
+  "template": "Q31",
+  "kind": "permission",
+  "type": "bool",
+  "text": "May e055 approve request r044?",
+  "goal": "approver(r044, e055)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "r": "r044",
+   "m": "e055"
+  },
+  "id": "Q31-2"
+ },
+ {
+  "template": "Q32",
+  "kind": "fact",
+  "type": "bool",
+  "text": "Does request r106 pass the vendor check?",
+  "goal": "vendor_cleared(r106)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "r": "r106"
+  },
+  "id": "Q32-1"
+ },
+ {
+  "template": "Q32",
+  "kind": "fact",
+  "type": "bool",
+  "text": "Does request r091 pass the vendor check?",
+  "goal": "vendor_cleared(r091)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "r": "r091"
+  },
+  "id": "Q32-2"
+ },
+ {
+  "template": "Q33",
+  "kind": "permission",
+  "type": "bool",
+  "text": "Is request r181 approved?",
+  "goal": "approved(r181)",
+  "conflict": "(denied(r181), auto_approved(r181))",
+  "resolve": null,
+  "params": {
+   "r": "r181"
+  },
+  "id": "Q33-1"
+ },
+ {
+  "template": "Q33",
+  "kind": "permission",
+  "type": "bool",
+  "text": "Is request r038 approved?",
+  "goal": "approved(r038)",
+  "conflict": "(denied(r038), auto_approved(r038))",
+  "resolve": null,
+  "params": {
+   "r": "r038"
+  },
+  "id": "Q33-2"
+ },
+ {
+  "template": "Q34",
+  "kind": "permission",
+  "type": "set",
+  "text": "Which requests raised by employees in the subtree of cc1 are approved?",
+  "goal": "(req(V, E, _, _, _, _, _), emp(E, _, D), in_subtree(D, cc1), approved(V))",
+  "conflict": "(req(R, E, _, _, _, _, _), emp(E, _, D), in_subtree(D, cc1), denied(R), auto_approved(R))",
+  "resolve": null,
+  "params": {
+   "c": "cc1"
+  },
+  "id": "Q34-1"
+ },
+ {
+  "template": "Q34",
+  "kind": "permission",
+  "type": "set",
+  "text": "Which requests raised by employees in the subtree of cc1_1_3 are approved?",
+  "goal": "(req(V, E, _, _, _, _, _), emp(E, _, D), in_subtree(D, cc1_1_3), approved(V))",
+  "conflict": "(req(R, E, _, _, _, _, _), emp(E, _, D), in_subtree(D, cc1_1_3), denied(R), auto_approved(R))",
+  "resolve": null,
+  "params": {
+   "c": "cc1_1_3"
+  },
+  "id": "Q34-2"
+ },
+ {
+  "template": "Q35",
+  "kind": "permission",
+  "type": "bool",
+  "text": "Is request r118 denied?",
+  "goal": "denied(r118)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "r": "r118"
+  },
+  "id": "Q35-1"
+ },
+ {
+  "template": "Q35",
+  "kind": "permission",
+  "type": "bool",
+  "text": "Is request r041 denied?",
+  "goal": "denied(r041)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "r": "r041"
+  },
+  "id": "Q35-2"
+ },
+ {
+  "template": "Q36",
+  "kind": "fact",
+  "type": "bool",
+  "text": "Does request r113 pass the cap check?",
+  "goal": "cap_ok(r113)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "r": "r113"
+  },
+  "id": "Q36-1"
+ },
+ {
+  "template": "Q36",
+  "kind": "fact",
+  "type": "bool",
+  "text": "Does request r215 pass the cap check?",
+  "goal": "cap_ok(r215)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "r": "r215"
+  },
+  "id": "Q36-2"
+ },
+ {
+  "template": "Q91",
+  "kind": "fact",
+  "type": "int",
+  "text": "What is the travel budget of cost centre cc2_1_1?",
+  "goal": "travel_budget(cc2_1_1, V)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "c": "cc2_1_1"
+  },
+  "id": "Q91-1"
+ },
+ {
+  "template": "Q91",
+  "kind": "fact",
+  "type": "int",
+  "text": "What is the travel budget of cost centre cc2_1_3?",
+  "goal": "travel_budget(cc2_1_3, V)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "c": "cc2_1_3"
+  },
+  "id": "Q91-2"
+ }
+]

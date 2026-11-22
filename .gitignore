@@ -4,3 +4,4 @@ __pycache__/
 .venv/
 paper/*.aux
 paper/*.log
+worlds/*/ask.log.jsonl

@@ -158,3 +158,35 @@ Cost control: do not run the full matrix before M6. Per milestone run only the n
 - `paper/v1/` holds PAPER.md, whitepaper.pdf and both figures. The only edit to PAPER.md is the figure paths (`paper/fig-*.png` → `fig-*.png`). v1's `paper/build.py` and `paper/figures.py` were not moved: they read study results that now live only at the tag, so they are rebuilt from there (`paper/v1/README.md`).
 - Layout from §4.5 created as directories with `.gitkeep`; no `make verify` on `main` until M1 has something to check (a target that always passes would not be a test).
 - requirements.txt: dropped pyshacl/rdflib, added pyyaml (rule and question files are YAML).
+
+**2026-11-22 · M1**
+- M1 test passes: `make verify` regenerates `worlds/` and requires it to match byte for byte. Then, for 3 sizes × 3 seeds, `verify/reference.py` must reproduce every key `engine/keys.pl` computed: 9 worlds × 48 questions × 4 layers × 2 fork configurations = 3456 keys. Mutating two comparisons in the reference makes it fail, so the test can fail. Key statuses over all worlds:
+  - decided config: 991 ANSWER, 648 UNDERDETERMINED, 17 CONFLICT, 72 OUT_OF_SCOPE;
+  - open config: 214 of those ANSWERs become AMBIGUOUS.
+- Scope: the full rule base, L0–L3 (38 rule records), is written and keyed now, so the keys for M3–M5 already exist and are checked. Only L0 is rendered (text.md, structured.yaml, formal.pl). The L1–L3 projections come with their milestones.
+- `why/2` is deferred to M5, as the milestone table says (§4.2 lists it under the engine). There is no Soufflé cross-check, which §4.3 marked optional.
+- Negation is `\+`, not `tnot/1`. The rule base is stratified, and `keys.pl` halts if it is not, so well-founded semantics adds nothing. `\+` also keeps clauses portable to the plain Datalog/Python reading. Only recursive predicates are tabled: `cc_anc/2` and `chain/2`.
+- Programs are built per (layer, fork readings) into a fresh module. Only relations and predicates of layer ≤ L are declared, so a call above the layer is an existence error rather than a silent `false`. `ask` reports this as "headroom/2 is not defined at layer 0".
+- Rule records live in `rules/rules.yaml`: id, head, layer, class, conservative, owner, fork, table, english, prolog. The engine reads them at runtime; there is no build step.
+  - Forks are data: id, layer, owner, question, readings, decided. A forked rule carries `fork: {id, reading}`.
+  - The v1 forks keep their names: c1 committed spend, c2 governing date, c3 department, c4 cap scope.
+  - C5, deny vs auto-approve, has no rule by design. It is a `conflict:` goal in the question bank, keyed CONFLICT.
+- Two key configurations per question and layer:
+  - `decided`: every fork takes its decided reading, which is what the material states once a fork is written down.
+  - `open`: every fork the question depends on at that layer is live. Readings that disagree give AMBIGUOUS, with the value under each reading.
+  - Q25 (which cost centre on a date) is CONFLICT at L2, where hr and finance disagree. At L3 it is resolved by R313 (finance governs). A resolve goal applies only from its own layer upwards.
+- min_layer and forks: the engine derives both from the dependency closure of goal ∪ conflict. The bank declares them too, and `check.py` requires the two to agree, so a template cannot silently need a higher layer than it claims. OUT_OF_SCOPE (Q91, `travel_budget/2`) is detected as a call to a predicate no layer defines.
+- L0 shows *current* values (`role_limit`, `vendor`, `emp.cc`). L2 adds the history behind them: `role_limit_version`, `vendor_status`, and `assignment` with an hr and a finance source. `check.py` requires L0 to equal L2 evaluated on `today`. Keys are relative to each layer's material: Q01 (which relations refer to X) has a different answer at L0 and at L2, by design.
+- Sources that disagree (§4.1): HR records a transfer on d1. Finance records it 7–40 days later, or not yet; every world has one move finance has not recorded by today. `emp/3` is finance's view as of today.
+  - "Claim status" from §4.1 was not added. The hr/finance disagreement already gives L2 a contradiction that survives ingestion (M4's test), and a second mechanism would add rules without adding a question kind.
+- Question value types are bool, int, set and **sym** (a single symbol, such as a status or a cost centre). sym was added because "which cost centre" and "which status" are neither sets nor counts.
+- Each world plants six requests so that every rule interaction occurs at least once:
+  - C5;
+  - waiver blocked;
+  - waiver applies;
+  - the manager-limit change (c2);
+  - the exemption withdrawn later (c2);
+  - the vendor suspended later (c2).
+  Request ids are shuffled afterwards, so position gives nothing away.
+- Sampling: each template draws 6 candidate instances. Two are kept from different key signatures (L3 decided value + open status), so the two instances of a template do not trivially share an answer. 24 templates (including the out-of-scope Q91) × 2 = 48 questions per world.
+- Python 3.14 / SWI-Prolog 11.0 details: `library(http/json)` moved to `library(json)` and is loaded conditionally. Derived predicates are declared `discontiguous`, because forked alternatives interleave.

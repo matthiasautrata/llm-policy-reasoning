@@ -1,0 +1,446 @@
+# Rule records: the single source of the policy. Every projection and the engine read this file.
+#   id            stable id, cited by explain answers and by why/2
+#   head          Name/Arity of the predicate the rule (partly) defines
+#   layer         1 ontology | 2 context | 3 warrant (L0 has no rules, only base relations)
+#   class         definitional | temporal | fitness | material_inference | defeasible | incompatibility | entitlement
+#   conservative  true if the rule only rearranges what is asserted (eliminable definition, join, filter, sum)
+#   owner         who may change the rule; null if no two SMEs could reasonably disagree about it
+#   fork          {id, reading}: the rule is one reading of an interpretation fork (see forks:)
+#   table         tabled in the engine (recursive predicates)
+#   english       the rule as the text projection states it
+#   prolog        the clause(s); constants are lower-case atoms, dates are integers YYYYMMDD
+# Predicates: docs: gives the one-line meaning of each derived predicate (capability registry).
+
+forks:
+  - id: c1
+    layer: 1
+    owner: controller
+    question: Does the committed spend of a cost centre include pending requests?
+    term: committed spend
+    readings: [booked_only, with_pending]
+    decided: booked_only
+  - id: c2
+    layer: 2
+    owner: procurement
+    question: Which date governs a request's dated rules (approval limits, vendor status, exemptions), the request date or today?
+    term: governing date
+    readings: [request_date, today]
+    decided: request_date
+  - id: c3
+    layer: 1
+    owner: hr
+    question: Is an employee's department their cost centre or their cost centre's organisational unit?
+    term: department
+    readings: [cost_centre, org_unit]
+    decided: cost_centre
+  - id: c4
+    layer: 1
+    owner: controller
+    question: Does a request's cap check cover only the requester's cost centre, or also every ancestor of it?
+    term: cap scope
+    readings: [with_ancestors, own_only]
+    decided: with_ancestors
+
+docs:
+  cc_anc/2: "cc_anc(C, A): A is an ancestor of cost centre C (parent, parent's parent, ...)."
+  in_subtree/2: "in_subtree(C, Root): C is Root or a descendant of Root."
+  chain/2: "chain(E, M): M is in E's reporting chain (manager, manager's manager, ...)."
+  booked_total/2: "booked_total(C, T): T is the booked amount of C and all its descendants."
+  pending_total/2: "pending_total(C, P): P is the amount of pending requests raised in C or its descendants."
+  committed/2: "committed(C, T): T is the committed spend of cost centre C."
+  headroom/2: "headroom(C, H): H is C's cap minus its committed spend."
+  over_cap/1: "over_cap(C): C's committed spend exceeds its cap."
+  cap_scope/2: "cap_scope(R, C): cost centre C's cap applies to request R."
+  exposure/3: "exposure(R, C, X): X is what C would have committed if R were approved."
+  cap_breach/1: "cap_breach(R): approving R would exceed the cap of a cost centre in its cap scope."
+  big_capital/1: "big_capital(R): R is a capital request over 50000."
+  dept/2: "dept(E, D): D is employee E's department."
+  headcount/2: "headcount(D, N): N employees belong to department D."
+  governing_date/2: "governing_date(R, D): D is the date that governs request R's dated rules."
+  limit_on/3: "limit_on(Role, L, D): L is the approval limit of Role on date D."
+  vendor_status_on/3: "vendor_status_on(V, S, D): vendor V has status S on date D."
+  vendor_approved/1: "vendor_approved(R): R's vendor is approved on R's governing date."
+  cc_on/4: "cc_on(E, C, Src, D): according to source Src, employee E belongs to C on date D."
+  disputed_on/2: "disputed_on(E, D): hr and finance disagree about E's cost centre on date D."
+  exemption_in_force/3: "exemption_in_force(X, Cat, D): exemption X for category Cat applies on date D."
+  approver/2: "approver(R, M): M may approve request R."
+  has_approver/1: "has_approver(R): someone may approve R."
+  exempt/1: "exempt(R): R is exempt from the cap check."
+  cap_ok/1: "cap_ok(R): R passes the cap check."
+  waiver/1: "waiver(R): R's suspended vendor is waived because R is an emergency."
+  waiver_blocked/1: "waiver_blocked(R): the emergency waiver does not apply to R."
+  vendor_cleared/1: "vendor_cleared(R): R passes the vendor check."
+  eligible/1: "eligible(R): R has an approver, passes the cap check and passes the vendor check."
+  denied/1: "denied(R): R is denied."
+  auto_approved/1: "auto_approved(R): R is approved automatically."
+  approved/1: "approved(R): R is approved."
+  authoritative_cc_on/3: "authoritative_cc_on(E, C, D): C is E's cost centre on date D where sources disagree."
+
+rules:
+  # ---------------- L1 ontology ----------------
+  - id: R101
+    head: cc_anc/2
+    layer: 1
+    class: definitional
+    conservative: true
+    owner: null
+    table: true
+    english: The ancestors of a cost centre are its parent, its parent's parent, and so on.
+    prolog: |
+      cc_anc(C, A) :- cc_parent(C, A).
+      cc_anc(C, A) :- cc_parent(C, P), cc_anc(P, A).
+  - id: R102
+    head: in_subtree/2
+    layer: 1
+    class: definitional
+    conservative: true
+    owner: null
+    english: A cost centre lies in the subtree of a cost centre X if it is X or one of X's descendants.
+    prolog: |
+      in_subtree(C, C) :- cc(C).
+      in_subtree(C, X) :- cc_anc(C, X).
+  - id: R103
+    head: chain/2
+    layer: 1
+    class: definitional
+    conservative: true
+    owner: null
+    table: true
+    english: An employee's reporting chain is their manager, their manager's manager, and so on. It does not include the employee.
+    prolog: |
+      chain(E, M) :- reports(E, M).
+      chain(E, M) :- reports(E, X), chain(X, M).
+  - id: R104
+    head: booked_total/2
+    layer: 1
+    class: definitional
+    conservative: true
+    owner: null
+    english: The booked total of a cost centre is the sum of the booked amounts of every cost centre in its subtree (zero where nothing is booked).
+    prolog: |
+      booked_total(C, T) :- cc(C), aggregate_all(sum(B), (in_subtree(D, C), booked(D, B)), T).
+  - id: R105
+    head: pending_total/2
+    layer: 1
+    class: definitional
+    conservative: true
+    owner: null
+    english: The pending total of a cost centre is the sum of the amounts of pending requests whose requester's cost centre lies in its subtree.
+    prolog: |
+      pending_total(C, P) :- cc(C), aggregate_all(sum(A), (req(_, E, A, _, _, _, pending), emp(E, _, D), in_subtree(D, C)), P).
+  - id: R106
+    head: committed/2
+    layer: 1
+    class: definitional
+    conservative: true
+    owner: controller
+    fork: {id: c1, reading: booked_only}
+    english: The committed spend of a cost centre is its booked total. Pending requests do not count.
+    prolog: |
+      committed(C, T) :- booked_total(C, T).
+  - id: R106b
+    head: committed/2
+    layer: 1
+    class: definitional
+    conservative: true
+    owner: controller
+    fork: {id: c1, reading: with_pending}
+    english: The committed spend of a cost centre is its booked total plus its pending total.
+    prolog: |
+      committed(C, T) :- booked_total(C, B), pending_total(C, P), T is B + P.
+  - id: R107
+    head: headroom/2
+    layer: 1
+    class: definitional
+    conservative: true
+    owner: null
+    english: The headroom of a cost centre is its cap minus its committed spend.
+    prolog: |
+      headroom(C, H) :- cap(C, K), committed(C, T), H is K - T.
+  - id: R108
+    head: over_cap/1
+    layer: 1
+    class: definitional
+    conservative: true
+    owner: null
+    english: A cost centre is over cap if its committed spend exceeds its cap.
+    prolog: |
+      over_cap(C) :- cap(C, K), committed(C, T), T > K.
+  - id: R109
+    head: cap_scope/2
+    layer: 1
+    class: definitional
+    conservative: true
+    owner: controller
+    fork: {id: c4, reading: with_ancestors}
+    english: A request's cap scope is its requester's cost centre and every ancestor of that cost centre.
+    prolog: |
+      cap_scope(R, C) :- req(R, E, _, _, _, _, _), emp(E, _, C).
+      cap_scope(R, A) :- req(R, E, _, _, _, _, _), emp(E, _, C), cc_anc(C, A).
+  - id: R109b
+    head: cap_scope/2
+    layer: 1
+    class: definitional
+    conservative: true
+    owner: controller
+    fork: {id: c4, reading: own_only}
+    english: A request's cap scope is its requester's cost centre only.
+    prolog: |
+      cap_scope(R, C) :- req(R, E, _, _, _, _, _), emp(E, _, C).
+  - id: R110
+    head: exposure/3
+    layer: 1
+    class: definitional
+    conservative: true
+    owner: null
+    english: A request's exposure at a cost centre in its cap scope is that centre's committed spend plus the request amount, not counting the request itself twice if committed spend already includes it.
+    prolog: |
+      exposure(R, C, X) :- req(R, _, A, _, _, _, St), cap_scope(R, C), committed(C, T),
+          ( reading(c1, with_pending), St == pending -> X is T ; X is T + A ).
+  - id: R111
+    head: cap_breach/1
+    layer: 1
+    class: definitional
+    conservative: true
+    owner: null
+    english: A request breaches a cap if its exposure at some cost centre in its cap scope exceeds that centre's cap.
+    prolog: |
+      cap_breach(R) :- exposure(R, C, X), cap(C, K), X > K.
+  - id: R112
+    head: big_capital/1
+    layer: 1
+    class: definitional
+    conservative: true
+    owner: null
+    english: A big capital request is a capital request whose amount is over 50000.
+    prolog: |
+      big_capital(R) :- req(R, _, A, capital, _, _, _), A > 50000.
+  - id: R113
+    head: dept/2
+    layer: 1
+    class: definitional
+    conservative: true
+    owner: hr
+    fork: {id: c3, reading: cost_centre}
+    english: An employee's department is their cost centre.
+    prolog: |
+      dept(E, D) :- emp(E, _, D).
+  - id: R113b
+    head: dept/2
+    layer: 1
+    class: definitional
+    conservative: true
+    owner: hr
+    fork: {id: c3, reading: org_unit}
+    english: An employee's department is the organisational unit of their cost centre.
+    prolog: |
+      dept(E, D) :- emp(E, _, C), org_unit(C, D).
+  - id: R114
+    head: headcount/2
+    layer: 1
+    class: definitional
+    conservative: true
+    owner: null
+    english: The headcount of a department is the number of employees whose department it is.
+    prolog: |
+      headcount(D, N) :- setof(X, E^dept(E, X), Ds), member(D, Ds), aggregate_all(count, dept(_, D), N).
+
+  # ---------------- L2 context ----------------
+  - id: R201
+    head: governing_date/2
+    layer: 2
+    class: temporal
+    conservative: true
+    owner: procurement
+    fork: {id: c2, reading: request_date}
+    english: A request's dated rules (approval limits, vendor status, exemptions) are read as of the date the request was raised.
+    prolog: |
+      governing_date(R, D) :- req(R, _, _, _, _, D, _).
+  - id: R201b
+    head: governing_date/2
+    layer: 2
+    class: temporal
+    conservative: true
+    owner: procurement
+    fork: {id: c2, reading: today}
+    english: A request's dated rules (approval limits, vendor status, exemptions) are read as of today.
+    prolog: |
+      governing_date(R, D) :- req(R, _, _, _, _, _, _), today(D).
+  - id: R202
+    head: limit_on/3
+    layer: 2
+    class: temporal
+    conservative: true
+    owner: null
+    english: A role's approval limit on a date is the limit of the version valid on that date.
+    prolog: |
+      limit_on(Role, L, D) :- role_limit_version(Role, L, F, T), F =< D, D =< T.
+  - id: R203
+    head: vendor_status_on/3
+    layer: 2
+    class: temporal
+    conservative: true
+    owner: null
+    english: A vendor's status on a date is the status of the period that contains that date.
+    prolog: |
+      vendor_status_on(V, S, D) :- vendor_status(V, S, F, T), F =< D, D =< T.
+  - id: R204
+    head: vendor_approved/1
+    layer: 2
+    class: temporal
+    conservative: true
+    owner: null
+    english: A request's vendor is approved for it if the vendor's status on the request's governing date is approved.
+    prolog: |
+      vendor_approved(R) :- req(R, _, _, _, V, _, _), governing_date(R, D), vendor_status_on(V, approved, D).
+  - id: R205
+    head: cc_on/4
+    layer: 2
+    class: temporal
+    conservative: true
+    owner: null
+    english: According to a source, an employee belongs on a date to the cost centre of that source's latest assignment record effective on or before that date.
+    prolog: |
+      cc_on(E, C, Src, D) :- assignment(E, C, Src, F), F =< D,
+          \+ ( assignment(E, _, Src, F2), F2 =< D, F2 > F ).
+  - id: R206
+    head: disputed_on/2
+    layer: 2
+    class: fitness
+    conservative: true
+    owner: null
+    english: An employee's cost centre is disputed on a date if hr and finance place them in different cost centres on that date.
+    prolog: |
+      disputed_on(E, D) :- cc_on(E, C1, hr, D), cc_on(E, C2, finance, D), C1 \== C2.
+  - id: R207
+    head: exemption_in_force/3
+    layer: 2
+    class: temporal
+    conservative: true
+    owner: null
+    english: An exemption is in force on a date if it was granted on or before that date and not withdrawn on or before that date.
+    prolog: |
+      exemption_in_force(X, Cat, D) :- exemption(X, Cat, G), G =< D,
+          \+ ( exemption_withdrawn(X, W), W =< D ).
+
+  # ---------------- L3 warrant ----------------
+  - id: R301
+    head: approver/2
+    layer: 3
+    class: entitlement
+    conservative: false
+    owner: procurement
+    english: Someone may approve a request if they are in the requester's reporting chain and their role's approval limit on the request's governing date is at least the request amount.
+    prolog: |
+      approver(R, M) :- req(R, E, A, _, _, _, _), chain(E, M), emp(M, Role, _),
+          governing_date(R, D), limit_on(Role, L, D), L >= A.
+  - id: R302
+    head: has_approver/1
+    layer: 3
+    class: definitional
+    conservative: true
+    owner: null
+    english: A request has an approver if someone may approve it.
+    prolog: |
+      has_approver(R) :- approver(R, _).
+  - id: R303
+    head: exempt/1
+    layer: 3
+    class: defeasible
+    conservative: false
+    owner: cfo
+    english: "Exception to the cap check: a request is exempt from it if an exemption for its category is in force on its governing date."
+    prolog: |
+      exempt(R) :- req(R, _, _, Cat, _, _, _), governing_date(R, D), exemption_in_force(_, Cat, D).
+  - id: R304
+    head: cap_ok/1
+    layer: 3
+    class: defeasible
+    conservative: false
+    owner: controller
+    english: A request passes the cap check if it breaches no cap or is exempt from the cap check.
+    prolog: |
+      cap_ok(R) :- req(R, _, _, _, _, _, _), \+ cap_breach(R).
+      cap_ok(R) :- exempt(R).
+  - id: R305
+    head: vendor_cleared/1
+    layer: 3
+    class: material_inference
+    conservative: false
+    owner: procurement
+    english: A request passes the vendor check if its vendor is approved for it, or if the emergency waiver applies to it.
+    prolog: |
+      vendor_cleared(R) :- vendor_approved(R).
+      vendor_cleared(R) :- waiver(R), \+ waiver_blocked(R).
+  - id: R306
+    head: waiver/1
+    layer: 3
+    class: defeasible
+    conservative: false
+    owner: procurement
+    english: "Exception to the vendor check: an emergency request whose vendor is suspended on its governing date is waived through the vendor check."
+    prolog: |
+      waiver(R) :- emergency(R), req(R, _, _, _, V, _, _), governing_date(R, D), vendor_status_on(V, suspended, D).
+  - id: R307
+    head: waiver_blocked/1
+    layer: 3
+    class: defeasible
+    conservative: false
+    owner: compliance
+    english: "Exception to the emergency waiver: the waiver does not apply to a big capital request."
+    prolog: |
+      waiver_blocked(R) :- waiver(R), big_capital(R).
+  - id: R308
+    head: eligible/1
+    layer: 3
+    class: material_inference
+    conservative: false
+    owner: procurement
+    english: A request is eligible if it has an approver, passes the cap check and passes the vendor check.
+    prolog: |
+      eligible(R) :- has_approver(R), cap_ok(R), vendor_cleared(R).
+  - id: R309
+    head: denied/1
+    layer: 3
+    class: incompatibility
+    conservative: false
+    owner: compliance
+    english: A request is denied if its requester has a recorded policy violation.
+    prolog: |
+      denied(R) :- req(R, E, _, _, _, _, _), violation(E).
+  - id: R310
+    head: approved/1
+    layer: 3
+    class: material_inference
+    conservative: false
+    owner: procurement
+    english: A request is approved if it is eligible and not denied. Denial overrides eligibility.
+    prolog: |
+      approved(R) :- eligible(R), \+ denied(R).
+  - id: R311
+    head: auto_approved/1
+    layer: 3
+    class: entitlement
+    conservative: false
+    owner: procurement
+    english: A software request under 10000 is approved automatically, without further checks.
+    prolog: |
+      auto_approved(R) :- req(R, _, A, software, _, _, _), A < 10000.
+  - id: R312
+    head: approved/1
+    layer: 3
+    class: entitlement
+    conservative: false
+    owner: procurement
+    english: An automatically approved request is approved.
+    prolog: |
+      approved(R) :- auto_approved(R).
+  - id: R313
+    head: authoritative_cc_on/3
+    layer: 3
+    class: incompatibility
+    conservative: false
+    owner: controller
+    english: Where hr and finance disagree about an employee's cost centre, finance governs.
+    prolog: |
+      authoritative_cc_on(E, C, D) :- cc_on(E, C, finance, D).
