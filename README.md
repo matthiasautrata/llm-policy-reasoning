@@ -7,7 +7,7 @@ This repository holds two studies on a synthetic procurement-approval policy. Th
 
 ## Findings in brief
 
-1. **Written decisions matter more than the notation.** When the interpretation decisions were written down, 449 of 453 answers were correct in English, Datalog and OWL + SHACL-AF alike. When they were missing, models silently picked one reading in 15 of 87 answers.
+1. **Written decisions matter more than the notation.** When the interpretation decisions were written down, 449 of the 453 answered questions were correct in English, Datalog and OWL + SHACL-AF alike. When they were missing, models silently picked one reading in 15 of 87 answers.
 2. **A model evaluating the rules itself runs into cost first, then errors.** As the world grew from 76 to 1,336 facts, the reading runs slowed sharply, and their first errors were omissions from set-valued and count answers. At 1,336 facts, two of Sonnet's three reading runs exhausted their output budget without answering.
 3. **Behind an engine, results stay flat.** Querying Soufflé or a graph materialised by pySHACL gave 9 of 9 answers at every size, in 12–56 s per run.
 
