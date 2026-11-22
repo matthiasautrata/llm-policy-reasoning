@@ -1,23 +1,11 @@
-S1 = study1-interpretation
-S2 = study2-scaling
-PY ?= python3
+# v2 targets are added per milestone (see REWORK.md §5).
+PY ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
+# absolute interpreter path without resolving symlinks (a venv's python is a symlink)
+PYABS := $(if $(filter /%,$(PY)),$(PY),$(if $(findstring /,$(PY)),$(CURDIR)/$(PY),$(shell command -v $(PY))))
 
-.PHONY: verify score figures paper
+.PHONY: verify-v1
 
-verify:
-	souffle -w -D - $(S1)/oracle/small/queries.dl > /dev/null
-	souffle -w -D - $(S1)/oracle/large/queries.dl > /dev/null
-	$(PY) $(S1)/oracle/check_ontology.py
-	$(PY) $(S2)/verify.py $(S2)/worlds/*
-	$(PY) $(S2)/check_shacl.py $(S2)/worlds/*
-
-score:
-	$(PY) $(S1)/harness/score.py $(S1)/results/original-20260831.jsonl
-	$(PY) $(S1)/harness/score.py $(S1)/results/claude-subagents-20260918.jsonl
-	$(PY) $(S2)/score.py $(S2)/results/scaling-pilot-20260918.jsonl
-
-figures:
-	$(PY) paper/figures.py
-
-paper: figures
-	$(PY) paper/build.py
+# M0 test: the frozen v1 tree still verifies (needs souffle, pyshacl, rdflib).
+verify-v1:
+	@tmp=$$(mktemp -d) && git worktree add -q --detach "$$tmp/v1" v1 && \
+	  { $(MAKE) -C "$$tmp/v1" verify PY="$(PYABS)"; s=$$?; git worktree remove --force "$$tmp/v1"; rmdir "$$tmp"; exit $$s; }

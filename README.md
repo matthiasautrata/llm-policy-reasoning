@@ -1,67 +1,38 @@
 # llm-policy-reasoning
 
-When should a language model evaluate a rule-based policy itself, and when should it hand the job to an engine?
-This repository holds two studies on a synthetic procurement-approval policy. The policy is written in three forms, English, Datalog and OWL + SHACL-AF, and every answer key is checked by a machine.
+Which layer of meaning does a question about a rule-based policy need, and in which representation and mode does a language model use it reliably?
 
-**Paper:** [`PAPER.md`](PAPER.md) · typeset PDF: [`paper/whitepaper.pdf`](paper/whitepaper.pdf)
+v2 is under construction; the plan, hypotheses and milestones are in [`REWORK.md`](REWORK.md).
+It crosses four cumulative layers (L0 schema, L1 ontology, L2 context, L3 warrant) with three representations (text, structured, formal) and two modes (*read*: the model answers from the material; *compile*: the model writes a Prolog goal that an engine executes), on a synthetic procurement-approval policy whose answer keys are computed by SWI-Prolog and checked by an independent Python implementation.
 
-## Findings in brief
+## v1
 
-1. **Written decisions matter more than the notation.** When the interpretation decisions were written down, 449 of the 453 answered questions were correct in English, Datalog and OWL + SHACL-AF alike. When they were missing, models silently picked one reading in 15 of 87 answers.
-2. **A model evaluating the rules itself runs into cost first, then errors.** As the world grew from 76 to 1,336 facts, the reading runs slowed sharply, and their first errors were omissions from set-valued and count answers. At 1,336 facts, two of Sonnet's three reading runs exhausted their output budget without answering.
-3. **Behind an engine, results stay flat.** Querying Soufflé or a graph materialised by pySHACL gave 9 of 9 answers at every size, in 12–56 s per run.
+v1, "Rules in Context", asked whether notation matters and when an engine is needed. Written decisions mattered, notation did not; the engine earned its place at scale.
+Paper: [`paper/v1/PAPER.md`](paper/v1/PAPER.md) · PDF: [`paper/v1/whitepaper.pdf`](paper/v1/whitepaper.pdf).
+Its studies, transcripts and results are at git tag `v1` (see [`paper/v1/README.md`](paper/v1/README.md)).
 
 ## Layout
 
 ```
-PAPER.md                      the white paper (GitHub-rendered); paper/ holds the PDF, figures and build scripts
-study1-interpretation/        Study 1: ambiguity and notation (fixed small/large worlds)
-  prompts/                    18 original prompts (verbatim, recovered) + x01 (OWL+SHACL); manifest.json
-  keys/keys.json              expected STATUS per scenario + answer regexes
-  oracle/small|large/         the Datalog arms in Soufflé syntax + one query per scenario
-  oracle/check_ontology.py    the OWL+SHACL arm under pySHACL == Soufflé, relation by relation
-  arms/large-owl-shacl/       schema, rules, data; build_prompt.py -> prompts/x01
-  harness/                    run.py (any model via litellm; serves ASK: queries from Soufflé), score.py, import_hermes.py
-  transcripts/                the 50 original agent sessions of 2026-08-31 (metadata trimmed)
-  results/                    run records (*.jsonl) and graded answers (*.scored.csv)
-study2-scaling/               Study 2: size and overrides (generated worlds)
-  gen.py, rules.dl, shacl_arm.py   world generator; policy as Datalog, English and OWL+SHACL-AF
-  verify.py                   independent Python evaluation of the English rules == Soufflé keys
-  check_shacl.py              pySHACL-derived relations == Soufflé, tuple for tuple
-  score.py                    grading (exact match; F1 for sets)
-  worlds/{S,M,L}-L{0,2}/      the exact worlds, prompts, keys and query tools used in the runs
-  results/                    run records, graded answers, wall time and token cost
-history/2026-08-31-agent-datalog/  Datalog programs and outputs that the Aug 31 agent wrote during its runs
+REWORK.md     v2 plan and decision log
+world/        world generator and domain model
+rules/        rules.yaml: rule records (id, layer, class, conservative, owner, english, prolog)
+render/       projections per representation × layer (text, structured, prolog)
+engine/       SWI-Prolog engine, why/2, capability registry, ./ask
+verify/       independent Python reference; engine == reference check
+questions/    question bank (kind, min_layer, forks, type) → per-world questions and keys
+harness/      model runs, compile-mode IM validation, scoring
+worlds/       generated worlds used in runs (committed)
+results/      run records
+paper/        v2 paper sources; paper/v1/ holds the frozen v1 report
 ```
 
-## Reproduce
+## Prerequisites
 
-Requirements: Python ≥ 3.10, [Soufflé](https://souffle-lang.github.io) 2.4+ on `PATH`, and pandoc + XeLaTeX (only for rebuilding the PDF).
-
-```
-pip install -r requirements.txt
-make verify      # recompute every key; check English == Datalog == OWL+SHACL
-make score       # re-grade all recorded runs
-make figures     # regenerate paper/fig-*.png from the result files
-make paper       # rebuild paper/whitepaper.pdf
-```
-
-Running new models:
+- Python ≥ 3.10 (`pip install -r requirements.txt`, ideally into `.venv/`; the Makefile uses `.venv/bin/python` when present)
+- [SWI-Prolog](https://www.swi-prolog.org) 9+ on `PATH` (developed on 11.0)
+- For `make verify-v1` only: [Soufflé](https://souffle-lang.github.io) 2.4+ on `PATH`, and `pip install pyshacl rdflib`
 
 ```
-# Study 1 (any litellm model id; oracle arms are served automatically)
-python study1-interpretation/harness/run.py --models anthropic/<model> openrouter/<vendor>/<model> --reps 3 \
-       --out study1-interpretation/results/runs.jsonl
-python study1-interpretation/harness/score.py study1-interpretation/results/runs.jsonl
-
-# Study 2: generate a new world, then hand prompt-*.txt to a model (tool arms: ./ask, ./sparql in the world folder)
-python study2-scaling/gen.py --depth 4 --branch 3 --analysts 2 --level 2 --seed 2 --out study2-scaling/worlds/L-L2-s2
+make verify-v1    # check the frozen v1 tree (tag v1) still verifies
 ```
-
-## Caveats
-
-- Study 2 ran once per cell, with one seed per world.
-- The Claude runs used Claude Code subagents, so model versions, temperature and reasoning budgets were not controlled.
-- The `AMBIGUOUS` keys in Study 1 are judgements. The numeric and yes/no keys are machine-checked.
-
-See §7 of the paper for the full list.
