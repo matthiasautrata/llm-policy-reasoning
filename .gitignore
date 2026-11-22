@@ -5,3 +5,5 @@ __pycache__/
 paper/*.aux
 paper/*.log
 worlds/*/ask.log.jsonl
+# run.py appends to plain JSONL; the committed copy is gzipped (gzip -k -9)
+results/*.jsonl

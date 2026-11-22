@@ -190,3 +190,44 @@ Cost control: do not run the full matrix before M6. Per milestone run only the n
   Request ids are shuffled afterwards, so position gives nothing away.
 - Sampling: each template draws 6 candidate instances. Two are kept from different key signatures (L3 decided value + open status), so the two instances of a template do not trivially share an answer. 24 templates (including the out-of-scope Q91) × 2 = 48 questions per world.
 - Python 3.14 / SWI-Prolog 11.0 details: `library(http/json)` moved to `library(json)` and is loaded conditionally. Derived predicates are declared `discontiguous`, because forked alternatives interleave.
+
+**2026-11-22 · M2**
+
+- **Test passes.**
+  - Below-layer keying: every question whose min_layer exceeds the layer is keyed UNDERDETERMINED. `verify/check.py` checks this, and `harness/score.py` asserts it again before scoring.
+  - The overreach rate is reported in `results/m2-read-L0-deepseek-v4.1-flash.md`.
+- **The run.**
+  - `deepseek/deepseek-v4.1-flash` in read mode at L0, on S-s1, S-s2, S-s3 and M-s1 × 3 representations × 48 questions × 3 repetitions: 1728 calls, no API errors.
+  - Cost $0.34, plus $0.004 of probes.
+  - Overall results:
+    - ANSWER keys: 99% correct (357/360).
+    - OUT_OF_SCOPE keys: 100% correct.
+    - Overreach on UNDERDETERMINED keys: 31% (401/1296).
+  - Overreach by the question's min_layer:
+    - L1: 60%;
+    - L2: 19%;
+    - L3: 14%.
+
+    This fits H1's "overreach is the dominant error below the layer": every wrong status on an UNDERDETERMINED key is an ANSWER or an OUT_OF_SCOPE.
+  - Overreach by representation: text 35%, structured 30%, formal 28%.
+  - Status stability across 3 repetitions is 72–83% of question cells.
+- **Harness without litellm.** `harness/openrouter.py` is a standard-library client, so no new dependency. It sends no identifying headers and records the served model, provider, tokens, reasoning tokens, OpenRouter's billed cost and wall time per call. v1's oracle turns belong to compile mode and are deferred to M6.
+- **Model and routing.**
+  - The model id is pinned.
+  - Providers are restricted to fp8 and sorted by price; 1724 calls went to Baidu and 4 to InferenceNet. The provider is recorded per call.
+  - Temperature 1.0, as in v1. `reasoning.effort = medium` is set explicitly rather than left to the provider default. max_tokens is 16000, and every call ended with `stop`.
+- **Read mode.**
+  - One question per call. The layer's material goes in the system message, and the question plus the expected answer type go in the user message.
+  - The model ends its reply with a JSON object `{status, value, readings, missing}`.
+  - The prompt defines the five statuses and never mentions layers, so the model is not told that more material exists.
+- **Scoring.**
+  - `correct` means the status matches and, for ANSWER keys, the value matches exactly.
+  - Overreach is an UNDERDETERMINED key met with ANSWER or AMBIGUOUS. It is the primary below-layer metric.
+  - Abstention is scored leniently (UNDERDETERMINED and OUT_OF_SCOPE are interchangeable) and strictly (the exact status). At L0 the two can't be told apart from inside the material when the layer that introduces a notion also introduces its relation. Q26 (exemptions) and Q24 (hr/finance disagreement) are mostly answered OUT_OF_SCOPE for that reason, so the lenient score is the one to read.
+  - The scorer re-parses the raw replies, so parser fixes apply to old records. `UNDETERMINED`, used in 44 replies, is accepted as an alias and counted in the report.
+- **Open for M3/M4: overreach that matches the later key.** The report shows how often an overreaching ANSWER equals the decided key at the question's min_layer:
+  - Q13, Q14, Q16, Q22 match in every case. The obvious reading coincides with the definition the next layer supplies, so the value can't tell a guess from knowing the definition.
+  - Q11 ("booked total") almost never matches: the model reads it as direct spend, while L1 defines it over the subtree.
+
+  When M3/M4 sampling chooses instances, it should prefer ones where the natural-language default and the later definition differ, so that a step at the layer shows in values and not only in statuses.
+- **Results files.** `results/*.jsonl` are working files and are not committed. The gzip copy (1.7 MB, with reasoning text) and the Markdown report are committed.

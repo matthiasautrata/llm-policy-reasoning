@@ -48,3 +48,21 @@ engine/ask --capabilities --layer 2        # predicates available at a layer, wi
 ```
 
 It prints one line of bindings per solution (or `true` / `false`). It exits 2 on an error, for example a predicate that is not defined at the requested layer. Every call is logged as JSONL to `$ASK_LOG` or `WORLD/ask.log.jsonl`.
+
+### Model runs
+
+Read mode puts one layer's material in context and asks one question per call. The model ends its reply with a JSON object holding a status (`ANSWER`, `AMBIGUOUS`, `CONFLICT`, `UNDERDETERMINED`, `OUT_OF_SCOPE`) and a value. Calls go through [OpenRouter](https://openrouter.ai), with the key read from `OPENROUTER_API_KEY`.
+
+```
+python harness/run.py --layer 0 --worlds S-s1 M-s1 --n 3 --model deepseek/deepseek-v4.1-flash \
+    --reasoning-effort medium --out results/run.jsonl --budget 1.00
+python harness/run.py --layer 0 --worlds S-s1 --model stub:key --out /tmp/stub.jsonl   # no calls; scores 100%
+python harness/score.py results/run.jsonl --report results/run.md
+```
+
+How a run behaves:
+- It appends one record per call: world, layer, representation, model and serving provider, question, raw reply and reasoning, parsed answer, tokens, cost, seconds.
+- It is resumable. Cells that are already done are skipped.
+- `--budget` caps the summed cost of the file.
+- Providers are restricted to fp8 and sorted by price, unless `--quantization any` is given.
+- Plain `results/*.jsonl` files are working copies and are ignored by git. The committed copy is `gzip -9`, and `score.py` reads it directly.
