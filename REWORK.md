@@ -561,3 +561,20 @@ Cost control: do not run the full matrix before M6. Per milestone run only the n
   - Spent in M6: L2-open compile $0.191; set-aside pre-R314 L3 compile $0.078 (`m6-compile-L3-preR314`, superseded by the fix and not scored); C5 read $0.917 and compile $0.832; L0 compile $0.479. M6 total about $2.50.
   - Size runs (iii): L-s1 read $0.33, S/M read $0.15, L-s1 compile $0.22, S/M compile $0.12; $0.82 in total.
   - Running total **$7.31 of $10**, $2.69 left for M7.
+
+### 2026-11-23 · M7
+
+- **Scope: subsets, not the full matrix.** Under the $10 cap, a full worlds × layers × representations × modes × reps matrix was not affordable: at M6's measured cost per call it would have been many times the remaining $2.69. M7 instead pools the milestone runs (M2–M6, each its new layer's questions plus the regression subset) and adds one run for H5. The paper says so (§4 Scope, §7).
+- **H5 run** (Matthias's choice: GLM-5.3 read vs DeepSeek compile). GLM-5.3 read, M-s1, L3 decided, the regression subset plus Q33/Q34, formal and structured, n=1. Settings as in M2a: effort high, Novita, fp8. Cap $1.00, spent $0.3545, 84 records, all `stop` (`results/m7-read-L3-glm-5.3.md`). It is compared on the same 84 cells with M6's DeepSeek compile records.
+  - GLM read 82/84 (formal 40/42, structured 42/42); DeepSeek compile 82/84 (same split); DeepSeek read 79/84.
+  - GLM's errors (Q03-1, Q15-2, formal) are DeepSeek read's errors too. The keys were rechecked against M-s1 L3 formal.pl: e077 is in cc3_1_3, and the earlier assignment rows list cc2_2_1. These are genuine misreadings of the history, not key errors.
+  - GLM costs $0.0036–0.0048 per call, against $0.0014–0.0017 for DeepSeek compile. On its 2 CONFLICT cells (both correct) it reasoned 7–14k tokens (86–174 s, $0.018–0.032 each); its median is about 100 tokens.
+  - An extension (GLM on all C5 cells, Q33/Q34 on M-s1 and S-s1–3, n=2, about $0.5–0.9) was blocked by the permission classifier as unapproved spend and was not run. It is listed as a threat to validity.
+- **Verdicts** (paper §5.6):
+  - H1 confirmed for k=1 (L0 → L1: 170/432 → 501/504) and k=2 (L1 → L2: 72/144 → 387/432). For k=3 it is confirmed in text and structured but not visible in formal, which already abstains at L2; C5 lowers L3 to about 90%. Below the step every error is overreach, 65–100% of it lucky.
+  - H2 confirmed at small scale: ANSWER keys are 99–100% in all representations, and representation moves only the abstention boundary. The length effect shows in cost and time, not in accuracy, up to 1.5k facts.
+  - H3 confirmed on contradiction (C5 compile 29/30 vs read 5/24) and on errors moving to translation (compile size runs: 0 wrong values, 6 unrun plans; 58/62 L2-open errors are plan shape). A tie at L size. Refuted for abstention: L0 overreach rises under compile (formal 33/44 vs 22/48, structured 45/114 vs 28/108).
+  - H4 falsified as stated: 85/106 read errors at or above the layer are on CONFLICT keys (Q25, C5); the L3 non-conflict templates are 286/288. Below the layer, the conservative L1 concepts overreach most (60%). Refined: consistency of the material, not conservativeness, predicts read failure.
+  - H5 confirmed as "matches" (82/84 vs 82/84) at 2.5–3× lower cost per call; n=1, 2 CONFLICT cells.
+- **Paper v2** at `paper/v2/PAPER.md` (with a README). References reuse v1's [1]–[10]; [11] is v1 itself. No new citations were added.
+- **Cost.** M7 $0.3545. Total **$7.66 of $10** for 8,822 records (DeepSeek 8,198 at $6.37, GLM-5.3 360 at $0.78, Qwen3.8 Flash 264 at $0.51); $2.34 unspent.
