@@ -12,9 +12,9 @@ v1 of this study found that, for policy questions, written interpretation decisi
 - **Representation (H2) matters less than layer presence.** With the right layer present, ANSWER keys are 99–100% correct in every representation. Representation moves the abstention boundary, and at about 1.5k facts it shows in cost and time but not in accuracy.
 - **Compile mode (H3) wins on contradiction.** It reaches 29/30 on rule-level CONFLICT keys, against 5/24 for read. It ties read at L size, and its errors move into the plan's shape. But it *raises* overreach when the needed layer is absent.
 - **The criterion (H4) is falsified as stated.** Read failures do not concentrate on defeasible or deontic rules (286/288 correct). They concentrate on contradictions, both in the data and between rules.
-- **Small model plus engine (H5) is confirmed as "matches".** DeepSeek in compile mode and a larger model (GLM-5.3) in read mode both score 82/84 on the same cells, at about 2.5–3× lower cost per call.
+- **Small model plus engine (H5) is confirmed.** DeepSeek in compile mode matches a larger model (GLM-5.3) in read mode where the material is consistent (82/84 each), and beats it on the rule-level contradiction (29/30 vs 9/20). It costs 2–3.5× less per call. GLM resolves half of the contradictions silently.
 
-The whole programme cost $7.66.
+The whole programme cost $8.11.
 
 ## 1 Introduction
 
@@ -214,6 +214,7 @@ Read errors at or above the question's minimum layer (DeepSeek, decided):
 | L3 | 864 | 45 | 40 (Q33/Q34 C5: 36 ANSWER, 4 parse) |
 
 - **85 of 106 errors are on CONFLICT keys.** On the L3 templates whose keys follow from the defeasible and deontic rules, read mode is nearly perfect: Q31 permission 72/72, Q32 vendor check with exception and exception-to-exception 72/72, Q35 denial 72/72, Q36 cap check 70/72. That is 286/288. Q33 scores 64/72 and Q34 40/72, and their misses are the C5 conflicts.
+- **The concentration replicates in a second model family.** On the C5 cells, GLM-5.3 misses 11 of 20 CONFLICT keys and 1 of 44 other keys of the same templates (§5.5).
 - **The two contradictions behave differently.** The data conflict, Q25, was always noticed: no reply picked a side, and the miss is the status label. The rule conflict, C5 before R314, was resolved silently:
   - *By the reader:* R312 "an automatically approved request is approved" was read as a second sufficient condition, and R310's "denial overrides eligibility" as scoped to eligibility.
   - *By the formalism:* formal gave 15/15 ANSWER, because two clauses for `approved/1` are a union under program semantics. A formal rule set resolves an unstated precedence by construction. It needs an explicit incompatibility (R314) for the contradiction to exist at all.
@@ -233,10 +234,21 @@ Same 84 cells: M-s1, L3 decided, the 19-template subset plus Q33/Q34, formal and
 | DeepSeek V4.1 Flash, read | 79/84 | | | | |
 
 - GLM's two errors are the same Q03/Q15 history misreadings that DeepSeek makes in read mode; the keys were rechecked against the material. One of DeepSeek compile's errors is a plan-shape error (`V = []` for a set). DeepSeek read lost the two Q34 CONFLICT cells to truncation.
-- GLM answered both CONFLICT cells it saw correctly. Its median reasoning was about 100 tokens, but on the two CONFLICT cells it used 7–14k tokens (86–174 s, $0.018–0.032 each). The contradiction made a strong model reason long too.
+- On these 84 cells GLM's median reasoning was about 100 tokens. Its two CONFLICT cells were both correct, at 7–14k tokens (86–174 s, $0.018–0.032 each).
+
+The 84 cells hold only 2 CONFLICT keys, so GLM was also run on all C5 cells: Q33/Q34 on M-s1 and S-s1–3, formal and structured, n = 2, the same cells as DeepSeek's C5 runs (§5.3).
+
+| Arm (C5 cells) | CONFLICT keys | formal | structured | other keys | median reasoning on CONFLICT | cost per call, CONFLICT / other |
+|---|---|---|---|---|---|---|
+| GLM-5.3, read (n = 2) | **9/20** | 6/10 | 3/10 | 43/44 | 4.7k tok, 64 s | $0.0140 / $0.0058 |
+| DeepSeek, compile (n = 3) | **29/30** | 15/15 | 14/15 | 61/66 | 6.7k tok, 55 s | $0.0039 / $0.0027 |
+| DeepSeek, read (n = 3, cap-stopped) | 5/15 | 3/6 | 2/9 | 43/47 | 15.8k tok, 86 s | $0.0092 / $0.0033 |
+
+- **The larger model resolves the contradiction silently instead of truncating.** GLM answers 10 of the 20 CONFLICT cells with a value. 8 of the 10 take the side on which denial wins, the value of the exclusion-enforced program M−, as if R314 had precedence. The other 2 match neither side. Only 1 of 20 hit the output cap, against 7 of 15 for DeepSeek read. DeepSeek read fails by reasoning until it is cut off; GLM fails by picking the plausible business reading, as at L0 (§5.1).
+- DeepSeek compile's misses on the other keys are unrun plans (4) and one engine-side CONFLICT on an ANSWER key. GLM's one miss is a formal misreading.
 - Over all its reps on these M-s1 cells (100 records), DeepSeek compile scores 96/100.
 
-**Verdict: H5 confirmed as "matches", not "beats"**: equal accuracy at about 2.5–3× lower cost per call, though slower per call. The comparison has n = 1 and only 2 CONFLICT cells. And at L0, where the needed layer is missing, GLM overreached more than DeepSeek (96% vs 74%).
+**Verdict: H5 confirmed.** The small model with the engine matches the larger model where the material is consistent (82/84 vs 82/84; other C5-template keys 61/66 vs 43/44). It beats the larger model on the rule-level contradiction (29/30 vs 9/20), at 2–3.5× lower cost per call. Neither arm is better at abstaining: at L0, where the needed layer is missing, GLM overreached more than DeepSeek in read mode (96% vs 74%), and DeepSeek compile overreaches more than DeepSeek read (§5.3).
 
 ### 5.6 Summary
 
@@ -246,7 +258,7 @@ Same 84 cells: M-s1, L3 decided, the 19-template subset plus Q33/Q34, formal and
 | H2 representation | confirmed at small scale; length effect only in cost and time | ANSWER keys 99–100% in all representations; L-s1 97–100% |
 | H3 mode | confirmed on contradiction and on error location; tie at scale; refuted for abstention | C5 29/30 vs 5/24; size: 0 wrong values in compile; L0 overreach 33/44 vs 22/48 |
 | H4 criterion | falsified; refined to contradiction | 85/106 read errors on CONFLICT keys; L3 non-conflict templates 286/288 |
-| H5 small + engine | confirmed as "matches" | 82/84 vs 82/84, at 2.5–3× lower cost per call |
+| H5 small + engine | confirmed: matches on consistent material, beats on contradiction | 82/84 vs 82/84; C5 CONFLICT 29/30 vs 9/20; 2–3.5× lower cost per call |
 
 ## 6 Discussion
 
@@ -254,7 +266,7 @@ Same 84 cells: M-s1, L3 decided, the 19-template subset plus Q33/Q34, formal and
 
 **Compile mode is not an abstention mechanism.** One might hope that an engine that refuses unknown predicates would turn overreach into UNDERDETERMINED. It does not, because the model writes the missing concept out of base relations. Overreach is semantic, not syntactic. A validator could only catch it if the plan had to name the concept it computes, so that the concept could be checked against the layer's capabilities. That argues for a **typed plan schema**: a data AST that names the concept and declares its output kind (scalar, set or bool). It would also remove the 58/62 shape errors. It was not built in v2.
 
-**Contradiction is the hard case for reading, and the engine's strongest case.** v1 located the engine's advantage in size. v2 finds that at 1.5k facts size costs time but not accuracy. A self-contradiction, by contrast, produces long reasoning and truncation in read mode. GLM-5.3 also reasoned 7–14k tokens on the two CONFLICT cells it saw. Compile mode turns contradiction into a mechanical comparison (M vs M−), which the model does not need to carry out. The rule-level result also has a design consequence: in a formal rule base, an unstated precedence between two sufficient conditions is resolved silently as a union. Contradiction must be declared (an incompatibility rule) before an engine can find it.
+**Contradiction is the hard case for reading, and the engine's strongest case.** v1 located the engine's advantage in size. v2 finds that at 1.5k facts size costs time but not accuracy. A self-contradiction, by contrast, produces long reasoning and truncation in read mode (DeepSeek), or a silently chosen side (GLM-5.3, 10/20 answered, 8 of them with denial winning). Compile mode turns contradiction into a mechanical comparison (M vs M−), which the model does not need to carry out. The rule-level result also has a design consequence: in a formal rule base, an unstated precedence between two sufficient conditions is resolved silently as a union. Contradiction must be declared (an incompatibility rule) before an engine can find it.
 
 **The division of labour from v1 holds, with a refinement.** The model interprets and plans; the engine evaluates and checks consistency. But the model also decides whether the material suffices, and both modes do that badly.
 
@@ -263,7 +275,7 @@ Same 84 cells: M-s1, L3 decided, the 19-template subset plus Q33/Q34, formal and
 - **One main model, several providers.** Almost all calls are DeepSeek V4.1 Flash. They were served by Baidu, DeepInfra and InferenceNet at fp8, and provider is recorded but not balanced. The size curve was re-run on one day, mostly on one provider (96%), to remove this confound there.
 - **Small n and subsets.** Most cells are n = 1–3. Under the $10 cap the full matrix was not run. Each milestone ran its new questions plus the 19-template regression subset; compile mode at L0 covers M-s1 only, and the size curve covers one L world.
 - **Runs stopped at caps.** Three of the four C5 runs and the L0 compile run stopped at their budget caps, so their cells are unbalanced: for example, read decided 98/144 cells, compile open 45/96.
-- **H5 is thin.** GLM-5.3 ran at n = 1 on 84 cells, of which only 2 are CONFLICT keys. An extension to all C5 cells (about $0.5) was not run.
+- **H5 rests on one pair of models.** GLM-5.3 ran at n = 1 on the 84 subset cells and at n = 2 on the 64 C5 cells (20 of them CONFLICT keys). DeepSeek compile's C5 cells are n = 3 from M6, run on a different day.
 - **Template choice.** The L0 model comparison used 11 templates chosen from DeepSeek's M2 overreach, which favours finding overreach for DeepSeek. GLM still overreached more.
 - **Size.** L-s1 has 1,543 facts. Effects of length beyond that are untested.
 - **Heuristics.** "Noticed but answered" is a keyword heuristic, with a per-model control rate.
@@ -272,7 +284,7 @@ Same 84 cells: M-s1, L3 decided, the 19-template subset plus Q33/Q34, formal and
 
 ## 8 Conclusions and future work
 
-When a question needs a layer of meaning, providing that layer is what makes it answerable. Without it, a model answers anyway, usually with the right guess, in every representation and in both modes. Representation matters at the boundary of abstention, not in reading. Compile mode earns its place on contradiction and consistency, and at equal accuracy it lets a flash-tier model match a larger one at 2.5–3× lower cost per call. It does not make a model abstain.
+When a question needs a layer of meaning, providing that layer is what makes it answerable. Without it, a model answers anyway, usually with the right guess, in every representation and in both modes. Representation matters at the boundary of abstention, not in reading. Compile mode earns its place on contradiction and consistency, and it lets a flash-tier model match a larger one on consistent material, and beat it on contradiction, at 2–3.5× lower cost per call. It does not make a model abstain.
 
 Next steps:
 - a typed plan schema that names the computed concept and its output kind, so that overreach and shape errors can be checked before execution;
@@ -283,7 +295,7 @@ Next steps:
 
 ## Reproducibility
 
-The repository holds the generator, rule records, renderers, engine, Python reference, question bank, harness, every world used, every raw record (`results/*.jsonl.gz`) and the scored reports (`results/*.md`). `make verify` regenerates every world and checks every key against the reference. `harness/score.py <run>.jsonl --report <run>.md` rescores a run. Runs used OpenRouter at a total of $7.66 for 8,822 records: DeepSeek 8,198 records ($6.37), GLM-5.3 360 ($0.78) and Qwen3.8 Flash 264 ($0.51). The cost of each run is listed in `REWORK.md`, Decisions.
+The repository holds the generator, rule records, renderers, engine, Python reference, question bank, harness, every world used, every raw record (`results/*.jsonl.gz`) and the scored reports (`results/*.md`). `make verify` regenerates every world and checks every key against the reference. `harness/score.py <run>.jsonl --report <run>.md` rescores a run. Runs used OpenRouter at a total of $8.11 for 8,878 records: DeepSeek 8,198 records ($6.37), GLM-5.3 416 ($1.23) and Qwen3.8 Flash 264 ($0.51). The cost of each run is listed in `REWORK.md`, Decisions.
 
 ## References
 
