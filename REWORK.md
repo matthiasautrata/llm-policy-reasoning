@@ -317,3 +317,51 @@ Cost control: do not run the full matrix before M6. Per milestone run only the n
   | Running total with M2 | about $1.94 of the $5 |
 
   The M-s1 assume cells begun in the first attempt (59 records) are kept but not used; the assume comparison is on the S worlds.
+
+**2026-11-22 · M3**
+
+- **Test passes: the H1 step is visible for min_layer 1 questions.**
+  - Setup: DeepSeek, base prompt, decided config, S-s1–3 + M-s1 × 3 representations × 3 reps, on the same question instances at both layers.
+  - Correct on min_layer 1 questions goes from 40% (203/504) at L0 to 99% (501/504) at L1:
+
+    | Representation | L0 | L1 |
+    |---|---|---|
+    | formal | 49% | 99% |
+    | structured | 41% | 99% |
+    | text | 32% | 100% |
+
+  - The step also shows in *values*:
+    - At L0, Q11 is answered with the direct reading (roll-up value 1/72).
+    - At L1, Q11 and Q17 are 72/72 correct under R104's roll-up.
+  - Report: `results/m3-read-L1-deepseek-v4.1-flash.md`. Its L0 rows are the M2 and m2a base-prompt records on the same cells.
+- **Run scope** (cost control, §5). This is not all 50 templates. It covers:
+  - every min_layer 0 template (Q01–Q05) as the regression subset;
+  - every min_layer 1 template (Q11–Q17);
+  - Q21, Q22, Q31 and Q33 as above-layer probes;
+  - Q91 (out of scope).
+  - 17 templates × 2 instances × 4 worlds × 3 representations × 3 reps = 1224 calls (including a 24-call pilot).
+  - The open config covers only the forked L1 templates Q11–Q15 and Q17: 432 calls.
+- **Regression and above-layer.**
+  - L0 questions stay at 99% at L1, and Q91 at 100%.
+  - Above the layer, overreach persists: 50% on min_layer 2 at both layers, and 26% → 20% on min_layer 3.
+    - Q22 (applicable approval limit) is ANSWER 72/72 at L0 and at L1, and equals the L2 key every time.
+    - Q33 ("is request r approved?") moves from UNDERDETERMINED to OUT_OF_SCOPE (31/72) at L1. This is still abstention, so the strict-correct rate on min_layer 3 drops (74% → 58%) while overreach falls.
+- **Open config (L1-open).**
+  - Text and structured are 95–97% correct: AMBIGUOUS, with the value under each reading right.
+  - Formal is 16%. On the 129 AMBIGUOUS keys, formal answers UNDERDETERMINED 111 times. Every one of the 111 names the open fork in `missing`, and some compute both values first.
+  - Overreach (ANSWER on an AMBIGUOUS key) is low everywhere: text 5, structured 3, formal 2 of 129.
+  - Reading: the formal projection states an open fork as an absent `reading/2` fact, with the comment "nothing that depends on an open question is derived". The model takes that literally, as a missing decision, which the status definitions also allow.
+  - This is a representation effect on the AMBIGUOUS/UNDERDETERMINED boundary, not overreach.
+  - The material was left as rendered for this run. An ablation is open: reword the formal comment to list the readings' values as alternatives; 144 calls, about $0.13. Alternatively, score "UNDERDETERMINED naming the open fork" as a lenient match for AMBIGUOUS.
+- **L1 material.**
+  - Concepts (`rules.yaml` `concepts:`) bind each term the definitions use to a column, with the contrast that keeps it apart from a neighbouring term. They are descriptive only: the engine does not read them.
+  - Rules are rendered with their id and English in all three representations. Formal also carries the clauses and `rule/6`, `doc/2`, `concept/3` and `fork/5` facts.
+  - Decided: the definitions follow the decisions, and a Decisions section states them.
+  - Open: every fork *of the layer* is shown open, not only those a question depends on, so the material is the same for every question. Each fork lists its readings with their rule ids. In formal, each reading's clauses are guarded by `reading(Fork, Reading)`.
+  - L0 material stays byte-identical to the M2 run. The L1 format note in the prompt is added only from L1 on (`RULES_NOTE`).
+- **Formal check.**
+  - `verify/formal.pl` loads each rendered L1 / L1-open `formal.pl` alone, asserts the job's readings, and must reproduce every L1 key.
+  - In particular, a question keyed UNDERDETERMINED at L1 must not be derivable from the file.
+  - `make verify` runs it for all 9 worlds.
+- **Questions stay fixed across layers.** The same instances are asked at every layer, and only the key changes, so a step is a within-question comparison. Records carry `cfg` (decided/open), and the resume key includes it.
+- **Cost.** L1 decided $0.311; L1 open $0.388 (about 3× per call: about 1670 completion tokens against 510, because both readings are worked out). M3 total about $0.70. Running total about $2.64 of $5, with about $2.36 left for M4–M6.
