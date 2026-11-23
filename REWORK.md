@@ -231,3 +231,89 @@ Cost control: do not run the full matrix before M6. Per milestone run only the n
 
   When M3/M4 sampling chooses instances, it should prefer ones where the natural-language default and the later definition differ, so that a step at the layer shows in values and not only in statuses.
 - **Results files.** `results/*.jsonl` are working files and are not committed. The gzip copy (1.7 MB, with reasoning text) and the Markdown report are committed.
+
+**2026-11-22 · M2 addendum** (Matthias's five follow-ups to M2, done before the M3 runs)
+
+- **Fork c6, booked total (item 4).**
+  - Registered as `c6` (controller): `with_descendants` (R104, decided) / `direct_only` (new R104b). It is c6, not c5, because C5 is the deny/auto-approve CONFLICT.
+  - The L1 concept for "booked amount" now says it is the direct amount and that the booked total is defined separately (R104).
+  - The bank's `forks:` lists of Q11–Q14 now include c6; `check.py` requires them to match the derived closure.
+  - Existing questions, instances and decided keys are unchanged. Only open keys moved: Q11–Q14 and Q33/Q34/Q36 become AMBIGUOUS where the two readings differ.
+- **Q16 (reporting chain).** The default was accepted: R103 stays unowned. "Reporting chain" has one reasonable reading (transitive managers). The M2 overreach on Q16 matches the L1 key every time.
+- **Paraphrase (item 5).**
+  - Q17 asks Q11's goal as "What is the rolled-up booked spend of cost centre {c}?".
+  - `paraphrase_of: Q11` reuses Q11's instances with no sampling, so neither the RNG stream nor any other question moves.
+  - Result (DeepSeek, base prompt, S-s1–3 + M-s1, n=3):
+    - Q11 is answered 72/72, with the roll-up value 1/72.
+    - Q17 is UNDERDETERMINED 33/72 and answered 39/72, every answer the roll-up value.
+  - The wording selects the reading, so c6 is a real fork and not a model quirk. Score.py has a "Paraphrases" section.
+- **Noticed but answered (item 1).**
+  - What it counts: an overreaching ANSWER whose content or reasoning trace matches an ambiguity/missing-definition keyword list. There are two lists:
+    - strict: ambiguous, not defined, unspecified, no rule, …
+    - wide: strict plus assume, interpret, missing, not stated, …
+  - JSON keys (`"missing":`, `"assumptions":`) are blanked first. The control is the same rate on ANSWER keys answered correctly.
+  - M2 data (DeepSeek, all 401 overreaches):
+    - strict: 89% (355/401), control 11%;
+    - wide: 96%, control 17%.
+    - Per representation (strict / control): formal 92/13, structured 91/17, text 84/5.
+  - The noticing is in the reasoning trace: the visible reply flags it in 2/401. The user's rough 352/401 is confirmed.
+  - It is a keyword heuristic and calibrates differently per model (see Models below), so read it with its control.
+- **Assume prompt (item 2).**
+  - Added as `--prompt assume`: the same instructions plus a required `assumptions` list in the JSON. It is a field, not a sixth status, so status scoring stays comparable with the base prompt. The record carries `prompt`, and a cell key includes it.
+  - Subset: S-s1–3, 11 templates (Q01 Q03 Q05 controls; Q11 Q13 Q14 Q15 Q16 Q17 at min_layer 1; Q22; Q31) × 3 representations × 3 reps.
+  - Results, base → assume, on the same cells:
+    - overreach on min_layer 1 fell from 67% to 59%;
+    - min_layer 2 stayed at 100%;
+    - min_layer 3 went from 48% to 46%.
+  - 93–96% of overreaching ANSWERs list assumptions, and the assumptions name the chosen reading. For example: "'booked total' is read as the amount booked directly on the cost centre".
+  - 15–39% of correct control answers also list assumptions. These are trivial schema readings ("pending means status 'pending'").
+  - Per template, abstention rose:
+    - Q15: 65 → 83%;
+    - Q16: 9 → 20%;
+    - Q17: 54 → 70%.
+    - Q11, Q13 and Q22 are still answered almost always.
+  - Conclusion: overreach turns into *stated* assumptions, not into abstention.
+    - A later scoring option is "ANSWER + an assumption naming the missing definition" as a softer category than silent overreach.
+    - Under assume, the wide keyword list is contaminated (control 87–94%, because the trace discusses the field), so use strict.
+  - Report: `results/m2a-assume-L0-deepseek-v4.1-flash.md`.
+- **Models (item 3).** Same 11 templates, base prompt, S-s1 + M-s1, reps 0–1 (264 calls per model). Report: `results/m2a-models-L0.md`.
+  - **GLM-5.3** (`z-ai/glm-5.3`):
+    - Configuration: `reasoning.effort = high`, Novita, fp8.
+    - fp8 to keep quantization comparable with DeepSeek; fp4 providers were excluded.
+    - Effort high because at medium it thinks adaptively and barely reasons (28–163 tokens in a 12-call pilot, kept in `m2a-pilot-…-medium.jsonl`).
+  - **Qwen3.8-flash** (`qwen/qwen3.8-flash`): effort medium, Alibaba (the only provider; quantization not reported, so `--quantization any`).
+  - Overreach on the min_layer 1 keys of these cells:
+
+    | Model | Overreach | ANSWER keys correct |
+    |---|---|---|
+    | DeepSeek | 74% | 99% |
+    | Qwen | 69% | 97% |
+    | GLM | 96% | 96% |
+
+    - min_layer 2 (Q22) is 100% for all three.
+    - min_layer 3 (Q31): 42 / 17 / 25%.
+  - The stronger model overreaches *more*. GLM answers Q14, Q16 and Q17 almost always, where DeepSeek and Qwen abstain on half of Q14. On Q15, GLM uses AMBIGUOUS (20/24) instead of UNDERDETERMINED.
+  - The paraphrase effect replicates in every family. Q11 is read as direct spend (roll-up 1/22, 0/23). Every Q17 ANSWER is the roll-up value (18/18, 23/23).
+  - Noticed (strict) per model:
+    - DeepSeek 87–95%, control 0–29%.
+    - Qwen 97–100%, but control 43–57%: its traces use the keywords throughout, so the heuristic barely separates.
+    - GLM 35–47%, control 0–4%: it answers without discussing alternatives.
+    So "noticed but answered" is a DeepSeek finding, not a general one.
+  - Stability across 2 reps: DeepSeek 75–84%, Qwen 75–80%, GLM 86–95%.
+  - Bias: the 11 templates were chosen from DeepSeek's M2 overreach, which favours finding overreach for DeepSeek. GLM is still higher.
+- **Routing.**
+  - The cheapest fp8 provider for DeepSeek (Baidu) returned HTTP 429 ("temporarily rate-limited upstream") on most calls at ≥3 workers. The fallback went to InferenceNet at 3× the output price.
+  - Added `--only-provider P…`, which sets `provider.only`. `allow_fallbacks: false` is not used: with it, OpenRouter tries only the first provider in the list.
+  - Failed calls are stored as error records and retried on resume.
+  - The assume run was served by Baidu 562, DeepInfra 332 and InferenceNet 294. All are the same model at fp8; the provider is recorded per call.
+- **Cost.**
+
+  | Item | Cost |
+  |---|---|
+  | DeepSeek (Q17 + assume) | $0.646 |
+  | GLM | $0.411 run + $0.014 pilot + about $0.016 provider probes |
+  | Qwen | $0.509 |
+  | Addendum total | about $1.60 |
+  | Running total with M2 | about $1.94 of the $5 |
+
+  The M-s1 assume cells begun in the first attempt (59 records) are kept but not used; the assume comparison is on the S worlds.

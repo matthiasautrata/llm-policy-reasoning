@@ -8,6 +8,8 @@
 #   goal       Prolog goal; V is the answer variable (int, sym, set); bool = does the goal hold
 #   conflict   optional goal: if it holds, the material contradicts itself on this question
 #   resolve    optional goal that settles the conflict where its predicates exist (a precedence rule)
+#   paraphrase_of  the template asks the same goal as another one in other words; its instances reuse
+#              that template's parameters (no sampling), so the two compare on the same instances
 # min_layer and forks are declarations: verify/check.py compares them with what the engine derives
 # from the dependency closure of goal and conflict.
 
@@ -56,7 +58,7 @@ templates:
   - id: Q11
     kind: fact
     min_layer: 1
-    forks: []
+    forks: [c6]
     type: int
     params: {c: internal_cc}
     text: What is the booked total of cost centre {c}?
@@ -64,7 +66,7 @@ templates:
   - id: Q12
     kind: fact
     min_layer: 1
-    forks: [c1]
+    forks: [c1, c6]
     type: int
     params: {c: cc}
     text: What is the headroom of cost centre {c}?
@@ -72,7 +74,7 @@ templates:
   - id: Q13
     kind: fact
     min_layer: 1
-    forks: [c1]
+    forks: [c1, c6]
     type: set
     params: {c: internal_cc}
     text: Which cost centres in the subtree of {c} (including {c}) are over cap?
@@ -80,7 +82,7 @@ templates:
   - id: Q14
     kind: fact
     min_layer: 1
-    forks: [c1, c4]
+    forks: [c1, c4, c6]
     type: bool
     params: {r: req}
     text: Would approving request {r} breach a cap?
@@ -101,6 +103,15 @@ templates:
     params: {m: manager}
     text: How many employees have {m} in their reporting chain?
     goal: aggregate_all(count, chain(_, {m}), V)
+  - id: Q17
+    kind: fact
+    min_layer: 1
+    forks: [c6]
+    type: int
+    paraphrase_of: Q11
+    params: {c: internal_cc}
+    text: What is the rolled-up booked spend of cost centre {c}?
+    goal: booked_total({c}, V)
 
   - id: Q21
     kind: fact
@@ -172,7 +183,7 @@ templates:
   - id: Q33
     kind: permission
     min_layer: 3
-    forks: [c1, c2, c4]
+    forks: [c1, c2, c4, c6]
     type: bool
     params: {r: req}
     text: Is request {r} approved?
@@ -181,7 +192,7 @@ templates:
   - id: Q34
     kind: permission
     min_layer: 3
-    forks: [c1, c2, c4]
+    forks: [c1, c2, c4, c6]
     type: set
     params: {c: internal_cc}
     text: Which requests raised by employees in the subtree of {c} are approved?
@@ -198,7 +209,7 @@ templates:
   - id: Q36
     kind: fact
     min_layer: 3
-    forks: [c1, c2, c4]
+    forks: [c1, c2, c4, c6]
     type: bool
     params: {r: req}
     text: Does request {r} pass the cap check?

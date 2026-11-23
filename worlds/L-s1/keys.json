@@ -462,6 +462,42 @@
     "value": 9
    }
   },
+  "Q17-1": {
+   "L0": {
+    "missing_layer": 1,
+    "status": "UNDERDETERMINED"
+   },
+   "L1": {
+    "status": "ANSWER",
+    "value": 285000
+   },
+   "L2": {
+    "status": "ANSWER",
+    "value": 285000
+   },
+   "L3": {
+    "status": "ANSWER",
+    "value": 285000
+   }
+  },
+  "Q17-2": {
+   "L0": {
+    "missing_layer": 1,
+    "status": "UNDERDETERMINED"
+   },
+   "L1": {
+    "status": "ANSWER",
+    "value": 736000
+   },
+   "L2": {
+    "status": "ANSWER",
+    "value": 736000
+   },
+   "L3": {
+    "status": "ANSWER",
+    "value": 736000
+   }
+  },
   "Q21-1": {
    "L0": {
     "missing_layer": 2,
@@ -992,48 +1028,58 @@
    "min_layer": 0
   },
   "Q11-1": {
-   "forks": [],
+   "forks": [
+    "c6"
+   ],
    "min_layer": 1
   },
   "Q11-2": {
-   "forks": [],
+   "forks": [
+    "c6"
+   ],
    "min_layer": 1
   },
   "Q12-1": {
    "forks": [
-    "c1"
+    "c1",
+    "c6"
    ],
    "min_layer": 1
   },
   "Q12-2": {
    "forks": [
-    "c1"
+    "c1",
+    "c6"
    ],
    "min_layer": 1
   },
   "Q13-1": {
    "forks": [
-    "c1"
+    "c1",
+    "c6"
    ],
    "min_layer": 1
   },
   "Q13-2": {
    "forks": [
-    "c1"
+    "c1",
+    "c6"
    ],
    "min_layer": 1
   },
   "Q14-1": {
    "forks": [
     "c1",
-    "c4"
+    "c4",
+    "c6"
    ],
    "min_layer": 1
   },
   "Q14-2": {
    "forks": [
     "c1",
-    "c4"
+    "c4",
+    "c6"
    ],
    "min_layer": 1
   },
@@ -1055,6 +1101,18 @@
   },
   "Q16-2": {
    "forks": [],
+   "min_layer": 1
+  },
+  "Q17-1": {
+   "forks": [
+    "c6"
+   ],
+   "min_layer": 1
+  },
+  "Q17-2": {
+   "forks": [
+    "c6"
+   ],
    "min_layer": 1
   },
   "Q21-1": {
@@ -1137,7 +1195,8 @@
    "forks": [
     "c1",
     "c2",
-    "c4"
+    "c4",
+    "c6"
    ],
    "min_layer": 3
   },
@@ -1145,7 +1204,8 @@
    "forks": [
     "c1",
     "c2",
-    "c4"
+    "c4",
+    "c6"
    ],
    "min_layer": 3
   },
@@ -1153,7 +1213,8 @@
    "forks": [
     "c1",
     "c2",
-    "c4"
+    "c4",
+    "c6"
    ],
    "min_layer": 3
   },
@@ -1161,7 +1222,8 @@
    "forks": [
     "c1",
     "c2",
-    "c4"
+    "c4",
+    "c6"
    ],
    "min_layer": 3
   },
@@ -1177,7 +1239,8 @@
    "forks": [
     "c1",
     "c2",
-    "c4"
+    "c4",
+    "c6"
    ],
    "min_layer": 3
   },
@@ -1185,7 +1248,8 @@
    "forks": [
     "c1",
     "c2",
-    "c4"
+    "c4",
+    "c6"
    ],
    "min_layer": 3
   },
@@ -1439,16 +1503,25 @@
     "status": "UNDERDETERMINED"
    },
    "L1": {
-    "status": "ANSWER",
-    "value": 285000
+    "readings": {
+     "c6=direct_only": 0,
+     "c6=with_descendants": 285000
+    },
+    "status": "AMBIGUOUS"
    },
    "L2": {
-    "status": "ANSWER",
-    "value": 285000
+    "readings": {
+     "c6=direct_only": 0,
+     "c6=with_descendants": 285000
+    },
+    "status": "AMBIGUOUS"
    },
    "L3": {
-    "status": "ANSWER",
-    "value": 285000
+    "readings": {
+     "c6=direct_only": 0,
+     "c6=with_descendants": 285000
+    },
+    "status": "AMBIGUOUS"
    }
   },
   "Q11-2": {
@@ -1457,16 +1530,25 @@
     "status": "UNDERDETERMINED"
    },
    "L1": {
-    "status": "ANSWER",
-    "value": 736000
+    "readings": {
+     "c6=direct_only": 0,
+     "c6=with_descendants": 736000
+    },
+    "status": "AMBIGUOUS"
    },
    "L2": {
-    "status": "ANSWER",
-    "value": 736000
+    "readings": {
+     "c6=direct_only": 0,
+     "c6=with_descendants": 736000
+    },
+    "status": "AMBIGUOUS"
    },
    "L3": {
-    "status": "ANSWER",
-    "value": 736000
+    "readings": {
+     "c6=direct_only": 0,
+     "c6=with_descendants": 736000
+    },
+    "status": "AMBIGUOUS"
    }
   },
   "Q12-1": {
@@ -1494,22 +1576,28 @@
    },
    "L1": {
     "readings": {
-     "c1=booked_only": 81000,
-     "c1=with_pending": -419000
+     "c1=booked_only,c6=direct_only": 342000,
+     "c1=booked_only,c6=with_descendants": 81000,
+     "c1=with_pending,c6=direct_only": -158000,
+     "c1=with_pending,c6=with_descendants": -419000
     },
     "status": "AMBIGUOUS"
    },
    "L2": {
     "readings": {
-     "c1=booked_only": 81000,
-     "c1=with_pending": -419000
+     "c1=booked_only,c6=direct_only": 342000,
+     "c1=booked_only,c6=with_descendants": 81000,
+     "c1=with_pending,c6=direct_only": -158000,
+     "c1=with_pending,c6=with_descendants": -419000
     },
     "status": "AMBIGUOUS"
    },
    "L3": {
     "readings": {
-     "c1=booked_only": 81000,
-     "c1=with_pending": -419000
+     "c1=booked_only,c6=direct_only": 342000,
+     "c1=booked_only,c6=with_descendants": 81000,
+     "c1=with_pending,c6=direct_only": -158000,
+     "c1=with_pending,c6=with_descendants": -419000
     },
     "status": "AMBIGUOUS"
    }
@@ -1521,10 +1609,19 @@
    },
    "L1": {
     "readings": {
-     "c1=booked_only": [
+     "c1=booked_only,c6=direct_only": [
       "cc1_2_1_2"
      ],
-     "c1=with_pending": [
+     "c1=booked_only,c6=with_descendants": [
+      "cc1_2_1_2"
+     ],
+     "c1=with_pending,c6=direct_only": [
+      "cc1_2_1",
+      "cc1_2_1_1",
+      "cc1_2_1_2",
+      "cc1_2_1_3"
+     ],
+     "c1=with_pending,c6=with_descendants": [
       "cc1_2_1",
       "cc1_2_1_1",
       "cc1_2_1_2",
@@ -1535,10 +1632,19 @@
    },
    "L2": {
     "readings": {
-     "c1=booked_only": [
+     "c1=booked_only,c6=direct_only": [
       "cc1_2_1_2"
      ],
-     "c1=with_pending": [
+     "c1=booked_only,c6=with_descendants": [
+      "cc1_2_1_2"
+     ],
+     "c1=with_pending,c6=direct_only": [
+      "cc1_2_1",
+      "cc1_2_1_1",
+      "cc1_2_1_2",
+      "cc1_2_1_3"
+     ],
+     "c1=with_pending,c6=with_descendants": [
       "cc1_2_1",
       "cc1_2_1_1",
       "cc1_2_1_2",
@@ -1549,10 +1655,19 @@
    },
    "L3": {
     "readings": {
-     "c1=booked_only": [
+     "c1=booked_only,c6=direct_only": [
       "cc1_2_1_2"
      ],
-     "c1=with_pending": [
+     "c1=booked_only,c6=with_descendants": [
+      "cc1_2_1_2"
+     ],
+     "c1=with_pending,c6=direct_only": [
+      "cc1_2_1",
+      "cc1_2_1_1",
+      "cc1_2_1_2",
+      "cc1_2_1_3"
+     ],
+     "c1=with_pending,c6=with_descendants": [
       "cc1_2_1",
       "cc1_2_1_1",
       "cc1_2_1_2",
@@ -1569,10 +1684,23 @@
    },
    "L1": {
     "readings": {
-     "c1=booked_only": [
+     "c1=booked_only,c6=direct_only": [
       "cc1_1_2_1"
      ],
-     "c1=with_pending": [
+     "c1=booked_only,c6=with_descendants": [
+      "cc1_1_2_1"
+     ],
+     "c1=with_pending,c6=direct_only": [
+      "cc1_1",
+      "cc1_1_1_1",
+      "cc1_1_1_2",
+      "cc1_1_1_3",
+      "cc1_1_2_1",
+      "cc1_1_2_2",
+      "cc1_1_3_1",
+      "cc1_1_3_2"
+     ],
+     "c1=with_pending,c6=with_descendants": [
       "cc1_1",
       "cc1_1_1",
       "cc1_1_1_1",
@@ -1590,10 +1718,23 @@
    },
    "L2": {
     "readings": {
-     "c1=booked_only": [
+     "c1=booked_only,c6=direct_only": [
       "cc1_1_2_1"
      ],
-     "c1=with_pending": [
+     "c1=booked_only,c6=with_descendants": [
+      "cc1_1_2_1"
+     ],
+     "c1=with_pending,c6=direct_only": [
+      "cc1_1",
+      "cc1_1_1_1",
+      "cc1_1_1_2",
+      "cc1_1_1_3",
+      "cc1_1_2_1",
+      "cc1_1_2_2",
+      "cc1_1_3_1",
+      "cc1_1_3_2"
+     ],
+     "c1=with_pending,c6=with_descendants": [
       "cc1_1",
       "cc1_1_1",
       "cc1_1_1_1",
@@ -1611,10 +1752,23 @@
    },
    "L3": {
     "readings": {
-     "c1=booked_only": [
+     "c1=booked_only,c6=direct_only": [
       "cc1_1_2_1"
      ],
-     "c1=with_pending": [
+     "c1=booked_only,c6=with_descendants": [
+      "cc1_1_2_1"
+     ],
+     "c1=with_pending,c6=direct_only": [
+      "cc1_1",
+      "cc1_1_1_1",
+      "cc1_1_1_2",
+      "cc1_1_1_3",
+      "cc1_1_2_1",
+      "cc1_1_2_2",
+      "cc1_1_3_1",
+      "cc1_1_3_2"
+     ],
+     "c1=with_pending,c6=with_descendants": [
       "cc1_1",
       "cc1_1_1",
       "cc1_1_1_1",
@@ -1638,28 +1792,40 @@
    },
    "L1": {
     "readings": {
-     "c1=booked_only,c4=own_only": false,
-     "c1=booked_only,c4=with_ancestors": false,
-     "c1=with_pending,c4=own_only": true,
-     "c1=with_pending,c4=with_ancestors": true
+     "c1=booked_only,c4=own_only,c6=direct_only": false,
+     "c1=booked_only,c4=own_only,c6=with_descendants": false,
+     "c1=booked_only,c4=with_ancestors,c6=direct_only": false,
+     "c1=booked_only,c4=with_ancestors,c6=with_descendants": false,
+     "c1=with_pending,c4=own_only,c6=direct_only": true,
+     "c1=with_pending,c4=own_only,c6=with_descendants": true,
+     "c1=with_pending,c4=with_ancestors,c6=direct_only": true,
+     "c1=with_pending,c4=with_ancestors,c6=with_descendants": true
     },
     "status": "AMBIGUOUS"
    },
    "L2": {
     "readings": {
-     "c1=booked_only,c4=own_only": false,
-     "c1=booked_only,c4=with_ancestors": false,
-     "c1=with_pending,c4=own_only": true,
-     "c1=with_pending,c4=with_ancestors": true
+     "c1=booked_only,c4=own_only,c6=direct_only": false,
+     "c1=booked_only,c4=own_only,c6=with_descendants": false,
+     "c1=booked_only,c4=with_ancestors,c6=direct_only": false,
+     "c1=booked_only,c4=with_ancestors,c6=with_descendants": false,
+     "c1=with_pending,c4=own_only,c6=direct_only": true,
+     "c1=with_pending,c4=own_only,c6=with_descendants": true,
+     "c1=with_pending,c4=with_ancestors,c6=direct_only": true,
+     "c1=with_pending,c4=with_ancestors,c6=with_descendants": true
     },
     "status": "AMBIGUOUS"
    },
    "L3": {
     "readings": {
-     "c1=booked_only,c4=own_only": false,
-     "c1=booked_only,c4=with_ancestors": false,
-     "c1=with_pending,c4=own_only": true,
-     "c1=with_pending,c4=with_ancestors": true
+     "c1=booked_only,c4=own_only,c6=direct_only": false,
+     "c1=booked_only,c4=own_only,c6=with_descendants": false,
+     "c1=booked_only,c4=with_ancestors,c6=direct_only": false,
+     "c1=booked_only,c4=with_ancestors,c6=with_descendants": false,
+     "c1=with_pending,c4=own_only,c6=direct_only": true,
+     "c1=with_pending,c4=own_only,c6=with_descendants": true,
+     "c1=with_pending,c4=with_ancestors,c6=direct_only": true,
+     "c1=with_pending,c4=with_ancestors,c6=with_descendants": true
     },
     "status": "AMBIGUOUS"
    }
@@ -1770,6 +1936,60 @@
    "L3": {
     "status": "ANSWER",
     "value": 9
+   }
+  },
+  "Q17-1": {
+   "L0": {
+    "missing_layer": 1,
+    "status": "UNDERDETERMINED"
+   },
+   "L1": {
+    "readings": {
+     "c6=direct_only": 0,
+     "c6=with_descendants": 285000
+    },
+    "status": "AMBIGUOUS"
+   },
+   "L2": {
+    "readings": {
+     "c6=direct_only": 0,
+     "c6=with_descendants": 285000
+    },
+    "status": "AMBIGUOUS"
+   },
+   "L3": {
+    "readings": {
+     "c6=direct_only": 0,
+     "c6=with_descendants": 285000
+    },
+    "status": "AMBIGUOUS"
+   }
+  },
+  "Q17-2": {
+   "L0": {
+    "missing_layer": 1,
+    "status": "UNDERDETERMINED"
+   },
+   "L1": {
+    "readings": {
+     "c6=direct_only": 0,
+     "c6=with_descendants": 736000
+    },
+    "status": "AMBIGUOUS"
+   },
+   "L2": {
+    "readings": {
+     "c6=direct_only": 0,
+     "c6=with_descendants": 736000
+    },
+    "status": "AMBIGUOUS"
+   },
+   "L3": {
+    "readings": {
+     "c6=direct_only": 0,
+     "c6=with_descendants": 736000
+    },
+    "status": "AMBIGUOUS"
    }
   },
   "Q21-1": {
@@ -2096,14 +2316,22 @@
    },
    "L3": {
     "readings": {
-     "c1=booked_only,c2=request_date,c4=own_only": true,
-     "c1=booked_only,c2=request_date,c4=with_ancestors": true,
-     "c1=booked_only,c2=today,c4=own_only": true,
-     "c1=booked_only,c2=today,c4=with_ancestors": true,
-     "c1=with_pending,c2=request_date,c4=own_only": false,
-     "c1=with_pending,c2=request_date,c4=with_ancestors": false,
-     "c1=with_pending,c2=today,c4=own_only": false,
-     "c1=with_pending,c2=today,c4=with_ancestors": false
+     "c1=booked_only,c2=request_date,c4=own_only,c6=direct_only": true,
+     "c1=booked_only,c2=request_date,c4=own_only,c6=with_descendants": true,
+     "c1=booked_only,c2=request_date,c4=with_ancestors,c6=direct_only": true,
+     "c1=booked_only,c2=request_date,c4=with_ancestors,c6=with_descendants": true,
+     "c1=booked_only,c2=today,c4=own_only,c6=direct_only": true,
+     "c1=booked_only,c2=today,c4=own_only,c6=with_descendants": true,
+     "c1=booked_only,c2=today,c4=with_ancestors,c6=direct_only": true,
+     "c1=booked_only,c2=today,c4=with_ancestors,c6=with_descendants": true,
+     "c1=with_pending,c2=request_date,c4=own_only,c6=direct_only": false,
+     "c1=with_pending,c2=request_date,c4=own_only,c6=with_descendants": false,
+     "c1=with_pending,c2=request_date,c4=with_ancestors,c6=direct_only": false,
+     "c1=with_pending,c2=request_date,c4=with_ancestors,c6=with_descendants": false,
+     "c1=with_pending,c2=today,c4=own_only,c6=direct_only": false,
+     "c1=with_pending,c2=today,c4=own_only,c6=with_descendants": false,
+     "c1=with_pending,c2=today,c4=with_ancestors,c6=direct_only": false,
+     "c1=with_pending,c2=today,c4=with_ancestors,c6=with_descendants": false
     },
     "status": "AMBIGUOUS"
    }
@@ -2123,7 +2351,7 @@
    },
    "L3": {
     "readings": {
-     "c1=booked_only,c2=request_date,c4=own_only": [
+     "c1=booked_only,c2=request_date,c4=own_only,c6=direct_only": [
       "r007",
       "r020",
       "r025",
@@ -2150,7 +2378,61 @@
       "r217",
       "r231"
      ],
-     "c1=booked_only,c2=request_date,c4=with_ancestors": [
+     "c1=booked_only,c2=request_date,c4=own_only,c6=with_descendants": [
+      "r007",
+      "r020",
+      "r025",
+      "r032",
+      "r038",
+      "r040",
+      "r058",
+      "r059",
+      "r061",
+      "r068",
+      "r082",
+      "r095",
+      "r100",
+      "r110",
+      "r130",
+      "r141",
+      "r161",
+      "r170",
+      "r172",
+      "r191",
+      "r202",
+      "r214",
+      "r216",
+      "r217",
+      "r231"
+     ],
+     "c1=booked_only,c2=request_date,c4=with_ancestors,c6=direct_only": [
+      "r007",
+      "r020",
+      "r025",
+      "r032",
+      "r038",
+      "r040",
+      "r058",
+      "r059",
+      "r061",
+      "r068",
+      "r082",
+      "r095",
+      "r100",
+      "r110",
+      "r130",
+      "r141",
+      "r161",
+      "r170",
+      "r172",
+      "r191",
+      "r202",
+      "r214",
+      "r216",
+      "r217",
+      "r231"
+     ],
+     "c1=booked_only,c2=request_date,c4=with_ancestors,c6=with_descendants": [
       "r007",
       "r020",
       "r025",
@@ -2176,7 +2458,7 @@
       "r217",
       "r231"
      ],
-     "c1=booked_only,c2=today,c4=own_only": [
+     "c1=booked_only,c2=today,c4=own_only,c6=direct_only": [
       "r007",
       "r032",
       "r040",
@@ -2196,7 +2478,7 @@
       "r202",
       "r214"
      ],
-     "c1=booked_only,c2=today,c4=with_ancestors": [
+     "c1=booked_only,c2=today,c4=own_only,c6=with_descendants": [
       "r007",
       "r032",
       "r040",
@@ -2216,7 +2498,65 @@
       "r202",
       "r214"
      ],
-     "c1=with_pending,c2=request_date,c4=own_only": [
+     "c1=booked_only,c2=today,c4=with_ancestors,c6=direct_only": [
+      "r007",
+      "r032",
+      "r040",
+      "r058",
+      "r059",
+      "r068",
+      "r082",
+      "r095",
+      "r100",
+      "r110",
+      "r130",
+      "r141",
+      "r161",
+      "r170",
+      "r191",
+      "r193",
+      "r202",
+      "r214"
+     ],
+     "c1=booked_only,c2=today,c4=with_ancestors,c6=with_descendants": [
+      "r007",
+      "r032",
+      "r040",
+      "r058",
+      "r059",
+      "r068",
+      "r082",
+      "r095",
+      "r100",
+      "r110",
+      "r130",
+      "r141",
+      "r161",
+      "r170",
+      "r191",
+      "r193",
+      "r202",
+      "r214"
+     ],
+     "c1=with_pending,c2=request_date,c4=own_only,c6=direct_only": [
+      "r020",
+      "r025",
+      "r032",
+      "r058",
+      "r059",
+      "r061",
+      "r068",
+      "r095",
+      "r100",
+      "r110",
+      "r130",
+      "r191",
+      "r202",
+      "r216",
+      "r217",
+      "r231"
+     ],
+     "c1=with_pending,c2=request_date,c4=own_only,c6=with_descendants": [
       "r020",
       "r025",
       "r061",
@@ -2228,7 +2568,24 @@
       "r217",
       "r231"
      ],
-     "c1=with_pending,c2=request_date,c4=with_ancestors": [
+     "c1=with_pending,c2=request_date,c4=with_ancestors,c6=direct_only": [
+      "r020",
+      "r025",
+      "r032",
+      "r059",
+      "r061",
+      "r068",
+      "r095",
+      "r100",
+      "r110",
+      "r130",
+      "r191",
+      "r202",
+      "r216",
+      "r217",
+      "r231"
+     ],
+     "c1=with_pending,c2=request_date,c4=with_ancestors,c6=with_descendants": [
       "r020",
       "r025",
       "r061",
@@ -2238,13 +2595,36 @@
       "r217",
       "r231"
      ],
-     "c1=with_pending,c2=today,c4=own_only": [
+     "c1=with_pending,c2=today,c4=own_only,c6=direct_only": [
+      "r032",
+      "r058",
+      "r059",
+      "r068",
+      "r095",
+      "r100",
+      "r110",
+      "r130",
+      "r191",
+      "r202"
+     ],
+     "c1=with_pending,c2=today,c4=own_only,c6=with_descendants": [
       "r068",
       "r095",
       "r130",
       "r202"
      ],
-     "c1=with_pending,c2=today,c4=with_ancestors": [
+     "c1=with_pending,c2=today,c4=with_ancestors,c6=direct_only": [
+      "r032",
+      "r059",
+      "r068",
+      "r095",
+      "r100",
+      "r110",
+      "r130",
+      "r191",
+      "r202"
+     ],
+     "c1=with_pending,c2=today,c4=with_ancestors,c6=with_descendants": [
       "r202"
      ]
     },
@@ -2266,22 +2646,40 @@
    },
    "L3": {
     "readings": {
-     "c1=booked_only,c2=request_date,c4=own_only": [
+     "c1=booked_only,c2=request_date,c4=own_only,c6=direct_only": [
+      "r070",
+      "r096"
+     ],
+     "c1=booked_only,c2=request_date,c4=own_only,c6=with_descendants": [
       "r070"
      ],
-     "c1=booked_only,c2=request_date,c4=with_ancestors": [
+     "c1=booked_only,c2=request_date,c4=with_ancestors,c6=direct_only": [
+      "r070",
+      "r096"
+     ],
+     "c1=booked_only,c2=request_date,c4=with_ancestors,c6=with_descendants": [
       "r070"
      ],
-     "c1=booked_only,c2=today,c4=own_only": [
+     "c1=booked_only,c2=today,c4=own_only,c6=direct_only": [
       "r070"
      ],
-     "c1=booked_only,c2=today,c4=with_ancestors": [
+     "c1=booked_only,c2=today,c4=own_only,c6=with_descendants": [
       "r070"
      ],
-     "c1=with_pending,c2=request_date,c4=own_only": [],
-     "c1=with_pending,c2=request_date,c4=with_ancestors": [],
-     "c1=with_pending,c2=today,c4=own_only": [],
-     "c1=with_pending,c2=today,c4=with_ancestors": []
+     "c1=booked_only,c2=today,c4=with_ancestors,c6=direct_only": [
+      "r070"
+     ],
+     "c1=booked_only,c2=today,c4=with_ancestors,c6=with_descendants": [
+      "r070"
+     ],
+     "c1=with_pending,c2=request_date,c4=own_only,c6=direct_only": [],
+     "c1=with_pending,c2=request_date,c4=own_only,c6=with_descendants": [],
+     "c1=with_pending,c2=request_date,c4=with_ancestors,c6=direct_only": [],
+     "c1=with_pending,c2=request_date,c4=with_ancestors,c6=with_descendants": [],
+     "c1=with_pending,c2=today,c4=own_only,c6=direct_only": [],
+     "c1=with_pending,c2=today,c4=own_only,c6=with_descendants": [],
+     "c1=with_pending,c2=today,c4=with_ancestors,c6=direct_only": [],
+     "c1=with_pending,c2=today,c4=with_ancestors,c6=with_descendants": []
     },
     "status": "AMBIGUOUS"
    }
@@ -2355,14 +2753,22 @@
    },
    "L3": {
     "readings": {
-     "c1=booked_only,c2=request_date,c4=own_only": true,
-     "c1=booked_only,c2=request_date,c4=with_ancestors": false,
-     "c1=booked_only,c2=today,c4=own_only": true,
-     "c1=booked_only,c2=today,c4=with_ancestors": false,
-     "c1=with_pending,c2=request_date,c4=own_only": false,
-     "c1=with_pending,c2=request_date,c4=with_ancestors": false,
-     "c1=with_pending,c2=today,c4=own_only": false,
-     "c1=with_pending,c2=today,c4=with_ancestors": false
+     "c1=booked_only,c2=request_date,c4=own_only,c6=direct_only": true,
+     "c1=booked_only,c2=request_date,c4=own_only,c6=with_descendants": true,
+     "c1=booked_only,c2=request_date,c4=with_ancestors,c6=direct_only": true,
+     "c1=booked_only,c2=request_date,c4=with_ancestors,c6=with_descendants": false,
+     "c1=booked_only,c2=today,c4=own_only,c6=direct_only": true,
+     "c1=booked_only,c2=today,c4=own_only,c6=with_descendants": true,
+     "c1=booked_only,c2=today,c4=with_ancestors,c6=direct_only": true,
+     "c1=booked_only,c2=today,c4=with_ancestors,c6=with_descendants": false,
+     "c1=with_pending,c2=request_date,c4=own_only,c6=direct_only": false,
+     "c1=with_pending,c2=request_date,c4=own_only,c6=with_descendants": false,
+     "c1=with_pending,c2=request_date,c4=with_ancestors,c6=direct_only": false,
+     "c1=with_pending,c2=request_date,c4=with_ancestors,c6=with_descendants": false,
+     "c1=with_pending,c2=today,c4=own_only,c6=direct_only": false,
+     "c1=with_pending,c2=today,c4=own_only,c6=with_descendants": false,
+     "c1=with_pending,c2=today,c4=with_ancestors,c6=direct_only": false,
+     "c1=with_pending,c2=today,c4=with_ancestors,c6=with_descendants": false
     },
     "status": "AMBIGUOUS"
    }

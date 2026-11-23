@@ -34,8 +34,9 @@ paper/        v2 paper sources; paper/v1/ holds the frozen v1 report
 - For `make verify-v1` only: [Soufflé](https://souffle-lang.github.io) 2.4+ on `PATH`, and `pip install pyshacl rdflib`
 
 ```
-make worlds       # regenerate worlds/ (sizes S M L × seeds 1 2 3): relations, L0 projections, questions, keys
-make verify       # worlds/ is fresh, and the Python reference reproduces every engine key
+make worlds       # regenerate worlds/ (sizes S M L × seeds 1 2 3): relations, projections, questions, keys
+make verify       # worlds/ is fresh, the Python reference reproduces every engine key, and the rendered
+                  # L1 formal.pl (decided and open) reproduces the L1 keys on its own
 make verify-v1    # check the frozen v1 tree (tag v1) still verifies
 ```
 
@@ -58,11 +59,20 @@ python harness/run.py --layer 0 --worlds S-s1 M-s1 --n 3 --model deepseek/deepse
     --reasoning-effort medium --out results/run.jsonl --budget 1.00
 python harness/run.py --layer 0 --worlds S-s1 --model stub:key --out /tmp/stub.jsonl   # no calls; scores 100%
 python harness/score.py results/run.jsonl --report results/run.md
+python harness/run.py --layer 1 --config open ...      # L1 with its forks undecided (keys from keys.json "open")
+python harness/run.py --layer 0 --prompt assume ...    # JSON also carries a required assumptions list
+python harness/score.py results/a.jsonl results/b.jsonl --worlds S-s1 M-s1 --max-rep 1   # common cells only
 ```
+
+Each world directory holds the material per layer and configuration: `L0/`, `L1/` (decided: forked rules in their
+decided reading, decisions stated) and `L1-open/` (every reading of each fork, nothing decided), each with
+`text.md`, `structured.yaml` and `formal.pl`.
 
 How a run behaves:
 - It appends one record per call: world, layer, representation, model and serving provider, question, raw reply and reasoning, parsed answer, tokens, cost, seconds.
 - It is resumable. Cells that are already done are skipped.
 - `--budget` caps the summed cost of the file.
-- Providers are restricted to fp8 and sorted by price, unless `--quantization any` is given.
+- Providers are restricted to fp8 and sorted by price, unless `--quantization any` is given. `--only-provider NAME`
+  restricts serving to the named providers (cheapest first, falling back within the list); failed calls are
+  recorded as errors and retried on resume.
 - Plain `results/*.jsonl` files are working copies and are ignored by git. The committed copy is `gzip -9`, and `score.py` reads it directly.

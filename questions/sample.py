@@ -121,13 +121,19 @@ def make(world_dir, w, seed):
     P = Pools(w)
     cands = []
     for t in BANK:
+        if t.get("paraphrase_of"):      # no draws: the sampling of every other template is unchanged
+            continue
         for i, q in enumerate(candidates(t, P, rnd)):
             q["id"] = f"{t['id']}-c{i + 1}"
             cands.append(q)
     K = engine_keys(world_dir, cands)
     sig = lambda q: json.dumps([K["decided"][q["id"]]["L3"], K["open"][q["id"]]["L3"]["status"]], sort_keys=True)
     qs, keys = [], {"meta": {}, "decided": {}, "open": {}}
+    para = []
     for t in BANK:
+        if t.get("paraphrase_of"):
+            para.append(t)
+            continue
         cs = [q for q in cands if q["template"] == t["id"]]
         groups = {}
         for q in cs:
@@ -142,4 +148,23 @@ def make(world_dir, w, seed):
             for part in keys:
                 keys[part][new] = K[part][q["id"]]
             qs.append(dict(q, id=new))
+    if para:
+        pq = []
+        for t in para:
+            for q in [q for q in qs if q["template"] == t["paraphrase_of"]]:
+                fill = lambda s, i: None if s is None else s.format(**{k: q["params"][k] if i == 0 else goal_val(q, k) for k in q["params"]})
+                pq.append(dict(template=t["id"], kind=t["kind"], type=t["type"], text=fill(t["text"], 0),
+                               goal=fill(t["goal"], 1), conflict=fill(t.get("conflict"), 1), resolve=fill(t.get("resolve"), 1),
+                               params=dict(q["params"]), id=f"{t['id']}-{q['id'].rsplit('-', 1)[1]}"))
+        PK = engine_keys(world_dir, pq)
+        for q in pq:
+            for part in keys:
+                keys[part][q["id"]] = PK[part][q["id"]]
+        qs += pq
     return qs, keys
+
+
+def goal_val(q, k):
+    """A parameter's goal form: ISO dates become YYYYMMDD, everything else is the same."""
+    v = q["params"][k]
+    return v.replace("-", "") if len(v) == 10 and v[4] == "-" and v[7] == "-" else v

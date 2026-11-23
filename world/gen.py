@@ -142,23 +142,31 @@ def build(size, seed):
     return dict(params=params, relations=rel)
 
 
+# (layer, config) of the material written per world; layers without rules have one config.
+MATERIAL = [(0, "decided"), (1, "decided"), (1, "open")]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--size", choices=list(SIZES)); ap.add_argument("--seed", type=int)
     ap.add_argument("--out", default=str(ROOT / "worlds"))
     a = ap.parse_args()
     from render import prolog, text, structured
+    from render.common import material_dir
     from questions import sample
     for size in [a.size] if a.size else SIZES:
         for seed in [a.seed] if a.seed else SEEDS:
             w = build(size, seed)
             d = pathlib.Path(a.out) / f"{size}-s{seed}"
-            (d / "L0").mkdir(parents=True, exist_ok=True)
+            d.mkdir(parents=True, exist_ok=True)
             (d / "world.json").write_text(json.dumps(w, indent=1) + "\n")
             (d / "facts.pl").write_text(prolog.facts(w, 3))
-            (d / "L0/formal.pl").write_text(prolog.render(w, 0))
-            (d / "L0/text.md").write_text(text.render(w, 0))
-            (d / "L0/structured.yaml").write_text(structured.render(w, 0))
+            for k, cfg in MATERIAL:
+                m = d / material_dir(k, cfg)
+                m.mkdir(exist_ok=True)
+                (m / "formal.pl").write_text(prolog.render(w, k, cfg))
+                (m / "text.md").write_text(text.render(w, k, cfg))
+                (m / "structured.yaml").write_text(structured.render(w, k, cfg))
             qs, keys = sample.make(d, w, seed)
             (d / "questions.json").write_text(json.dumps(qs, indent=1) + "\n")
             (d / "keys.json").write_text(json.dumps(keys, indent=1, sort_keys=True) + "\n")

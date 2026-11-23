@@ -49,7 +49,9 @@ class World:
             e = self.mgr[e]; out.append(e)
         return out
 
-    def booked_total(self, c):
+    def booked_total(self, c):       # fork c6
+        if self.rd["c6"] == "direct_only":
+            return self.booked.get(c, 0)
         return sum(self.booked.get(d, 0) for d in self.subtree(c))
 
     def pending_total(self, c):
@@ -176,6 +178,7 @@ EVAL = {
     "Q04": (lambda W, p, k: W.booked.get(p["c"], 0), None, None),
     "Q05": (lambda W, p, k: _single(s for v, s in W.R["vendor"] if v == p["v"]), None, None),
     "Q11": (lambda W, p, k: W.booked_total(p["c"]), None, None),
+    "Q17": (lambda W, p, k: W.booked_total(p["c"]), None, None),      # paraphrase of Q11
     "Q12": (lambda W, p, k: W.headroom(p["c"]), None, None),
     "Q13": (lambda W, p, k: sorted(c for c in W.subtree(p["c"]) if W.over_cap(c)), None, None),
     "Q14": (lambda W, p, k: W.cap_breach(p["r"]), None, None),

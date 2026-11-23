@@ -40,6 +40,13 @@ forks:
     term: cap scope
     readings: [with_ancestors, own_only]
     decided: with_ancestors
+  - id: c6          # registered after M2: at L0 models read "booked total" as the direct amount (REWORK, M2 addendum)
+    layer: 1
+    owner: controller
+    question: Does the booked total of a cost centre include what is booked on its descendants, or only what is booked directly on it?
+    term: booked total
+    readings: [with_descendants, direct_only]
+    decided: with_descendants
 
 docs:
   cc_anc/2: "cc_anc(C, A): A is an ancestor of cost centre C (parent, parent's parent, ...)."
@@ -75,6 +82,31 @@ docs:
   auto_approved/1: "auto_approved(R): R is approved automatically."
   approved/1: "approved(R): R is approved."
   authoritative_cc_on/3: "authoritative_cc_on(E, C, D): C is E's cost centre on date D where sources disagree."
+
+# Concept bindings (L1): the terms the definitions use, bound to the columns that carry them, with the
+# contrast that keeps a term apart from a neighbouring one. Descriptive only: the engine does not read them.
+concepts:
+  - term: requester
+    binding: req.requester
+    english: The requester of a request is the employee who raised it.
+  - term: requester's cost centre
+    binding: emp.cc
+    english: A requester's cost centre is the cost centre recorded for them in emp.
+  - term: pending request
+    binding: req.status = pending
+    english: A pending request is one whose status is pending. Cancelled requests are neither pending nor booked.
+  - term: booked amount
+    binding: booked.amount
+    english: The booked amount of a cost centre is what is booked directly on it. Its booked total is defined separately (R104).
+  - term: cap
+    binding: cap.amount
+    english: The cap of a cost centre bounds its committed spend (R106).
+  - term: manager
+    binding: reports.manager
+    english: An employee's manager is their direct manager only. Their reporting chain (R103) goes further up.
+  - term: organisational unit
+    binding: org_unit.unit
+    english: The organisational unit of a cost centre is a grouping of cost centres. An employee's department is defined separately (R113).
 
 rules:
   # ---------------- L1 ontology ----------------
@@ -115,10 +147,21 @@ rules:
     layer: 1
     class: definitional
     conservative: true
-    owner: null
+    owner: controller
+    fork: {id: c6, reading: with_descendants}
     english: The booked total of a cost centre is the sum of the booked amounts of every cost centre in its subtree (zero where nothing is booked).
     prolog: |
       booked_total(C, T) :- cc(C), aggregate_all(sum(B), (in_subtree(D, C), booked(D, B)), T).
+  - id: R104b
+    head: booked_total/2
+    layer: 1
+    class: definitional
+    conservative: true
+    owner: controller
+    fork: {id: c6, reading: direct_only}
+    english: The booked total of a cost centre is its own booked amount, not counting its descendants (zero where nothing is booked).
+    prolog: |
+      booked_total(C, T) :- cc(C), aggregate_all(sum(B), booked(C, B), T).
   - id: R105
     head: pending_total/2
     layer: 1

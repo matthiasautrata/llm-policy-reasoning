@@ -10,13 +10,56 @@ Per world:
   reference  verify/reference.py gives the same status and value as keys.json, decided and open
   meta       the engine's derived min_layer and forks equal the bank's declarations
   L0 = L2    the current values L0 shows agree with what L2's history says on today
+  formal     each rendered formal.pl with rules (L1, L1-open), loaded on its own in SWI-Prolog,
+             reproduces the keys of its layer: decided ANSWER keys as they are; open keys under
+             every combination of the question's open forks, asserted as reading/2 facts; and a
+             question keyed UNDERDETERMINED raises an existence error (its predicates are absent)
 """
-import filecmp, json, pathlib, subprocess, sys, tempfile
+import filecmp, itertools, json, pathlib, subprocess, sys, tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from questions.sample import engine_keys     # noqa: E402
 from verify import reference                 # noqa: E402
+from render.common import FORKS, material_dir   # noqa: E402
+
+FORMAL = [(1, "decided"), (1, "open")]          # rendered material whose formal.pl must reproduce the keys
+
+
+def formal(d, qs, keys):
+    """Mismatches between the rendered formal projections and the keys (see the module docstring)."""
+    errs = []
+    for L, cfg in FORMAL:
+        jobs, want = [], []
+        for q in qs:
+            e, m = keys[cfg][q["id"]][f"L{L}"], keys["meta"][q["id"]]
+            if e["status"] in ("OUT_OF_SCOPE", "CONFLICT"):
+                continue
+            live = [f for f in m["forks"] if FORKS[f]["layer"] <= L] if cfg == "open" else []
+            for combo in itertools.product(*(FORKS[f]["readings"] for f in live)):
+                rs = [[f, r] for f, r in zip(live, combo)]
+                if e["status"] == "ANSWER":
+                    exp = ("value", e["value"])
+                elif e["status"] == "AMBIGUOUS":
+                    v = e["readings"][",".join(f"{f}={r}" for f, r in rs)]
+                    exp = ("value", v)
+                else:
+                    exp = ("error", "existence_error")
+                jobs.append({"id": q["id"], "type": q["type"], "goal": q["goal"], "readings": rs})
+                want.append(exp)
+        with tempfile.TemporaryDirectory() as tmp:
+            jf, of = pathlib.Path(tmp, "jobs.json"), pathlib.Path(tmp, "out.json")
+            jf.write_text(json.dumps(jobs))
+            subprocess.run(["swipl", str(ROOT / "verify/formal.pl"), str(jf), str(of),
+                            str(d / material_dir(L, cfg) / "formal.pl")], check=True)
+            got = json.loads(of.read_text())
+        for j, (kind, exp), g in zip(jobs, want, got):
+            tag = f"formal {material_dir(L, cfg)} {j['id']} {j['readings'] or ''}"
+            if kind == "value" and g.get("value", g.get("error")) != exp:
+                errs.append(f"{tag}: formal.pl gives {g.get('value', g.get('error'))}, key {exp}")
+            if kind == "error" and exp not in (g.get("error") or ""):
+                errs.append(f"{tag}: keyed UNDERDETERMINED but formal.pl gives {g.get('value')}")
+    return errs
 
 
 def strip(e):
@@ -46,6 +89,8 @@ def check(d):
         decl = {"min_layer": t["min_layer"], "forks": sorted(t["forks"])}
         if {"min_layer": m["min_layer"], "forks": sorted(m["forks"])} != decl:
             errs.append(f"meta {q['id']}: engine {m} != bank {decl}")
+
+    errs += formal(d, qs, keys)
 
     R = w["relations"]
     today = R["today"][0][0]
@@ -89,7 +134,7 @@ def main():
     for d in dirs:
         errs = check(d)
         n = len(json.loads((d / "questions.json").read_text()))
-        print(f"{d.name}: {n} questions x 4 layers x 2 configs, {'ok' if not errs else f'{len(errs)} mismatches'}")
+        print(f"{d.name}: {n} questions x 4 layers x 2 configs (+ L1 formal), {'ok' if not errs else f'{len(errs)} mismatches'}")
         for e in errs[:20]:
             print("  " + e)
         bad += bool(errs)

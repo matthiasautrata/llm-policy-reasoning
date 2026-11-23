@@ -636,5 +636,31 @@
    "c": "cc1"
   },
   "id": "Q91-2"
+ },
+ {
+  "template": "Q17",
+  "kind": "fact",
+  "type": "int",
+  "text": "What is the rolled-up booked spend of cost centre cc3_1_3?",
+  "goal": "booked_total(cc3_1_3, V)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "c": "cc3_1_3"
+  },
+  "id": "Q17-1"
+ },
+ {
+  "template": "Q17",
+  "kind": "fact",
+  "type": "int",
+  "text": "What is the rolled-up booked spend of cost centre cc1_3_2?",
+  "goal": "booked_total(cc1_3_2, V)",
+  "conflict": null,
+  "resolve": null,
+  "params": {
+   "c": "cc1_3_2"
+  },
+  "id": "Q17-2"
  }
 ]
