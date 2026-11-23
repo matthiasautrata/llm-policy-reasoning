@@ -477,6 +477,7 @@ Cost control: do not run the full matrix before M6. Per milestone run only the n
 ### 2026-11-23 · M6
 
 - **Budget raised from $5 to $8** (Matthias, 2026-11-23). M7 is to be paid from the same cap.
+- **Budget raised from $8 to $10, final limit** (Matthias, 2026-11-23, after M6's C5 and L0 runs had spent $6.49). It covers (iii) and M7.
 - **Doc fixes.**
   - c6 leak: the `booked_total/2` doc said "the booked amount of C and all its descendants", which states the c6 reading `with_descendants`. It now reads "the booked total of cost centre C". Its effect on the earlier runs was nil.
   - `engine/capability.pl` now gives each relation the doc its material shows at the layer (`schema.yaml doc_from`), the same doc `render/common.py` uses. The compile prompt's predicate list therefore matches the material.
@@ -536,9 +537,27 @@ Cost control: do not run the full matrix before M6. Per milestone run only the n
     - Overreach is semantic (a base relation standing in for a concept the layer does not define), not syntactic. A check would need the IM to name the concept it computes, as a typed plan schema could.
   - **Correction to an earlier note: plans can express recursion, by unrolling it.** Q14 plans unroll the ancestor chain to a fixed depth (`cc_parent(C0, P1), cc_parent(P1, P2), ...`).
 - **Compile costs more per call than read.** L0: $0.0021 per call and 3.4k reasoning tokens, against $0.0002 and 0.8k in M2 read. L2-open: $0.0017 per call. The model works the answer out and then also writes the plan; the prompt's "do not compute the answer yourself" is not followed in the reasoning trace.
-- **(iii) L-size world: not run yet.** It is held for Matthias's decision on the remaining budget; see Cost.
+- **(iii) Size: read vs compile on S-s1, M-s1, L-s1** (`results/m6-{read,compile}-L3-size-*.md`).
+  - *Setup.* L3 decided, the M5 regression subset (Q01–Q05, Q11–Q17, Q21–Q26, Q91; 38 questions per world, no conflict templates), all on the same day and mostly the same provider (InferenceNet, 96%). L-s1 n=2, S-s1 and M-s1 n=1. Base facts (L0 formal, schema included): S-s1 156, M-s1 642, L-s1 1543, so L-s1 is about the size of v1's L world (1336).
+  - The first S/M read comparison used M5's records, which DeepInfra served. Per-call time and cost differ between providers, so S/M read was re-run on the same day.
+
+  | World | Mode | correct | prompt tok | reasoning tok | mean s | p90 s | cost per call |
+  |---|---|---|---|---|---|---|---|
+  | S-s1 | read (3 repr) | 100% | 4.5–8.0k | 620–885 | 5.9–7.9 | 11–22 | $0.00049–0.00063 |
+  | M-s1 | read | 95–97% | 15–19k | 857–1,001 | 6.7–7.3 | 15–18 | $0.00072–0.00080 |
+  | L-s1 | read | 97–100% | 36–42k | 1,250–1,830 | 9.2–13.8 | 19–38 | $0.00122–0.00163 |
+  | S-s1 | compile (2 repr) | 97–100% | 8.6–10k | 773–1,059 | 9.3–10.5 | 21–30 | $0.00059–0.00070 |
+  | M-s1 | compile | 97–100% | 22–23k | 937–979 | 8.9–10.3 | 23–26 | $0.00091–0.00096 |
+  | L-s1 | compile | 95–100% | 47–49k | 987–1,269 | 8.6–11.0 | 16–33 | $0.00125–0.00162 |
+
+  - **v1's blow-up is not replicated at this size for this model and subset.** From S to L (10× the facts), read reasoning grows about 2× and mean time about 1.6×, with no truncation and accuracy flat. v1's Sonnet runs, by contrast, took 24× the time for 17× the facts and ran out of a 64k budget.
+  - Compile is flat in reasoning and time from S to L, as v1's engine arms were.
+  - In both modes cost per call follows prompt length. Compile's prompt is longer (the predicate list and plan instructions), so at L it costs about the same as read.
+  - Caveats: the subset has no exhaustive set-valued conflict questions (Q33/Q34 were left out on cost); one model; read at n=1–2.
+  - **In M6 the blow-up came from self-contradiction, not size.** It appeared on C5 after R314: median reasoning 15.6k tokens, and every open-config CONFLICT reply truncated at 16k. Read mode's cost risk is driven by what the material does to the reasoning (an unresolvable contradiction), more than by how much of it there is.
 - **score.py** gains a "Cost by world and representation" table (prompt, reasoning and completion tokens, mean/p90/max seconds, cost, truncations), and the report title names the mode.
 - **Cost.**
   - My estimates were 5× too low. I sized the runs from M5's mean cost, but Q33/Q34 after R314 and all compile calls reason far longer.
   - Spent in M6: L2-open compile $0.191; set-aside pre-R314 L3 compile $0.078 (`m6-compile-L3-preR314`, superseded by the fix and not scored); C5 read $0.917 and compile $0.832; L0 compile $0.479. M6 total about $2.50.
-  - Running total **$6.49 of $8**, $1.51 left for M7.
+  - Size runs (iii): L-s1 read $0.33, S/M read $0.15, L-s1 compile $0.22, S/M compile $0.12; $0.82 in total.
+  - Running total **$7.31 of $10**, $2.69 left for M7.
