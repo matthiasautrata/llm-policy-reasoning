@@ -202,14 +202,20 @@ EVAL = {
 }
 
 
+# template -> the distinct values the material supports when the conflict holds (sym/int goals);
+# bool goals have both sides, set goals none.
+SIDES = {"Q25": lambda W, p: sorted(W.cc_on(p["e"], "hr", p["d"]) | W.cc_on(p["e"], "finance", p["d"]))}
+
+
 def _eval(w, k, rd, t, p):
-    """('v', value) or ('c',) for one layer and one full set of readings."""
+    """('v', value) or ('c', sides) for one layer and one full set of readings."""
     val, conflict, resolve = EVAL[t]
     W = World(w, k, rd)
     if conflict and conflict(W, p):
         if resolve and resolve[0] <= k:
             return ("v", resolve[1](W, p))
-        return ("c",)
+        typ = BANK[t]["type"]
+        return ("c", [False, True] if typ == "bool" else None if typ == "set" else SIDES[t](W, p))
     return ("v", val(W, p, k))
 
 
@@ -235,7 +241,8 @@ def keys(w, questions):
                 distinct = {repr(v) for v in res.values()}
                 if len(distinct) == 1:
                     v = next(iter(res.values()))
-                    ks[L] = {"status": "ANSWER", "value": v[1]} if v[0] == "v" else {"status": "CONFLICT"}
+                    ks[L] = {"status": "ANSWER", "value": v[1]} if v[0] == "v" else \
+                        {"status": "CONFLICT", **({"sides": v[1]} if v[1] is not None else {})}
                 else:
                     ks[L] = {"status": "AMBIGUOUS", "readings": {rk: (v[1] if v[0] == "v" else "CONFLICT") for rk, v in res.items()}}
             out[cfg][q["id"]] = ks

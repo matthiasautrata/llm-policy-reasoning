@@ -9,7 +9,8 @@
       OUT_OF_SCOPE     the goal calls a predicate no layer defines
       UNDERDETERMINED  L < min_layer (missing_layer = min_layer)
       ANSWER           value (bool | int | sym as string | set as sorted list)
-      CONFLICT         the conflict goal holds and no resolve goal is available at L (detail)
+      CONFLICT         the conflict goal holds and no resolve goal is available at L (detail; sides: the
+                       distinct values the material supports, for sym and int goals; both, for bool)
       AMBIGUOUS        live readings give different results (readings: "c1=..,c4=.." -> value | "CONFLICT")
     min_layer and forks are derived here from the dependency closure of goal and conflict (meta).
 */
@@ -85,19 +86,24 @@ readings_key(Rs, K) :- maplist([F-R, S]>>format(string(S), "~w=~w", [F, R]), Rs,
     atomic_list_concat(Ss, ',', K).
 
 entry(v(V), _{status:"ANSWER", value:V}).
-entry(conflict(D), _{status:"CONFLICT", detail:D}).
+entry(conflict(D, none), _{status:"CONFLICT", detail:D}) :- !.
+entry(conflict(D, S), _{status:"CONFLICT", detail:D, sides:S}).
 res_value(v(V), V).
-res_value(conflict(_), "CONFLICT").
+res_value(conflict(_, _), "CONFLICT").
 
-%% eval(+Layer, +Readings, +Parsed, -v(Value) | conflict(Detail))
+%% eval(+Layer, +Readings, +Parsed, -v(Value) | conflict(Detail, Sides))
 eval(L, Rs, P0, Res) :-
     copy_term(P0, q(Type, G-V, C, R-RV)),
     program(L, Rs, M),
     (   C \== none, once(M:C)
     ->  (   R \== none, goal_meta([R], RL, _), RL =< L
         ->  value(Type, M, R, RV, X), Res = v(X)
-        ;   format(string(D), "~q", [C]), Res = conflict(D) )
+        ;   format(string(D), "~q", [C]), sides(Type, M, G, V, S), Res = conflict(D, S) )
     ;   value(Type, M, G, V, X), Res = v(X) ).
+
+sides(bool, _, _, _, [false, true]) :- !.
+sides(set, _, _, _, none) :- !.
+sides(_, M, G, V, S) :- value(set, M, G, V, S).
 
 value(bool, M, G, _, B) :- !, ( once(M:G) -> B = true ; B = false ).
 value(set, M, G, V, S) :- !, findall(V, M:G, L0), sort(L0, L1), maplist(to_json, L1, S).

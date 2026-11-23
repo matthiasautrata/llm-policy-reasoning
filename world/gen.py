@@ -143,7 +143,7 @@ def build(size, seed):
 
 
 # (layer, config) of the material written per world; layers without rules have one config.
-MATERIAL = [(0, "decided"), (1, "decided"), (1, "open")]
+MATERIAL = [(0, "decided"), (1, "decided"), (1, "open"), (2, "decided"), (2, "open")]
 
 
 def main():

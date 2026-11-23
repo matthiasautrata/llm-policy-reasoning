@@ -147,6 +147,14 @@ def main():
         m = k["meta"][r["qid"]]
         later = k["decided"][r["qid"]][f"L{m['min_layer']}"] if m["min_layer"] is not None else None
         s = score(r, k[r.get("cfg", "decided")][r["qid"]][f"L{r['layer']}"], m, later)
+        s["side"] = None
+        ke = k[r.get("cfg", "decided")][r["qid"]][f"L{r['layer']}"]
+        if s["key"] == "CONFLICT" and s["got"] == "AMBIGUOUS" and ke.get("sides") is not None:
+            s["side"] = "both" if r["parsed"].get("reading_values") == sorted(
+                {json.dumps(norm_value(v, r["type"])) for v in ke["sides"]}) else "ambiguous-other"
+        if s["key"] == "CONFLICT" and s["got"] == "ANSWER":
+            top = k["decided"][r["qid"]]["L3"]
+            s["side"] = "resolved" if top["status"] == "ANSWER" and r["parsed"]["value"] == norm_value(top["value"], r["type"]) else "other"
         scored.append((r, s))
 
     def by(f):
@@ -270,6 +278,25 @@ def main():
                      pct(sum(s["correct"] for s in g), len(g)), ", ".join(f"{k} {n}" for k, n in got.most_common())])
     L.append(table(rows, [*LC, "template", "keys", "min_layer", "correct", "model statuses"]))
     L.append("")
+
+    if any(s["key"] == "CONFLICT" for _, s in scored):
+        L.append("## CONFLICT keys\n")
+        L.append("Keys where the material holds both sides of a disagreement and nothing at the layer says which "
+                 "prevails. Strict: CONFLICT. AMBIGUOUS = both sides: the reading values are exactly the key's sides "
+                 "(the disagreement reported as two readings). No side picked (lenient): any status but ANSWER. "
+                 "An ANSWER picks a side: resolved = the value the next layer's resolution rule gives "
+                 "(L3 decided key), other = any other value.\n")
+        rows = []
+        for kk, g in by(lambda r, s: (*lc(r, s), r["repr"])):
+            g = [s for s in g if s["key"] == "CONFLICT"]
+            if g:
+                got = collections.Counter(s["got"] for s in g)
+                rows.append([*kk, len(g), pct(got["CONFLICT"], len(g)), pct(sum(s["side"] == "both" for s in g), len(g)),
+                             pct(len(g) - got["ANSWER"], len(g)), sum(s["side"] == "resolved" for s in g),
+                             sum(s["side"] == "other" for s in g), ", ".join(f"{k} {n}" for k, n in got.most_common())])
+        L.append(table(rows, [*LC, "repr", "n", "CONFLICT", "AMBIGUOUS = both sides", "no side picked",
+                              "ANSWER = resolved", "ANSWER = other", "model statuses"]))
+        L.append("")
 
     L.append("## Stability across repetitions\n")
     rows = []

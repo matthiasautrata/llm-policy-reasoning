@@ -803,6 +803,10 @@
    },
    "L3": {
     "detail": "denied(r008),auto_approved(r008)",
+    "sides": [
+     false,
+     true
+    ],
     "status": "CONFLICT"
    }
   },
@@ -2212,6 +2216,10 @@
    },
    "L3": {
     "detail": "denied(r008),auto_approved(r008)",
+    "sides": [
+     false,
+     true
+    ],
     "status": "CONFLICT"
    }
   },

@@ -211,7 +211,7 @@ fork(c1, controller, 'committed spend', 'Does the committed spend of a cost cent
 fork(c3, hr, 'department', 'Is an employee\'s department their cost centre or their cost centre\'s organisational unit?', [cost_centre, org_unit]).
 fork(c4, controller, 'cap scope', 'Does a request\'s cap check cover only the requester\'s cost centre, or also every ancestor of it?', [with_ancestors, own_only]).
 fork(c6, controller, 'booked total', 'Does the booked total of a cost centre include what is booked on its descendants, or only what is booked directly on it?', [with_descendants, direct_only]).
-% Open questions: undecided(Fork). No reading(Fork, _) fact holds for them, and each reading's clauses below are guarded by reading(Fork, Reading), so nothing that depends on an open question is derived.
+% Open questions: undecided(Fork). The material does not choose between a fork's readings; each is an alternative it allows. Each reading's clauses below are guarded by reading(Fork, Reading), and no reading/2 fact is given: to evaluate a predicate under a reading, assume reading(Fork, Reading).
 undecided(c1).
 undecided(c3).
 undecided(c4).
@@ -250,7 +250,7 @@ rule('R103', chain/2, 1, definitional, true, none).
 chain(E, M) :- reports(E, M).
 chain(E, M) :- reports(E, X), chain(X, M).
 
-% Open question c6 (owner: controller), on booked total: Does the booked total of a cost centre include what is booked on its descendants, or only what is booked directly on it? Not decided; one rule per reading.
+% Open question c6 (owner: controller), on booked total: Does the booked total of a cost centre include what is booked on its descendants, or only what is booked directly on it? Not decided; the readings below are alternatives, one rule per reading.
 % R104: The booked total of a cost centre is the sum of the booked amounts of every cost centre in its subtree (zero where nothing is booked).
 rule('R104', booked_total/2, 1, definitional, true, controller).
 booked_total(C, T) :- reading(c6, with_descendants), cc(C), aggregate_all(sum(B), (in_subtree(D, C), booked(D, B)), T).
@@ -262,7 +262,7 @@ booked_total(C, T) :- reading(c6, direct_only), cc(C), aggregate_all(sum(B), boo
 rule('R105', pending_total/2, 1, definitional, true, none).
 pending_total(C, P) :- cc(C), aggregate_all(sum(A), (req(_, E, A, _, _, _, pending), emp(E, _, D), in_subtree(D, C)), P).
 
-% Open question c1 (owner: controller), on committed spend: Does the committed spend of a cost centre include pending requests? Not decided; one rule per reading.
+% Open question c1 (owner: controller), on committed spend: Does the committed spend of a cost centre include pending requests? Not decided; the readings below are alternatives, one rule per reading.
 % R106: The committed spend of a cost centre is its booked total. Pending requests do not count.
 rule('R106', committed/2, 1, definitional, true, controller).
 committed(C, T) :- reading(c1, booked_only), booked_total(C, T).
@@ -278,7 +278,7 @@ headroom(C, H) :- cap(C, K), committed(C, T), H is K - T.
 rule('R108', over_cap/1, 1, definitional, true, none).
 over_cap(C) :- cap(C, K), committed(C, T), T > K.
 
-% Open question c4 (owner: controller), on cap scope: Does a request's cap check cover only the requester's cost centre, or also every ancestor of it? Not decided; one rule per reading.
+% Open question c4 (owner: controller), on cap scope: Does a request's cap check cover only the requester's cost centre, or also every ancestor of it? Not decided; the readings below are alternatives, one rule per reading.
 % R109: A request's cap scope is its requester's cost centre and every ancestor of that cost centre.
 rule('R109', cap_scope/2, 1, definitional, true, controller).
 cap_scope(R, C) :- reading(c4, with_ancestors), req(R, E, _, _, _, _, _), emp(E, _, C).
@@ -300,7 +300,7 @@ cap_breach(R) :- exposure(R, C, X), cap(C, K), X > K.
 rule('R112', big_capital/1, 1, definitional, true, none).
 big_capital(R) :- req(R, _, A, capital, _, _, _), A > 50000.
 
-% Open question c3 (owner: hr), on department: Is an employee's department their cost centre or their cost centre's organisational unit? Not decided; one rule per reading.
+% Open question c3 (owner: hr), on department: Is an employee's department their cost centre or their cost centre's organisational unit? Not decided; the readings below are alternatives, one rule per reading.
 % R113: An employee's department is their cost centre.
 rule('R113', dept/2, 1, definitional, true, hr).
 dept(E, D) :- reading(c3, cost_centre), emp(E, _, D).

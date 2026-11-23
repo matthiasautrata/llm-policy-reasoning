@@ -15,8 +15,14 @@ CONFIGS = ("decided", "open")
 
 
 def relations(k):
-    """Schema records of the relations shown at layer k (layers are cumulative)."""
-    return [r for r in SCHEMA if r["layer"] <= k]
+    """Schema records of the relations shown at layer k (layers are cumulative). A record's doc_from
+    ({layer: doc}) replaces its doc from that layer on, where a later layer changes what the doc implies."""
+    out = []
+    for r in SCHEMA:
+        if r["layer"] <= k:
+            later = [l for l in r.get("doc_from", {}) if l <= k]
+            out.append(dict(r, doc=r["doc_from"][max(later)]) if later else r)
+    return out
 
 
 def forks(k):

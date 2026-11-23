@@ -1,7 +1,7 @@
 """Formal projection: SWI-Prolog facts. Relations are declared dynamic (an empty relation is a fact
 too: nothing holds); the schema itself is stated as relation/1, column/4, key/2 and fk/3 facts.
 From L1 on: concept/3 bindings, fork/5 questions, the decisions as decided/2 and reading/2 facts
-(decided) or undecided/1 facts with every reading's clauses guarded by reading/2 (open), rule/6
+(decided) or undecided/1 facts with every reading's clauses guarded by reading/2, stated as alternatives (open), rule/6
 records, doc/2 meanings, and the clauses themselves, each rule preceded by its id and English.
 The file loads on its own: the derived predicates answer the questions the layer can answer."""
 from render.common import relations, concepts, forks, items, date_int, RULES
@@ -83,9 +83,9 @@ def render(w, k, cfg="decided"):
         out += [f"decided({f['id']}, {f['decided']})." for f in forks(k)]
         out += [f"reading({f['id']}, {f['decided']})." for f in forks(k)]
     else:
-        out.append("% Open questions: undecided(Fork). No reading(Fork, _) fact holds for them, and each reading's "
-                   "clauses below are guarded by reading(Fork, Reading), so nothing that depends on an open "
-                   "question is derived.")
+        out.append("% Open questions: undecided(Fork). The material does not choose between a fork's readings; each "
+                   "is an alternative it allows. Each reading's clauses below are guarded by reading(Fork, Reading), "
+                   "and no reading/2 fact is given: to evaluate a predicate under a reading, assume reading(Fork, Reading).")
         out += [f"undecided({f['id']})." for f in forks(k)]
     out += ["", "% Definitions: rule(Id, Head, Layer, Class, Conservative, Owner); doc(Head, Meaning); then the clauses.",
             "% Owner none: no one could reasonably read the rule differently."]
@@ -99,7 +99,7 @@ def render(w, k, cfg="decided"):
             out += _rule(it[1])
         else:
             f = it[1]
-            out.append(f"% Open question {f['id']} (owner: {f['owner']}), on {f['term']}: {f['question']} Not decided; one rule per reading.")
+            out.append(f"% Open question {f['id']} (owner: {f['owner']}), on {f['term']}: {f['question']} Not decided; the readings below are alternatives, one rule per reading.")
             for x in it[2]:
                 out += _rule(x, guard=(f["id"], x["fork"]["reading"]))
     return "\n".join(out) + "\n"

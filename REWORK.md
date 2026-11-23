@@ -365,3 +365,52 @@ Cost control: do not run the full matrix before M6. Per milestone run only the n
   - `make verify` runs it for all 9 worlds.
 - **Questions stay fixed across layers.** The same instances are asked at every layer, and only the key changes, so a step is a within-question comparison. Records carry `cfg` (decided/open), and the resume key includes it.
 - **Cost.** L1 decided $0.311; L1 open $0.388 (about 3× per call: about 1670 completion tokens against 510, because both readings are worked out). M3 total about $0.70. Running total about $2.64 of $5, with about $2.36 left for M4–M6.
+
+**2026-11-22 · Stronger models and the formal-open ablation** (decided with Matthias after M3)
+- **Move on with DeepSeek through M6.** No separate formal-open ablation. Instead the renderer's open-config wording is fixed in M4 (readings stated as alternatives, not as a missing decision), and the next open-config run measures it.
+- **No Claude 5.5 run.** Estimates were about $40 (Sonnet 5.5) / $80 (Opus 5.5) for a reduced matrix of about 3,400 calls and $380 / $750 for the full matrix; Matthias judged this out of range. M7 stays on DeepSeek within the $5 cap; any second model must be cheap and is discussed first.
+- **Harness note, for any later model.** `run.py` always sends `temperature`; Claude 5.5 models reject it, so it would have to be made optional.
+
+**2026-11-22 · M4**
+
+- **Test passes.**
+  - *A contradiction survives ingestion.* Q25 ("which cost centre did e belong to on d?") is keyed CONFLICT whenever HR and finance disagree on the date: 45 of 72 instances in the run worlds. The key now carries the two sides (`sides`, computed by the engine and, independently, by the Python reference).
+  - `verify/check.py` has two new checks:
+    - **rows**: every relation row of the world appears in all three representations of every material directory (L0, L1, L1-open, L2, L2-open), so the disagreeing `assignment` rows are not dropped by any renderer;
+    - **formal CONFLICT**: the rendered `formal.pl` must derive the conflict, and both sides, under every reading combination.
+  - Negative tests: deleting a disagreeing row from text.md, formal.pl or L2-open/formal.pl makes `make verify` fail.
+  - *As-of questions are keyed correctly.* For Q21, Q22, Q23 and Q26 the check counts instances whose L2 key differs from the value as of `today`: 6, 2, 8 and 10 of 18. A full run fails if any template has none, so the dated keys can't silently collapse to "today".
+- **L2 material.**
+  - Relations: `today`, `role_limit_version`, `vendor_status`, `assignment` (per source, with an effective date), `exemption`, `exemption_withdrawn`. Rules R201–R207. Fork c2 (request date vs today for the owner's procurement rule), decided as request_date.
+  - **Leak fix.** At L2 the `emp` column doc said "current cost centre", which next to two disagreeing sources reads as "finance is the system of record", and that is R313 (L3). From L2 on the doc is "as finance records it", via a new `doc_from` per-layer override in `schema.yaml`. L0 and L1 material stay byte-identical.
+  - **Open wording** (the decision after M3). The L1-open / L2-open formal comment now says the readings are alternatives the material allows, and how to evaluate under one (assume `reading(Fork, Reading)`). It no longer says "nothing that depends on an open question is derived". This changes only `*/L1-open/formal.pl` among older material.
+- **Run scope** (§5). DeepSeek, base prompt, S-s1–3 + M-s1, flags as in M3.
+  - L2 decided: Q21–Q26, Q31, Q33 × 3 reps (576 calls), plus the regression subset Q01–Q05, Q11–Q17, Q91 × 1 rep (312).
+  - L2 open: the forked templates Q11–Q15, Q17, Q22 × 1 rep (168), plus Q22 on M-s2 and M-s3 × 3 reps, so that c2 has differing readings (36).
+  - Rewording: L1-open, formal only, Q11–Q15 and Q17 × 3 reps (144), on the same cells as M3.
+- **Results, L2 decided** (`results/m4-read-L2-deepseek-v4.1-flash.md`).
+  - New ANSWER keys: Q21–Q24 and Q26 are 100% (360/360), as-of instances included. On min_layer 2, correct on ANSWER keys is 387/387.
+  - Regression: min_layer 0 98% (Q03 3/24 wrong; a count on M-s1 that was wrong at L0 too, not an L2 effect), min_layer 1 98%, Q91 100%.
+  - **Q25 CONFLICT: 0/45 under strict scoring, yet no reply picked a side.**
+
+    | Representation | No side picked | AMBIGUOUS with both sides |
+    |---|---|---|
+    | formal | 15/15 | 14/15 |
+    | structured | 15/15 | 11/15 |
+    | text | 15/15 | 10/15 |
+
+    The rest are UNDERDETERMINED, naming the missing precedence. The 27 ANSWER instances of Q25, where the sources agree, are all right. The replies say "no rule says which source prevails" and still file it as AMBIGUOUS. The likely cause is the answer format: only AMBIGUOUS has a slot (`readings`) for two values. This is a status-boundary effect, like the formal-open one in M3. It is not overreach. For M6/M7: either give CONFLICT a `sides` field in the JSON line (a prompt change, so it needs a fresh baseline), or score "AMBIGUOUS = both sides" as a lenient CONFLICT. For now it is reported, not adopted.
+  - **Above-layer overreach grows in text.** min_layer 3 overreach is 26% (37/144). Q31 ("may m approve r?") is ANSWER 23/24 in text at L2, against 16/24 at L1; structured 8/24, formal 1/24. The L2 limits and exemptions give enough to assemble an approval rule the material doesn't state. Q33: 5 ANSWERs, all text.
+- **Results, L2 open.** Correct: formal 94%, structured 97%, text 97%; AMBIGUOUS readings right 92% / 96% / 96%. Q22 under c2: 18/18 AMBIGUOUS with the right values. Q17: 6/24 ANSWER (overreach on an open fork).
+- **Results, rewording** (`results/m4-read-L1-open-reword-deepseek-v4.1-flash.md`, against the M3 formal-open cells).
+
+  | L1-open formal | M3 | M4 |
+  |---|---|---|
+  | correct | 23/144 | 125/144 |
+  | AMBIGUOUS key → AMBIGUOUS | 16/129 | 118/129 |
+  | AMBIGUOUS key → UNDERDETERMINED | 111/129 | 0/129 |
+  | AMBIGUOUS key → ANSWER (overreach) | 2/129 | 11/129 |
+
+  The M3 formal-open gap was the wording, as suspected. With a reading stated as an alternative, formal comes close to text and structured (95–97%). Overreach rises somewhat. Mean completion tokens 1817 → 2168. Because M3's formal-open numbers measured the old wording, they are superseded for any comparison across representations.
+- **Harness.** `score.py` gains a "CONFLICT keys" section (strict, both sides as AMBIGUOUS, no side picked, resolved by the L3 value, other ANSWER). `run.py`, `read.py` and the prompt are unchanged.
+- **Cost.** L2 decided $0.410, L2 open $0.207, rewording $0.135: M4 $0.75. Running total $3.37 of $5 (summed over every results file), $1.63 left for M5–M6.

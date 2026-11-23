@@ -653,6 +653,10 @@
    },
    "L2": {
     "detail": "disputed_on(e251,20260626)",
+    "sides": [
+     "cc1_2_2_2",
+     "cc3_2_1_3"
+    ],
     "status": "CONFLICT"
    },
    "L3": {
@@ -671,6 +675,10 @@
    },
    "L2": {
     "detail": "disputed_on(e282,20260712)",
+    "sides": [
+     "cc2_2_2_1",
+     "cc3_3_3_3"
+    ],
     "status": "CONFLICT"
    },
    "L3": {
@@ -2147,6 +2155,10 @@
    },
    "L2": {
     "detail": "disputed_on(e251,20260626)",
+    "sides": [
+     "cc1_2_2_2",
+     "cc3_2_1_3"
+    ],
     "status": "CONFLICT"
    },
    "L3": {
@@ -2165,6 +2177,10 @@
    },
    "L2": {
     "detail": "disputed_on(e282,20260712)",
+    "sides": [
+     "cc2_2_2_1",
+     "cc3_3_3_3"
+    ],
     "status": "CONFLICT"
    },
    "L3": {

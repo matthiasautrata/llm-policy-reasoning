@@ -31,6 +31,8 @@ relations:
     key: [emp]
     fks: {cc: cc}
     doc: An employee, their role, and their cost centre in the finance system of record.
+    # From L2 on two sources record the cost centre; "system of record" would say finance prevails, which is R313 (L3).
+    doc_from: {2: "An employee, their role, and their current cost centre as finance records it."}
   - name: reports
     layer: 0
     columns: [[emp, id], [manager, id]]

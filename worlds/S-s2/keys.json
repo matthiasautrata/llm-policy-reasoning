@@ -653,6 +653,10 @@
    },
    "L2": {
     "detail": "disputed_on(e013,20260830)",
+    "sides": [
+     "cc1_2",
+     "cc2_2"
+    ],
     "status": "CONFLICT"
    },
    "L3": {
@@ -2077,6 +2081,10 @@
    },
    "L2": {
     "detail": "disputed_on(e013,20260830)",
+    "sides": [
+     "cc1_2",
+     "cc2_2"
+    ],
     "status": "CONFLICT"
    },
    "L3": {
