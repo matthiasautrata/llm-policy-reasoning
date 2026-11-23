@@ -2278,7 +2278,7 @@ doc(vendor_approved/1, 'vendor_approved(R): R\'s vendor is approved on R\'s gove
 doc(cc_on/4, 'cc_on(E, C, Src, D): according to source Src, employee E belongs to C on date D.').
 doc(disputed_on/2, 'disputed_on(E, D): hr and finance disagree about E\'s cost centre on date D.').
 doc(exemption_in_force/3, 'exemption_in_force(X, Cat, D): exemption X for category Cat applies on date D.').
-doc(booked_total/2, 'booked_total(C, T): T is the booked amount of C and all its descendants.').
+doc(booked_total/2, 'booked_total(C, T): T is the booked total of cost centre C.').
 doc(committed/2, 'committed(C, T): T is the committed spend of cost centre C.').
 doc(cap_scope/2, 'cap_scope(R, C): cost centre C\'s cap applies to request R.').
 doc(dept/2, 'dept(E, D): D is employee E\'s department.').

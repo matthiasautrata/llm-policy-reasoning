@@ -473,3 +473,72 @@ Cost control: do not run the full matrix before M6. Per milestone run only the n
     - n is small (34 instances, one model), so this is a pilot reading, not a result.
 - **Results, L3 open.** 72/72 correct, including Q32's 6 AMBIGUOUS keys (c2: vendor status on the request date vs today), with the right reading values.
 - **Cost.** L3 decided $0.461 (the Q31–Q36 run stopped at its $0.35 cap 8 calls short and was resumed), explain $0.131, L3 open $0.024: M5 $0.62. Running total $3.98 of $5, $1.02 left for M6.
+
+### 2026-11-23 · M6
+
+- **Budget raised from $5 to $8** (Matthias, 2026-11-23). M7 is to be paid from the same cap.
+- **Doc fixes.**
+  - c6 leak: the `booked_total/2` doc said "the booked amount of C and all its descendants", which states the c6 reading `with_descendants`. It now reads "the booked total of cost centre C". Its effect on the earlier runs was nil.
+  - `engine/capability.pl` now gives each relation the doc its material shows at the layer (`schema.yaml doc_from`), the same doc `render/common.py` uses. The compile prompt's predicate list therefore matches the material.
+- **Compile mode** (`harness/compile.py`, `engine/compile.pl`).
+  - *The plan is the intermediate model (IM).* It is plain data: `{"readings": {fork: reading}, "goal": "<Prolog goal>"}`. The goal runs over the layer's predicates and a whitelist of built-ins (comparison, arithmetic, lists, `findall`/`setof`/`bagof`/`aggregate_all`, `forall`, `\+`, if-then-else). There is no assert, I/O, `call/N` or module prefix.
+  - *Static validation before execution.* Every called predicate must be in the whitelist or in the layer's capabilities; a predicate of a higher layer is reported as "not a predicate of the material". Readings must name an open fork and one of its readings. Execution is capped in time and inferences.
+  - *k candidates in one call.* The model gives at most 3 plans, one per reading it considers, in a single reply. The engine also expands the open forks that a plan leaves unfixed. One distinct value gives ANSWER and several give AMBIGUOUS. More than 3 plans is a repair error, never a silent truncation.
+  - *One repair turn* for validation or execution errors. Records keep the first and final outcomes.
+  - The predicate list is alphabetical, so no layer order is shown.
+  - Compile is offered for formal and structured only. Text has no declared predicates, and that asymmetry is reported, not hidden.
+  - *The plan's `constructs` field* lists the aggregation and arithmetic built-ins the plan uses. It is a flag, not a rejection.
+  - Stubs: `stub:key` (plans the bank goal), `stub:repair` (calls a missing predicate first) and `stub:plan` (always plans the bank goal, so the engine does the detecting). Each scores as designed: `stub:key` 100%; `stub:plan` gives CONFLICT 100%, engine-detected 4/4 at L3 for Q33/Q34, and at L0 every UNDERDETERMINED key is blocked.
+- **L2-open, compile vs read** (`results/m6-compile-L2-open-deepseek-v4.1-flash.md`). The model is at ceiling in both modes:
+  - Correct: compile formal 88%, structured 95%; read 93% and 96%. On AMBIGUOUS keys compile gets the readings right in 84% and 93%.
+  - *Forks surfaced by divergent execution only (engine-only): 0%.* Whenever the plans diverged, the model had already split on the fork itself.
+  - On Q12 the model gave 3 plans where c1 × c4 has 4 readings. The 3-plan cap is smaller than a two-fork product. Engine expansion of unfixed forks covers this when the plan leaves a fork open, but not when it fixes both forks in each of its 3 plans.
+  - **Paper note: raw Prolog goals are an awkward plan language.** Of 62 first-pass compile errors, 30 were "V not bound" (a value question whose goal never binds V) and 28 were a list given as one value (`findall` into V where one solution per member is wanted). Another 3 were too many plans and 1 had no JSON. That is 58 of 62 errors in the plan's *shape*, not its logic. This argues for a typed plan schema: a data AST with declared output kind (scalar / set / bool), validated before execution. Not implemented.
+  - Because L2-open is at ceiling, the rest of M6 was retargeted on Matthias's note, in order: (i) L0 overreach under compile, (ii) C5 after the fix, read vs compile, (iii) one L-size world.
+- **C5 fix (a): an explicit incompatibility rule.**
+  - *Why.* Under program semantics `approved/1` is the union of R310 and R312, so formal's 15/15 ANSWER in M5 was the literal reading, not an error. The M5 result stays as a separate finding: a formal rule set resolves an unstated precedence by construction (a union of clauses), so the formalism overreaches where a reader would have to stop.
+  - *Fix.* New rule R314, `excluded(approved(R)) :- denied(R).` ("A denied request is never approved"; class incompatibility, owner procurement, layer 3). Now the material genuinely contradicts itself on a denied, auto-approved request, and CONFLICT is the right key by construction.
+  - *Mechanical detection.* For each predicate P named by an `excluded/1` head at layer ≤ L, `program_x/3` builds M−, which renames P to `'P$raw'` and adds the wrapper `P(Xs) :- 'P$raw'(Xs), \+ excluded(P(Xs))`. If a goal's value differs between M and M−, the rule base derives both G and excluded(G): a detected CONFLICT, with sides [M− value, M value]. The stratification check gains the negative edge P → excluded/1.
+  - *Keys.* `engine/keys.pl` cross-checks detection against the declared conflict goal wherever an exclusion bears on the goal; a mismatch throws. Q25 (a data conflict) stays declared only.
+    - Q34 decided CONFLICT keys gain sides (approved and not denied in the subtree; approved in the subtree), in L-s2, M-s1, M-s3 and S-s1–3. Their details now read "derived and excluded: [...]".
+    - An open-config key whose readings are all CONFLICT but whose sides vary by reading is CONFLICT without sides, not AMBIGUOUS. The same rule is applied in `keys.pl` and `reference.py`.
+    - `check.py` checks that plain Prolog on the rendered formal.pl gives the last side, the union.
+    - No status changed. The why keys are unchanged.
+  - *Compile.* Each run that an exclusion bears on is repeated in M−. A difference makes the run's value "CONFLICT" (with sides and detail). If every run is CONFLICT the status is CONFLICT with `engine_conflict: true`; if only some are, the result is AMBIGUOUS with "CONFLICT" among the reading values. score.py's CONFLICT table gains an "engine-detected" column.
+- **Results, C5 after the fix** (DeepSeek; M-s1, S-s1–3; Q33/Q34; n=3; `results/m6-{read,compile}-L3-c5-{decided,open}-deepseek-v4.1-flash.md`). Three of the four runs stopped at their $0.40 caps: read decided 98/144, read open 70/144, compile open 45/96, compile decided complete (96/96). The results on CONFLICT keys:
+
+  | Mode, config | Representation | CONFLICT | ANSWER (a side) | Truncated (no JSON) |
+  |---|---|---|---|---|
+  | read, decided | formal | 3/6 | 0 | 3 |
+  | read, decided | structured | 2/9 | 3 | 4 |
+  | read, decided | text | 0/9 | 5 | 4 |
+  | read, open | all | 0/16 | 0 | 16 |
+  | compile, decided | formal | 15/15 (3 engine-detected) | 0 | 0 |
+  | compile, decided | structured | 14/15 (6 engine-detected) | 0 | 1 |
+  | compile, open | formal / structured | 6/9 | 0 | 3 |
+
+  - *Read mode does not get better with the rule stated: the model reasons until it is cut off.* On CONFLICT keys the median reasoning is 15.6k tokens (decided), against 8.3k for the same keys in M5 and 2.3k for the ANSWER keys of the same run. In the open configuration every CONFLICT reply hit the 16k output cap. The C5 contradiction is now noticed (formal 3 of the 3 replies that finished), but read mode often cannot close it. This is v1's failure mode, which there appeared with size (exhausting the output budget without answering), here appearing with self-contradiction.
+  - *Compile mode closes it.* Decided: 29/30 CONFLICT, median reasoning 6.7k tokens. Most of these the model declared itself (first reply CONFLICT: formal 12/15); where it planned the approval goal instead, the engine detected the contradiction. No compile reply picked a side.
+  - ANSWER keys of the same templates: read 71/74 and compile 61/66 correct. All misses are truncations or unrun plans; no compile ANSWER is wrong.
+- **Results, L0 overreach under compile** (`results/m6-compile-L0-deepseek-v4.1-flash.md`; stopped for budget after 224 calls, M-s1 only: formal 74, structured 150). Compared on the same question × representation cells with the M2 read baseline:
+
+  | Representation | read overreach (M2) | compile, first reply | compile, final |
+  |---|---|---|---|
+  | formal (16 questions) | 22/48 | 25/44 | 33/44 |
+  | structured (38 questions) | 28/108 | 36/114 | 45/114 |
+
+  - Outcomes of the final reply on UNDERDETERMINED keys: **blocked 1%** (1/158 first replies called a predicate the layer lacks), **inlined** formal 75%, structured 39%, **abstained** 25% and 59%.
+  - **Compile does not turn overreach into UNDERDETERMINED. It raises overreach.** The model does not call the undefined predicate; it writes the missing concept out of base relations. Examples: Q14 (cap breach) goes from 0/6 to 6/6 in formal, Q17 (not in the M2 run) 6/6, Q31/Q32 from 0/6 to 3–4/6 in structured.
+    - The repair turn adds to overreach: an error on the first plan is "fixed" by inlining more.
+    - Of the inlined values, 67% (formal) and 78% (structured) equal the key at the layer that defines the concept. As in M2, most overreach guesses the later definition.
+  - **The static check is insufficient.** The `constructs` flag catches 39% (formal) and 47% (structured) of inlined plans, and it also fires on 20% of ANSWER-key plans (the control).
+    - Many inlined plans use no aggregate at all: `( booked(C, V) -> true ; V = 0 )` for a booked total (Q11), `emp(E, Role, _), role_limit(Role, V)` for an approval limit (Q22).
+    - Overreach is semantic (a base relation standing in for a concept the layer does not define), not syntactic. A check would need the IM to name the concept it computes, as a typed plan schema could.
+  - **Correction to an earlier note: plans can express recursion, by unrolling it.** Q14 plans unroll the ancestor chain to a fixed depth (`cc_parent(C0, P1), cc_parent(P1, P2), ...`).
+- **Compile costs more per call than read.** L0: $0.0021 per call and 3.4k reasoning tokens, against $0.0002 and 0.8k in M2 read. L2-open: $0.0017 per call. The model works the answer out and then also writes the plan; the prompt's "do not compute the answer yourself" is not followed in the reasoning trace.
+- **(iii) L-size world: not run yet.** It is held for Matthias's decision on the remaining budget; see Cost.
+- **score.py** gains a "Cost by world and representation" table (prompt, reasoning and completion tokens, mean/p90/max seconds, cost, truncations), and the report title names the mode.
+- **Cost.**
+  - My estimates were 5× too low. I sized the runs from M5's mean cost, but Q33/Q34 after R314 and all compile calls reason far longer.
+  - Spent in M6: L2-open compile $0.191; set-aside pre-R314 L3 compile $0.078 (`m6-compile-L3-preR314`, superseded by the fix and not scored); C5 read $0.917 and compile $0.832; L0 compile $0.479. M6 total about $2.50.
+  - Running total **$6.49 of $8**, $1.51 left for M7.

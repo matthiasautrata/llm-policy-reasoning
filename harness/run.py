@@ -10,6 +10,9 @@ explain (adds a required list of the rule ids the answer applies; with --only-wh
 that have a why key to grade it against).
 Resumable: a record already in --out (same world, layer, config, prompt, repr, model, question, rep, no error)
 is not run again. --budget caps the summed OpenRouter cost of the whole file, earlier runs included.
+--mode compile (M6): the model writes plans that the engine validates and runs (harness/compile.py; formal
+and structured only; records have prompt "compile"). Compile stubs: stub:key plans the bank goal,
+stub:repair first calls a missing predicate and is repaired, stub:plan always plans the bank goal.
 Stub models make no calls and cost nothing:
   stub:key      answers with the decided key (scoring must give 100%)
   stub:abstain  always UNDERDETERMINED
@@ -20,7 +23,7 @@ import argparse, concurrent.futures as cf, json, pathlib, sys, threading, time
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from harness import openrouter, read      # noqa: E402
+from harness import compile as compile_mode, openrouter, read      # noqa: E402
 
 
 def cell(r):
@@ -48,6 +51,7 @@ def main():
     ap.add_argument("--layer", type=int, required=True)
     ap.add_argument("--config", choices=["decided", "open"], default="decided")
     ap.add_argument("--prompt", choices=list(read.PROMPTS), default="base")
+    ap.add_argument("--mode", choices=["read", "compile"], default="read")
     ap.add_argument("--worlds", nargs="+", required=True)
     ap.add_argument("--repr", nargs="+", default=["text", "structured", "formal"], choices=list(read.FILES))
     ap.add_argument("--n", type=int, default=3, help="repetitions per cell")
@@ -65,6 +69,11 @@ def main():
     ap.add_argument("--only-why", action="store_true", help="only questions with a why key (bool, true at L3 decided)")
     ap.add_argument("--limit", type=int, help="at most this many new calls")
     a = ap.parse_args()
+    if a.mode == "compile":
+        bad = [r for r in a.repr if r not in compile_mode.REPRS]
+        if bad:
+            raise SystemExit(f"compile mode is not offered for {bad} (plans need declared predicates)")
+        a.prompt = "compile"
 
     out = pathlib.Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -95,7 +104,7 @@ def main():
                 if a.only_why and q["id"] not in allkeys.get("why", {}):
                     continue
                 for i in range(a.n):
-                    base = {"world": w, "layer": a.layer, "cfg": a.config, "prompt": a.prompt, "repr": rep, "mode": "read", "model": a.model,
+                    base = {"world": w, "layer": a.layer, "cfg": a.config, "prompt": a.prompt, "repr": rep, "mode": a.mode, "model": a.model,
                             "qid": q["id"], "template": q["template"], "type": q["type"], "rep": i}
                     if cell(base) not in done:
                         jobs.append((d, q, keys[q["id"]][f"L{a.layer}"], base, allkeys.get("why", {}).get(q["id"])))
@@ -110,17 +119,27 @@ def main():
         d, q, key, base, why = job
         if stop.is_set():
             return
-        msgs = read.messages(d, a.layer, base["repr"], q, a.config, a.prompt)
         rec = dict(base, params=q["params"], config=config, ts=time.strftime("%Y-%m-%dT%H:%M:%S"))
         try:
-            if a.model.startswith("stub:"):
+            if a.mode == "compile":
+                def call(msgs):
+                    if a.model.startswith("stub:"):
+                        return compile_mode.stub(a.model, key, q, msgs)
+                    return openrouter.chat(a.model, msgs, temperature=a.temperature, max_tokens=a.max_tokens,
+                                           reasoning=reasoning, provider=provider)
+                rec.update(compile_mode.answer(call, d, base["world"], a.layer, base["repr"], q, a.config),
+                           error=None, tool_calls=0)
+            elif a.model.startswith("stub:"):
+                msgs = read.messages(d, a.layer, base["repr"], q, a.config, a.prompt)
                 res = {"content": stub(a.model, key, why), "reasoning": "", "cost": 0.0, "model_served": a.model}
             else:
+                msgs = read.messages(d, a.layer, base["repr"], q, a.config, a.prompt)
                 res = openrouter.chat(a.model, msgs, temperature=a.temperature, max_tokens=a.max_tokens,
                                       reasoning=reasoning, provider=provider)
-            rec.update(res, error=None, tool_calls=0)
-            rec["parsed"] = read.parse(res["content"], q["type"])
-        except openrouter.CallError as e:
+            if a.mode == "read":
+                rec.update(res, error=None, tool_calls=0)
+                rec["parsed"] = read.parse(res["content"], q["type"])
+        except (openrouter.CallError, RuntimeError) as e:     # RuntimeError: engine/compile.pl failed
             rec.update(error=str(e), cost=0.0)
         with lock:
             with out.open("a") as f:

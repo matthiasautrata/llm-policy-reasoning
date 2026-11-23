@@ -398,7 +398,7 @@ rules:
   rule: An employee's reporting chain is their manager, their manager's manager, and so on. It does not include the employee.
 - id: R104
   defines: booked_total/2
-  meaning: 'booked_total(C, T): T is the booked amount of C and all its descendants.'
+  meaning: 'booked_total(C, T): T is the booked total of cost centre C.'
   class: definitional
   conservative: true
   owner: controller
@@ -618,6 +618,13 @@ rules:
   conservative: false
   owner: controller
   rule: Where hr and finance disagree about an employee's cost centre, finance governs.
+- id: R314
+  defines: excluded/1
+  meaning: 'excluded(G): G must not hold; a rule base that derives both G and excluded(G) contradicts itself.'
+  class: incompatibility
+  conservative: false
+  owner: procurement
+  rule: A denied request is never approved.
 decisions:
 - id: c1
   term: committed spend

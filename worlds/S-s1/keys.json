@@ -852,7 +852,19 @@
     "status": "UNDERDETERMINED"
    },
    "L3": {
-    "detail": "req(r003,e008,8000,software,fern,20260808,pending),emp(e008,analyst,cc1_1),in_subtree(cc1_1,cc1),denied(r003),auto_approved(r003)",
+    "detail": "derived and excluded: [approved(r003),approved(r011)]",
+    "sides": [
+     [
+      "r009",
+      "r017"
+     ],
+     [
+      "r003",
+      "r009",
+      "r011",
+      "r017"
+     ]
+    ],
     "status": "CONFLICT"
    }
   },
@@ -2341,7 +2353,7 @@
     "status": "UNDERDETERMINED"
    },
    "L3": {
-    "detail": "req(r003,e008,8000,software,fern,20260808,pending),emp(e008,analyst,cc1_1),in_subtree(cc1_1,cc1),denied(r003),auto_approved(r003)",
+    "detail": "derived and excluded: [approved(r003),approved(r011)]",
     "status": "CONFLICT"
    }
   },

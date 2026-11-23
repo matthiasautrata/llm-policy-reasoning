@@ -60,6 +60,9 @@ def formal(d, qs, keys):
                     if q["type"] not in ("bool", "set"):
                         jobs.append({"id": q["id"], "type": "set", "goal": q["goal"], "readings": rs})
                         want.append(("value", e["sides"]))
+                    elif e.get("sides") is not None:  # a rule conflict: plain Prolog gives the union, the last side
+                        jobs.append({"id": q["id"], "type": q["type"], "goal": q["goal"], "readings": rs})
+                        want.append(("value", e["sides"][-1]))
                     continue
                 if e["status"] == "ANSWER":
                     exp = ("value", e["value"])

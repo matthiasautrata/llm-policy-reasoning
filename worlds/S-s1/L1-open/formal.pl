@@ -229,7 +229,7 @@ doc(exposure/3, 'exposure(R, C, X): X is what C would have committed if R were a
 doc(cap_breach/1, 'cap_breach(R): approving R would exceed the cap of a cost centre in its cap scope.').
 doc(big_capital/1, 'big_capital(R): R is a capital request over 50000.').
 doc(headcount/2, 'headcount(D, N): N employees belong to department D.').
-doc(booked_total/2, 'booked_total(C, T): T is the booked amount of C and all its descendants.').
+doc(booked_total/2, 'booked_total(C, T): T is the booked total of cost centre C.').
 doc(committed/2, 'committed(C, T): T is the committed spend of cost centre C.').
 doc(cap_scope/2, 'cap_scope(R, C): cost centre C\'s cap applies to request R.').
 doc(dept/2, 'dept(E, D): D is employee E\'s department.').

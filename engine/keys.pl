@@ -9,8 +9,11 @@
       OUT_OF_SCOPE     the goal calls a predicate no layer defines
       UNDERDETERMINED  L < min_layer (missing_layer = min_layer)
       ANSWER           value (bool | int | sym as string | set as sorted list)
-      CONFLICT         the conflict goal holds and no resolve goal is available at L (detail; sides: the
-                       distinct values the material supports, for sym and int goals; both, for bool)
+      CONFLICT         the rule base contradicts itself on the goal (it derives G and excluded(G): the plain
+                       and the exclusion-enforced program differ; sides [enforced value, plain value]), or the
+                       bank's conflict goal holds (data conflicts; sides: the distinct values the material
+                       supports, for sym and int goals; both, for bool); in either case only if no resolve
+                       goal is available at L
       AMBIGUOUS        live readings give different results (readings: "c1=..,c4=.." -> value | "CONFLICT")
     min_layer and forks are derived here from the dependency closure of goal and conflict (meta).
     why: for each bool question whose L3 decided key is true, the why/4 tree of its goal (checked with
@@ -82,7 +85,10 @@ key(Cfg, L, scope(_, Fs), P, E) :-
     findall(Rs, readings(Live, Rs), Combos),
     findall(Rs-Res, ( member(Rs, Combos), eval(L, Rs, P, Res) ), Results),
     findall(Res, member(_-Res, Results), Rs0), sort(Rs0, Distinct),
-    ( Distinct = [One] -> entry(One, E)
+    findall(X, ( member(Res, Distinct), res_value(Res, X) ), Xs0), sort(Xs0, Xs),
+    (   Distinct = [One] -> entry(One, E)
+    ;   Xs == ["CONFLICT"]                 % every reading conflicts, on sides that vary: CONFLICT, no sides
+    ->  Distinct = [conflict(D, _)|_], entry(conflict(D, none), E)
     ; findall(RK-RV, ( member(Rs-Res, Results), readings_key(Rs, RK), res_value(Res, RV) ), Pairs),
       dict_pairs(RD, _, Pairs), E = _{status:"AMBIGUOUS", readings:RD} ).
 
@@ -103,14 +109,34 @@ res_value(v(V), V).
 res_value(conflict(_, _), "CONFLICT").
 
 %% eval(+Layer, +Readings, +Parsed, -v(Value) | conflict(Detail, Sides))
+%% A conflict is detected (the plain and the exclusion-enforced program give different values: the rule
+%% base derives G and excluded(G); sides [enforced value, plain value]) or declared (the bank's conflict
+%% goal holds: data conflicts such as Q25). Where an exclusion bears on the goal, the declaration must
+%% agree with the detection: the bank and the engine are checked against each other, not trusted.
 eval(L, Rs, P0, Res) :-
     copy_term(P0, q(Type, G-V, C, R-RV)),
     program(L, Rs, M),
-    (   C \== none, once(M:C)
+    (   excl_relevant(L, [G]) -> value(Type, M, G, V, X), program_x(L, Rs, MX), value(Type, MX, G, V, XX),
+        ( X \== XX -> Det = true ; Det = false ), Rel = true
+    ;   Det = false, Rel = false ),
+    ( C \== none, once(M:C) -> Dec = true ; Dec = false ),
+    ( Rel == true, C \== none, Det \== Dec -> throw(error(conflict_declaration_mismatch(G, detected(Det), declared(Dec)), _)) ; true ),
+    (   ( Det == true ; Dec == true )
     ->  (   R \== none, goal_meta([R], RL, _), RL =< L
-        ->  value(Type, M, R, RV, X), Res = v(X)
+        ->  value(Type, M, R, RV, Y), Res = v(Y)
+        ;   Det == true
+        ->  contradicted(M, L, As0), relevant_atoms(As0, G, X, XX, As),
+            format(string(D), "derived and excluded: ~q", [As]), Res = conflict(D, [XX, X])
         ;   format(string(D), "~q", [C]), sides(Type, M, G, V, S), Res = conflict(D, S) )
-    ;   value(Type, M, G, V, X), Res = v(X) ).
+    ;   ( var(X) -> value(Type, M, G, V, X) ; true ), Res = v(X) ).
+
+%% relevant_atoms: the contradicted atoms that mention the goal's constants or the values that differ.
+relevant_atoms(As0, G, X, XX, As) :-
+    term_to_list(X, L1), term_to_list(XX, L2), union(L1, L2, U), intersection(L1, L2, I), subtract(U, I, Diff),
+    findall(A, ( member(A, As0), A =.. [_|Args], member(Arg, Args), atomic(Arg),
+                 ( atom_string(Arg, S), memberchk(S, Diff) ; sub_term(T, G), T == Arg ) ), As1),
+    sort(As1, As).
+term_to_list(X, L) :- ( is_list(X) -> L = X ; L = [X] ).
 
 sides(bool, _, _, _, [false, true]) :- !.
 sides(set, _, _, _, none) :- !.

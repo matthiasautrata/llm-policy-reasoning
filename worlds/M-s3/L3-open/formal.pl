@@ -1003,7 +1003,7 @@ exemption(capex, capital, 20260101).
 exemption_withdrawn(capex, 20260810).
 
 % Terms: concept(Term, Binding, Meaning) -- what the terms used by the definitions refer to.
-:- discontiguous concept/3, rule/6, doc/2, cc_anc/2, in_subtree/2, chain/2, pending_total/2, headroom/2, over_cap/1, exposure/3, cap_breach/1, big_capital/1, headcount/2, limit_on/3, vendor_status_on/3, vendor_approved/1, cc_on/4, disputed_on/2, exemption_in_force/3, approver/2, has_approver/1, exempt/1, cap_ok/1, vendor_cleared/1, waiver/1, waiver_blocked/1, eligible/1, denied/1, approved/1, auto_approved/1, authoritative_cc_on/3, booked_total/2, committed/2, cap_scope/2, dept/2, governing_date/2.
+:- discontiguous concept/3, rule/6, doc/2, cc_anc/2, in_subtree/2, chain/2, pending_total/2, headroom/2, over_cap/1, exposure/3, cap_breach/1, big_capital/1, headcount/2, limit_on/3, vendor_status_on/3, vendor_approved/1, cc_on/4, disputed_on/2, exemption_in_force/3, approver/2, has_approver/1, exempt/1, cap_ok/1, vendor_cleared/1, waiver/1, waiver_blocked/1, eligible/1, denied/1, approved/1, auto_approved/1, authoritative_cc_on/3, excluded/1, booked_total/2, committed/2, cap_scope/2, dept/2, governing_date/2.
 concept('requester', 'req.requester', 'The requester of a request is the employee who raised it.').
 concept('requester\'s cost centre', 'emp.cc', 'A requester\'s cost centre is the cost centre recorded for them in emp.').
 concept('pending request', 'req.status = pending', 'A pending request is one whose status is pending. Cancelled requests are neither pending nor booked.').
@@ -1056,7 +1056,8 @@ doc(denied/1, 'denied(R): R is denied.').
 doc(approved/1, 'approved(R): R is approved.').
 doc(auto_approved/1, 'auto_approved(R): R is approved automatically.').
 doc(authoritative_cc_on/3, 'authoritative_cc_on(E, C, D): C is E\'s cost centre on date D where sources disagree.').
-doc(booked_total/2, 'booked_total(C, T): T is the booked amount of C and all its descendants.').
+doc(excluded/1, 'excluded(G): G must not hold; a rule base that derives both G and excluded(G) contradicts itself.').
+doc(booked_total/2, 'booked_total(C, T): T is the booked total of cost centre C.').
 doc(committed/2, 'committed(C, T): T is the committed spend of cost centre C.').
 doc(cap_scope/2, 'cap_scope(R, C): cost centre C\'s cap applies to request R.').
 doc(dept/2, 'dept(E, D): D is employee E\'s department.').
@@ -1228,3 +1229,7 @@ approved(R) :- auto_approved(R).
 % R313: Where hr and finance disagree about an employee's cost centre, finance governs.
 rule('R313', authoritative_cc_on/3, 3, incompatibility, false, controller).
 authoritative_cc_on(E, C, D) :- cc_on(E, C, finance, D).
+
+% R314: A denied request is never approved.
+rule('R314', excluded/1, 3, incompatibility, false, procurement).
+excluded(approved(R)) :- denied(R).

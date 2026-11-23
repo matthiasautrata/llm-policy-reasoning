@@ -14,5 +14,10 @@ capability(fk/3, 0, "fk(R, C, T): column C of relation R refers to relation T.")
 capability(reading/2, 1, "reading(Fork, Reading): the reading chosen for an interpretation fork.").
 
 %% capabilities(+Layer, -List): c(PI, FromLayer, Doc) for everything available at Layer, sorted by layer.
+%% A relation's doc is the one its material shows at Layer (schema.yaml doc_from), as render/common.py does.
 capabilities(Layer, List) :-
-    findall(L-c(PI, L, Doc), ( capability(PI, L, Doc), L =< Layer ), Ps), keysort(Ps, S), pairs_values(S, List).
+    findall(L-c(PI, L, Doc), ( capability(PI, L, Doc0), L =< Layer, doc_at(PI, Layer, Doc0, Doc) ), Ps),
+    keysort(Ps, S), pairs_values(S, List).
+
+doc_at(N/_, Layer, Doc0, Doc) :-
+    ( aggregate_all(max(K, D), ( rel_doc_from(N, K, D), K =< Layer ), max(_, D1)) -> Doc = D1 ; Doc = Doc0 ).

@@ -27,7 +27,7 @@ import yaml
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from harness.read import norm_value, parse      # noqa: E402
+from harness.read import norm_value, parse, reading_value      # noqa: E402
 
 ABST = {"UNDERDETERMINED", "OUT_OF_SCOPE"}
 ORDER = ["ANSWER", "AMBIGUOUS", "CONFLICT", "UNDERDETERMINED", "OUT_OF_SCOPE", "PARSE"]
@@ -50,7 +50,8 @@ def f1(a, b):
 
 
 def score(r, key, meta, later):
-    p = r["parsed"] = parse(r["content"], r["type"])
+    p = r["parsed"] if r.get("mode") == "compile" else parse(r["content"], r["type"])   # compile: engine result
+    r["parsed"] = p
     ms = p["status"] or "PARSE"
     ks = key["status"]
     s = {"key": ks, "got": ms, "status_ok": ms == ks, "min_layer": meta["min_layer"]}
@@ -70,7 +71,7 @@ def score(r, key, meta, later):
         s["lucky"] = p["value"] == norm_value(later["value"], r["type"])
     s["readings_ok"] = None
     if ks == "AMBIGUOUS" and ms == "AMBIGUOUS":
-        kv = sorted({json.dumps(norm_value(v, r["type"])) for v in key["readings"].values()})
+        kv = sorted({reading_value(v, r["type"]) for v in key["readings"].values()})
         s["readings_ok"] = p.get("reading_values") == kv
     s["correct"] = s["status_ok"] and (ks != "ANSWER" or bool(s["value_ok"])) and (ks != "AMBIGUOUS" or bool(s["readings_ok"]))
     s["config"] = r.get("cfg", "decided")
@@ -155,6 +156,9 @@ def main():
         if s["key"] == "CONFLICT" and s["got"] == "ANSWER":
             top = k["decided"][r["qid"]]["L3"]
             s["side"] = "resolved" if top["status"] == "ANSWER" and r["parsed"]["value"] == norm_value(top["value"], r["type"]) else "other"
+        s["engine_conflict"] = bool((r.get("parsed") or {}).get("engine_conflict"))
+        if r.get("mode") == "compile":
+            s["first"] = score(dict(r, parsed=r["parsed_first"]), ke, m, later)
         scored.append((r, s))
     scored_s = {id(r): s for r, s in scored}
 
@@ -167,7 +171,8 @@ def main():
     L = []
     models = sorted({r["model"] for r, _ in scored})
     layers = sorted({r["layer"] for r, _ in scored})
-    L.append(f"# Read mode: {', '.join(models)} at layer(s) {', '.join(map(str, layers))}\n")
+    modes = " + ".join(sorted({r.get("mode", "read") for r, _ in scored})).capitalize()
+    L.append(f"# {modes} mode: {', '.join(models)} at layer(s) {', '.join(map(str, layers))}\n")
     cost = sum(r.get("cost") or 0 for r in recs)
     secs = [r.get("seconds") or 0 for r in recs]
     toks = lambda f: sum(r.get(f) or 0 for r in recs)
@@ -192,6 +197,25 @@ def main():
         L.append(f"## {title}\n")
         L.append(table([[*kk, *summary(g)] for kk, g in by(f)], [*LC, title.split(" ")[-1], *HEAD]))
         L.append("")
+
+    L.append("## Cost by world and representation\n")
+    L.append("Per call (compile: summed over the reply and any repair turn). p90 / max s: wall time per call. "
+             "length: replies cut off at the output-token cap.\n")
+    g2 = collections.defaultdict(list)
+    for r, s in scored:
+        g2[(*lc(r, s), r["world"], r["repr"])].append((r, s))
+    rows = []
+    for kk, g in sorted(g2.items(), key=lambda kv: str(kv[0])):
+        n = len(g)
+        mean = lambda f: sum(r.get(f) or 0 for r, _ in g) / n
+        sec = sorted(r.get("seconds") or 0 for r, _ in g)
+        rows.append([*kk, n, pct(sum(s["correct"] for _, s in g), n), f"{mean('prompt_tokens'):,.0f}",
+                     f"{mean('reasoning_tokens'):,.0f}", f"{mean('completion_tokens'):,.0f}", f"{mean('seconds'):.1f}",
+                     f"{sec[min(n - 1, int(0.9 * n))]:.1f}", f"{sec[-1]:.1f}", f"${mean('cost'):.5f}",
+                     sum(r.get("finish_reason") == "length" for r, _ in g)])
+    L.append(table(rows, [*LC, "world", "representation", "n", "correct", "prompt tok", "reasoning tok",
+                          "completion tok", "mean s", "p90 s", "max s", "cost", "length"]))
+    L.append("")
 
     L.append("## Noticed but answered\n")
     L.append("Of the overreaching ANSWERs (UNDERDETERMINED key, model ANSWER), the share whose reply or reasoning "
@@ -286,7 +310,9 @@ def main():
                  "prevails. Strict: CONFLICT. AMBIGUOUS = both sides: the reading values are exactly the key's sides "
                  "(the disagreement reported as two readings). No side picked (lenient): any status but ANSWER. "
                  "An ANSWER picks a side: resolved = the value the next layer's resolution rule gives "
-                 "(L3 decided key), other = any other value.\n")
+                 "(L3 decided key), other = any other value. Engine-detected (compile mode): CONFLICT or a CONFLICT "
+                 "reading that the engine found by running the plan in the exclusion-enforced program, not declared by "
+                 "the model.\n")
         rows = []
         for kk, g in by(lambda r, s: (*lc(r, s), r["repr"])):
             g = [s for s in g if s["key"] == "CONFLICT"]
@@ -294,9 +320,10 @@ def main():
                 got = collections.Counter(s["got"] for s in g)
                 rows.append([*kk, len(g), pct(got["CONFLICT"], len(g)), pct(sum(s["side"] == "both" for s in g), len(g)),
                              pct(len(g) - got["ANSWER"], len(g)), sum(s["side"] == "resolved" for s in g),
-                             sum(s["side"] == "other" for s in g), ", ".join(f"{k} {n}" for k, n in got.most_common())])
+                             sum(s["side"] == "other" for s in g), sum(s["engine_conflict"] for s in g),
+                             ", ".join(f"{k} {n}" for k, n in got.most_common())])
         L.append(table(rows, [*LC, "repr", "n", "CONFLICT", "AMBIGUOUS = both sides", "no side picked",
-                              "ANSWER = resolved", "ANSWER = other", "model statuses"]))
+                              "ANSWER = resolved", "ANSWER = other", "engine-detected", "statuses"]))
         L.append("")
 
     ex = [(r, s) for r, s in scored if "rules" in (r.get("parsed") or {}) and r["qid"] in keys[r["world"]].get("why", {})]
@@ -351,6 +378,109 @@ def main():
                                     for i in sc["got"] - sc["core"] - set(keys[r["world"]]["why"][r["qid"]]["support"]))
         L.append("Most often missed core rules: " + (", ".join(f"{i} {n}" for i, n in miss.most_common(10)) or "none") + ".")
         L.append("Most often named outside core and support: " + (", ".join(f"{i} {n}" for i, n in extra.most_common(10)) or "none") + ".\n")
+
+    comp = [(r, s) for r, s in scored if r.get("mode") == "compile"]
+    if comp:
+        L.append("## Compile mode\n")
+        L.append("The model writes one to three plans (a Prolog goal over the material's predicates, with the readings it "
+                 "adopts); the engine validates and runs them (engine/compile.pl) and answers ANSWER if every run agrees, "
+                 "AMBIGUOUS if not. In the open configuration forks the plan leaves unfixed are expanded by the engine. "
+                 "Errors get one repair turn. First pass = the first reply alone; final = after repair. No run = no plan "
+                 "survived validation and execution (counted as unparsed). Text material is not offered compile mode.\n")
+        rows = []
+        for kk, g in by(lambda r, s: (*lc(r, s), r["repr"])):
+            rs = [(r, s) for r, s in comp if (*lc(r, s), r["repr"]) == kk]
+            if not rs:
+                continue
+            n = len(rs)
+            st = collections.Counter(r["first"]["reply_status"] or "PARSE" for r, _ in rs)
+            plans = [len(r["first"]["plans"]) for r, _ in rs if r["first"]["reply_status"] == "PLAN"]
+            rows.append([*kk, n, pct(sum(s["first"]["correct"] for _, s in rs), n), pct(sum(s["correct"] for _, s in rs), n),
+                         pct(sum(r["turns"] > 1 for r, _ in rs), n),
+                         pct(sum(r["turns"] > 1 and not r["final"]["errors"] for r, _ in rs), sum(r["turns"] > 1 for r, _ in rs)),
+                         sum(s["got"] == "PARSE" for _, s in rs),
+                         ", ".join(f"{k} {v}" for k, v in st.most_common()),
+                         f"{sum(plans) / len(plans):.2f}" if plans else "–", pct(sum(x > 1 for x in plans), len(plans))])
+        L.append(table(rows, [*LC, "repr", "n", "correct (first pass)", "correct (final)", "repaired", "repair cleared errors",
+                              "no run (final)", "first reply status", "plans per PLAN reply", "PLAN replies with >1 plan"]))
+        L.append("")
+        kinds = [("not a predicate of the material", r"not a predicate of the material"),
+                 ("built-in not allowed", r"not allowed"), ("V not bound", r"must bind V"),
+                 ("several values", r"different values for V"), ("syntax", r"does not parse|syntax"),
+                 ("readings", r"question of interpretation|is not a reading|is decided as"),
+                 ("list as one value", r"V = \[.*is not an identifier"), ("too many plans", r"plans; give at most"),
+                 ("time limit", r"time limit"), ("no JSON / no plan", r"no JSON|needs at least one plan|not in the form|unknown status")]
+        errs = collections.Counter()
+        for r, _ in comp:
+            for e in r["first"]["errors"]:
+                errs[next((k for k, rx in kinds if re.search(rx, e)), "other")] += 1
+        L.append("First-pass errors by kind (all compile records): " + (", ".join(f"{k} {v}" for k, v in errs.most_common()) or "none") + ".\n")
+        amb = [(r, s) for r, s in comp if s["key"] == "AMBIGUOUS"]
+        if amb:
+            L.append("AMBIGUOUS keys in compile mode. Surfaced by the model: its plans fix some fork to different readings "
+                     "(it split on the question of interpretation itself). Engine only: AMBIGUOUS came from the engine "
+                     "expanding forks the plans left unfixed. Picked a reading: a single reading fixed for a fork the key "
+                     "depends on, so the engine did not expand it.\n")
+            rows = []
+            for kk in sorted({(*lc(r, s), r["repr"]) for r, s in amb}, key=str):
+                g = [(r, s) for r, s in amb if (*lc(r, s), r["repr"]) == kk]
+                forks = lambda r: set(keys[r["world"]]["meta"][r["qid"]]["forks"])
+                sur = sum(bool(set(r["surfaced"]) & forks(r)) for r, _ in g)
+                picked = sum(any(f in forks(r) and f not in r["surfaced"] for p in r["final"]["plans"] for f in p["readings"])
+                             for r, _ in g)
+                got = collections.Counter(s["got"] for _, s in g)
+                rows.append([*kk, len(g), pct(got["AMBIGUOUS"], len(g)), pct(sum(bool(s["readings_ok"]) for _, s in g), len(g)),
+                             pct(sur, len(g)), pct(sum(s["got"] == "AMBIGUOUS" and not set(r["surfaced"]) & forks(r) for r, s in g), len(g)),
+                             pct(picked, len(g)), ", ".join(f"{k} {v}" for k, v in got.most_common())])
+            L.append(table(rows, [*LC, "repr", "n", "AMBIGUOUS", "readings right", "surfaced by model", "engine only",
+                                  "picked a reading", "statuses"]))
+            L.append("")
+        und = [(r, s) for r, s in comp if s["key"] == "UNDERDETERMINED"]
+        if und:
+            L.append("UNDERDETERMINED keys in compile mode (overreach). First reply: blocked = a plan called a predicate "
+                     "the layer does not define (an existence error, reported as \"not a predicate of the material\"); "
+                     "inlined = a plan ran and gave a value, the model computing the missing concept from what the layer "
+                     "has; abstained = UNDERDETERMINED or OUT_OF_SCOPE. Final: after the repair turn. Flagged = the inlined "
+                     "plan uses aggregation or arithmetic (engine/compile.pl constructs). = later key: the inlined value "
+                     "equals the key at the layer that defines the concept. Control: ANSWER keys of the same cells, "
+                     "share whose final plan is flagged (the flag is a report, not a rejection).\n")
+            def outcome(o):
+                if o["reply_status"] in ("UNDERDETERMINED", "OUT_OF_SCOPE"):
+                    return "abstained"
+                if o["engine"] and o["engine"]["status"] in ("ANSWER", "AMBIGUOUS"):
+                    return "inlined"
+                if any("not a predicate of the material" in e for e in o["errors"]):
+                    return "blocked"
+                return "other"
+            flagged = lambda o: any(p.get("constructs") for p in (o["engine"] or {}).get("plans", []) if not p.get("error"))
+            rows = []
+            for kk in sorted({(*lc(r, s), r["repr"]) for r, s in comp}, key=str):
+                g = [(r, s) for r, s in und if (*lc(r, s), r["repr"]) == kk]
+                if not g:
+                    continue
+                f1c = collections.Counter(outcome(r["first"]) for r, _ in g)
+                blocked_first = sum(any("not a predicate of the material" in e for e in r["first"]["errors"]) for r, _ in g)
+                fc = collections.Counter(outcome(r["final"]) for r, _ in g)
+                inl = [(r, s) for r, s in g if outcome(r["final"]) == "inlined"]
+                ctl = [r for r, s in comp if (*lc(r, s), r["repr"]) == kk and s["key"] == "ANSWER"]
+                rows.append([*kk, len(g), pct(blocked_first, len(g)), pct(f1c["inlined"], len(g)), pct(f1c["abstained"], len(g)),
+                             pct(fc["inlined"], len(g)), pct(fc["abstained"], len(g)), pct(fc["blocked"] + fc["other"], len(g)),
+                             pct(sum(flagged(r["final"]) for r, _ in inl), len(inl)),
+                             pct(sum(bool(s["lucky"]) for _, s in inl), len(inl)),
+                             pct(sum(flagged(r["final"]) for r in ctl), len(ctl))])
+            L.append(table(rows, [*LC, "repr", "n", "first: blocked", "first: inlined", "first: abstained",
+                                  "final: inlined", "final: abstained", "final: no run", "inlined, flagged",
+                                  "inlined = later key", "control: ANSWER keys flagged"]))
+            L.append("")
+            per = collections.defaultdict(collections.Counter)
+            for r, s in und:
+                per[r["template"]][outcome(r["final"])] += 1
+            L.append("Final outcome per template (UNDERDETERMINED keys): " + "; ".join(
+                f"{t} " + ", ".join(f"{k} {v}" for k, v in c.most_common()) for t, c in sorted(per.items())) + ".\n")
+        fa = [(r, s) for r, s in comp if s["key"] == "ANSWER" and s["got"] == "AMBIGUOUS"]
+        if fa:
+            L.append(f"ANSWER keys met with AMBIGUOUS in compile mode: {len(fa)} (plans that disagree on the goal itself, or "
+                     f"readings the key does not depend on).\n")
 
     L.append("## Stability across repetitions\n")
     rows = []

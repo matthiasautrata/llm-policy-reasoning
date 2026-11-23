@@ -1105,7 +1105,7 @@ rules:
   rule: An employee's reporting chain is their manager, their manager's manager, and so on. It does not include the employee.
 - id: R104
   defines: booked_total/2
-  meaning: 'booked_total(C, T): T is the booked amount of C and all its descendants.'
+  meaning: 'booked_total(C, T): T is the booked total of cost centre C.'
   class: definitional
   conservative: true
   owner: controller

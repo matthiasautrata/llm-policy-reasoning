@@ -111,6 +111,12 @@ def _last_json(text):
     return None
 
 
+def reading_value(v, typ):
+    """One reading's value as compared in scoring: "CONFLICT" (a reading on which the material contradicts
+    itself), else the JSON of the normalised value."""
+    return "CONFLICT" if isinstance(v, str) and v.strip().upper() == "CONFLICT" else json.dumps(norm_value(v, typ))
+
+
 def norm_value(v, typ):
     """Coerce a model value to the key's type; None if it cannot be."""
     if v is None:
@@ -158,7 +164,7 @@ def parse(content, typ):
                                for x in a for m in [re.fullmatch(r"\s*(R\d+)([a-z]?)\s*", str(x), re.I)] if m})
         out["rules_unparsed"] = [str(x) for x in a if not re.fullmatch(r"\s*R\d+[a-z]?\s*", str(x), re.I)]
     if st == "AMBIGUOUS" and isinstance(o.get("readings"), dict):
-        out["reading_values"] = sorted({json.dumps(norm_value(v, typ)) for v in o["readings"].values()})
+        out["reading_values"] = sorted({reading_value(v, typ) for v in o["readings"].values()})
     if st == "ANSWER":
         out["value"] = norm_value(o.get("value"), typ)
         if out["value"] is None:

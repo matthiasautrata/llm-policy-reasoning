@@ -52,7 +52,7 @@ docs:
   cc_anc/2: "cc_anc(C, A): A is an ancestor of cost centre C (parent, parent's parent, ...)."
   in_subtree/2: "in_subtree(C, Root): C is Root or a descendant of Root."
   chain/2: "chain(E, M): M is in E's reporting chain (manager, manager's manager, ...)."
-  booked_total/2: "booked_total(C, T): T is the booked amount of C and all its descendants."
+  booked_total/2: "booked_total(C, T): T is the booked total of cost centre C."
   pending_total/2: "pending_total(C, P): P is the amount of pending requests raised in C or its descendants."
   committed/2: "committed(C, T): T is the committed spend of cost centre C."
   headroom/2: "headroom(C, H): H is C's cap minus its committed spend."
@@ -81,6 +81,7 @@ docs:
   denied/1: "denied(R): R is denied."
   auto_approved/1: "auto_approved(R): R is approved automatically."
   approved/1: "approved(R): R is approved."
+  excluded/1: "excluded(G): G must not hold; a rule base that derives both G and excluded(G) contradicts itself."
   authoritative_cc_on/3: "authoritative_cc_on(E, C, D): C is E's cost centre on date D where sources disagree."
 
 # Concept bindings (L1): the terms the definitions use, bound to the columns that carry them, with the
@@ -487,3 +488,12 @@ rules:
     english: Where hr and finance disagree about an employee's cost centre, finance governs.
     prolog: |
       authoritative_cc_on(E, C, D) :- cc_on(E, C, finance, D).
+  - id: R314
+    head: excluded/1
+    layer: 3
+    class: incompatibility
+    conservative: false
+    owner: procurement
+    english: A denied request is never approved.
+    prolog: |
+      excluded(approved(R)) :- denied(R).

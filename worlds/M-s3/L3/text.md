@@ -1044,6 +1044,7 @@ Each definition has a rule id. A definition applies wherever its term is used.
 - **R311.** A software request under 10000 is approved automatically, without further checks.
 - **R312.** An automatically approved request is approved.
 - **R313.** Where hr and finance disagree about an employee's cost centre, finance governs.
+- **R314.** A denied request is never approved.
 
 # Decisions
 

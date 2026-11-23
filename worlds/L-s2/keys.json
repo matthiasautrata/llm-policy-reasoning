@@ -832,7 +832,62 @@
     "status": "UNDERDETERMINED"
    },
    "L3": {
-    "detail": "req(r027,e169,3000,software,fern,20260723,pending),emp(e169,analyst,cc1_3_3_1),in_subtree(cc1_3_3_1,cc1),denied(r027),auto_approved(r027)",
+    "detail": "derived and excluded: [approved(r027)]",
+    "sides": [
+     [
+      "r003",
+      "r008",
+      "r009",
+      "r053",
+      "r059",
+      "r071",
+      "r076",
+      "r078",
+      "r079",
+      "r082",
+      "r087",
+      "r103",
+      "r104",
+      "r107",
+      "r118",
+      "r127",
+      "r152",
+      "r153",
+      "r154",
+      "r182",
+      "r209",
+      "r214",
+      "r227",
+      "r228"
+     ],
+     [
+      "r003",
+      "r008",
+      "r009",
+      "r027",
+      "r053",
+      "r059",
+      "r071",
+      "r076",
+      "r078",
+      "r079",
+      "r082",
+      "r087",
+      "r103",
+      "r104",
+      "r107",
+      "r118",
+      "r127",
+      "r152",
+      "r153",
+      "r154",
+      "r182",
+      "r209",
+      "r214",
+      "r227",
+      "r228"
+     ]
+    ],
     "status": "CONFLICT"
    }
   },
@@ -2261,7 +2316,7 @@
     "status": "UNDERDETERMINED"
    },
    "L3": {
-    "detail": "req(r027,e169,3000,software,fern,20260723,pending),emp(e169,analyst,cc1_3_3_1),in_subtree(cc1_3_3_1,cc1),denied(r027),auto_approved(r027)",
+    "detail": "derived and excluded: [approved(r027)]",
     "status": "CONFLICT"
    }
   },

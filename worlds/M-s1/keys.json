@@ -860,7 +860,20 @@
     "status": "UNDERDETERMINED"
    },
    "L3": {
-    "detail": "req(r024,e107,8000,software,acme,20260824,pending),emp(e107,analyst,cc3_2_2),in_subtree(cc3_2_2,cc3_2),denied(r024),auto_approved(r024)",
+    "detail": "derived and excluded: [approved(r024)]",
+    "sides": [
+     [
+      "r012",
+      "r063",
+      "r084"
+     ],
+     [
+      "r012",
+      "r024",
+      "r063",
+      "r084"
+     ]
+    ],
     "status": "CONFLICT"
    }
   },
@@ -2338,7 +2351,7 @@
     "status": "UNDERDETERMINED"
    },
    "L3": {
-    "detail": "req(r024,e107,8000,software,acme,20260824,pending),emp(e107,analyst,cc3_2_2),in_subtree(cc3_2_2,cc3_2),denied(r024),auto_approved(r024)",
+    "detail": "derived and excluded: [approved(r024)]",
     "status": "CONFLICT"
    }
   },

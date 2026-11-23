@@ -2243,7 +2243,7 @@ reading(c6, with_descendants).
 doc(cc_anc/2, 'cc_anc(C, A): A is an ancestor of cost centre C (parent, parent\'s parent, ...).').
 doc(in_subtree/2, 'in_subtree(C, Root): C is Root or a descendant of Root.').
 doc(chain/2, 'chain(E, M): M is in E\'s reporting chain (manager, manager\'s manager, ...).').
-doc(booked_total/2, 'booked_total(C, T): T is the booked amount of C and all its descendants.').
+doc(booked_total/2, 'booked_total(C, T): T is the booked total of cost centre C.').
 doc(pending_total/2, 'pending_total(C, P): P is the amount of pending requests raised in C or its descendants.').
 doc(committed/2, 'committed(C, T): T is the committed spend of cost centre C.').
 doc(headroom/2, 'headroom(C, H): H is C\'s cap minus its committed spend.').

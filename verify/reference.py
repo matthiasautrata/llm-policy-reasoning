@@ -202,9 +202,12 @@ EVAL = {
 }
 
 
-# template -> the distinct values the material supports when the conflict holds (sym/int goals);
-# bool goals have both sides, set goals none.
-SIDES = {"Q25": lambda W, p: sorted(W.cc_on(p["e"], "hr", p["d"]) | W.cc_on(p["e"], "finance", p["d"]))}
+# template -> the sides of a conflict: for a data conflict (Q25) the distinct values the material supports;
+# for a rule conflict (R314: a denied request is never approved, against R312) [value with the exclusion
+# enforced, value of the plain rule base]. Bool goals without an entry have both sides, set goals none.
+SIDES = {"Q25": lambda W, p: sorted(W.cc_on(p["e"], "hr", p["d"]) | W.cc_on(p["e"], "finance", p["d"])),
+         "Q34": lambda W, p: [sorted(r for r in W.in_sub_reqs(p["c"]) if W.approved(r) and not W.denied(r)),
+                              sorted(r for r in W.in_sub_reqs(p["c"]) if W.approved(r))]}
 
 
 def _eval(w, k, rd, t, p):
@@ -215,7 +218,7 @@ def _eval(w, k, rd, t, p):
         if resolve and resolve[0] <= k:
             return ("v", resolve[1](W, p))
         typ = BANK[t]["type"]
-        return ("c", [False, True] if typ == "bool" else None if typ == "set" else SIDES[t](W, p))
+        return ("c", SIDES[t](W, p) if t in SIDES else [False, True] if typ == "bool" else None)
     return ("v", val(W, p, k))
 
 
@@ -243,6 +246,8 @@ def keys(w, questions):
                     v = next(iter(res.values()))
                     ks[L] = {"status": "ANSWER", "value": v[1]} if v[0] == "v" else \
                         {"status": "CONFLICT", **({"sides": v[1]} if v[1] is not None else {})}
+                elif all(v[0] == "c" for v in res.values()):    # every reading conflicts, on sides that vary
+                    ks[L] = {"status": "CONFLICT"}
                 else:
                     ks[L] = {"status": "AMBIGUOUS", "readings": {rk: (v[1] if v[0] == "v" else "CONFLICT") for rk, v in res.items()}}
             out[cfg][q["id"]] = ks
