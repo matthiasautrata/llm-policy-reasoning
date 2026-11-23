@@ -2462,5 +2462,503 @@
     "status": "OUT_OF_SCOPE"
    }
   }
+ },
+ "why": {
+  "Q14-2": {
+   "core": [
+    "R104",
+    "R106",
+    "R109",
+    "R110",
+    "R111"
+   ],
+   "support": [
+    "R101",
+    "R102"
+   ],
+   "tree": {
+    "body": [
+     {
+      "body": [
+       {
+        "fact": "req(r013,e014,38000,services,edge,20260814,pending)"
+       },
+       {
+        "body": [
+         {
+          "fact": "req(r013,e014,38000,services,edge,20260814,pending)"
+         },
+         {
+          "fact": "emp(e014,analyst,cc2_2)"
+         }
+        ],
+        "goal": "cap_scope(r013,cc2_2)",
+        "rule": "R109"
+       },
+       {
+        "body": [
+         {
+          "body": [
+           {
+            "fact": "cc(cc2_2)"
+           },
+           {
+            "lemma": "aggregate_all(sum(A),(in_subtree(B,cc2_2),booked(B,A)),101000)"
+           }
+          ],
+          "goal": "booked_total(cc2_2,101000)",
+          "rule": "R104"
+         }
+        ],
+        "goal": "committed(cc2_2,101000)",
+        "rule": "R106"
+       },
+       {
+        "body": [
+         {
+          "builtin": "139000 is 101000+38000"
+         }
+        ],
+        "branch": "else",
+        "ite": "reading(c1,with_pending),pending==pending"
+       }
+      ],
+      "goal": "exposure(r013,cc2_2,139000)",
+      "rule": "R110"
+     },
+     {
+      "fact": "cap(cc2_2,104000)"
+     },
+     {
+      "builtin": "139000>104000"
+     }
+    ],
+    "goal": "cap_breach(r013)",
+    "rule": "R111"
+   }
+  },
+  "Q21-1": {
+   "core": [
+    "R203"
+   ],
+   "support": [],
+   "tree": {
+    "body": [
+     {
+      "fact": "vendor_status(cog,approved,20260101,20261231)"
+     },
+     {
+      "builtin": "20260101=<20260824"
+     },
+     {
+      "builtin": "20260824=<20261231"
+     }
+    ],
+    "goal": "vendor_status_on(cog,approved,20260824)",
+    "rule": "R203"
+   }
+  },
+  "Q24-2": {
+   "core": [
+    "R205",
+    "R206"
+   ],
+   "support": [],
+   "tree": {
+    "body": [
+     {
+      "body": [
+       {
+        "fact": "assignment(e011,cc2_2,hr,20260619)"
+       },
+       {
+        "builtin": "20260619=<20260630"
+       },
+       {
+        "absent": "assignment(e011,A,hr,B),B=<20260630,B>20260619"
+       }
+      ],
+      "goal": "cc_on(e011,cc2_2,hr,20260630)",
+      "rule": "R205"
+     },
+     {
+      "body": [
+       {
+        "fact": "assignment(e011,cc2_1,finance,20260101)"
+       },
+       {
+        "builtin": "20260101=<20260630"
+       },
+       {
+        "absent": "assignment(e011,A,finance,B),B=<20260630,B>20260101"
+       }
+      ],
+      "goal": "cc_on(e011,cc2_1,finance,20260630)",
+      "rule": "R205"
+     },
+     {
+      "builtin": "cc2_2\\==cc2_1"
+     }
+    ],
+    "goal": "disputed_on(e011,20260630)",
+    "rule": "R206"
+   }
+  },
+  "Q26-1": {
+   "core": [
+    "R207"
+   ],
+   "support": [],
+   "tree": {
+    "body": [
+     {
+      "fact": "exemption(capex,capital,20260101)"
+     },
+     {
+      "builtin": "20260101=<20260727"
+     },
+     {
+      "absent": "exemption_withdrawn(capex,A),A=<20260727"
+     }
+    ],
+    "goal": "exemption_in_force(capex,capital,20260727)",
+    "rule": "R207"
+   }
+  },
+  "Q31-1": {
+   "core": [
+    "R103",
+    "R201",
+    "R202",
+    "R301"
+   ],
+   "support": [],
+   "tree": {
+    "body": [
+     {
+      "fact": "req(r009,e009,60000,capital,cog,20260801,pending)"
+     },
+     {
+      "body": [
+       {
+        "fact": "reports(e009,e003)"
+       },
+       {
+        "body": [
+         {
+          "fact": "reports(e003,e001)"
+         }
+        ],
+        "goal": "chain(e003,e001)",
+        "rule": "R103"
+       }
+      ],
+      "goal": "chain(e009,e001)",
+      "rule": "R103"
+     },
+     {
+      "fact": "emp(e001,director,cc1)"
+     },
+     {
+      "body": [
+       {
+        "fact": "req(r009,e009,60000,capital,cog,20260801,pending)"
+       }
+      ],
+      "goal": "governing_date(r009,20260801)",
+      "rule": "R201"
+     },
+     {
+      "body": [
+       {
+        "fact": "role_limit_version(director,100000,20260101,20261231)"
+       },
+       {
+        "builtin": "20260101=<20260801"
+       },
+       {
+        "builtin": "20260801=<20261231"
+       }
+      ],
+      "goal": "limit_on(director,100000,20260801)",
+      "rule": "R202"
+     },
+     {
+      "builtin": "100000>=60000"
+     }
+    ],
+    "goal": "approver(r009,e001)",
+    "rule": "R301"
+   }
+  },
+  "Q32-1": {
+   "core": [
+    "R201",
+    "R203",
+    "R204",
+    "R305"
+   ],
+   "support": [],
+   "tree": {
+    "body": [
+     {
+      "body": [
+       {
+        "fact": "req(r006,e011,38000,services,cog,20260910,pending)"
+       },
+       {
+        "body": [
+         {
+          "fact": "req(r006,e011,38000,services,cog,20260910,pending)"
+         }
+        ],
+        "goal": "governing_date(r006,20260910)",
+        "rule": "R201"
+       },
+       {
+        "body": [
+         {
+          "fact": "vendor_status(cog,approved,20260101,20261231)"
+         },
+         {
+          "builtin": "20260101=<20260910"
+         },
+         {
+          "builtin": "20260910=<20261231"
+         }
+        ],
+        "goal": "vendor_status_on(cog,approved,20260910)",
+        "rule": "R203"
+       }
+      ],
+      "goal": "vendor_approved(r006)",
+      "rule": "R204"
+     }
+    ],
+    "goal": "vendor_cleared(r006)",
+    "rule": "R305"
+   }
+  },
+  "Q33-2": {
+   "core": [
+    "R103",
+    "R201",
+    "R202",
+    "R203",
+    "R204",
+    "R207",
+    "R301",
+    "R302",
+    "R303",
+    "R304",
+    "R305",
+    "R308",
+    "R310"
+   ],
+   "support": [
+    "R309"
+   ],
+   "tree": {
+    "body": [
+     {
+      "body": [
+       {
+        "body": [
+         {
+          "body": [
+           {
+            "fact": "req(r009,e009,60000,capital,cog,20260801,pending)"
+           },
+           {
+            "body": [
+             {
+              "fact": "reports(e009,e003)"
+             },
+             {
+              "body": [
+               {
+                "fact": "reports(e003,e001)"
+               }
+              ],
+              "goal": "chain(e003,e001)",
+              "rule": "R103"
+             }
+            ],
+            "goal": "chain(e009,e001)",
+            "rule": "R103"
+           },
+           {
+            "fact": "emp(e001,director,cc1)"
+           },
+           {
+            "body": [
+             {
+              "fact": "req(r009,e009,60000,capital,cog,20260801,pending)"
+             }
+            ],
+            "goal": "governing_date(r009,20260801)",
+            "rule": "R201"
+           },
+           {
+            "body": [
+             {
+              "fact": "role_limit_version(director,100000,20260101,20261231)"
+             },
+             {
+              "builtin": "20260101=<20260801"
+             },
+             {
+              "builtin": "20260801=<20261231"
+             }
+            ],
+            "goal": "limit_on(director,100000,20260801)",
+            "rule": "R202"
+           },
+           {
+            "builtin": "100000>=60000"
+           }
+          ],
+          "goal": "approver(r009,e001)",
+          "rule": "R301"
+         }
+        ],
+        "goal": "has_approver(r009)",
+        "rule": "R302"
+       },
+       {
+        "body": [
+         {
+          "body": [
+           {
+            "fact": "req(r009,e009,60000,capital,cog,20260801,pending)"
+           },
+           {
+            "body": [
+             {
+              "fact": "req(r009,e009,60000,capital,cog,20260801,pending)"
+             }
+            ],
+            "goal": "governing_date(r009,20260801)",
+            "rule": "R201"
+           },
+           {
+            "body": [
+             {
+              "fact": "exemption(capex,capital,20260101)"
+             },
+             {
+              "builtin": "20260101=<20260801"
+             },
+             {
+              "absent": "exemption_withdrawn(capex,A),A=<20260801"
+             }
+            ],
+            "goal": "exemption_in_force(capex,capital,20260801)",
+            "rule": "R207"
+           }
+          ],
+          "goal": "exempt(r009)",
+          "rule": "R303"
+         }
+        ],
+        "goal": "cap_ok(r009)",
+        "rule": "R304"
+       },
+       {
+        "body": [
+         {
+          "body": [
+           {
+            "fact": "req(r009,e009,60000,capital,cog,20260801,pending)"
+           },
+           {
+            "body": [
+             {
+              "fact": "req(r009,e009,60000,capital,cog,20260801,pending)"
+             }
+            ],
+            "goal": "governing_date(r009,20260801)",
+            "rule": "R201"
+           },
+           {
+            "body": [
+             {
+              "fact": "vendor_status(cog,approved,20260101,20261231)"
+             },
+             {
+              "builtin": "20260101=<20260801"
+             },
+             {
+              "builtin": "20260801=<20261231"
+             }
+            ],
+            "goal": "vendor_status_on(cog,approved,20260801)",
+            "rule": "R203"
+           }
+          ],
+          "goal": "vendor_approved(r009)",
+          "rule": "R204"
+         }
+        ],
+        "goal": "vendor_cleared(r009)",
+        "rule": "R305"
+       }
+      ],
+      "goal": "eligible(r009)",
+      "rule": "R308"
+     },
+     {
+      "absent": "denied(r009)"
+     }
+    ],
+    "goal": "approved(r009)",
+    "rule": "R310"
+   }
+  },
+  "Q35-1": {
+   "core": [
+    "R309"
+   ],
+   "support": [],
+   "tree": {
+    "body": [
+     {
+      "fact": "req(r002,e008,90000,capital,fern,20260622,pending)"
+     },
+     {
+      "fact": "violation(e008)"
+     }
+    ],
+    "goal": "denied(r002)",
+    "rule": "R309"
+   }
+  },
+  "Q36-1": {
+   "core": [
+    "R304"
+   ],
+   "support": [
+    "R101",
+    "R102",
+    "R104",
+    "R105",
+    "R106",
+    "R109",
+    "R110",
+    "R111"
+   ],
+   "tree": {
+    "body": [
+     {
+      "fact": "req(r001,e011,3000,hardware,cog,20260723,pending)"
+     },
+     {
+      "absent": "cap_breach(r001)"
+     }
+    ],
+    "goal": "cap_ok(r001)",
+    "rule": "R304"
+   }
+  }
  }
 }

@@ -5,7 +5,9 @@
 
 --config decided (default) shows the layer with its decisions; open shows every fork of the layer
 with all its readings and no decision (keys from keys.json "open").
---prompt base (default, the M2 prompt) or assume (adds a required assumptions list to the JSON).
+--prompt base (default, the M2 prompt), assume (adds a required assumptions list to the JSON) or
+explain (adds a required list of the rule ids the answer applies; with --only-why, only questions
+that have a why key to grade it against).
 Resumable: a record already in --out (same world, layer, config, prompt, repr, model, question, rep, no error)
 is not run again. --budget caps the summed OpenRouter cost of the whole file, earlier runs included.
 Stub models make no calls and cost nothing:
@@ -25,10 +27,10 @@ def cell(r):
     return (r["world"], r["layer"], r.get("cfg", "decided"), r.get("prompt", "base"), r["repr"], r["model"], r["qid"], r["rep"])
 
 
-def stub(model, key):
+def stub(model, key, why=None):
     if model == "stub:key":
         o = {"status": key["status"], "value": key.get("value"), "readings": key.get("readings"), "missing": None,
-             "assumptions": []}
+             "assumptions": [], "rules": (why or {}).get("core", [])}
     elif model == "stub:abstain":
         o = {"status": "UNDERDETERMINED", "value": None, "readings": None, "missing": "everything"}
     elif model == "stub:answer":
@@ -60,6 +62,7 @@ def main():
     ap.add_argument("--only-provider", nargs="+", help="serve from these providers only (cheapest available first, "
                     "falling back within the list); failed calls are recorded as errors and retried on resume")
     ap.add_argument("--templates", nargs="*", help="only these templates (e.g. Q01 Q12)")
+    ap.add_argument("--only-why", action="store_true", help="only questions with a why key (bool, true at L3 decided)")
     ap.add_argument("--limit", type=int, help="at most this many new calls")
     a = ap.parse_args()
 
@@ -83,16 +86,19 @@ def main():
     for w in a.worlds:
         d = ROOT / "worlds" / w
         qs = json.loads((d / "questions.json").read_text())
-        keys = json.loads((d / "keys.json").read_text())[a.config]
+        allkeys = json.loads((d / "keys.json").read_text())
+        keys = allkeys[a.config]
         for rep in a.repr:
             for q in qs:
                 if a.templates and q["template"] not in a.templates:
+                    continue
+                if a.only_why and q["id"] not in allkeys.get("why", {}):
                     continue
                 for i in range(a.n):
                     base = {"world": w, "layer": a.layer, "cfg": a.config, "prompt": a.prompt, "repr": rep, "mode": "read", "model": a.model,
                             "qid": q["id"], "template": q["template"], "type": q["type"], "rep": i}
                     if cell(base) not in done:
-                        jobs.append((d, q, keys[q["id"]][f"L{a.layer}"], base))
+                        jobs.append((d, q, keys[q["id"]][f"L{a.layer}"], base, allkeys.get("why", {}).get(q["id"])))
     if a.limit is not None:
         jobs = jobs[:a.limit]
     print(f"{len(done)} cells already done, {len(jobs)} to run; spent so far ${spent:.4f} of ${a.budget:.2f}")
@@ -101,14 +107,14 @@ def main():
     stats = {"spent": spent, "ok": 0, "err": 0}
 
     def run(job):
-        d, q, key, base = job
+        d, q, key, base, why = job
         if stop.is_set():
             return
         msgs = read.messages(d, a.layer, base["repr"], q, a.config, a.prompt)
         rec = dict(base, params=q["params"], config=config, ts=time.strftime("%Y-%m-%dT%H:%M:%S"))
         try:
             if a.model.startswith("stub:"):
-                res = {"content": stub(a.model, key), "reasoning": "", "cost": 0.0, "model_served": a.model}
+                res = {"content": stub(a.model, key, why), "reasoning": "", "cost": 0.0, "model_served": a.model}
             else:
                 res = openrouter.chat(a.model, msgs, temperature=a.temperature, max_tokens=a.max_tokens,
                                       reasoning=reasoning, provider=provider)

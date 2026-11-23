@@ -143,7 +143,7 @@ Cost control: do not run the full matrix before M6. Per milestone run only the n
 
 - Is the rule classification (definitional, material inference, defeasible, incompatibility, entitlement, fitness, temporal) closed? Record any rule that fits no class.
 - Can English rule text be generated from clauses for L1–L3, or must it stay co-located and verified?
-- Does `why/2` scale to L-size worlds within the per-call time limit?
+- Does `why/2` scale to L-size worlds within the per-call time limit? (Answered in M5: yes, L-s1 builds and checks 10857 trees in 1.65 s.)
 - Clojure later: the IM is plain data; re-hosting it in Clojure/EDN should need no change to the plan language. Check that nothing Prolog-specific leaks into the IM schema.
 
 ## Decisions
@@ -414,3 +414,62 @@ Cost control: do not run the full matrix before M6. Per milestone run only the n
   The M3 formal-open gap was the wording, as suspected. With a reading stated as an alternative, formal comes close to text and structured (95–97%). Overreach rises somewhat. Mean completion tokens 1817 → 2168. Because M3's formal-open numbers measured the old wording, they are superseded for any comparison across representations.
 - **Harness.** `score.py` gains a "CONFLICT keys" section (strict, both sides as AMBIGUOUS, no side picked, resolved by the L3 value, other ANSWER). `run.py`, `read.py` and the prompt are unchanged.
 - **Cost.** L2 decided $0.410, L2 open $0.207, rewording $0.135: M4 $0.75. Running total $3.37 of $5 (summed over every results file), $1.63 left for M5–M6.
+
+**2026-11-22 · M5**
+
+- **Test passes.**
+  - *Every `why` tree re-verifies.* `verify/why.pl` builds a tree for every derived predicate of layers 1–3, under the decided readings and under every reading combination of the forks it depends on, up to 200 instances per predicate (dated predicates get each world date for their date argument). `check_why/3` re-checks each tree without the meta-interpreter. Results: S-s1 1785 trees (max depth 6, 0.13 s), M-s1 6234 (depth 7, 0.54 s), L-s1 10857 (depth 9, 1.65 s), 0 failures. Negative test: replacing a fact leaf's argument makes the check reject the tree. `make verify` runs it for all 9 worlds; the whole verify takes 45 s.
+  - *Explain answers are graded against it.* `keys.json` gains `why`: for each bool question whose L3 decided key is ANSWER true, the tree (as JSON), `core` and `support`. That is 78 instances over the 9 worlds, 34 in the run worlds. `engine/keys.pl` refuses to write a tree that does not re-verify. `check.py` checks that each why entry belongs to an ANSWER-true key, that core is non-empty, that core and support are disjoint, and that every id is a rule record.
+  - Open question §6 ("does `why/2` scale to L-size worlds?"): yes. The worst case is a depth-9 tree; all 10857 L-s1 trees build and check in under 2 s.
+- **why/2 design** (`engine/why.pl`, as §4.2 planned).
+  - Answers come from the tabled program. A true instance is then justified by a meta-interpreter over the same rule records: layer ≤ L, and forked clauses only under the chosen readings.
+  - Node kinds: `rule(Id, G, Body)`, `fact`, `builtin`, `absent(G)` (closed-world negation, not expanded), `lemma(G)` (aggregates, member, or below the depth bound of 200, which no tree reaches), and `ite` for if-then-else, recording the branch taken.
+  - Limits:
+    - Positive proofs only. There is no why-not for false answers, so explain grading covers ANSWER-true keys only.
+    - A non-ground goal is justified for its first solution.
+    - The rules behind `absent` and `lemma` leaves are not expanded. They form the *support* set: rules an explanation may name. *Core* is the rules of the rule nodes: rules an explanation must name. For example, `cap_ok(r)` has core [R304] and support of 8 rules (the cap chain behind `absent(cap_breach(..))`).
+- **L3 material.**
+  - Rules R301–R313 rendered in all three representations.
+  - Relations `emergency` and `violation` (layer 0 base relations, shown from L3).
+  - L3-open has all forks c1–c6 open; L3 itself adds no fork.
+  - Older material is unchanged.
+  - Formal check fix: Q25 has a conflict goal at L2 and is settled at L3 by R313 (`resolve: authoritative_cc_on`). The formal check now evaluates `(conflict -> resolve ; goal)` for such keys, the same combination the engine keys use.
+- **Harness.**
+  - Prompt variant `explain`: the JSON line gains a required `"rules": [...]` list of applied rule ids. The template slots are renamed `extra_note` / `extra_field`; the base and assume prompts render byte-identically (checked).
+  - `parse()` normalises ids (case, whitespace; ids that are not rule ids go to `rules_unparsed`).
+  - `run.py --only-why` keeps only questions with a why key.
+  - `score.py` gains an "Explanations" section: core recall, full recall, precision against core ∪ support, "nothing outside", exact, and recall per rule class and conservative flag (for H4).
+  - Stub check (`stub:key`, which answers the key and cites core) scores 100% everywhere.
+- **Run scope.** DeepSeek, flags as in M3/M4, S-s1–3 and M-s1.
+  - L3 decided base: Q31–Q36 × 3 reps (432 calls) plus the regression subset Q01–Q05, Q11–Q17, Q21–Q26, Q91 × 1 rep (456 calls). Q25 is in the subset to check R313.
+  - Explain: the 34 why instances × 3 representations × 3 reps (306 calls).
+  - L3 open: Q31, Q32, Q35 × 1 rep (72 calls).
+- **Results, L3 decided** (`results/m5-read-L3-deepseek-v4.1-flash.md`).
+  - Correct on ANSWER keys 99–100% in every representation. New ANSWER keys: Q31, Q32 and Q35 are 72/72; Q36 is 70/72 (two arithmetic slips along the cap chain).
+  - Regression: min_layer 0 98% (Q03 3/24 again, as at L0–L2), min_layer 1 and 2 100%, Q91 100%.
+  - Q25 at L3 is 24/24: R313 (finance governs) is applied in every representation, including the instances that were CONFLICT at L2.
+  - **C5 (denial vs automatic approval) is not reported as a conflict.** Q33's 9 CONFLICT instances got 8 ANSWER true and 1 CONFLICT. Q34's 36 CONFLICT instances got 28 ANSWER, 4 CONFLICT and 4 unparsed (max_tokens on structured and text). 27 of the 28 sets include the denied, auto-approved request.
+
+    | Representation | CONFLICT | No side picked | ANSWER |
+    |---|---|---|---|
+    | formal | 0/15 | 0/15 | 15/15 |
+    | structured | 2/15 | 5/15 | 10/15 |
+    | text | 3/15 | 4/15 | 11/15 |
+
+    The model reads R312 ("an automatically approved request is approved") as a second sufficient condition. It reads R310's "denial overrides eligibility" as scoped to eligibility, and so unions the two. That is a defensible reading of the text, and it is exactly the silent resolution C5 was planted to expose. This is the opposite of Q25 at L2, where the disagreement was in the data and was always noticed. Here the conflict is between two rules, and formal (two clauses for `approved/1`) never notices it.
+  - Stability: formal 100%, structured 96%, text 92% of cells give the same status in every rep.
+- **Results, explain** (`results/m5-explain-L3-deepseek-v4.1-flash.md`). All 306 replies are ANSWER true and correct; no list is empty.
+
+  | Representation | core recall | full recall | precision | nothing outside | exact |
+  |---|---|---|---|---|---|
+  | formal | 0.97 | 94% | 0.97 | 95% | 92% |
+  | structured | 0.97 | 93% | 0.96 | 90% | 89% |
+  | text | 0.97 | 95% | 0.94 | 80% | 79% |
+
+  - Text replies more often cite rules that were checked and did not apply: R303 (exemption), R311/R312 (auto-approval), R313. The grading counts those as outside the proof. "Considered" and "applied" are not separated by the prompt. If M7 cares, the prompt should ask for applied rules only and say so more sharply, or grading could allow rules whose head is the negated or rejected alternative.
+  - H4 (conservative rules go unnamed more often): **not supported at this scale.**
+    - Recall by class: L1 definitional (conservative) 94%, L2 temporal (conservative) 91%, L3 definitional (conservative) 67% (18/27), L3 material inference 75%, defeasible 88%, entitlement 88%, incompatibility 100%.
+    - The misses are spread over the long chains (R103, R201–R204, R301, R305, R308, R310, about 9–15 each). They are not concentrated on conservative rules.
+    - n is small (34 instances, one model), so this is a pilot reading, not a result.
+- **Results, L3 open.** 72/72 correct, including Q32's 6 AMBIGUOUS keys (c2: vendor status on the request date vs today), with the right reading values.
+- **Cost.** L3 decided $0.461 (the Q31–Q36 run stopped at its $0.35 cap 8 calls short and was resumed), explain $0.131, L3 open $0.024: M5 $0.62. Running total $3.98 of $5, $1.02 left for M6.

@@ -128,7 +128,7 @@ def make(world_dir, w, seed):
             cands.append(q)
     K = engine_keys(world_dir, cands)
     sig = lambda q: json.dumps([K["decided"][q["id"]]["L3"], K["open"][q["id"]]["L3"]["status"]], sort_keys=True)
-    qs, keys = [], {"meta": {}, "decided": {}, "open": {}}
+    qs, keys = [], {"meta": {}, "decided": {}, "open": {}, "why": {}}   # why: only where a tree exists
     para = []
     for t in BANK:
         if t.get("paraphrase_of"):
@@ -146,7 +146,8 @@ def make(world_dir, w, seed):
         for i, q in enumerate(sorted(chosen, key=lambda q: q["id"])):
             new = f"{t['id']}-{i + 1}"
             for part in keys:
-                keys[part][new] = K[part][q["id"]]
+                if q["id"] in K[part]:
+                    keys[part][new] = K[part][q["id"]]
             qs.append(dict(q, id=new))
     if para:
         pq = []
@@ -159,7 +160,8 @@ def make(world_dir, w, seed):
         PK = engine_keys(world_dir, pq)
         for q in pq:
             for part in keys:
-                keys[part][q["id"]] = PK[part][q["id"]]
+                if q["id"] in PK[part]:
+                    keys[part][q["id"]] = PK[part][q["id"]]
         qs += pq
     return qs, keys
 

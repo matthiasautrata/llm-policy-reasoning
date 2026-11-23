@@ -2453,5 +2453,549 @@
     "status": "OUT_OF_SCOPE"
    }
   }
+ },
+ "why": {
+  "Q14-1": {
+   "core": [
+    "R104",
+    "R106",
+    "R109",
+    "R110",
+    "R111"
+   ],
+   "support": [
+    "R101",
+    "R102"
+   ],
+   "tree": {
+    "body": [
+     {
+      "body": [
+       {
+        "fact": "req(r191,e014,38000,software,cog,20260625,pending)"
+       },
+       {
+        "body": [
+         {
+          "fact": "req(r191,e014,38000,software,cog,20260625,pending)"
+         },
+         {
+          "fact": "emp(e014,manager,cc1_1_3_3)"
+         }
+        ],
+        "goal": "cap_scope(r191,cc1_1_3_3)",
+        "rule": "R109"
+       },
+       {
+        "body": [
+         {
+          "body": [
+           {
+            "fact": "cc(cc1_1_3_3)"
+           },
+           {
+            "lemma": "aggregate_all(sum(A),(in_subtree(B,cc1_1_3_3),booked(B,A)),77000)"
+           }
+          ],
+          "goal": "booked_total(cc1_1_3_3,77000)",
+          "rule": "R104"
+         }
+        ],
+        "goal": "committed(cc1_1_3_3,77000)",
+        "rule": "R106"
+       },
+       {
+        "body": [
+         {
+          "builtin": "115000 is 77000+38000"
+         }
+        ],
+        "branch": "else",
+        "ite": "reading(c1,with_pending),pending==pending"
+       }
+      ],
+      "goal": "exposure(r191,cc1_1_3_3,115000)",
+      "rule": "R110"
+     },
+     {
+      "fact": "cap(cc1_1_3_3,92000)"
+     },
+     {
+      "builtin": "115000>92000"
+     }
+    ],
+    "goal": "cap_breach(r191)",
+    "rule": "R111"
+   }
+  },
+  "Q14-2": {
+   "core": [
+    "R104",
+    "R106",
+    "R109",
+    "R110",
+    "R111"
+   ],
+   "support": [
+    "R101",
+    "R102"
+   ],
+   "tree": {
+    "body": [
+     {
+      "body": [
+       {
+        "fact": "req(r006,e118,45000,hardware,bolt,20260605,pending)"
+       },
+       {
+        "body": [
+         {
+          "fact": "req(r006,e118,45000,hardware,bolt,20260605,pending)"
+         },
+         {
+          "fact": "emp(e118,manager,cc3_3_3_1)"
+         }
+        ],
+        "goal": "cap_scope(r006,cc3_3_3_1)",
+        "rule": "R109"
+       },
+       {
+        "body": [
+         {
+          "body": [
+           {
+            "fact": "cc(cc3_3_3_1)"
+           },
+           {
+            "lemma": "aggregate_all(sum(A),(in_subtree(B,cc3_3_3_1),booked(B,A)),60000)"
+           }
+          ],
+          "goal": "booked_total(cc3_3_3_1,60000)",
+          "rule": "R104"
+         }
+        ],
+        "goal": "committed(cc3_3_3_1,60000)",
+        "rule": "R106"
+       },
+       {
+        "body": [
+         {
+          "builtin": "105000 is 60000+45000"
+         }
+        ],
+        "branch": "else",
+        "ite": "reading(c1,with_pending),pending==pending"
+       }
+      ],
+      "goal": "exposure(r006,cc3_3_3_1,105000)",
+      "rule": "R110"
+     },
+     {
+      "fact": "cap(cc3_3_3_1,66000)"
+     },
+     {
+      "builtin": "105000>66000"
+     }
+    ],
+    "goal": "cap_breach(r006)",
+    "rule": "R111"
+   }
+  },
+  "Q21-1": {
+   "core": [
+    "R203"
+   ],
+   "support": [],
+   "tree": {
+    "body": [
+     {
+      "fact": "vendor_status(dyne,approved,20260701,20261231)"
+     },
+     {
+      "builtin": "20260701=<20260812"
+     },
+     {
+      "builtin": "20260812=<20261231"
+     }
+    ],
+    "goal": "vendor_status_on(dyne,approved,20260812)",
+    "rule": "R203"
+   }
+  },
+  "Q24-1": {
+   "core": [
+    "R205",
+    "R206"
+   ],
+   "support": [],
+   "tree": {
+    "body": [
+     {
+      "body": [
+       {
+        "fact": "assignment(e156,cc2_1_2_1,hr,20260809)"
+       },
+       {
+        "builtin": "20260809=<20260913"
+       },
+       {
+        "absent": "assignment(e156,A,hr,B),B=<20260913,B>20260809"
+       }
+      ],
+      "goal": "cc_on(e156,cc2_1_2_1,hr,20260913)",
+      "rule": "R205"
+     },
+     {
+      "body": [
+       {
+        "fact": "assignment(e156,cc1_2_3_3,finance,20260101)"
+       },
+       {
+        "builtin": "20260101=<20260913"
+       },
+       {
+        "absent": "assignment(e156,A,finance,B),B=<20260913,B>20260101"
+       }
+      ],
+      "goal": "cc_on(e156,cc1_2_3_3,finance,20260913)",
+      "rule": "R205"
+     },
+     {
+      "builtin": "cc2_1_2_1\\==cc1_2_3_3"
+     }
+    ],
+    "goal": "disputed_on(e156,20260913)",
+    "rule": "R206"
+   }
+  },
+  "Q26-1": {
+   "core": [
+    "R207"
+   ],
+   "support": [],
+   "tree": {
+    "body": [
+     {
+      "fact": "exemption(capex,capital,20260101)"
+     },
+     {
+      "builtin": "20260101=<20260624"
+     },
+     {
+      "absent": "exemption_withdrawn(capex,A),A=<20260624"
+     }
+    ],
+    "goal": "exemption_in_force(capex,capital,20260624)",
+    "rule": "R207"
+   }
+  },
+  "Q31-1": {
+   "core": [
+    "R103",
+    "R201",
+    "R202",
+    "R301"
+   ],
+   "support": [],
+   "tree": {
+    "body": [
+     {
+      "fact": "req(r051,e100,45000,software,cog,20260627,pending)"
+     },
+     {
+      "body": [
+       {
+        "fact": "reports(e100,e095)"
+       },
+       {
+        "body": [
+         {
+          "fact": "reports(e095,e081)"
+         }
+        ],
+        "goal": "chain(e095,e081)",
+        "rule": "R103"
+       }
+      ],
+      "goal": "chain(e100,e081)",
+      "rule": "R103"
+     },
+     {
+      "fact": "emp(e081,director,cc3)"
+     },
+     {
+      "body": [
+       {
+        "fact": "req(r051,e100,45000,software,cog,20260627,pending)"
+       }
+      ],
+      "goal": "governing_date(r051,20260627)",
+      "rule": "R201"
+     },
+     {
+      "body": [
+       {
+        "fact": "role_limit_version(director,100000,20260101,20261231)"
+       },
+       {
+        "builtin": "20260101=<20260627"
+       },
+       {
+        "builtin": "20260627=<20261231"
+       }
+      ],
+      "goal": "limit_on(director,100000,20260627)",
+      "rule": "R202"
+     },
+     {
+      "builtin": "100000>=45000"
+     }
+    ],
+    "goal": "approver(r051,e081)",
+    "rule": "R301"
+   }
+  },
+  "Q32-1": {
+   "core": [
+    "R201",
+    "R203",
+    "R204",
+    "R305"
+   ],
+   "support": [],
+   "tree": {
+    "body": [
+     {
+      "body": [
+       {
+        "fact": "req(r106,e105,30000,capital,edge,20260601,pending)"
+       },
+       {
+        "body": [
+         {
+          "fact": "req(r106,e105,30000,capital,edge,20260601,pending)"
+         }
+        ],
+        "goal": "governing_date(r106,20260601)",
+        "rule": "R201"
+       },
+       {
+        "body": [
+         {
+          "fact": "vendor_status(edge,approved,20260101,20261231)"
+         },
+         {
+          "builtin": "20260101=<20260601"
+         },
+         {
+          "builtin": "20260601=<20261231"
+         }
+        ],
+        "goal": "vendor_status_on(edge,approved,20260601)",
+        "rule": "R203"
+       }
+      ],
+      "goal": "vendor_approved(r106)",
+      "rule": "R204"
+     }
+    ],
+    "goal": "vendor_cleared(r106)",
+    "rule": "R305"
+   }
+  },
+  "Q33-2": {
+   "core": [
+    "R103",
+    "R201",
+    "R202",
+    "R203",
+    "R204",
+    "R301",
+    "R302",
+    "R304",
+    "R305",
+    "R308",
+    "R310"
+   ],
+   "support": [
+    "R101",
+    "R102",
+    "R104",
+    "R105",
+    "R106",
+    "R109",
+    "R110",
+    "R111",
+    "R309"
+   ],
+   "tree": {
+    "body": [
+     {
+      "body": [
+       {
+        "body": [
+         {
+          "body": [
+           {
+            "fact": "req(r038,e096,20000,hardware,dyne,20260825,pending)"
+           },
+           {
+            "body": [
+             {
+              "fact": "reports(e096,e095)"
+             }
+            ],
+            "goal": "chain(e096,e095)",
+            "rule": "R103"
+           },
+           {
+            "fact": "emp(e095,senior_manager,cc3_2)"
+           },
+           {
+            "body": [
+             {
+              "fact": "req(r038,e096,20000,hardware,dyne,20260825,pending)"
+             }
+            ],
+            "goal": "governing_date(r038,20260825)",
+            "rule": "R201"
+           },
+           {
+            "body": [
+             {
+              "fact": "role_limit_version(senior_manager,50000,20260101,20261231)"
+             },
+             {
+              "builtin": "20260101=<20260825"
+             },
+             {
+              "builtin": "20260825=<20261231"
+             }
+            ],
+            "goal": "limit_on(senior_manager,50000,20260825)",
+            "rule": "R202"
+           },
+           {
+            "builtin": "50000>=20000"
+           }
+          ],
+          "goal": "approver(r038,e095)",
+          "rule": "R301"
+         }
+        ],
+        "goal": "has_approver(r038)",
+        "rule": "R302"
+       },
+       {
+        "body": [
+         {
+          "fact": "req(r038,e096,20000,hardware,dyne,20260825,pending)"
+         },
+         {
+          "absent": "cap_breach(r038)"
+         }
+        ],
+        "goal": "cap_ok(r038)",
+        "rule": "R304"
+       },
+       {
+        "body": [
+         {
+          "body": [
+           {
+            "fact": "req(r038,e096,20000,hardware,dyne,20260825,pending)"
+           },
+           {
+            "body": [
+             {
+              "fact": "req(r038,e096,20000,hardware,dyne,20260825,pending)"
+             }
+            ],
+            "goal": "governing_date(r038,20260825)",
+            "rule": "R201"
+           },
+           {
+            "body": [
+             {
+              "fact": "vendor_status(dyne,approved,20260701,20261231)"
+             },
+             {
+              "builtin": "20260701=<20260825"
+             },
+             {
+              "builtin": "20260825=<20261231"
+             }
+            ],
+            "goal": "vendor_status_on(dyne,approved,20260825)",
+            "rule": "R203"
+           }
+          ],
+          "goal": "vendor_approved(r038)",
+          "rule": "R204"
+         }
+        ],
+        "goal": "vendor_cleared(r038)",
+        "rule": "R305"
+       }
+      ],
+      "goal": "eligible(r038)",
+      "rule": "R308"
+     },
+     {
+      "absent": "denied(r038)"
+     }
+    ],
+    "goal": "approved(r038)",
+    "rule": "R310"
+   }
+  },
+  "Q36-2": {
+   "core": [
+    "R201",
+    "R207",
+    "R303",
+    "R304"
+   ],
+   "support": [],
+   "tree": {
+    "body": [
+     {
+      "body": [
+       {
+        "fact": "req(r215,e276,60000,capital,cog,20260712,pending)"
+       },
+       {
+        "body": [
+         {
+          "fact": "req(r215,e276,60000,capital,cog,20260712,pending)"
+         }
+        ],
+        "goal": "governing_date(r215,20260712)",
+        "rule": "R201"
+       },
+       {
+        "body": [
+         {
+          "fact": "exemption(capex,capital,20260101)"
+         },
+         {
+          "builtin": "20260101=<20260712"
+         },
+         {
+          "absent": "exemption_withdrawn(capex,A),A=<20260712"
+         }
+        ],
+        "goal": "exemption_in_force(capex,capital,20260712)",
+        "rule": "R207"
+       }
+      ],
+      "goal": "exempt(r215)",
+      "rule": "R303"
+     }
+    ],
+    "goal": "cap_ok(r215)",
+    "rule": "R304"
+   }
+  }
  }
 }

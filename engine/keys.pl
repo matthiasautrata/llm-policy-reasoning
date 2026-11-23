@@ -13,8 +13,11 @@
                        distinct values the material supports, for sym and int goals; both, for bool)
       AMBIGUOUS        live readings give different results (readings: "c1=..,c4=.." -> value | "CONFLICT")
     min_layer and forks are derived here from the dependency closure of goal and conflict (meta).
+    why: for each bool question whose L3 decided key is true, the why/4 tree of its goal (checked with
+    check_why/3), its core rules and support rules (engine/why.pl); explain answers are graded on them.
 */
 :- use_module(core).
+:- use_module(why).
 :- if(exists_source(library(json))).
 :- use_module(library(json)).
 :- else.
@@ -33,7 +36,7 @@ main :-
     ( Bad == [] -> true ; format(user_error, "rule base not stratified: ~q~n", [Bad]), halt(1) ),
     load_world(World),
     setup_call_cleanup(open(QF, read, S), json_read_dict(S, Qs, [value_string_as(string)]), close(S)),
-    foldl(question_ctx, Qs, _{meta:_{}, decided:_{}, open:_{}}, Keys),
+    foldl(question_ctx, Qs, _{meta:_{}, decided:_{}, open:_{}, why:_{}}, Keys),
     setup_call_cleanup(open(Out, write, O), json_write_dict(O, Keys, [width(0)]), close(O)).
 
 question_ctx(Q, K0, K) :-
@@ -48,7 +51,15 @@ question(Q, K0, K) :-
     dict_pairs(DD, _, Dec), dict_pairs(OD, _, Open),
     ( Meta = scope(ML, Fs) -> MD = _{min_layer:ML, forks:Fs} ; MD = _{min_layer:null, forks:[]} ),
     put_dict(Id, K0.meta, MD, Me), put_dict(Id, K0.decided, DD, De), put_dict(Id, K0.open, OD, Op),
-    K = _{meta:Me, decided:De, open:Op}.
+    ( why_entry(P, DD.'L3', W) -> put_dict(Id, K0.why, W, Wh) ; Wh = K0.why ),
+    K = _{meta:Me, decided:De, open:Op, why:Wh}.
+
+%% why_entry(+Parsed, +L3DecidedKey, -Entry): for a bool question keyed true at L3 (decided), the
+%% justification an explanation is graded against: the proof tree (re-verified here) and its rules.
+why_entry(q(bool, G-_, _, _), _{status:"ANSWER", value:true}, _{tree:TD, core:Core, support:Sup}) :-
+    why(3, [], G, T),
+    ( check_why(3, [], T) -> true ; throw(error(why_does_not_verify(G), _)) ),
+    why_rules(3, [], T, Core, Sup), tree_dict(T, TD).
 
 %% parse(+QuestionDict, -q(Type, Goal-V, Conflict, Resolve-RV))
 parse(Q, q(Type, G-V, C, R-RV)) :-

@@ -2492,5 +2492,357 @@
     "status": "OUT_OF_SCOPE"
    }
   }
+ },
+ "why": {
+  "Q14-1": {
+   "core": [
+    "R104",
+    "R106",
+    "R109",
+    "R110",
+    "R111"
+   ],
+   "support": [
+    "R101",
+    "R102"
+   ],
+   "tree": {
+    "body": [
+     {
+      "body": [
+       {
+        "fact": "req(r008,e077,8000,software,acme,20260816,pending)"
+       },
+       {
+        "body": [
+         {
+          "fact": "req(r008,e077,8000,software,acme,20260816,pending)"
+         },
+         {
+          "fact": "emp(e077,analyst,cc2_2_1)"
+         }
+        ],
+        "goal": "cap_scope(r008,cc2_2_1)",
+        "rule": "R109"
+       },
+       {
+        "body": [
+         {
+          "body": [
+           {
+            "fact": "cc(cc2_2_1)"
+           },
+           {
+            "lemma": "aggregate_all(sum(A),(in_subtree(B,cc2_2_1),booked(B,A)),49000)"
+           }
+          ],
+          "goal": "booked_total(cc2_2_1,49000)",
+          "rule": "R104"
+         }
+        ],
+        "goal": "committed(cc2_2_1,49000)",
+        "rule": "R106"
+       },
+       {
+        "body": [
+         {
+          "builtin": "57000 is 49000+8000"
+         }
+        ],
+        "branch": "else",
+        "ite": "reading(c1,with_pending),pending==pending"
+       }
+      ],
+      "goal": "exposure(r008,cc2_2_1,57000)",
+      "rule": "R110"
+     },
+     {
+      "fact": "cap(cc2_2_1,47000)"
+     },
+     {
+      "builtin": "57000>47000"
+     }
+    ],
+    "goal": "cap_breach(r008)",
+    "rule": "R111"
+   }
+  },
+  "Q21-1": {
+   "core": [
+    "R203"
+   ],
+   "support": [],
+   "tree": {
+    "body": [
+     {
+      "fact": "vendor_status(dyne,approved,20260701,20261231)"
+     },
+     {
+      "builtin": "20260701=<20260904"
+     },
+     {
+      "builtin": "20260904=<20261231"
+     }
+    ],
+    "goal": "vendor_status_on(dyne,approved,20260904)",
+    "rule": "R203"
+   }
+  },
+  "Q24-2": {
+   "core": [
+    "R205",
+    "R206"
+   ],
+   "support": [],
+   "tree": {
+    "body": [
+     {
+      "body": [
+       {
+        "fact": "assignment(e093,cc2_1_3,hr,20260622)"
+       },
+       {
+        "builtin": "20260622=<20260628"
+       },
+       {
+        "absent": "assignment(e093,A,hr,B),B=<20260628,B>20260622"
+       }
+      ],
+      "goal": "cc_on(e093,cc2_1_3,hr,20260628)",
+      "rule": "R205"
+     },
+     {
+      "body": [
+       {
+        "fact": "assignment(e093,cc2_3_3,finance,20260101)"
+       },
+       {
+        "builtin": "20260101=<20260628"
+       },
+       {
+        "absent": "assignment(e093,A,finance,B),B=<20260628,B>20260101"
+       }
+      ],
+      "goal": "cc_on(e093,cc2_3_3,finance,20260628)",
+      "rule": "R205"
+     },
+     {
+      "builtin": "cc2_1_3\\==cc2_3_3"
+     }
+    ],
+    "goal": "disputed_on(e093,20260628)",
+    "rule": "R206"
+   }
+  },
+  "Q26-1": {
+   "core": [
+    "R207"
+   ],
+   "support": [],
+   "tree": {
+    "body": [
+     {
+      "fact": "exemption(capex,capital,20260101)"
+     },
+     {
+      "builtin": "20260101=<20260719"
+     },
+     {
+      "absent": "exemption_withdrawn(capex,A),A=<20260719"
+     }
+    ],
+    "goal": "exemption_in_force(capex,capital,20260719)",
+    "rule": "R207"
+   }
+  },
+  "Q26-2": {
+   "core": [
+    "R207"
+   ],
+   "support": [],
+   "tree": {
+    "body": [
+     {
+      "fact": "exemption(capex,capital,20260101)"
+     },
+     {
+      "builtin": "20260101=<20260709"
+     },
+     {
+      "absent": "exemption_withdrawn(capex,A),A=<20260709"
+     }
+    ],
+    "goal": "exemption_in_force(capex,capital,20260709)",
+    "rule": "R207"
+   }
+  },
+  "Q31-2": {
+   "core": [
+    "R103",
+    "R201",
+    "R202",
+    "R301"
+   ],
+   "support": [],
+   "tree": {
+    "body": [
+     {
+      "fact": "req(r075,e020,45000,hardware,fern,20260710,pending)"
+     },
+     {
+      "body": [
+       {
+        "fact": "reports(e020,e019)"
+       },
+       {
+        "body": [
+         {
+          "fact": "reports(e019,e014)"
+         },
+         {
+          "body": [
+           {
+            "fact": "reports(e014,e000)"
+           }
+          ],
+          "goal": "chain(e014,e000)",
+          "rule": "R103"
+         }
+        ],
+        "goal": "chain(e019,e000)",
+        "rule": "R103"
+       }
+      ],
+      "goal": "chain(e020,e000)",
+      "rule": "R103"
+     },
+     {
+      "fact": "emp(e000,vp,company)"
+     },
+     {
+      "body": [
+       {
+        "fact": "req(r075,e020,45000,hardware,fern,20260710,pending)"
+       }
+      ],
+      "goal": "governing_date(r075,20260710)",
+      "rule": "R201"
+     },
+     {
+      "body": [
+       {
+        "fact": "role_limit_version(vp,500000,20260101,20261231)"
+       },
+       {
+        "builtin": "20260101=<20260710"
+       },
+       {
+        "builtin": "20260710=<20261231"
+       }
+      ],
+      "goal": "limit_on(vp,500000,20260710)",
+      "rule": "R202"
+     },
+     {
+      "builtin": "500000>=45000"
+     }
+    ],
+    "goal": "approver(r075,e000)",
+    "rule": "R301"
+   }
+  },
+  "Q32-1": {
+   "core": [
+    "R201",
+    "R203",
+    "R204",
+    "R305"
+   ],
+   "support": [],
+   "tree": {
+    "body": [
+     {
+      "body": [
+       {
+        "fact": "req(r026,e041,20000,hardware,bolt,20260619,pending)"
+       },
+       {
+        "body": [
+         {
+          "fact": "req(r026,e041,20000,hardware,bolt,20260619,pending)"
+         }
+        ],
+        "goal": "governing_date(r026,20260619)",
+        "rule": "R201"
+       },
+       {
+        "body": [
+         {
+          "fact": "vendor_status(bolt,approved,20260101,20260731)"
+         },
+         {
+          "builtin": "20260101=<20260619"
+         },
+         {
+          "builtin": "20260619=<20260731"
+         }
+        ],
+        "goal": "vendor_status_on(bolt,approved,20260619)",
+        "rule": "R203"
+       }
+      ],
+      "goal": "vendor_approved(r026)",
+      "rule": "R204"
+     }
+    ],
+    "goal": "vendor_cleared(r026)",
+    "rule": "R305"
+   }
+  },
+  "Q35-2": {
+   "core": [
+    "R309"
+   ],
+   "support": [],
+   "tree": {
+    "body": [
+     {
+      "fact": "req(r010,e113,8000,software,acme,20260727,pending)"
+     },
+     {
+      "fact": "violation(e113)"
+     }
+    ],
+    "goal": "denied(r010)",
+    "rule": "R309"
+   }
+  },
+  "Q36-2": {
+   "core": [
+    "R304"
+   ],
+   "support": [
+    "R101",
+    "R102",
+    "R104",
+    "R105",
+    "R106",
+    "R109",
+    "R110",
+    "R111"
+   ],
+   "tree": {
+    "body": [
+     {
+      "fact": "req(r017,e096,3000,hardware,dyne,20260910,pending)"
+     },
+     {
+      "absent": "cap_breach(r017)"
+     }
+    ],
+    "goal": "cap_ok(r017)",
+    "rule": "R304"
+   }
+  }
  }
 }

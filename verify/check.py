@@ -13,12 +13,17 @@ Per world:
   rows       every rendered representation of every layer holds exactly the world's rows of each
              relation it shows, none dropped, merged or added (so both sides of a disagreement
              survive ingestion: hr's and finance's assignment records alike)
-  formal     each rendered formal.pl with rules (L1, L2, decided and open), loaded on its own in
+  formal     each rendered formal.pl with rules (L1-L3, decided and open), loaded on its own in
              SWI-Prolog, reproduces the keys of its layer: decided ANSWER keys as they are; open keys
              under every combination of the question's open forks, asserted as reading/2 facts; a
              question keyed UNDERDETERMINED raises an existence error (its predicates are absent); and
              for a question keyed CONFLICT its conflict goal holds and, for a sym or int goal,
-             the goal's values are exactly the key's sides (both survive ingestion)
+             the goal's values are exactly the key's sides (both survive ingestion); where a resolve
+             rule settles a conflict (Q25 at L3, R313), the resolve goal gives the ANSWER key
+  why        verify/why.pl: the why/2 tree of every true instance of every derived predicate (L3,
+             decided and every reading combination; up to 200 instances per predicate and readings)
+             re-verifies with check_why/3, and a corrupted tree is rejected; the why keys
+             (keys.json "why", re-checked by keys.pl) name rules of the question's layer
 All worlds, after the per-world checks:
   as-of      each dated template (Q21-Q23, Q26) has instances whose key differs from what the
              current (today) value would give, so answering from L0's current values is caught
@@ -31,9 +36,9 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from questions.sample import engine_keys     # noqa: E402
 from verify import reference                 # noqa: E402
-from render.common import FORKS, material_dir, relations   # noqa: E402
+from render.common import FORKS, RULES, material_dir, relations   # noqa: E402
 
-FORMAL = [(1, "decided"), (1, "open"), (2, "decided"), (2, "open")]   # formal.pl files that must reproduce the keys
+FORMAL = [(1, "decided"), (1, "open"), (2, "decided"), (2, "open"), (3, "decided"), (3, "open")]   # formal.pl files that must reproduce the keys
 MATERIAL = [(0, "decided")] + FORMAL                                  # every rendered material directory
 
 
@@ -63,7 +68,10 @@ def formal(d, qs, keys):
                     exp = ("value", v)
                 else:
                     exp = ("error", "existence_error")
-                jobs.append({"id": q["id"], "type": q["type"], "goal": q["goal"], "readings": rs})
+                goal = q["goal"]
+                if q.get("resolve"):              # an ANSWER despite the conflict goal: the resolve rule settles it
+                    goal = f"(({q['conflict']}) -> ({q['resolve']}) ; ({q['goal']}))"
+                jobs.append({"id": q["id"], "type": q["type"], "goal": goal, "readings": rs})
                 want.append(exp)
         with tempfile.TemporaryDirectory() as tmp:
             jf, of = pathlib.Path(tmp, "jobs.json"), pathlib.Path(tmp, "out.json")
@@ -77,6 +85,19 @@ def formal(d, qs, keys):
                 errs.append(f"{tag}: formal.pl gives {g.get('value', g.get('error'))}, key {exp}")
             if kind == "error" and exp not in (g.get("error") or ""):
                 errs.append(f"{tag}: keyed UNDERDETERMINED but formal.pl gives {g.get('value')}")
+    return errs
+
+
+def why(d, keys):
+    """verify/why.pl over the world, and the why keys' rules against the rule records."""
+    p = subprocess.run(["swipl", str(ROOT / "verify/why.pl"), str(ROOT), str(d), "3"], capture_output=True, text=True)
+    errs = [] if p.returncode == 0 else [f"why: {p.stdout.strip()} {p.stderr.strip()}"]
+    ids = {r["id"] for r in RULES["rules"]}
+    for q, e in keys.get("why", {}).items():
+        if keys["decided"][q]["L3"] != {"status": "ANSWER", "value": True}:
+            errs.append(f"why {q}: a why key on a question not keyed true at L3")
+        if not e["core"] or not set(e["core"] + e["support"]) <= ids or set(e["core"]) & set(e["support"]):
+            errs.append(f"why {q}: core {e['core']} / support {e['support']} malformed")
     return errs
 
 
@@ -165,6 +186,7 @@ def check(d):
 
     errs += rows(d, w)
     errs += formal(d, qs, keys)
+    errs += why(d, keys)
 
     R = w["relations"]
     today = R["today"][0][0]
@@ -208,7 +230,7 @@ def main():
     for d in dirs:
         errs = check(d)
         n = len(json.loads((d / "questions.json").read_text()))
-        print(f"{d.name}: {n} questions x 4 layers x 2 configs (+ rows, L1/L2 formal), {'ok' if not errs else f'{len(errs)} mismatches'}")
+        print(f"{d.name}: {n} questions x 4 layers x 2 configs (+ rows, L1-L3 formal, why), {'ok' if not errs else f'{len(errs)} mismatches'}")
         for e in errs[:20]:
             print("  " + e)
         bad += bool(errs)

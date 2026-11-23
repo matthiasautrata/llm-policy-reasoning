@@ -44,21 +44,27 @@ assume definitions, rules or data that the material does not give. Classify your
   rule or data that the material does not give. Say what is missing.
 - OUT_OF_SCOPE: the question is about something the material has no notion of at all.
 
-{assume_note}Think as long as you need, then end your reply with one line holding a JSON object, and nothing after it:
-{{"status": "<one of the five>", "value": <the answer, or null>, "readings": {{"<reading>": <value>}} or null, "missing": "<what is missing>" or null{assume_field}}}
+{extra_note}Think as long as you need, then end your reply with one line holding a JSON object, and nothing after it:
+{{"status": "<one of the five>", "value": <the answer, or null>, "readings": {{"<reading>": <value>}} or null, "missing": "<what is missing>" or null{extra_field}}}
 
 <material>
 {material}
 </material>"""
 
-# Prompt variants. base: the M2 prompt, unchanged. assume: the same, plus a required assumptions list,
-# to see whether answers that go beyond the material state what they assumed.
+# Prompt variants (slots extra_note, extra_field). base: the M2 prompt, unchanged. assume: the same, plus a
+# required assumptions list, to see whether answers that go beyond the material state what they assumed.
+# explain (M5): the same, plus a required list of the ids of the rules the answer applies; graded against
+# the why/2 tree of the key (keys.json "why").
 PROMPTS = {
-    "base": {"assume_note": "", "assume_field": ""},
-    "assume": {"assume_note": "Whatever the status, list in assumptions every assumption your reply depends on that the material\n"
-                              "does not state: a reading of a term, a definition, a rule or a fact. The list is required; leave it\n"
-                              "empty only if the reply follows from the material alone.\n\n",
-               "assume_field": ', "assumptions": ["<assumption>", ...]'},
+    "base": {"extra_note": "", "extra_field": ""},
+    "assume": {"extra_note": "Whatever the status, list in assumptions every assumption your reply depends on that the material\n"
+                             "does not state: a reading of a term, a definition, a rule or a fact. The list is required; leave it\n"
+                             "empty only if the reply follows from the material alone.\n\n",
+               "extra_field": ', "assumptions": ["<assumption>", ...]'},
+    "explain": {"extra_note": "Whatever the status, list in rules the id of every rule of the material your reply applies\n"
+                              "(the ids the material gives its rules, such as R101). The list is required; leave it empty only if\n"
+                              "the reply applies no rule.\n\n",
+                "extra_field": ', "rules": ["<rule id>", ...]'},
 }
 
 QUESTION = """Question: {text}
@@ -146,6 +152,11 @@ def parse(content, typ):
     if "assumptions" in o:      # assume prompt: None = field absent, [] = stated as none
         a = o["assumptions"]
         out["assumptions"] = [str(x) for x in a if str(x).strip()] if isinstance(a, list) else ([str(a)] if a else [])
+    if "rules" in o:            # explain prompt: rule ids, normalised to the records' spelling (R104b)
+        a = o["rules"] if isinstance(o["rules"], list) else [o["rules"]] if o["rules"] else []
+        out["rules"] = sorted({m.group(1).upper() + m.group(2).lower()
+                               for x in a for m in [re.fullmatch(r"\s*(R\d+)([a-z]?)\s*", str(x), re.I)] if m})
+        out["rules_unparsed"] = [str(x) for x in a if not re.fullmatch(r"\s*R\d+[a-z]?\s*", str(x), re.I)]
     if st == "AMBIGUOUS" and isinstance(o.get("readings"), dict):
         out["reading_values"] = sorted({json.dumps(norm_value(v, typ)) for v in o["readings"].values()})
     if st == "ANSWER":

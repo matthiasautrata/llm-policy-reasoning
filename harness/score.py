@@ -156,6 +156,7 @@ def main():
             top = k["decided"][r["qid"]]["L3"]
             s["side"] = "resolved" if top["status"] == "ANSWER" and r["parsed"]["value"] == norm_value(top["value"], r["type"]) else "other"
         scored.append((r, s))
+    scored_s = {id(r): s for r, s in scored}
 
     def by(f):
         g = collections.defaultdict(list)
@@ -297,6 +298,59 @@ def main():
         L.append(table(rows, [*LC, "repr", "n", "CONFLICT", "AMBIGUOUS = both sides", "no side picked",
                               "ANSWER = resolved", "ANSWER = other", "model statuses"]))
         L.append("")
+
+    ex = [(r, s) for r, s in scored if "rules" in (r.get("parsed") or {}) and r["qid"] in keys[r["world"]].get("why", {})]
+    if ex:
+        L.append("## Explanations (explain prompt, graded against the why/2 tree)\n")
+        L.append("Only replies whose key and answer are both ANSWER true (why/2 justifies true answers only). "
+                 "Core: the rules of the tree's rule nodes; an explanation must name them. Support: the rules behind "
+                 "the tree's closed-world negations, aggregates and if-then-else conditions; an explanation may name "
+                 "them. Ids are compared without a reading suffix (R104b = R104). Recall = share of core named; "
+                 "precision = share of named rules that are in core or support; exact = recall 1 and nothing outside "
+                 "core and support.\n")
+        bare = lambda i: re.sub(r"[a-z]$", "", i)
+        rec = []
+        for r, s in ex:
+            w = keys[r["world"]]["why"][r["qid"]]
+            got = {bare(i) for i in r["parsed"]["rules"]}
+            core, ok = set(w["core"]), set(w["core"]) | set(w["support"])
+            sc = dict(correct=s["key"] == "ANSWER" and r["parsed"].get("status") == "ANSWER" and r["parsed"].get("value") is True,
+                      recall=len(got & core) / len(core), prec=len(got & ok) / len(got) if got else None,
+                      n=len(got), core=core, got=got)
+            sc["full"] = sc["recall"] == 1
+            sc["clean"] = got <= ok
+            rec.append((r, sc))
+        rows = []
+        g = collections.defaultdict(list)
+        for r, sc in rec:
+            g[(*lc(r, scored_s[id(r)]), r["repr"])].append(sc)
+        for kk, v in sorted(g.items(), key=lambda kv: str(kv[0])):
+            c = [x for x in v if x["correct"]]
+            ps = [x["prec"] for x in c if x["prec"] is not None]
+            mean = lambda xs: f"{sum(xs) / len(xs):.2f}" if xs else "-"
+            rows.append([*kk, len(v), len(c), mean([x["recall"] for x in c]), pct(sum(x["full"] for x in c), len(c)),
+                         mean(ps), pct(sum(x["clean"] for x in c), len(c)), pct(sum(x["full"] and x["clean"] for x in c), len(c)),
+                         sum(x["n"] == 0 for x in c), mean([x["n"] for x in c])])
+        L.append(table(rows, [*LC, "repr", "n", "ANSWER true", "core recall", "full recall", "precision",
+                              "nothing outside", "exact", "empty list", "mean ids named"]))
+        L.append("")
+        rr = {x["id"]: x for x in yaml.safe_load((ROOT / "rules/rules.yaml").read_text())["rules"]}
+        cls = collections.defaultdict(lambda: [0, 0])
+        for r, sc in rec:
+            if sc["correct"]:
+                for i in sc["core"]:
+                    k2 = (rr[i]["layer"], rr[i]["class"], rr[i]["conservative"])
+                    cls[k2][0] += 1; cls[k2][1] += i in sc["got"]
+        L.append("Core recall per rule class (correct replies, all representations): a needed rule of the class, named or not. "
+                 "H4 predicts conservative rules (rearranging what is asserted) are left unnamed more often.\n")
+        L.append(table([[*k2, n, pct(h, n)] for k2, (n, h) in sorted(cls.items(), key=lambda kv: str(kv[0]))],
+                       ["layer", "class", "conservative", "needed", "named"]))
+        L.append("")
+        miss = collections.Counter(i for _, sc in rec if sc["correct"] for i in sc["core"] - sc["got"])
+        extra = collections.Counter(i for r, sc in rec if sc["correct"]
+                                    for i in sc["got"] - sc["core"] - set(keys[r["world"]]["why"][r["qid"]]["support"]))
+        L.append("Most often missed core rules: " + (", ".join(f"{i} {n}" for i, n in miss.most_common(10)) or "none") + ".")
+        L.append("Most often named outside core and support: " + (", ".join(f"{i} {n}" for i, n in extra.most_common(10)) or "none") + ".\n")
 
     L.append("## Stability across repetitions\n")
     rows = []
