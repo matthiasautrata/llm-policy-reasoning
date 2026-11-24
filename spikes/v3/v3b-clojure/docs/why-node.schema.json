@@ -1,0 +1,221 @@
+{
+  "$ref": "#/definitions/v3b.model.node",
+  "definitions": {
+    "v3b.model.node": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "rule"
+            },
+            "id": {
+              "type": "string"
+            },
+            "goal": {
+              "$ref": "#/definitions/v3b.model.goal"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/v3b.model.node"
+              }
+            },
+            "failed": {
+              "oneOf": [
+                {
+                  "$ref": "#/definitions/v3b.model.node"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "goal",
+            "children"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "claim"
+            },
+            "id": {
+              "type": "string"
+            },
+            "goal": {
+              "$ref": "#/definitions/v3b.model.goal"
+            },
+            "asserted_by": {
+              "type": "string"
+            },
+            "asserted_at": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/v3b.model.node"
+              }
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "goal",
+            "asserted_by",
+            "asserted_at",
+            "children"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "fetch"
+            },
+            "concept": {
+              "type": "string"
+            },
+            "filters": {
+              "type": "object"
+            },
+            "sql": {
+              "type": "string"
+            },
+            "params": {
+              "type": "array"
+            },
+            "rows": {
+              "type": "integer"
+            },
+            "row": {
+              "oneOf": [
+                {
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "type",
+            "concept",
+            "filters",
+            "sql",
+            "params",
+            "rows"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "fact"
+            },
+            "goal": {
+              "$ref": "#/definitions/v3b.model.goal"
+            },
+            "holds": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type",
+            "goal"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "absent"
+            },
+            "goal": {
+              "$ref": "#/definitions/v3b.model.goal"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/v3b.model.node"
+              }
+            }
+          },
+          "required": [
+            "type",
+            "goal"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "defeated_by"
+            },
+            "id": {
+              "type": "string"
+            },
+            "target": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/v3b.model.node"
+              }
+            },
+            "blocked": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "target",
+            "children"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "superior"
+            },
+            "winner": {
+              "type": "string"
+            },
+            "loser": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string",
+              "enum": [
+                "explicit",
+                "authority:R313",
+                "later",
+                "strict"
+              ]
+            }
+          },
+          "required": [
+            "type",
+            "winner",
+            "loser",
+            "source"
+          ]
+        }
+      ]
+    },
+    "v3b.model.goal": {
+      "type": "array",
+      "items": {}
+    }
+  }
+}

@@ -11,3 +11,5 @@ spikes/v3/shared/slice.duckdb*
 spikes/v3/**/.cpcache/
 spikes/v3/**/target/
 spikes/v3/v3b-clojure/data/
+spikes/v3/v3b-clojure/classes/
+spikes/v3/v3b-clojure/.cpcache/

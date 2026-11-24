@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# V3b CLI (CONTRACT.md): session script on stdin -> {"results": [...]} on stdout. Run from the repo root.
+# JAVA_HOME is canonicalised: environ (a Datahike dependency) prints a warning to stdout when the
+# JAVA_HOME env var and the java.home property differ only by a symlink.
+HERE="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$(cd "$HERE/../../.." && pwd)"
+[ -n "$JAVA_HOME" ] && export JAVA_HOME="$(cd "$JAVA_HOME" && pwd -P)"
+cd "$HERE" && exec clojure -J--enable-native-access=ALL-UNNAMED -J-Dv3b.root="$ROOT" -M:run "$@"
