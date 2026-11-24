@@ -1,0 +1,11 @@
+;; Runtime extension (acceptance §6.3): one rule and one claim added to a running System A.
+;; Expected effect (keys.json "changed"): Q07 vendor check of r000002 true -> false (R307 defeats R306);
+;; Q14 C1 on 2026-07-01 holds -> rebutted (C6 defeats required sub-claim C1.2).
+[{:id :R307 :kind :defeater :owner :procurement :class :exception
+  :doc "Exception to the exception: the emergency waiver (R306) does not apply to a big capital request."
+  :head [:neg [:vendor_cleared ?r]]
+  :body [[:fetch :request {:id ?r :emergency true} {}] [:vendor_status_for ?r "suspended"] [:big_capital ?r]]
+  :superior-to [:R306]}
+ {:id :C6 :about "vendor:bolt" :assertion [:sanctioned "bolt"]
+  :asserted_by :risk :asserted_at #inst "2026-06-03" :valid_from #inst "2026-06-01" :valid_to nil
+  :backing "Sanctions list update 2026-06 (supersedes screening S-0220 for bolt)" :qualifier "certainly"}]

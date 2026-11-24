@@ -1,0 +1,318 @@
+;; Spike v3 canonical slice: physical model, semantic layer, vocabulary, rules, claims.
+;; Authored once; input to both spikes (V3a reads it with an EDN DCG, V3b natively).
+;; Detail data is NOT here: it lives in DuckDB / Postgres and is reached only through
+;; fetch(concept, filters). Rules reference concepts, never SQL.
+;;
+;; Conventions
+;;   ids        strings with a kind prefix ("table:req", "term:booked_total"); rule and claim ids keywords
+;;   constants  strings ("approved", "cc0049"), integers, booleans; dates are ISO strings or #inst
+;;   variables  symbols starting with ? (in rule heads and bodies)
+;;   body       a vector of literals, evaluated left to right:
+;;                [:pred arg ...]                    a derived literal (another rule's head, or a claim)
+;;                [:fetch :concept {col term} {col ?var}]  a concept lookup; bound terms filter, ?vars bind
+;;                [:not literal]                     the literal is not defeasibly provable
+;;                [:< a b] [:<= a b] [:> a b] [:>= a b] [:= a b]   comparison (numbers, ISO dates)
+;;                [:is ?x [:+ a b]] / [:- a b]        arithmetic
+;;                [:as_of ?d]                        the evaluation date (decide's as_of, default :today)
+;;   head       a literal; [:neg literal] for the complement (defeaters)
+;;   kinds      :strict  :defeasible  :defeater  :superiority  :incompatible
+{:slice/version 1
+ :today #inst "2026-09-15"
+
+ ;; Assets claims attach to that are not part of the model below (tables, columns, concepts and terms
+ ;; are assets too, by their ids).
+ :assets [{:id "vendor:bolt" :kind :vendor :doc "Vendor bolt (hardware)."}
+          {:id "vendor:cog" :kind :vendor :doc "Vendor cog (services)."}
+          {:id "emp:e077" :kind :employee :doc "Employee e077, senior manager; transferred cc0077 -> cc0078 in 2026."}]
+
+ ;; ------------------------------------------------------------------ physical model
+ :tables
+ [{:id "table:cc" :name "cc"
+   :doc "A cost centre: a node of the budget tree, with its spending cap and the spend booked directly on it this quarter."
+   :columns [{:id "col:cc/id" :name "id" :type :id :doc "Cost centre id."}
+             {:id "col:cc/parent" :name "parent" :type :id :doc "Parent cost centre; empty for the root."}
+             {:id "col:cc/level" :name "level" :type :int :doc "Depth in the tree; the root is 0."}
+             {:id "col:cc/org_unit" :name "org_unit" :type :enum :doc "Organisational unit the centre belongs to."}
+             {:id "col:cc/booked" :name "booked" :type :int :doc "Spend booked directly on this centre (not its descendants)."}
+             {:id "col:cc/cap" :name "cap" :type :int :doc "Spending cap of the centre this quarter."}]}
+  {:id "table:emp" :name "emp"
+   :doc "An employee, their role, their cost centre as finance records it, and their direct manager."
+   :columns [{:id "col:emp/id" :name "id" :type :id :doc "Employee id."}
+             {:id "col:emp/role" :name "role" :type :enum :doc "Role; governs the approval limit."}
+             {:id "col:emp/cc" :name "cc" :type :id :doc "Current cost centre in the finance system."}
+             {:id "col:emp/manager" :name "manager" :type :id :doc "Direct manager; empty for the vp."}
+             {:id "col:emp/violation" :name "violation" :type :bool :doc "The employee has a recorded policy violation."}]}
+  {:id "table:req" :name "req"
+   :doc "A purchase request, raised on a date by an employee, for an amount, category and vendor."
+   :columns [{:id "col:req/id" :name "id" :type :id :doc "Request id."}
+             {:id "col:req/requester" :name "requester" :type :id :doc "Employee who raised the request."}
+             {:id "col:req/amount" :name "amount" :type :int :doc "Amount requested."}
+             {:id "col:req/category" :name "category" :type :enum :doc "Spend category (code list codes:category)."}
+             {:id "col:req/vendor" :name "vendor" :type :id :doc "Vendor the purchase is from."}
+             {:id "col:req/date" :name "date" :type :date :doc "Date the request was raised; governs dated rules (R203)."}
+             {:id "col:req/status" :name "status" :type :enum :doc "pending or cancelled."}
+             {:id "col:req/emergency" :name "emergency" :type :bool :doc "Flagged as an emergency."}]}
+  {:id "table:assignment" :name "assignment"
+   :doc "A source's record (hr or finance) that an employee belongs to a cost centre from the effective date on."
+   :columns [{:id "col:assignment/emp" :name "emp" :type :id :doc "Employee."}
+             {:id "col:assignment/cc" :name "cc" :type :id :doc "Cost centre."}
+             {:id "col:assignment/source" :name "source" :type :enum :doc "hr or finance."}
+             {:id "col:assignment/effective" :name "effective" :type :date :doc "Effective from."}]}
+  {:id "table:role_limit_version" :name "role_limit_version"
+   :doc "A dated version of a role's approval limit, valid from and to the given dates inclusive."
+   :columns [{:id "col:role_limit_version/role" :name "role" :type :enum :doc "Role."}
+             {:id "col:role_limit_version/limit" :name "limit" :type :int :doc "Approval limit."}
+             {:id "col:role_limit_version/valid_from" :name "valid_from" :type :date :doc "First day valid."}
+             {:id "col:role_limit_version/valid_to" :name "valid_to" :type :date :doc "Last day valid."}]}
+  {:id "table:vendor_status" :name "vendor_status"
+   :doc "A vendor's status during a period, from and to the given dates inclusive."
+   :columns [{:id "col:vendor_status/vendor" :name "vendor" :type :id :doc "Vendor."}
+             {:id "col:vendor_status/status" :name "status" :type :enum :doc "approved or suspended."}
+             {:id "col:vendor_status/valid_from" :name "valid_from" :type :date :doc "First day."}
+             {:id "col:vendor_status/valid_to" :name "valid_to" :type :date :doc "Last day."}]}]
+
+ ;; ------------------------------------------------------------------ semantic layer
+ ;; A concept binds to tables and yields a SQL template. $name is a required parameter (pushed into
+ ;; the template); every other filter is applied as WHERE t."col" = value around the template.
+ ;; @iso(x) is a dialect macro: an ISO yyyy-mm-dd string from a DATE (DuckDB strftime, Postgres to_char).
+ :concepts
+ [{:id "entity:request" :name :request :kind :entity :tables ["table:req"]
+   :doc "Purchase requests."
+   :columns [:id :requester :amount :category :vendor :date :status :emergency]
+   :sql "SELECT id, requester, amount, category, vendor, @iso(date) AS date, status, emergency FROM req"}
+  {:id "entity:employee" :name :employee :kind :entity :tables ["table:emp"]
+   :doc "Employees."
+   :columns [:id :role :cc :manager :violation]
+   :sql "SELECT id, role, cc, manager, violation FROM emp"}
+  {:id "dim:cost_centre" :name :cost_centre :kind :dimension :tables ["table:cc"]
+   :doc "The cost centre dimension: the budget tree, its caps and direct bookings."
+   :columns [:id :parent :level :org_unit :booked :cap]
+   :sql "SELECT id, parent, level, org_unit, booked, cap FROM cc"}
+  {:id "dim:org_unit" :name :org_unit :kind :dimension :tables ["table:cc"]
+   :doc "The organisational-unit dimension: a grouping of cost centres, not a tree."
+   :columns [:id :centres]
+   :sql "SELECT org_unit AS id, CAST(COUNT(*) AS INTEGER) AS centres FROM cc GROUP BY org_unit"}
+  {:id "hier:ancestors_or_self" :name :ancestors_or_self :kind :hierarchy :tables ["table:cc"]
+   :doc "A cost centre and every ancestor up to the root (the centres a request is charged against)."
+   :params [:cc] :columns [:cc :anc :depth]
+   :sql "WITH RECURSIVE up(id, parent, depth) AS (SELECT id, parent, 0 FROM cc WHERE id = $cc UNION ALL SELECT c.id, c.parent, u.depth + 1 FROM cc c JOIN up u ON c.id = u.parent) SELECT CAST($cc AS VARCHAR) AS cc, id AS anc, depth FROM up"}
+  {:id "hier:subtree" :name :subtree :kind :hierarchy :tables ["table:cc"]
+   :doc "A cost centre and all its descendants."
+   :params [:root] :columns [:root :id]
+   :sql "WITH RECURSIVE sub(id) AS (SELECT id FROM cc WHERE id = $root UNION ALL SELECT c.id FROM cc c JOIN sub s ON c.parent = s.id) SELECT CAST($root AS VARCHAR) AS root, id FROM sub"}
+  {:id "hier:reporting_chain" :name :reporting_chain :kind :hierarchy :tables ["table:emp"]
+   :doc "An employee's manager, the manager's manager, and so on; not the employee."
+   :params [:emp] :columns [:emp :approver :role :depth]
+   :sql "WITH RECURSIVE ch(approver, depth) AS (SELECT manager, 1 FROM emp WHERE id = $emp AND manager IS NOT NULL UNION ALL SELECT e.manager, ch.depth + 1 FROM emp e JOIN ch ON e.id = ch.approver WHERE e.manager IS NOT NULL) SELECT CAST($emp AS VARCHAR) AS emp, ch.approver, emp.role, ch.depth FROM ch JOIN emp ON emp.id = ch.approver"}
+  {:id "entity:request_in_subtree" :name :request_in_subtree :kind :entity :tables ["table:req" "table:emp" "table:cc"]
+   :doc "Requests whose requester's cost centre lies in the subtree of a root."
+   :params [:root] :columns [:root :id :requester :cc :amount :status]
+   :sql "WITH RECURSIVE sub(id) AS (SELECT id FROM cc WHERE id = $root UNION ALL SELECT c.id FROM cc c JOIN sub s ON c.parent = s.id) SELECT CAST($root AS VARCHAR) AS root, r.id, r.requester, e.cc, r.amount, r.status FROM req r JOIN emp e ON e.id = r.requester JOIN sub ON sub.id = e.cc"}
+  {:id "entity:role_limit_version" :name :role_limit_version :kind :entity :tables ["table:role_limit_version"]
+   :doc "Dated approval-limit versions per role."
+   :columns [:role :limit :valid_from :valid_to]
+   :sql "SELECT role, \"limit\", @iso(valid_from) AS valid_from, @iso(valid_to) AS valid_to FROM role_limit_version"}
+  {:id "entity:vendor_status" :name :vendor_status :kind :entity :tables ["table:vendor_status"]
+   :doc "Dated vendor status periods."
+   :columns [:vendor :status :valid_from :valid_to]
+   :sql "SELECT vendor, status, @iso(valid_from) AS valid_from, @iso(valid_to) AS valid_to FROM vendor_status"}
+  {:id "entity:assignment" :name :assignment :kind :entity :tables ["table:assignment"]
+   :doc "hr and finance cost-centre assignment records."
+   :columns [:emp :cc :source :effective]
+   :sql "SELECT emp, cc, source, @iso(effective) AS effective FROM assignment"}
+  {:id "measure:booked_total" :name :booked_total :kind :measure :tables ["table:cc"]
+   :doc "Sum of the spend booked directly on every cost centre in the subtree of a centre (zero where nothing is booked)."
+   :params [:cc] :columns [:cc :value]
+   :sql "WITH RECURSIVE sub(id) AS (SELECT id FROM cc WHERE id = $cc UNION ALL SELECT c.id FROM cc c JOIN sub s ON c.parent = s.id) SELECT CAST($cc AS VARCHAR) AS cc, CAST(COALESCE(SUM(cc.booked), 0) AS INTEGER) AS value FROM cc JOIN sub ON cc.id = sub.id"}
+  {:id "measure:pending_exposure" :name :pending_exposure :kind :measure :tables ["table:req" "table:emp" "table:cc"]
+   :doc "Sum of the amounts of pending requests whose requester's cost centre lies in the subtree of a centre."
+   :params [:cc] :columns [:cc :value]
+   :sql "WITH RECURSIVE sub(id) AS (SELECT id FROM cc WHERE id = $cc UNION ALL SELECT c.id FROM cc c JOIN sub s ON c.parent = s.id) SELECT CAST($cc AS VARCHAR) AS cc, CAST(COALESCE(SUM(r.amount), 0) AS INTEGER) AS value FROM req r JOIN emp e ON e.id = r.requester JOIN sub ON sub.id = e.cc WHERE r.status = 'pending'"}
+  {:id "measure:headroom" :name :headroom :kind :measure :tables ["table:cc"]
+   :doc "Cap minus booked total. Computed by rule R105 over measure:booked_total; no SQL of its own."
+   :derived-by :R105}]
+
+ ;; ------------------------------------------------------------------ vocabulary
+ ;; Contrastive definitions: X, as opposed to Y, differing in Z.
+ :terms
+ [{:id "term:booked_total" :label "booked total" :synonyms ["total booked" "booked spend"] :owner :finance
+   :concept "measure:booked_total"
+   :definition "The booked total of a cost centre, as opposed to its booked amount, differs in counting the bookings of every descendant centre, not only those made directly on it."}
+  {:id "term:booked_amount" :label "booked amount" :synonyms ["direct booking"] :owner :finance
+   :concept "dim:cost_centre"
+   :definition "The booked amount of a cost centre, as opposed to its booked total, is only what is booked directly on that centre."}
+  {:id "term:committed_spend" :label "committed spend" :synonyms ["commitments"] :owner :finance
+   :definition "Committed spend, as opposed to booked total, differs in whether pending requests count. Finance has not decided which; no rule defines it."}
+  {:id "term:headroom" :label "headroom" :synonyms ["remaining budget"] :owner :finance
+   :concept "measure:headroom"
+   :definition "Headroom, as opposed to cap, is what remains of the cap after the booked total (R105)."}
+  {:id "term:pending_exposure" :label "pending exposure" :synonyms ["pending total"] :owner :finance
+   :concept "measure:pending_exposure"
+   :definition "Pending exposure, as opposed to booked total, sums requests not yet booked (pending, not cancelled)."}
+  {:id "term:cost_centre" :label "cost centre" :synonyms ["cc" "budget centre"] :owner :finance
+   :concept "dim:cost_centre"
+   :definition "A cost centre, as opposed to an org unit, is a node of the budget tree: caps and bookings roll up along it."}
+  {:id "term:org_unit" :label "org unit" :synonyms ["organisational unit" "unit"] :owner :hr
+   :concept "dim:org_unit"
+   :definition "An org unit, as opposed to a cost centre, is a flat grouping of centres (delivery, support, leadership); nothing rolls up along it."}
+  {:id "term:department" :label "department" :synonyms [] :owner :hr
+   :see ["term:cost_centre" "term:org_unit"]
+   :definition "Used in practice for both a cost centre and an org unit; resolve to one of them before use."}
+  {:id "term:approval_limit" :label "approval limit" :synonyms ["signing limit"] :owner :procurement
+   :concept "entity:role_limit_version"
+   :definition "A role's approval limit, as opposed to a cap, bounds a single request an approver may sign, not a centre's spend; dated (R202, R203)."}
+  {:id "term:vendor_status" :label "vendor status" :synonyms [] :owner :procurement
+   :concept "entity:vendor_status"
+   :definition "A vendor's status, as opposed to its fitness claims, is the dated register entry (approved or suspended)."}
+  {:id "term:request" :label "purchase request" :synonyms ["request" "requisition"] :owner :procurement
+   :concept "entity:request"
+   :definition "A purchase request, as opposed to a booking, is spend not yet committed."}]
+
+ :code-lists
+ [{:id "codes:category" :values ["software" "hardware" "services" "capital"]}
+  {:id "codes:vendor_status" :values ["approved" "suspended"]}
+  {:id "codes:role" :values ["analyst" "manager" "senior_manager" "director" "vp"]}
+  {:id "codes:request_status" :values ["pending" "cancelled"]}
+  {:id "codes:source" :values ["hr" "finance"]}]
+ :taxonomies
+ [{:id "tax:category" :code-list "codes:category"
+   :tree {"opex" ["software" "services"] "capex" ["hardware" "capital"]}}]
+
+ ;; Functional predicates: the first n arguments are the key, the last is the value. Two conclusions
+ ;; with the same key and different values compete (as p and ~p do).
+ :functional {:booked_total 1 :headroom 1 :role_limit 1 :limit_on 2 :governing_limit 2
+              :vendor_status_for 1 :cost_centre_of 1 :pending_exposure 1}
+
+ ;; ------------------------------------------------------------------ rules
+ :rules
+ [{:id :R104 :kind :strict :owner :finance :class :definition
+   :doc "The booked total of a cost centre rolls up over its subtree."
+   :head [:booked_total ?c ?v]
+   :body [[:fetch :booked_total {:cc ?c} {:value ?v}]]}
+  {:id :R105 :kind :strict :owner :finance :class :definition
+   :doc "The headroom of a cost centre is its cap minus its booked total."
+   :head [:headroom ?c ?h]
+   :body [[:booked_total ?c ?b] [:fetch :cost_centre {:id ?c} {:cap ?k}] [:is ?h [:- ?k ?b]]]}
+  {:id :R106 :kind :defeasible :owner :finance :class :material_inference
+   :doc "A request breaches a cap if its amount plus the booked total of some centre it is charged against (its requester's centre or an ancestor) exceeds that centre's cap."
+   :head [:cap_breach ?r]
+   :body [[:fetch :request {:id ?r} {:requester ?e :amount ?a}]
+          [:fetch :employee {:id ?e} {:cc ?c0}]
+          [:fetch :ancestors_or_self {:cc ?c0} {:anc ?c}]
+          [:booked_total ?c ?b]
+          [:fetch :cost_centre {:id ?c} {:cap ?k}]
+          [:> [:+ ?b ?a] ?k]]}
+  {:id :R110 :kind :strict :owner :finance :class :definition
+   :doc "The breaching requests in a subtree are the pending requests raised from it that breach a cap."
+   :head [:breach_in ?x ?r]
+   :body [[:fetch :request_in_subtree {:root ?x :status "pending"} {:id ?r}] [:cap_breach ?r]]}
+  {:id :R112 :kind :strict :owner :finance :class :definition
+   :doc "A big capital request is a capital request over 50,000."
+   :head [:big_capital ?r]
+   :body [[:fetch :request {:id ?r :category "capital"} {:amount ?a}] [:> ?a 50000]]}
+  {:id :R201 :kind :strict :owner :procurement :class :definition
+   :doc "A role's approval limit, asked without a date, is the limit on the evaluation date."
+   :head [:role_limit ?role ?l]
+   :body [[:as_of ?d] [:limit_on ?role ?d ?l]]}
+  {:id :R202 :kind :strict :owner :procurement :class :definition
+   :doc "A role's approval limit on a date is that of the version valid on the date."
+   :head [:limit_on ?role ?d ?l]
+   :body [[:fetch :role_limit_version {:role ?role} {:limit ?l :valid_from ?f :valid_to ?t}] [:<= ?f ?d] [:<= ?d ?t]]}
+  {:id :R203 :kind :strict :owner :procurement :class :definition
+   :doc "The approval limit that governs a request is the one valid on the date the request was raised, not today's."
+   :head [:governing_limit ?r ?role ?l]
+   :body [[:fetch :request {:id ?r} {:date ?d}] [:limit_on ?role ?d ?l]]}
+  {:id :R204 :kind :strict :owner :procurement :class :definition
+   :doc "A request's vendor status is the vendor's status on the request date."
+   :head [:vendor_status_for ?r ?s]
+   :body [[:fetch :request {:id ?r} {:vendor ?v :date ?d}]
+          [:fetch :vendor_status {:vendor ?v} {:status ?s :valid_from ?f :valid_to ?t}]
+          [:<= ?f ?d] [:<= ?d ?t]]}
+  {:id :R301 :kind :defeasible :owner :procurement :class :material_inference
+   :doc "A request has an approver if someone in the requester's reporting chain has a governing limit of at least the amount."
+   :head [:has_approver ?r]
+   :body [[:fetch :request {:id ?r} {:requester ?e :amount ?a}]
+          [:fetch :reporting_chain {:emp ?e} {:role ?role}]
+          [:governing_limit ?r ?role ?l]
+          [:>= ?l ?a]]}
+  {:id :R304 :kind :defeasible :owner :finance :class :material_inference
+   :doc "A request passes the cap check if it breaches no cap."
+   :head [:cap_ok ?r]
+   :body [[:not [:cap_breach ?r]]]}
+  {:id :R305 :kind :defeasible :owner :procurement :class :material_inference
+   :doc "A request passes the vendor check if its vendor is approved on the request date."
+   :head [:vendor_cleared ?r]
+   :body [[:vendor_status_for ?r "approved"]]}
+  {:id :R306 :kind :defeasible :owner :procurement :class :exception
+   :doc "Exception: an emergency request passes the vendor check even though its vendor is suspended."
+   :head [:vendor_cleared ?r]
+   :body [[:fetch :request {:id ?r :emergency true} {}] [:vendor_status_for ?r "suspended"]]}
+  {:id :R308 :kind :defeasible :owner :procurement :class :material_inference
+   :doc "A request is eligible if it has an approver, passes the cap check and passes the vendor check."
+   :head [:eligible ?r]
+   :body [[:has_approver ?r] [:cap_ok ?r] [:vendor_cleared ?r]]}
+  {:id :R309 :kind :defeasible :owner :compliance :class :material_inference
+   :doc "A request is denied if its requester has a recorded policy violation."
+   :head [:denied ?r]
+   :body [[:fetch :request {:id ?r} {:requester ?e}] [:fetch :employee {:id ?e :violation true} {}]]}
+  {:id :R310 :kind :defeasible :owner :procurement :class :material_inference
+   :doc "A request is approved if it is eligible and not denied."
+   :head [:approved ?r]
+   :body [[:eligible ?r] [:not [:denied ?r]]]}
+  {:id :R311 :kind :defeasible :owner :procurement :class :entitlement
+   :doc "A software request under 10,000 is approved automatically, without further checks."
+   :head [:auto_approved ?r]
+   :body [[:fetch :request {:id ?r :category "software"} {:amount ?a}] [:< ?a 10000]]}
+  {:id :R312 :kind :defeasible :owner :procurement :class :entitlement
+   :doc "An automatically approved request is approved (a second sufficient condition)."
+   :head [:approved ?r]
+   :body [[:auto_approved ?r]]}
+  {:id :R313 :kind :superiority :owner :controller :class :superiority
+   :doc "Where hr and finance claims disagree on an employee's cost centre, finance prevails."
+   :pred :cost_centre_of :order [:finance :hr]}
+  {:id :R314 :kind :incompatible :owner :procurement :class :incompatibility
+   :doc "A denied request is never approved. Declared, not inferred: deriving both is a CONFLICT."
+   :head [:approved ?r]
+   :body [[:denied ?r]]}]
+
+ ;; ------------------------------------------------------------------ claims (Toulmin)
+ ;; A claim is a defeasible fact about an asset, in force from valid_from to valid_to (inclusive; nil open).
+ ;; Superiority between competing claims: explicit, then asserter authority (R313, scoped to a predicate),
+ ;; then, for the same asserter, the later asserted_at.
+ :claims
+ [{:id :C1 :about "vendor:bolt" :assertion [:fit_for_use "bolt"]
+   :asserted_by :procurement :asserted_at #inst "2026-03-01" :valid_from #inst "2026-01-01" :valid_to #inst "2026-12-31"
+   :backing "Vendor onboarding file VO-17" :qualifier "presumably"
+   :subclaims [{:id :C1.1 :role :required :assertion [:due_diligence_passed "bolt"]
+                :asserted_by :compliance :asserted_at #inst "2026-02-15" :valid_from #inst "2026-01-01" :valid_to nil
+                :backing "KYC review 2026-02" :qualifier "certainly"}
+               {:id :C1.2 :role :required :assertion [:neg [:sanctioned "bolt"]]
+                :asserted_by :risk :asserted_at #inst "2026-02-20" :valid_from #inst "2026-01-01" :valid_to #inst "2026-12-31"
+                :backing "Sanctions screening run S-0220" :qualifier "certainly"}
+               {:id :C1.3 :role :supporting :assertion [:price_within_benchmark "bolt"]
+                :asserted_by :finance :asserted_at #inst "2026-02-25" :valid_from #inst "2026-01-01" :valid_to nil
+                :backing "Benchmark B-12: within 5%" :qualifier "presumably"}]}
+  {:id :C2 :about "vendor:cog" :assertion [:fit_for_use "cog"]
+   :asserted_by :procurement :asserted_at #inst "2026-03-01" :valid_from #inst "2026-01-01" :valid_to #inst "2026-12-31"
+   :backing "Vendor onboarding file VO-21" :qualifier "presumably"
+   :subclaims [{:id :C2.1 :role :required :assertion [:due_diligence_passed "cog"]
+                :asserted_by :compliance :asserted_at #inst "2026-02-15" :valid_from #inst "2026-01-01" :valid_to nil
+                :backing "KYC review 2026-02" :qualifier "certainly"}
+               {:id :C2.2 :role :required :assertion [:neg [:sanctioned "cog"]]
+                :asserted_by :risk :asserted_at #inst "2026-02-20" :valid_from #inst "2026-01-01" :valid_to #inst "2026-12-31"
+                :backing "Sanctions screening run S-0220" :qualifier "certainly"}
+               {:id :C2.3 :role :supporting :assertion [:price_within_benchmark "cog"]
+                :asserted_by :finance :asserted_at #inst "2026-02-25" :valid_from #inst "2026-01-01" :valid_to nil
+                :backing "Benchmark B-12: within 5%" :qualifier "presumably"}]}
+  {:id :C7 :about "vendor:cog" :assertion [:neg [:price_within_benchmark "cog"]]
+   :asserted_by :finance :asserted_at #inst "2026-05-10" :valid_from #inst "2026-05-10" :valid_to nil
+   :backing "Benchmark B-19: 12% above" :qualifier "certainly"}
+  {:id :C3 :about "emp:e077" :assertion [:cost_centre_of "e077" "cc0078"]
+   :asserted_by :hr :asserted_at #inst "2026-07-01" :valid_from #inst "2026-07-01" :valid_to nil
+   :backing "HR transfer record T-311" :qualifier "certainly"}
+  {:id :C4 :about "emp:e077" :assertion [:cost_centre_of "e077" "cc0077"]
+   :asserted_by :finance :asserted_at #inst "2026-01-02" :valid_from #inst "2026-01-01" :valid_to nil
+   :backing "Finance master data load 2026-01" :qualifier "certainly"}
+  {:id :C5 :about "emp:e077" :assertion [:cost_centre_of "e077" "cc0078"]
+   :asserted_by :finance :asserted_at #inst "2026-08-05" :valid_from #inst "2026-08-01" :valid_to nil
+   :backing "Finance transfer posting FT-88 (supersedes the January load for e077)" :qualifier "certainly"}]}

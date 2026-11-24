@@ -1,0 +1,27 @@
+;; Spike v3 questions. Keys: keys.json (reference.py), per state "base" (slice.edn) and "extended"
+;; (slice.edn + extension.edn). :kind is the System A call: :decide, :why_not, :claim (claims/2 standing
+;; of one claim), :resolve_term. :hypothesis asks the question inside with_hypothesis.
+[{:id :Q01 :kind :decide :goal [:booked_total "cc0009" ?v] :text "What is the booked total of cost centre cc0009?"}
+ {:id :Q02 :kind :decide :goal [:headroom "cc0009" ?v] :text "What headroom does cc0009 have?"}
+ {:id :Q03 :kind :decide :goal [:role_limit "manager" ?l] :as_of "2026-07-15" :text "What was a manager's approval limit on 15 July?"}
+ {:id :Q04 :kind :decide :goal [:role_limit "manager" ?l] :text "What is a manager's approval limit today?"}
+ {:id :Q05 :kind :decide :goal [:governing_limit "r000004" "manager" ?l] :text "Which manager limit governs request r000004 (raised 10 July)?"}
+ {:id :Q06 :kind :decide :goal [:vendor_cleared "r000003"] :text "Does emergency request r000003 (suspended vendor fern) pass the vendor check?"}
+ {:id :Q07 :kind :decide :goal [:vendor_cleared "r000002"] :text "Does emergency capital request r000002 (90,000, vendor fern) pass the vendor check?"}
+ {:id :Q08 :kind :decide :goal [:approved "r000001"] :text "Is request r000001 approved?"}
+ {:id :Q09 :kind :decide :goal [:approved "r000005"] :text "Is request r000005 approved?"}
+ {:id :Q10 :kind :decide :goal [:cost_centre_of "e077" ?c] :as_of "2026-07-15" :text "Which cost centre was e077 in on 15 July?"}
+ {:id :Q11 :kind :decide :goal [:cost_centre_of "e077" ?c] :as_of "2026-07-15" :hypothesis {:withhold [:R313]}
+  :text "Which cost centre was e077 in on 15 July, without R313?"}
+ {:id :Q12 :kind :decide :goal [:cost_centre_of "e077" ?c] :as_of "2026-08-15" :text "Which cost centre was e077 in on 15 August?"}
+ {:id :Q13 :kind :claim :asset "vendor:bolt" :claim :C1 :as_of "2026-05-15" :text "Does the claim that bolt is fit for use hold on 15 May?"}
+ {:id :Q14 :kind :claim :asset "vendor:bolt" :claim :C1 :as_of "2026-07-01" :text "Does the claim that bolt is fit for use hold on 1 July?"}
+ {:id :Q15 :kind :claim :asset "vendor:cog" :claim :C2 :text "Does the claim that cog is fit for use hold?"}
+ {:id :Q16 :kind :why_not :goal [:approved "r000006"] :text "Why is request r000006 not approved?"}
+ {:id :Q17 :kind :decide :goal [:breach_in "cc0049" ?r] :text "Which pending requests from the cc0049 subtree breach a cap?"}
+ {:id :Q18 :kind :decide :goal [:vendor_cleared "r000008"] :text "Does r000008 (vendor bolt, raised 15 August) pass the vendor check?"}
+ {:id :Q19 :kind :decide :goal [:committed_spend "cc0009" ?v] :text "What is the committed spend of cc0009?"}
+ {:id :Q20 :kind :decide :goal [:travel_budget "cc0009" ?v] :text "What is the travel budget of cc0009?"}
+ {:id :Q21 :kind :resolve_term :text "booked total"}
+ {:id :Q22 :kind :resolve_term :text "travel budget"}
+ {:id :Q23 :kind :resolve_term :text "department"}]
