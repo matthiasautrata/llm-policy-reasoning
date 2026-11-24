@@ -1,0 +1,168 @@
+id: https://example.org/llm-policy-reasoning/spike-v3/physical
+name: physical
+prefixes:
+  linkml: https://w3id.org/linkml/
+imports:
+- linkml:types
+default_range: string
+classes:
+  cc:
+    description: 'A cost centre: a node of the budget tree, with its spending cap and the spend booked directly on it this
+      quarter.'
+    attributes:
+      id:
+        range: string
+        description: Cost centre id.
+        required: true
+        identifier: true
+      parent:
+        range: string
+        description: Parent cost centre; empty for the root.
+      level:
+        range: integer
+        description: Depth in the tree; the root is 0.
+        required: true
+      org_unit:
+        range: string
+        description: Organisational unit the centre belongs to.
+        required: true
+      booked:
+        range: integer
+        description: Spend booked directly on this centre (not its descendants).
+        required: true
+      cap:
+        range: integer
+        description: Spending cap of the centre this quarter.
+        required: true
+  emp:
+    description: An employee, their role, their cost centre as finance records it, and their direct manager.
+    attributes:
+      id:
+        range: string
+        description: Employee id.
+        required: true
+        identifier: true
+      role:
+        range: string
+        description: Role; governs the approval limit.
+        required: true
+      cc:
+        range: string
+        description: Current cost centre in the finance system.
+        required: true
+      manager:
+        range: string
+        description: Direct manager; empty for the vp.
+      violation:
+        range: boolean
+        description: The employee has a recorded policy violation.
+        required: true
+  req:
+    description: A purchase request, raised on a date by an employee, for an amount, category and vendor.
+    attributes:
+      id:
+        range: string
+        description: Request id.
+        required: true
+        identifier: true
+      requester:
+        range: string
+        description: Employee who raised the request.
+        required: true
+      amount:
+        range: integer
+        description: Amount requested.
+        required: true
+      category:
+        range: string
+        description: Spend category (code list codes:category).
+        required: true
+      vendor:
+        range: string
+        description: Vendor the purchase is from.
+        required: true
+      date:
+        range: date
+        description: Date the request was raised; governs dated rules (R203).
+        required: true
+      status:
+        range: string
+        description: pending or cancelled.
+        required: true
+      emergency:
+        range: boolean
+        description: Flagged as an emergency.
+        required: true
+  assignment:
+    description: A source's record (hr or finance) that an employee belongs to a cost centre from the effective date on.
+    attributes:
+      emp:
+        range: string
+        description: Employee.
+        required: true
+      cc:
+        range: string
+        description: Cost centre.
+        required: true
+      source:
+        range: string
+        description: hr or finance.
+        required: true
+      effective:
+        range: date
+        description: Effective from.
+        required: true
+    unique_keys:
+      assignment_pk:
+        unique_key_slots:
+        - emp
+        - source
+        - effective
+  role_limit_version:
+    description: A dated version of a role's approval limit, valid from and to the given dates inclusive.
+    attributes:
+      role:
+        range: string
+        description: Role.
+        required: true
+      limit:
+        range: integer
+        description: Approval limit.
+        required: true
+      valid_from:
+        range: date
+        description: First day valid.
+        required: true
+      valid_to:
+        range: date
+        description: Last day valid.
+        required: true
+    unique_keys:
+      role_limit_version_pk:
+        unique_key_slots:
+        - role
+        - valid_from
+  vendor_status:
+    description: A vendor's status during a period, from and to the given dates inclusive.
+    attributes:
+      vendor:
+        range: string
+        description: Vendor.
+        required: true
+      status:
+        range: string
+        description: approved or suspended.
+        required: true
+      valid_from:
+        range: date
+        description: First day.
+        required: true
+      valid_to:
+        range: date
+        description: Last day.
+        required: true
+    unique_keys:
+      vendor_status_pk:
+        unique_key_slots:
+        - vendor
+        - valid_from

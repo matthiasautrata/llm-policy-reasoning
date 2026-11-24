@@ -1,0 +1,199 @@
+id: https://example.org/llm-policy-reasoning/spike-v3/slice
+name: slice
+title: Spike v3 System A slice
+description: >-
+  Physical model, semantic layer, vocabulary, rules and Toulmin claims of the spike v3 procurement slice.
+  Detail data is not part of the model: it stays relational and is reached through fetch(concept, filters).
+  Rule heads and bodies are EDN strings (the rule language is EDN data; LinkML holds the envelope).
+license: MIT
+prefixes:
+  linkml: https://w3id.org/linkml/
+  slice: https://example.org/llm-policy-reasoning/spike-v3/slice/
+default_prefix: slice
+default_range: string
+imports:
+  - linkml:types
+
+classes:
+  Slice:
+    tree_root: true
+    description: The whole slice, as authored in shared/slice.edn.
+    slots: [version, today, assets, tables, concepts, terms, code_lists, taxonomies, functional, rules, claims]
+
+  Asset:
+    description: Anything significant a claim can attach to that is not a table, column, concept or term.
+    slots: [id, kind, doc]
+    slot_usage:
+      kind: {range: AssetKind, required: true}
+
+  Table:
+    description: A physical table of the detail data.
+    slots: [id, name, doc, columns]
+    slot_usage:
+      id: {pattern: "^table:[a-z_]+$"}
+
+  Column:
+    description: A column of a physical table.
+    slots: [id, name, column_type, doc]
+    slot_usage:
+      id: {pattern: "^col:[a-z_]+/[a-z_]+$"}
+
+  Concept:
+    description: >-
+      A semantic-layer entry (measure, dimension, entity or hierarchy) bound to tables. Its SQL template
+      uses $name for required parameters and @iso(x) for an ISO date string; other filters are applied
+      around the template. A derived concept has no SQL and names the rule that computes it.
+    slots: [id, concept_name, kind, doc, tables, params, columns_out, sql, derived_by]
+    slot_usage:
+      kind: {range: ConceptKind, required: true}
+      tables: {range: string, required: true, inlined: false, description: Ids of the tables the concept binds to.}
+    rules:
+      - description: a concept has SQL or is derived by a rule
+        postconditions:
+          any_of:
+            - slot_conditions: {sql: {required: true}}
+            - slot_conditions: {derived_by: {required: true}}
+
+  Measure:
+    is_a: Concept
+    description: A concept whose kind is measure (an aggregate over the detail data).
+  Dimension:
+    is_a: Concept
+    description: A concept whose kind is dimension.
+
+  Term:
+    description: A vocabulary term with a contrastive definition (X, as opposed to Y, differing in Z).
+    slots: [id, label, synonyms, owner, concept, see, definition]
+    slot_usage:
+      id: {pattern: "^term:[a-z_]+$"}
+      definition: {required: true}
+      owner: {required: true}
+
+  CodeList:
+    description: The admissible codes of an enumerated column.
+    slots: [id, values]
+
+  Taxonomy:
+    description: A two-level grouping over a code list.
+    slots: [id, code_list, groups]
+
+  TaxonomyGroup:
+    slots: [group, members]
+
+  FunctionalPredicate:
+    description: >-
+      A predicate whose first key_arity arguments are a key and whose last argument is a value; two
+      conclusions with the same key and different values compete as p and ~p do.
+    slots: [pred, key_arity]
+
+  Rule:
+    description: >-
+      A rule envelope. kind strict, defeasible or defeater carries head and body; superiority carries
+      pred and order (asserter authority); incompatible carries head and body (head excluded when body holds).
+    slots: [id, kind, owner, rule_class, conservative, layer, doc, head, body, superior_to, pred, order]
+    slot_usage:
+      id: {pattern: "^R[0-9]+$"}
+      kind: {range: RuleKind, required: true}
+      owner: {required: true}
+    rules:
+      - preconditions: {slot_conditions: {kind: {equals_string: superiority}}}
+        postconditions: {slot_conditions: {pred: {required: true}, order: {required: true}}}
+      - preconditions: {slot_conditions: {kind: {any_of: [{equals_string: strict}, {equals_string: defeasible}, {equals_string: defeater}, {equals_string: incompatible}]}}}
+        postconditions: {slot_conditions: {head: {required: true}}}
+
+  ClaimCore:
+    abstract: true
+    description: >-
+      A Toulmin claim: an assertion about an asset by an asserter, in force from valid_from to valid_to
+      (inclusive; open when absent), with warrant, backing and qualifier.
+    slots: [id, assertion, asserted_by, asserted_at, valid_from, valid_to, warrant, backing, qualifier]
+    slot_usage:
+      id: {pattern: "^C[0-9]+(\\.[0-9]+)?$"}
+      assertion: {required: true}
+      asserted_by: {required: true}
+      asserted_at: {required: true}
+      valid_from: {required: true}
+
+  Claim:
+    is_a: ClaimCore
+    slots: [about, subclaims]
+    slot_usage:
+      about: {required: true}
+
+  SubClaim:
+    is_a: ClaimCore
+    description: >-
+      One level of nesting. A defeated required sub-claim rebuts its parent; a defeated supporting
+      sub-claim leaves the parent holding with a qualifier that lists it.
+    slots: [role]
+    slot_usage:
+      role: {required: true}
+
+slots:
+  id: {identifier: true, required: true}
+  version: {range: integer}
+  today: {range: date, required: true}
+  name: {}
+  concept_name: {description: The concept's name as rules reference it in fetch literals.}
+  doc: {}
+  kind: {}
+  column_type: {range: ColumnType}
+  assets: {range: Asset, multivalued: true, inlined_as_list: true}
+  tables: {range: Table, multivalued: true, inlined_as_list: true}
+  columns: {range: Column, multivalued: true, inlined_as_list: true}
+  concepts: {range: Concept, multivalued: true, inlined_as_list: true}
+  terms: {range: Term, multivalued: true, inlined_as_list: true}
+  code_lists: {range: CodeList, multivalued: true, inlined_as_list: true}
+  taxonomies: {range: Taxonomy, multivalued: true, inlined_as_list: true}
+  functional: {range: FunctionalPredicate, multivalued: true, inlined_as_list: true}
+  rules: {range: Rule, multivalued: true, inlined_as_list: true}
+  claims: {range: Claim, multivalued: true, inlined_as_list: true}
+  subclaims: {range: SubClaim, multivalued: true, inlined_as_list: true}
+  params: {multivalued: true}
+  columns_out: {multivalued: true, description: Output columns of the concept's rows.}
+  sql: {}
+  derived_by: {range: string, pattern: "^R[0-9]+$"}
+  label: {required: true}
+  synonyms: {multivalued: true}
+  owner: {range: Owner}
+  concept: {range: string, pattern: "^(measure|dim|entity|hier):[a-z_]+$"}
+  see: {multivalued: true, range: string}
+  definition: {}
+  values: {multivalued: true, required: true}
+  code_list: {range: string, pattern: "^codes:[a-z_]+$"}
+  groups: {range: TaxonomyGroup, multivalued: true, inlined_as_list: true}
+  group: {}
+  members: {multivalued: true}
+  pred: {}
+  key_arity: {range: integer, minimum_value: 1}
+  rule_class: {range: RuleClass}
+  conservative: {range: boolean}
+  layer: {}
+  head:
+    description: "EDN literal, e.g. [:headroom ?c ?h]."
+  body:
+    description: "EDN vector of literals (see the slice.edn header for the literal forms)."
+  superior_to: {multivalued: true, range: string, pattern: "^R[0-9]+$"}
+  order: {multivalued: true, range: Owner, description: "Asserter authority, strongest first."}
+  assertion:
+    description: "EDN literal, e.g. [:cost_centre_of \"e077\" \"cc0078\"]."
+  asserted_by: {range: Owner}
+  asserted_at: {range: date}
+  valid_from: {range: date}
+  valid_to: {range: date}
+  warrant: {range: string, pattern: "^R[0-9]+$"}
+  backing: {}
+  qualifier: {range: Modal}
+  about: {range: string, pattern: "^[a-z]+:[A-Za-z0-9_/]+$"}
+  role: {range: SubClaimRole}
+
+enums:
+  AssetKind: {permissible_values: {vendor: {}, employee: {}}}
+  ColumnType: {permissible_values: {id: {}, int: {}, enum: {}, bool: {}, date: {}}}
+  ConceptKind: {permissible_values: {entity: {}, dimension: {}, hierarchy: {}, measure: {}}}
+  RuleKind: {permissible_values: {strict: {}, defeasible: {}, defeater: {}, superiority: {}, incompatible: {}}}
+  RuleClass:
+    permissible_values: {definition: {}, material_inference: {}, exception: {}, entitlement: {}, superiority: {}, incompatibility: {}}
+  Owner: {permissible_values: {finance: {}, hr: {}, procurement: {}, compliance: {}, risk: {}, controller: {}}}
+  Modal: {permissible_values: {certainly: {}, presumably: {}}}
+  SubClaimRole: {permissible_values: {required: {}, supporting: {}}}

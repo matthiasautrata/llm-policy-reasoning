@@ -1,0 +1,84 @@
+---
+search:
+  boost: 5.0
+---
+
+# Slot: version 
+
+<div data-search-exclude markdown="1">
+
+
+
+URI: [slice:version](https://example.org/llm-policy-reasoning/spike-v3/slice/version)
+<!-- no inheritance hierarchy -->
+
+
+
+
+
+## Applicable Classes
+
+| Name | Description | Modifies Slot |
+| --- | --- | --- |
+| [Slice](Slice.md) | The whole slice, as authored in shared/slice |  no  |
+
+
+
+
+
+
+## Properties
+
+### Type and Range
+
+| Property | Value |
+| --- | --- |
+| Range | [Integer](Integer.md) |
+| Domain Of | [Slice](Slice.md) |
+
+
+
+
+
+
+
+
+
+
+## Identifier and Mapping Information
+
+
+
+
+
+### Schema Source
+
+
+* from schema: https://example.org/llm-policy-reasoning/spike-v3/slice
+
+
+
+
+## Mappings
+
+| Mapping Type | Mapped Value |
+| ---  | ---  |
+| self | slice:version |
+| native | slice:version |
+
+
+
+
+## LinkML Source
+
+<details>
+```yaml
+name: version
+from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
+rank: 1000
+domain_of:
+- Slice
+range: integer
+
+```
+</details></div>
