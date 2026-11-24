@@ -14,9 +14,13 @@ Updated as work proceeds; newest first.
 - [x] V3b model (`clojure -M:model`): slice + extension validate natively (rule bodies included); 12/12 negative tests rejected, including the concept sql-or-derived rule LinkML did not enforce; `docs/slice.md` identical to V3a's below the header; `docs/why-node.schema.json` from Malli; all 350 why roots of a check-1 run conform
 - [x] V3b probes (`clojure -M:probe`): who-said-it attributes vs tx-meta, as-of on tx vs valid time, C1 history via `d/as-of`, hypothesis branch vs `d/with`
 - [x] `shared/bench.py`: decide p50/p95, cold start, max RSS for any CLI
-- [ ] RESULTS.md
+- [x] RESULTS.md: "What we learned about the architecture", §7 table, LOC, performance (DuckDB + Postgres), recommendation (V3b's architecture shape; engine either). Readability left to you
 
 ## Questions for Matthias
+
+2. RESULTS recommends V3b's *shape* (rules as data + schema into bodies + immutable state, hypotheses as values), not its engine. Does that framing match what you wanted from an exploration, or do you want a stack-level pick?
+3. Optional search (Scriptum/Lucene, HNSW) was skipped: plain Datalog matching passes check 6. Worth a follow-up?
+4. V3b's `d/with` hypothesis mode is verified by probe/timing, not by `accept.py` (which has no config switch for it). Add one?
 
 (Decisions taken without you are logged in PLAN.md → Decisions; these are the ones worth a look.)
 
