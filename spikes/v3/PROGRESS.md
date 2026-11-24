@@ -18,10 +18,9 @@ Updated as work proceeds; newest first.
 
 ## Questions for Matthias
 
-2. RESULTS recommends V3b's *shape* (rules as data + schema into bodies + immutable state, hypotheses as values), not its engine. Does that framing match what you wanted from an exploration, or do you want a stack-level pick?
-3. Optional search (Scriptum/Lucene, HNSW) was skipped: plain Datalog matching passes check 6. Worth a follow-up?
-4. V3b's `d/with` hypothesis mode is verified by probe/timing, not by `accept.py` (which has no config switch for it). Add one?
-
 (Decisions taken without you are logged in PLAN.md → Decisions; these are the ones worth a look.)
 
 1. Tooling: Postgres 18 via `brew services` (socket /tmp:5432, db `spike_v3`); clojure + babashka via brew; Python deps via uv into `.venv`. OK to keep the brew service running?
+2. RESULTS recommends V3b's *shape* (rules as data + schema into bodies + immutable state, hypotheses as values), not its engine. Does that framing match what you wanted from an exploration, or do you want a stack-level pick?
+3. Optional search (Scriptum/Lucene, HNSW) was skipped: plain Datalog matching passes check 6. Worth a follow-up?
+4. V3b's `d/with` hypothesis mode is verified by probe/timing, not by `accept.py` (which has no config switch for it). Add one?
