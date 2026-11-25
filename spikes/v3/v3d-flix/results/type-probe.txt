@@ -1,0 +1,15 @@
+# Flix 0.80.0, each planted defect checked alone against System A's sources (probes/types/run.sh)
+# id | first error | message (truncated) | defect
+# caught: T 9/10 (V3c Elixir 1.20: 4/10), extras E1 E2 2/2
+T01 | -- Type Error [E6794] | >> Unable to unify the types: '({ claims = List[{ about = String, assertedAt = String, assertedBy = Owner, assertion = Goal, backing = Option[String], id = Stri… | r0 }'. | T1 (V3c: BadMapError) a function's tuple result used as a record
+T02 | NOT CAUGHT |  | T2 (V3c: KeyError) wrong key on a SQL row map. Rows are Map[String, Value]: a misspelt key type-checks
+T03 | -- Type Error [E6469] | >> Unable to unify the effect formulas: 'rc' and '{}'. | T3 (V3c: bad child spec; no supervisor in Flix) the defect hit here instead: a spawned thread touching the parent region Ref
+T04 | -- Type Error [E6794] | >> Unable to unify the types: '(  )' and '( id = String | r0 )'. | T4 (V3c: KeyError :id) a required field missing on a record
+T05 | -- Type Error [E6794] | >> Unable to unify the types: '(  )' and '( records = List[{ cls = Class, doc = String, form = Form, id = String, owner = Owner, superiorTo = List[String] }] | r0 )'. | T5 unknown record field
+T06 | -- Type Error [E7685] | >> Unexpected argument: expected 'String', got 'Store'. | T6 a record passed to a string function
+T07 | -- Type Error [E7685] | >> Unexpected argument: expected 'String', got 'Json'. | T7 string concatenation on a non-string result
+T08 | -- Type Error [E6794];-- Type Error [E6794] | >> Unable to unify the types: 'Result[String, java.sql.Connection]' and 'Option[t0]'. | T8 a match arm on a result shape the callee never returns (connect returns Result, not Option)
+T09 | -- Type Error [E7685] | >> Unexpected argument: expected 'Int32', got 'String'. | T9 arithmetic on a string literal
+T10 | -- Type Error [E6925] | >> Unable to unify the function type 'Map[String, Term] -> Option[Subst]' with the non-function type 'Option[Subst]'. | T10 wrong arity to a module function
+E1 | -- Type Error [E8752] | >> Unexpected effect 'IO' in {} function. | E1 (no V3c analog) an effect leak: SQL (IO) from a function declared pure
+E2 | -- Pattern Match Error [E5952] | >> Non-exhaustive match: missing case 'Is(_, _, _, _)'. | E2 (no V3c analog) a non-exhaustive match on a literal form

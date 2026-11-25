@@ -227,3 +227,134 @@ Neither model checks rule semantics, such as variable safety or a `derived_by` t
   - On Postgres the gap is smaller than first reported: V3a 8.5 ms p50 versus V3b 5.2 ms.
 
 **Carry forward the shape; the stack is open.** The remaining differences are qualitative trade-offs. On one side: one notation and isolation by construction. On the other: generators, a smaller footprint and isolation by primitive plus discipline. Readability of the two notations is Matthias's call.
+
+## V3c and V3d
+
+Added 2026-11-24 after `PLAN-v3cd.md`: V3c is Elixir 1.20.5 on OTP 29.1.2, V3d is Flix 0.80.0 on JDK 27.0.1. Versions, deviations and pitfalls are in that plan's Decisions. The sections above are left as written. Raw outputs are in `v3c-elixir/results/` and `v3d-flix/results/`.
+
+**Re-run.**
+
+| Run | V3c | V3d |
+|---|---|---|
+| `accept.py` (DuckDB, check 2 on Postgres; check 1 runs `check_why`) | GREEN 1–6 | GREEN 1–6 |
+| `accept.py --mutation` | fails, as it must | fails, as it must |
+| `isolation.py`, both backends | PASS | PASS |
+| `bench.py`, both backends | 0 errors, 49/200 approved, 11.17 statements per decide | same |
+| 12 negatives | 12/12 rejected | 12/12 rejected (`results/negatives.txt`) |
+
+Both use an **own defeasible evaluator**, ported from V3b, over an immutable store value with on-demand fetches. Neither runs System A on its platform's Datalog. The Datalog engines were probed instead; the answers to Q1 below say why.
+
+### §7 criteria, four platforms
+
+V3a and V3b values are from "After the V3a fixes" where that section changed them, and from the first table otherwise.
+
+| Criterion | V3a (LinkML · Prolog) | V3b (Malli · Clojure · Datahike) | V3c (Elixir · ex_datalog probe) | V3d (Flix) |
+|---|---|---|---|---|
+| Correctness | Green 1–6; mutation fails | Green 1–6; mutation fails | Green 1–6; mutation fails. Ported V3b's settled semantics | Green 1–6; mutation fails. Ported V3b's settled semantics |
+| Effort | Session 1 | Session 2 | Within its timebox (3 sessions) | Within its timebox (3 sessions); most of it went to the Datalog probes |
+| Defeasible semantics | All built (`defeasible.pl`) | All built (`engine.clj`) | All built (`engine.ex`). ex_datalog rejects the defeasible meta-program (`:unstratified_negation`) | All built (`Engine.flix`). Flix Datalog does stratified negation only; team defeat over derived conclusions would be a negative cycle |
+| Explanations | Built; `why.pl` 63 lines | Built; `why.clj` 64 | Built; `why.ex` 92. `Explain` gives 82,195 nodes for a 3-step proof on a 5-edge graph, and runs out of memory (12.7 GB) on the full ancestor relation | Built, inside `Engine.flix`. `pquery` returns the leaf input facts of one derivation (3 facts, 0.1 s), not a tree |
+| Model / validation | 12/12 (linkml-validate on a converted copy) | 12/12 (Malli) | 12/12, hand-written validator over the EDN data | 12/12: 10 by parsing into ADTs, 2 by explicit checks (date regex, closed maps) |
+| Adoption gate / hypothesis, p50/p95 (DuckDB) | `snapshot/1` 0.11/0.12 ms | `d/with` 2.7 ms; branch 103 ms | Store value: Q11 0.19/0.33 ms; deriving the store alone 0.05 ms | Store value: Q11 0.49/1.40 ms; deriving the store alone 0.016 ms |
+| Isolation, kind | Primitive plus memo-key discipline | By construction (the db value is an argument) | By construction (a value; each concurrent op is its own process, and the per-op memo lives in that process) | By construction, **compiler-enforced**: a spawned thread cannot touch the parent region's `Ref` (E6469), so each thread gets its own copy of the store value |
+| SQL boundary | janus → Python | JDBC | ADBC 0.12.1, with DuckDB 2.0.1 pinned by URL | JDBC through interop, typed `\ IO`. The evaluator performs a user-defined `Eval` effect, handled per op |
+| Performance (DuckDB) | 4.4/9.3 ms; cold 0.12 s; RSS 60/126 MB | 6.0/13.1 ms; cold 2.4 s; RSS 367/645 MB | 5.5/12.0 ms; cold 0.30 s; RSS 121/239 MB | 6.3/13.8 ms; cold 1.7 s (load 713 ms); RSS 92/333 MB |
+| Performance (Postgres) | 8.5/21.7 ms | 5.2/17.3 ms | 15.5/37.7 ms in bench.py (noisy: 7.9–15.5 p50 over 4 runs); 4.9/12.7 in-process, warm | 5.1/15.5 ms; cold 0.15 s; RSS 69/384 MB |
+| **Concurrency throughput**: the bench's 200 decides, 1 → 8 workers (decides/s, p95 at 8) | not measured (statements serialised on one connection) | not measured (same) | DuckDB 140 → 288 (2.1×), p95 45 ms; Postgres 86 → 505 (5.9×), p95 31 ms. 8 processes, 8 connections | DuckDB 135 → 459 (3.4×), p95 32 ms; Postgres 321 → 1081 (3.4×), p95 15 ms. 8 threads, 8 connections. Same answers, 0 errors |
+| **Supervision / failure** | — | — | SQL connection killed mid-loop: restarted in 0.04–0.46 ms. On Postgres one op got an error (the call in flight); 0 wrong answers. Hot reload of the evaluator under 8 workers: 0 errors over 531 / 1061 requests | No supervisor. A failure is a value (`Result`); a thread that dies is not restarted. Not probed |
+| **Lattice** | — | — | — (ex_datalog has no lattices) | Standing as a lattice-valued predicate works natively: meet over premises, the solver joins alternative derivations. Rebuttal lowers a standing, which is not monotone, so it needs stratified negation, not the lattice |
+| **Types caught** (planted defects T01–T10) | — | — | 4/10 (T1, T6, T9, plus T10 from the undefined-function check, not the type system) | 9/10. The miss: a misspelt key on a `Map[String, Value]` SQL row. Also caught: an IO effect leak from a pure function, and a non-exhaustive match on a literal form |
+| **Rules as data → native Datalog** | (not tried; Prolog clauses are data) | No: Datahike rules did not fit the defeasible layer | No. Strict closures only, as a probe: anc 0.57 s, chain 56 s vs CTE 37 ms. Magic sets 39–42 ms. Callbacks return one value per binding, and their SQL runs in other processes, outside the op's log | Partly. 16/19 logic rules become runtime `Fixpoint3` AST values and solve over materialised SQL facts, but without the frontend's checks (stratification, range restriction), bottom-up only, and not the defeasible semantics. The reified meta-program route is about 45× slower than typed predicates |
+| Footprint (information) | `.venv` 250 MB + SWI-Prolog | 75 jars, 106 MB + JDK | Erlang/OTP + Elixir (brew); deps compiled under `_build` | Fat jar 84.5 MB; `lib/` 79 MB; Flix 38 MB + JDK 374 MB |
+
+Lines (total, incl. blanks and comments):
+
+| Part | V3c | V3d |
+|---|---|---|
+| EDN reader | `edn.ex` 102 (NimbleParsec) | `Edn.flix` 181 (hand-written) |
+| Model / validation | `model.ex` 200 | `Model.flix` 496 (ADTs and parser; the types *are* the model) |
+| Evaluator + why | `engine.ex` 360 + `why.ex` 92 | `Engine.flix` 624 |
+| Store | `store.ex` 94 | `Store.flix` 47 |
+| Ops / SQL / glue | 277 / 138 / 67 | 357 / 174 / 107 |
+| Total | 1330 | 1986 |
+
+Latency is the CLI's own per-op `ms`, as before. V3d's Postgres cold start is shorter than its DuckDB one because loading DuckDB's native library dominates. The 1-thread rows of the throughput probe run after a warm-up pass; that is why V3d Postgres reaches 2.1 ms p50 there, against 5.1 in `bench.py`.
+
+### V3c: answers to PLAN-v3cd §1.2
+
+1. **What does ex_datalog carry?** Only the strict recursive part, and only as a probe.
+   - The ancestor closure is correct (9497 facts, equal to the CTE) but takes 0.57 s, and the reporting chain takes 56 s. The two all-pairs CTEs take 37 ms together.
+   - Magic sets answer one goal in 39–42 ms, the same answer as the CTE.
+   - The default 30 s timeout returns `{:ok, …}` with 79,652 of 97,683 facts. Truncation is visible only in `stats.termination`.
+   - BEAM callbacks as the `fetch` hook return one value per binding, so a multi-row fetch comes back as a list term, not as joinable rows. Their SQL runs in separate processes, invisible to the op's log and cache, which check 5 needs.
+   - `Explain` is not a usable source for `why`. It names every derived fact rather than one proof: 82,195 nodes for a 3-step proof. It runs out of memory on the full relation.
+   - The defeasible meta-program is rejected as unstratified.
+   
+   So it is an own evaluator in Elixir, as in V3b (`engine.ex` 360 + `why.ex` 92).
+2. **Isolation.** The state is one immutable `%Store{}`, and each concurrent op is its own process. `isolation.py` passes on both backends. Hypothesis p50/p95 on DuckDB: Q11 0.19/0.33 ms; with the extension added, 0.21/0.29 ms. That is between V3a's `snapshot/1` (0.11) and V3b's `d/with` (2.7).
+3. **Runtime extension.** Check 3 passes: a claim and a rule are added at runtime with no restart, and Q07 and Q14 change.
+4. **BEAM side benefits.**
+   - Supervision: killing the SQL connection process mid-loop restarts it in under 0.5 ms, with 0 wrong answers. At most the op in flight gets an error.
+   - Concurrency: 8 processes give 2.1× on DuckDB and 5.9× on Postgres.
+   - Hot reload: the evaluator module, loaded twice under 8 workers, gave 0 errors and 0 wrong answers, and all three versions served requests.
+   - Each of these was a short probe (`probes/beam_probes.exs`) against System A's existing supervision tree: a top supervisor, plus a `rest_for_one` supervisor per SQL connection.
+   - LiveView was skipped (optional).
+5. **Types.** Elixir 1.20's checker reported 3 of 10 planted defects, plus 1 from the undefined-function check. Not reported: a string key used as an atom on a SQL row (T2), a bad child spec (T3), a missing map field (T4), an unknown struct field (T5), concatenation on an atom (T7), and a clause on a result shape the callee never returns (T8). V3d's Flix caught 9/10 of the same.
+
+### V3d: answers to PLAN-v3cd §2.2
+
+1. **Can runtime rules become Flix Datalog values?**
+   - **(i) A fixed predicate vocabulary with typed `#{}` programs** does not reach rules loaded at runtime. The predicate symbols and their types live in source, and a typed program can only be composed (`<+>`) from fragments that already exist there. It works well where the *rules* are fixed and only *facts* come from SQL:
+     - typed closures over SQL rows: ancestors 9497 facts in 0.2 s, chain 97,683 in 0.6 s;
+     - but a single goal recomputes the whole closure (0.33 s for one employee's chain).
+   - **Runtime programs through the `Fixpoint3` AST** (`Translate.flix`) are the way rules-as-data reach the solver. 16 of 19 logic rules translate; R106 (a comparison over an arithmetic term), R202 and R304 (not range-restricted, bound only by the caller) do not. What this path gives up:
+     - **No negative-cycle check.** A cycle built at runtime "solves" and derives both sides, which is unsound. The same program as typed source is rejected at compile time (E5914).
+     - No range-restriction check, and an output/input argument order that only the solver notices.
+     - **Bottom-up only.** It needs a hand-chosen demand domain for parameterised concepts: 782,603 fetch facts materialised in 38 s. It also surfaced an INT32 overflow in the slice's own `pending_exposure` SQL, which no top-down engine ever reaches. Check 5's bounded fetch is lost.
+     - Its readings are Horn and a stratified approximation, not team defeat.
+   - **(ii) The reified encoding** works: the same 9497 facts, but 8.6 s, about 45× the typed program. The defeasible meta-program would need non-stratified negation as well.
+   - **(iii) An own evaluator** is what System A runs. Flix Datalog would fit the strict closures, which the SQL CTEs already do in milliseconds.
+   - **(iv) Codegen** costs 2.7–2.9 s for `check`, 9.6 s for a fat jar, a 1.7 s cold start, and the loss of in-process state on every rule change.
+2. **Lattice.** Yes, for propagation. `Eff(g; meet(a, b))` gives a conclusion the weakest standing of its premises, and the solver joins alternative derivations to the best one (`probe-lattice.txt`). Defeat is not monotone, so it cannot be a lattice operation; it needs stratified negation. Team defeat over *derived* conclusions is then a negative cycle. So the lattice can carry "how well supported", and defeat stays in the evaluator.
+3. **Isolation.** A hypothesis is a derived `Store` value. `isolation.py` passes on both backends. The compiler enforces that no thread shares the parent's mutable `Ref`. Q11 p50/p95 is 0.49/1.40 ms; deriving the hypothesis store is 0.016 ms. The rest is a slower evaluator than V3c's on this path (plain decide 0.21 vs 0.13 ms).
+4. **Explanations.** All built. `pquery` gives the input facts that support one derived fact (Node, two Parent edges for `Anc(cc0077, cc0001)`, 0.1 s), but not the rule steps or why-not. It also answers only for typed programs. `why` and `why_not` come from the own evaluator and pass `check_why`.
+5. **Types and effects.**
+   - Caught: 9/10 planted defects plus 2 extras: an effect leak, and a non-exhaustive match over literal forms.
+   - Most caught by the compiler during development: record shapes, `Result` vs `Option`, effect rows around `spawn`. The one real hole is the SQL row, a `Map[String, Value]`.
+   - The ceremony cost:
+     - name collisions with Datalog keywords;
+     - imports with aliases for every Java type;
+     - explicit arrays for varargs;
+     - an effect signature on `main`;
+     - `pin` around timings;
+     - a Model about 2.5× V3c's lines, because the ADTs and their parser are the validator.
+
+### What we learned about the architecture (additions)
+
+1. **The defeasible layer is not native Datalog on any of the four platforms.** Datahike rules, ex_datalog and Flix Datalog all stop at stratified negation, and team defeat over derived conclusions is a negative cycle. All four run the same own top-down evaluator. What the Datalog engines do well (recursive closures over fetched rows), SQL CTEs already do in milliseconds.
+2. **Top-down with a bounded fetch is part of the shape, not an engine detail.** The bottom-up path had to materialise 782k facts over a hand-chosen domain, and it reached SQL (`pending_exposure` at the root) that no question asks. Rules like R202 and R304 are legitimate only because a caller binds their variables. Check 5 measures exactly that property.
+3. **Rules as data lose the compiler's rule checks, so the model must take them over.** The static checks the typed Flix path gives for free (stratification, range restriction) are gone on the runtime path. The model validators, V3a–V3d alike, do not check them either. A moded safety check (which variables the caller binds) and a stratification check belong in the model.
+4. **Isolation by construction has three forms now:**
+   - a value passed as an argument (V3b, V3c, V3d);
+   - a process per op (V3c);
+   - a compiler that refuses shared mutable state across threads (V3d).
+   
+   Only the Prolog primitive needs a discipline.
+5. **The SQL boundary is where static guarantees stop.** It is Flix's one type miss, V3c's callbacks lose the op's log there, and DuckDB's INT128 sums meet an INT32 cast there. Typed rows per concept, generated from the concept's `columns`, would close the Flix gap without codegen of rules.
+6. **Lattice-valued standing is a separate axis from defeat.** Support strength can propagate monotonically through derivations; defeat cannot. If qualified or partial standing matters, it fits a lattice, and the evaluator keeps defeat.
+
+### Recommendation across four platforms
+
+The shape stands: rules and claims as data, a model that sees rule bodies, isolated hypotheses as values, a top-down evaluator with bounded fetch. All four platforms carry it, and all four needed an own evaluator. What each adds or costs (no ranking):
+- **V3a, Prolog:** the shortest evaluator, the lightest footprint and the fastest on DuckDB. Isolation is a primitive plus discipline, and LinkML validates a converted copy.
+- **V3b, Clojure/Datahike:** one notation throughout, isolation by construction, and transaction time as an audit axis. The heaviest footprint.
+- **V3c, Elixir:** isolation by value and by process, plus what the BEAM gives for free: supervision with sub-millisecond restarts, 2–6× throughput at 8 workers, and hot reload under load. The type checker is still weak (3–4/10). ex_datalog is young and carries nothing of System A.
+- **V3d, Flix:** the strongest static checks (9/10, effects, exhaustiveness) and compiler-enforced isolation. A native lattice, if graded standing is wanted. Its first-class Datalog does not reach rules loaded at runtime without dropping to an unchecked AST. The costs are ceremony and the largest code base (1986 lines).
+
+The stack remains open. The new information is about which secondary property is wanted:
+- operational resilience and concurrency (V3c);
+- static guarantees (V3d);
+- audit time (V3b);
+- minimal footprint (V3a).
+
+Readability of the four notations is Matthias's call.

@@ -109,3 +109,40 @@ See RESULTS "V3c and V3d" for the numbers.
 - **Explain** is probed on a 5-edge graph. On the full ancestor relation it ran out of memory (12.7 GB RSS, process killed), because provenance stores no bindings.
 - **LiveView** was skipped. It is optional in §1.2, the timebox went to the probes above, and the contract needs no UI.
 - **Hot reload** uses `Code.compile_string/2` on a modified `engine.ex`, loaded twice, so the second load purges version 1 while the 8 workers run. A release upgrade (appup or relup) was not tried.
+
+**2026-11-24 · V3d stack (versions checked against the Flix 0.80.0 docs and stdlib source, and Maven Central).** Flix 0.80.0 on openjdk 27.0.1; DuckDB JDBC 2.0.1.0 and PostgreSQL JDBC 42.7.15 as `mvn-dependencies` in `flix.toml`. The driver is instantiated directly (`new DuckDBDriver()`, `new org.postgresql.Driver()`) instead of going through `DriverManager`. That makes one plain constructor call per backend and does not depend on ServiceLoader registration in the fat jar; `DriverManager` was not tried. Postgres needs `stringtype=unspecified` so that string parameters bind against date and numeric columns. All JDBC calls are typed `\ IO`, and the boundary is `Sql.flix`. The evaluator does no IO itself: it performs a user-defined `Eval` effect (fetch, memo, fresh names, failure), which `Sql.withEval` handles for one op. Model, Store and Edn are pure. The CLI and the probes run with `-Xss512m`, a large main-thread stack for the deeply recursive evaluator and solver. It was set as a precaution; a run at the default stack size was not measured.
+
+**2026-11-24 · V3d EDN reader: hand-written in Flix (181 lines).** There is no Flix EDN library. Java interop to edn-java 0.7.1 or to Clojure's reader was rejected: both hand back `java.util` collections, which would need converting into Flix values anyway. A parser straight into a Flix `Edn` ADT avoids that conversion and stays typed.
+
+**2026-11-24 · V3d model and the 12 negatives (`results/negatives.txt`, `-Dprobe=negatives`).** The model is a set of ADTs for terms, literals, rule forms, claims and concepts. The parser targets these ADTs ("parse, don't validate"), and 12/12 negatives are rejected with a path and a message. 10 of them fall out of the parse: no value of the ADTs can represent them (owner and role enums, rule kind, arity and shape of literals, `?` variables, `[:neg <literal>]`, fetch filters as a map, `:is` operators, superiority owners, and a concept's `Source` as `Sql | Derived`). 2 need checks the types cannot express: the ISO date regex and closed maps (unknown keys). `Not` was narrowed to wrap a goal literal only. Validation stops at the first error, unlike Malli, which collects them all. `add` and `with_hypothesis` validate through the same parser.
+
+**2026-11-24 · V3d evaluator: own (route iii), Flix Datalog in the probes only.** System A's evaluator (`Engine.flix`, 624 lines with the why/why_not trees) is a port of V3b/V3c. It runs over the immutable Store record, with on-demand fetches and a per-op memo. Flix Datalog is not used in System A. The probes for routes (i), (ii) and (iv), and the reasons, are in the next entries and in RESULTS "V3c and V3d".
+
+**2026-11-24 · V3d Flix pitfalls (cost of the ceremony, recorded).**
+- Keywords that collide with ordinary names: `query`, `force`, `run`, `eff`, `inject`, `pquery`, `psolve`, `solve`.
+- Java varargs calls need an explicit array. A fully qualified Java type does not parse in a signature, so each one needs an `import ... => Alias`.
+- `main` has the effect signature `IO + Chan + NonDet` once it spawns threads.
+- `spawn` admits only `IO + Chan + NonDet`. A thread cannot touch the parent region's `Ref`, which the compiler rejects (E6469). So each `concurrent` thread gets its own `Ref` holding the store value as it was at the spawn. That gives isolation by construction, and the compiler enforces it.
+- Datalog solving is pure, so the optimiser may move it past a clock read. Timings need an IO call that uses the result (`pin`).
+- `/dev/stdin` is read with `Files.readString`.
+- The probes are a separate Flix project, `probes/`. Its `src/` symlinks System A's sources, so the probes see the real modules without a package build.
+
+**2026-11-24 · V3d Q1 probes (`results/probe-*.txt`).**
+- **(ii) reified encoding** (`Reified.flix`): rules as data plus a fixed meta-program over generic `Fact(pred, args)` relations. The ancestor closure gives the same 9497 facts as the typed program, but takes 8.6 s with facts keyed by predicate (67 s unkeyed), against 0.2 s for the typed program, about 45×.
+- **(i) runtime-built programs** (`Translate.flix`): the slice's rules are translated into Flix's `Fixpoint3` AST, which user code can reach (it is what the solver runs; the documented user API is the compile-time `#{}` syntax), and solved by `Fixpoint3.Solver.runSolver`. This is the only way a Datalog program can come from data, since the `#{}` syntax is compile-time. 16 of 19 logic rules translate. The 3 that do not:
+  - R106: a comparison over an arithmetic term;
+  - R202 and R304: not range-restricted, with a variable bound only by the caller (goal-directed).
+
+  Findings:
+  - `BodyPredicate.Functional` takes outputs *before* inputs. Both are `Vector[VarSym]`, so swapping them type-checks and only crashes inside the solver (`getOrCrash`).
+  - **The runtime path has no negative-cycle check.** `p :- q, not r. r :- q, not p.` built at runtime "solves" and derives both p and r, which is unsound. The same program as a typed `#{}` value is rejected at compile time with E5914 (`results/neg-cycle-typed.txt`).
+  - The runtime path also assumes range restriction; the translator checks it.
+  - Bottom-up needs a demand domain: a parameterised concept must be materialised for every binding, and the domain (all cc ids, the distinct requesters) was chosen by hand. That materialised 782,603 fetch facts in about 38 s.
+  - Materialising `pending_exposure` for every centre, root included, overflows the slice SQL's `CAST(SUM(...) AS INTEGER)` (3,830,473,000). This is a latent bug in the slice's SQL, reachable only bottom-up. It was left as found, because the slice is shared and the top-down engines never ask for the root.
+- **(iv) codegen, cost only:** `flix check` takes 2.7–2.9 s and `build-fatjar` 9.6 s, plus a 1.7 s JVM cold start, and the in-process state is lost. Not pursued.
+
+**2026-11-24 · V3d type probe (`probes/types/`, `results/type-probe.txt`).** The V3c planted defects T01–T10 were re-planted as Flix analogs, each checked alone against System A's sources. 9/10 were caught at compile time (V3c with Elixir 1.20: 4/10). The miss is T02, a misspelt key on a SQL row, because rows are `Map[String, Value]`. T03 (a bad child spec in V3c) has no Flix analog, since there is no supervisor; the defect planted instead is a spawned thread touching the parent's `Ref`, which is caught. Two extras with no V3c analog are both caught: an IO effect leaking from a function declared pure (E8752), and a non-exhaustive match on a literal form (E5952).
+
+**2026-11-24 · V3d throughput probe added (`probes/par.py`, `results/par-*.json`).** The plan's concurrency row needs a V3d number. The probe runs the bench's 200 seeded decides through the CLI's `concurrent` key on 1 thread and on 8 threads, each thread on its own JDBC connection, after a sequential warm-up of the same 200 for the JIT. The answers are identical between 1 and 8 threads, and there are 0 errors.
+
+**2026-11-24 · V3d hypothesis latency is higher than V3c's** (`results/hyp-latency-*.json`). Q11 (withhold R313, then decide) has p50/p95 of 0.49/1.40 ms on DuckDB, against V3c's 0.19/0.33. A plain decide on the same request is 0.21/0.34 against 0.13/0.15. Deriving the hypothesis store itself is 0.016 ms, so the difference lies in the evaluator, not in the hypothesis mechanism. Not investigated: this is footprint only.

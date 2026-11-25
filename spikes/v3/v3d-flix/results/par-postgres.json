@@ -1,0 +1,24 @@
+{
+ "backend": "postgres",
+ "parallel": [
+  {
+   "threads": 1,
+   "wall_ms": 623,
+   "decides_per_s": 321.0,
+   "errors": 0,
+   "p50": 2.095042,
+   "p95": 5.85625
+  },
+  {
+   "threads": 8,
+   "wall_ms": 185,
+   "decides_per_s": 1081.1,
+   "errors": 0,
+   "p50": 5.022375,
+   "p95": 14.701
+  },
+  {
+   "same_answers": true
+  }
+ ]
+}

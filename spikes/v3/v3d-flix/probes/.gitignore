@@ -1,0 +1,4 @@
+artifact/
+build/
+lib/
+*.jar

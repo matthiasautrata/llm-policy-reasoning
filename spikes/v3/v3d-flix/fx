@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# flix with ANSI colours stripped (for logs)
+cd "$(dirname "$0")" && flix "$@" 2>&1 | sed $'s/\x1b\\[[0-9;]*m//g'

@@ -1,0 +1,14 @@
+negatives: unmodified slice loads
+  rejected  concept with neither :sql nor :derived-by: slice.concepts[0]: a concept has :sql or :derived-by
+  rejected  unknown owner on a rule: slice.rules[0].owner: should be one of finance, hr, procurement, compliance, risk, controller
+  rejected  rule variable without ?: slice.rules[0].head[1]: a term: ?variable, string, integer, boolean or [:+|:- a b]
+  rejected  fetch filters not a map: slice.rules[0].body[0][2]: filters: a map
+  rejected  unknown arithmetic op in :is: slice.rules[1].body[3][2]: an expression [:+|:- a b]
+  rejected  comparison with three arguments: slice.rules[1].body[3]: :<: wrong arity or shape
+  rejected  bad date in a claim: slice.claims[0].asserted_at: should match \d{4}-\d{2}-\d{2}
+  rejected  unknown key on a claim (closed map): slice.claims[0].confidence: disallowed key
+  rejected  sub-claim role not required/supporting: slice.claims[0].subclaims[0].role: should be one of required, supporting
+  rejected  superiority order with unknown owner: slice.rules[20].order[1]: should be one of finance, hr, procurement, compliance, risk, controller
+  rejected  rule kind unknown: slice.rules[0].kind: should be one of strict, defeasible, defeater, incompatible
+  rejected  negated literal wrapping a non-literal: slice.rules[0].head[1]: a literal (vector)
+negatives rejected: 12/12

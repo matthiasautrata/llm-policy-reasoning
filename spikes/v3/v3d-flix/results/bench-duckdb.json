@@ -1,0 +1,29 @@
+{
+ "cli": "spikes/v3/v3d-flix/cli",
+ "backend": "duckdb",
+ "n": 200,
+ "errors": 0,
+ "approved_true": 49,
+ "decide_ms": {
+  "p50": 6.278375,
+  "p95": 13.792208,
+  "max": 63.274959,
+  "mean": 7.96996308
+ },
+ "decide_ms_warm": {
+  "p50": 5.823667,
+  "p95": 13.074959
+ },
+ "questions_ms": {
+  "p50": 1.111125,
+  "p95": 13.068625
+ },
+ "sql_per_decide": 11.17,
+ "load_ms": 712.661458,
+ "cold_start_s": 1.68,
+ "session_wall_s": 2.87,
+ "max_rss_mb": {
+  "load_only": 92,
+  "bench": 333
+ }
+}

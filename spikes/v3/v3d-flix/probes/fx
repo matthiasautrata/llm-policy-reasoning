@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+cd "$(dirname "$0")" && flix "$@" 2>&1 | sed $'s/\x1b\\[[0-9;]*m//g'

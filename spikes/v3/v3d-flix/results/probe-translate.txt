@@ -1,0 +1,14 @@
+translate: 20 rules, 19 logic rules, 16 translated; untranslatable:
+    R106: comparison over an arithmetic term
+    R202: not range-restricted, unbound: ?d :: Nil
+    R304: not range-restricted, unbound: ?r :: Nil
+  literal forms: Map#{as_of => 1, cmp => 8, derived => 14, fetch => 18, is => 1, not => 2}
+  (a) Horn reading, kinds ignored: 16 constraints, stratified, solved (no facts) in 8.4E-5 ms
+  (b) defeasible encoding (p :- body, not ~p): 15 constraints, stratified, solved (no facts) in 8.3E-5 ms
+  materialised 782603 fetch facts in 39025.517375 ms; errors: pending_exposure: RuntimeError: SQL: Conversion Error: Type INT128 with value 3830473000 can't be cast because the value is out of range for the destination type INT32
+
+LINE 1: ... sub s ON c.parent = s.id) SELECT CAST(? AS VARCHAR) AS cc, CAST(COALESCE(SUM(r.amount), 0) AS INTEGER) AS value FROM...
+                                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ :: Nil
+  (a) Horn reading over SQL facts: 782603 facts + 16 rules solved in 9265.723209 ms; derived: booked_total=1969 headroom=1969 breach_in=0 big_capital=7620 role_limit=0 governing_limit=0 vendor_status_for=100000 has_approver=0 vendor_cleared=78622 eligible=0 denied=5020 approved=9681 auto_approved=4932
+  (b) defeasible encoding over SQL facts: 782603 facts + 15 rules solved in 9357.827833 ms; derived: booked_total=1969 headroom=1969 breach_in=0 big_capital=7620 role_limit=0 governing_limit=0 vendor_status_for=100000 has_approver=0 vendor_cleared=78622 eligible=0 denied=5020 approved=4932 auto_approved=4932
+  negative cycle p/r (AST, runtime): 1 facts + 2 rules solved in 1.396542 ms; derived: p=1 r=1

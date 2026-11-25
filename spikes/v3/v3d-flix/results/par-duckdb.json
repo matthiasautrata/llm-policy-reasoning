@@ -1,0 +1,24 @@
+{
+ "backend": "duckdb",
+ "parallel": [
+  {
+   "threads": 1,
+   "wall_ms": 1479,
+   "decides_per_s": 135.2,
+   "errors": 0,
+   "p50": 5.435958,
+   "p95": 13.030083
+  },
+  {
+   "threads": 8,
+   "wall_ms": 436,
+   "decides_per_s": 458.7,
+   "errors": 0,
+   "p50": 13.572542,
+   "p95": 31.734375
+  },
+  {
+   "same_answers": true
+  }
+ ]
+}

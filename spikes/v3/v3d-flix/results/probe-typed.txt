@@ -1,0 +1,7 @@
+anc: 9497 facts (SQL CTE 9497) in 200.044292 ms; fetch 1968 edges 30.943791 ms
+chain: 97683 facts (SQL CTE 97683, 2.736334 ms) in 613.553875 ms over 19999 edges
+chain of e077: Vector#{e000, e001, e013} (331.019416 ms, full closure recomputed)
+pquery Anc(cc0077, cc0001) with {Parent, Node}: 104.8935 ms
+  Node(cc0077)
+  Parent(cc0077, cc0013)
+  Parent(cc0013, cc0001)
