@@ -497,6 +497,10 @@ functional:
   key_arity: 1
 - pred: pending_exposure
   key_arity: 1
+- pred: approved_total
+  key_arity: 1
+- pred: approved_count
+  key_arity: 1
 rules:
 - id: R104
   kind: strict
@@ -665,6 +669,89 @@ rules:
     args:
     - type: Var
       name: ?r
+- id: R120
+  kind: strict
+  owner: finance
+  rule_class: definition
+  recorded_at: '2026-09-14'
+  closed_over: known_facts
+  doc: 'Approved total of a subtree: the sum of the amounts of its pending requests whose approval is proven.'
+  head:
+    type: Derived
+    pred: approved_total
+    args:
+    - type: Var
+      name: ?x
+    - type: Var
+      name: ?v
+  body:
+  - type: Aggregate
+    op: sum
+    var:
+      type: Var
+      name: ?a
+    body:
+    - type: Fetch
+      concept: request_in_subtree
+      filters:
+        root:
+          type: Var
+          name: ?x
+        status:
+          type: Str
+          value: pending
+      outputs:
+        id: ?r
+        amount: ?a
+    - type: Derived
+      pred: approved
+      args:
+      - type: Var
+        name: ?r
+    out:
+      type: Var
+      name: ?v
+- id: R121
+  kind: strict
+  owner: finance
+  rule_class: definition
+  recorded_at: '2026-09-14'
+  closed_over: known_facts
+  doc: 'Approved count of a subtree: the number of its pending requests whose approval is proven.'
+  head:
+    type: Derived
+    pred: approved_count
+    args:
+    - type: Var
+      name: ?x
+    - type: Var
+      name: ?n
+  body:
+  - type: Aggregate
+    op: count
+    var:
+      type: Var
+      name: ?r
+    body:
+    - type: Fetch
+      concept: request_in_subtree
+      filters:
+        root:
+          type: Var
+          name: ?x
+        status:
+          type: Str
+          value: pending
+      outputs:
+        id: ?r
+    - type: Derived
+      pred: approved
+      args:
+      - type: Var
+        name: ?r
+    out:
+      type: Var
+      name: ?n
 - id: R112
   kind: strict
   owner: finance

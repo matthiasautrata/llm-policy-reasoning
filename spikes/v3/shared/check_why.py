@@ -27,7 +27,7 @@ backend connection, it re-checks every node:
 Usage as a library: Checker(slice_plain, active_rules, active_claims, as_of, runsql).check(nodes)
 returns a list of error strings (empty = verified).
 """
-import operator
+import json, operator
 
 CMP = {"<": operator.lt, "<=": operator.le, ">": operator.gt, ">=": operator.ge, "=": operator.eq}
 ARITH = {"+": operator.add, "-": operator.sub}
@@ -70,6 +70,13 @@ def unify(a, b, s):
     if isinstance(a, bool) or isinstance(b, bool):
         return s if a is b else None
     return s if a == b else None
+
+
+def vars_of_t(t):
+    if is_var(t): return {t}
+    if isinstance(t, list): return set().union(*map(vars_of_t, t)) if t else set()
+    if isinstance(t, dict): return set().union(*map(vars_of_t, t.values())) if t else set()
+    return set()
 
 
 def ground(t):
@@ -119,6 +126,8 @@ def node_ids(nodes, out=None):
             if n.get("source", "").startswith("authority:"):
                 out.add(n["source"].split(":", 1)[1])
         node_ids(n.get("children"), out)
+        for m in n.get("members") or []:              # aggregate: the proofs of each member
+            node_ids(m.get("children"), out)
         if n.get("failed"):
             node_ids([n["failed"]], out)
     return out
@@ -130,6 +139,8 @@ def goals_in(nodes, out=None):
         if "goal" in n:
             out.append(n["goal"])
         goals_in(n.get("children"), out)
+        for m in n.get("members") or []:
+            goals_in(m.get("children"), out)
         if n.get("failed"):
             goals_in([n["failed"]], out)
     return out
@@ -250,10 +261,9 @@ class Checker:
         body, kids = r.get("body") or [], n.get("children") or []
         if len(kids) < len(body):
             return self.err(path, f"{len(kids)} children for {len(body)} body literals")
-        for j, (lit, k) in enumerate(zip(body, kids)):
-            s = self.literal(lit, k, s, f"{path}[{j}]")
-            if s is None:
-                return
+        s = self.conj(body, kids, s, path)
+        if s is None:
+            return
         for j, k in enumerate(kids[len(body):]):
             if k.get("type") not in ("superior", "defeated_by"):
                 self.err(f"{path}[+{j}]", f"extra child of type {k.get('type')}")
@@ -261,8 +271,45 @@ class Checker:
         if not ground(subst(head, s)):
             self.err(path, "head not ground after the body")
 
+    def conj(self, body, kids, s, path):
+        """Children aligned with the literals of a conjunction -> the substitution, or None."""
+        for j, (lit, k) in enumerate(zip(body, kids)):
+            s = self.literal(lit, k, s, f"{path}[{j}]")
+            if s is None:
+                return None
+        return s
+
+    def aggregate(self, lit, k, s, path):
+        """[:agg op ?x [body] ?out]: every member a proof of the conjunction under s, distinct bindings,
+        and the aggregate recomputed (SEMANTICS.md, Aggregates). That refuted bindings are refuted is
+        the reference's part (the value is in the key)."""
+        _, op, x, body, out = lit
+        if k.get("type") != "aggregate" or k.get("op") != op:
+            self.err(path, f"expected aggregate {op}, got {k.get('type')} {k.get('op')}")
+            return None
+        local = sorted(vars_of_t(body) - {v for v in vars_of_t(body) if walk(v, s) != v})
+        seen, xs = set(), []
+        for i, m in enumerate(k.get("members") or []):
+            kids = m.get("children") or []
+            if len(kids) != len(body):
+                self.err(f"{path}.members[{i}]", f"{len(kids)} children for {len(body)} literals"); continue
+            sm = self.conj(body, kids, dict(s), f"{path}.members[{i}]")
+            if sm is None: continue
+            b = json.dumps([subst(v, sm) for v in local])
+            if b in seen: self.err(f"{path}.members[{i}]", f"duplicate binding {b}")
+            seen.add(b)
+            xv = ev(x, sm)
+            if norm(m.get("value")) != norm(xv): self.err(f"{path}.members[{i}]", f"member value {m.get('value')} != {xv}")
+            xs.append(xv)
+        val = sum(xs) if op == "sum" else len(xs)
+        if norm(k.get("value")) != norm(val):
+            self.err(path, f"aggregate value {k.get('value')} != recomputed {val}")
+        return unify(out, val, s)
+
     def literal(self, lit, k, s, path):
         op = lit[0]
+        if op == "agg":
+            return self.aggregate(lit, k, s, path)
         if op == "fetch":
             if k.get("type") != "fetch" or k.get("concept") != lit[1]:
                 self.err(path, f"expected fetch {lit[1]}, got {k.get('type')} {k.get('concept')}")

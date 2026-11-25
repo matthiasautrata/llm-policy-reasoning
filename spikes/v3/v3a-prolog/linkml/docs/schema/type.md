@@ -27,6 +27,7 @@ URI: [slice:type](https://example.org/llm-policy-reasoning/spike-v3/slice/type)
 | [Neg](Neg.md) | [:neg literal]: the complement (defeater heads, negative claims) |  no  |
 | [Comparison](Comparison.md) | [:< a b] and friends: numbers or ISO dates |  no  |
 | [Is](Is.md) | [:is ?x [:+ a b]]: arithmetic |  no  |
+| [Aggregate](Aggregate.md) | [:agg :sum ?x [literal  |  no  |
 | [AsOf](AsOf.md) | [:as_of ?d]: the evaluation date |  no  |
 | [RuleTerm](RuleTerm.md) | An argument of a literal (named RuleTerm because Term is the vocabulary class... |  no  |
 | [Var](Var.md) |  |  no  |

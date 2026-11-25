@@ -130,6 +130,7 @@ attributes:
     domain_of:
     - Output
     - Is
+    - Aggregate
     range: Var
     required: true
     inlined: true
@@ -162,6 +163,7 @@ attributes:
     domain_of:
     - Output
     - Is
+    - Aggregate
     range: Var
     required: true
     inlined: true

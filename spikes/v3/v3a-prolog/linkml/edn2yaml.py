@@ -3,7 +3,7 @@
 Field names map to snake_case slots. Rule heads, bodies and claim assertions become structured objects
 (PLAN-v3a-fix F2): each literal and term is an object whose `type` names its LinkML class (designates_type):
   literal  Derived{pred, args}  Fetch{concept, filters, outputs}  Not{literal}  Neg{literal}
-           Comparison{op, left, right}  Is{var, expr}  AsOf{date}
+           Comparison{op, left, right}  Is{var, expr}  Aggregate{op, var, body, out}  AsOf{date}
   term     Var{name}  Str{value}  Int{value}  Bool{value}  Expr{op, left, right}
 The mapping is faithful, not validating: positions beyond a form's arity go to `extra`, a non-map filter
 or output becomes a list, a keyword where a term belongs becomes Keyword{name}. The schema rejects those;
@@ -76,6 +76,10 @@ def literal(x):
         return positional("Comparison", {"op": k}, ["left", "right"], [term(v) for v in rest])
     if k == "is":
         return positional("Is", {}, ["var", "expr"], [term(v) for v in rest])
+    if k == "agg":
+        vals = [name(v) for v in rest[:1]] + [term(v) for v in rest[1:2]] \
+             + [[literal(l) for l in v] if isinstance(v, list) else term(v) for v in rest[2:3]] + [term(v) for v in rest[3:]]
+        return positional("Aggregate", {}, ["op", "var", "body", "out"], vals)
     if k == "as_of":
         return positional("AsOf", {}, ["date"], [term(v) for v in rest])
     return {"type": "Derived", "pred": k, "args": [term(v) for v in rest]}
@@ -87,6 +91,8 @@ def outputs_as_names(lit):
         lit["outputs"] = {c: (v["name"] if isinstance(v, dict) and v.get("type") == "Var" else v) for c, v in lit["outputs"].items()}
     for k in ("literal",):
         if isinstance(lit, dict) and k in lit: outputs_as_names(lit[k])
+    if isinstance(lit, dict) and lit.get("type") == "Aggregate" and isinstance(lit.get("body"), list):
+        for l in lit["body"]: outputs_as_names(l)
     return lit
 
 
@@ -107,6 +113,7 @@ def to_edn(s):
     if t in ("Not", "Neg"): return f"[:{t.lower()} {to_edn(s['literal'])}]"
     if t == "Comparison": return f"[:{s['op']} {ts(s['left'], s['right'])}]"
     if t == "Is": return f"[:is {ts(s['var'], s['expr'])}]"
+    if t == "Aggregate": return f"[:agg :{s['op']} {to_edn(s['var'])} [{ts(*s['body'])}] {to_edn(s['out'])}]"
     if t == "AsOf": return f"[:as_of {to_edn(s['date'])}]"
     if t == "Fetch":
         f = " ".join(f":{c} {to_edn(v)}" for c, v in s["filters"].items())

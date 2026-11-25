@@ -1,7 +1,7 @@
-1 instances: 1399 lines
+1 instances: 1486 lines
 2 schema: No issues found | instances: No issues found
-3 structured literals: 81, round trip to EDN (edn.pl parses, value equal): 81 ok 
+3 structured literals: 85, round trip to EDN (edn.pl parses, value equal): 85 ok 
 3b negative tests: linkml-validate 14/15, jsonschema 14/15, shared check 4/15, some layer 15/15 rejected (negatives.md)
-4 docs: docs/schema/ (gen-doc), 162 lines docs/slice.md
+4 docs: docs/schema/ (gen-doc), 164 lines docs/slice.md
 5A DDL: 31 columns, 29 mismatches
 5B DDL: 31 columns, 7 mismatches

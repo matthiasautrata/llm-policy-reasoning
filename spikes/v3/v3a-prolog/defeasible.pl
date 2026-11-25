@@ -178,6 +178,9 @@ live_att(L, D, Id, K, H, _{type:rule, id:Id, goal:H, children:Kids}, V, CL) :-
     rule(Id, K, Hr, _, _), memberchk(K, [strict, defeasible, defeater]), active(Id),
     copy_term(H0-Diff0, H-Diff), \+ Hr \= H,
     best_sol(Id, H, D, differs(Diff), V, Kids, CL).
+live_att(L, D, Id, incompatible, [neg, L], _{type:rule, id:Id, goal:[neg, L], children:Kids}, V, CL) :-
+    rule(Id, incompatible, Hr, _, _), active(Id), \+ Hr \= L,    % R314: a declared incompatibility attacks its head
+    best_sol(Id, L, D, true, V, Kids, CL).
 live_att(L, D, Id, claim, H, P, proven, []) :-
     rival(L, H0, Diff0), copy_term(H0-Diff0, H-Diff),
     claim(Id, H, By, At, F, T, _, _, _, _), active(Id), in_force(F, T, D), differs(Diff),
@@ -235,6 +238,8 @@ lit3([not, X], D, N, V, CL) :- ground(X), !,
     evaluate(X, D, E), value3(E, V0),
     (   V0 == refuted -> V = proven, CL = [], N = _{type:absent, goal:X}
     ;   V0 == contested -> V = contested, CL = [X], N = _{type:contested_lit, goal:X} ).
+lit3([agg, Op, X, B, Out], D, N, V, CL) :- !,
+    agg3(Op, X, B, D, Val, N, V, CL), Out = Val.
 lit3(L, D, N, V, CL) :- derived_lit(L), !,
     (   ground(L) -> Ls = [L] ; findall(L, candidate3(L, D), Ls0), sort(Ls0, Ls) ),
     member(L, Ls), evaluate(L, D, E), value3(E, V0),
@@ -242,7 +247,45 @@ lit3(L, D, N, V, CL) :- derived_lit(L), !,
     ;   V0 == contested -> V = contested, CL = [L], N = _{type:contested_lit, goal:L} ).
 lit3(L, D, N, proven, []) :- lit(L, D, N).
 
-derived_lit([P|_]) :- \+ memberchk(P, [fetch, not, as_of, is, <, <=, >, >=, =]).
+derived_lit([P|_]) :- \+ memberchk(P, [fetch, not, as_of, is, <, <=, >, >=, =, agg]).
+
+%!  agg3(+Op, ?X, +B, +D, -Val, -Node, -V, -CL)  SEMANTICS.md, Aggregates: members are the proven solutions
+%   (distinct bindings of B's local variables); any contested solution contests the literal (CL: the
+%   contested literals of those solutions), and Val is then the aggregate over the proven members only.
+%   Memoised per op and state like evaluate/3. A truncated fetch inside B throws agg_truncated/2.
+agg3(Op, X, B, D, Val, N, V, CL) :-
+    copy_term(agg(Op, X, B), K), state_token(S),
+    (   memo(S, D, agg(K0), R0), K0 =@= K -> true
+    ;   term_variables(B, Loc),
+        agg_depth(Depth), Depth1 is Depth + 1,
+        catch(setup_call_cleanup(nb_setval(v3a_agg, Depth1),
+                                 findall(Loc-X-V1-Kids-C1, body3(B, D, Kids, V1, C1), Sols0),
+                                 nb_setval(v3a_agg, Depth)),
+              agg_truncated(C), ( json_safe_agg([agg, Op, X, B], G), throw(agg_truncated(G, C)) )),
+        agg_group(Sols0, Mem, Cont),
+        maplist([_-Xi-_-_-_, Xi]>>true, Mem, Xs),
+        (   Op == sum -> sum_list(Xs, Val0) ; length(Xs, Val0) ),
+        maplist([_-Xi-_-Ki-_, _{value:Xi, children:Ki}]>>true, Mem, MNs),
+        findall(Y, ( member(_-_-_-_-C1, Cont), member(Y, C1) ), CL0), sort(CL0, CL1),
+        ( Cont == [] -> V0 = proven ; V0 = contested ),
+        R0 = r(Val0, _{type:aggregate, op:Op, value:Val0, members:MNs}, V0, CL1),
+        assertz(memo(S, D, agg(K), R0)) ),
+    R0 = r(Val, N, V, CL).
+
+agg_depth(V) :- ( nb_current(v3a_agg, V0), integer(V0) -> V = V0 ; V = 0 ).
+
+%   One entry per distinct binding: proven if some solution under it is proven, else contested.
+agg_group(Sols, Mem, Cont) :-
+    agg_group(Sols, [], Mem0, Cont0), reverse(Mem0, Mem), reverse(Cont0, Cont).
+agg_group([], Acc, Mem, Cont) :- partition([_-_-V-_-_]>>(V == proven), Acc, Mem, Cont).
+agg_group([E|Es], Acc, Mem, Cont) :-
+    E = Loc-_-V-_-_,
+    (   memberchk(Loc-_-_-_-_, Acc)
+    ->  (   V == proven, select(Loc-_-contested-_-_, Acc, Acc1) -> agg_group(Es, [E|Acc1], Mem, Cont)
+        ;   agg_group(Es, Acc, Mem, Cont) )
+    ;   agg_group(Es, [E|Acc], Mem, Cont) ).
+
+json_safe_agg(T0, T) :- copy_term(T0, T1), numbervars(T1, 0, _), with_output_to(string(T), print(T1)).
 
 %!  candidate3(?L, +D)  a ground instance of L with a live supporter
 candidate3(L, D) :-
@@ -280,12 +323,14 @@ lit([fetch, C, map(F), map(O)], _, Node) :- !,
     length(Rows, N),
     member(Row, Rows),
     maplist([Col-V]>>get_dict(Col, Row, V), O),
+    (   Info.truncated == true, nb_current(v3a_agg, Dp), integer(Dp), Dp > 0 -> throw(agg_truncated(C)) ; true ),
     Node = Info.put(_{type:fetch, concept:C, filters:Filters, rows:N, row:Row}).
 lit([not, L], D, _{type:absent, goal:L}) :- !,           % L refuted (a contested L is not absent)
     (   ground(L) -> evaluate(L, D, E), value3(E, refuted) ; \+ prove(L, D, _) ).
 lit([as_of, X], D, _{type:fact, goal:[as_of, D]}) :- !, X = D.
 lit([is, X, E], _, _{type:fact, goal:[is, V, E1]}) :- !, ev(E, V), X = V, inst(E, E1).
 lit([Op, A, B], _, _{type:fact, goal:[Op, A1, B1]}) :- cmp_op(Op), !, inst(A, A1), inst(B, B1), cmp_lit([Op, A1, B1]).
+lit([agg|T], D, N) :- !, lit3([agg|T], D, N, proven, _).
 lit(L, D, P) :- prove(L, D, P).
 
 cmp_op(Op) :- memberchk(Op, [<, <=, >, >=, =]).

@@ -33,6 +33,8 @@ op_error(Op, defeat_cycle(Path), _{status:"ERROR", error:_{op:Op, violations:[V]
     maplist([G, S]>>format(string(S), "~w", [G]), Path, Ms),
     atomic_list_concat(Ms, ' -> ', Msg0), format(string(Msg), "re-entered ~w (goal path ~w)", [Path, Msg0]),
     V = _{violation:"defeat-cycle", members:Ms, path:Path, message:Msg}.
+op_error(Op, agg_truncated(G, C), _{status:"ERROR", error:_{op:Op, aggregate:G, truncated:C, message:M}}) :- !,
+    format(string(M), "aggregate ~w: fetch ~w returned more than fetch_limit rows; the total would be wrong", [G, C]).
 op_error(_, E, _{status:"ERROR", error:S}) :- message_to_codes(E, S).
 
 message_to_codes(E, S) :- message_to_codes(E, [], Cs), !, string_codes(S, Cs).
@@ -60,11 +62,7 @@ scope(P, St) :- format(string(T), "term:~w", [P]), ( term(T, _) -> St = "UNDERDE
 decide_ground(G, D, R) :-
     evaluate(G, D, E),
     (   E = proven(Sups, SupN)
-    ->  team_proofs(Sups, SupN, Why),
-        (   incompatible(G, D, IId, INode)
-        ->  ids_of(Sups, SIds), sort([SIds, [IId]], Sides), append(Why, [INode], W2),
-            answer("CONFLICT", null, Sides, W2, R)
-        ;   answer("ANSWER", true, null, Why, R) )
+    ->  team_proofs(Sups, SupN, Why), answer("ANSWER", true, null, Why, R)
     ;   E = blocked(Sups, Un)
     ->  ids_of(Sups, A), ids_of(Un, B), sort([A, B], Sides),
         maplist([s(_, _, P), P]>>true, Sups, W1), maplist([a(_, _, _, P), P]>>true, Un, W2), append(W1, W2, Why),
@@ -72,10 +70,6 @@ decide_ground(G, D, R) :-
     ;   E = contested(_, _)                            % downstream of a root conflict
     ->  contested_why(G, D, Sides, Node), answer("CONFLICT", null, Sides, [Node], R)
     ;   explain_not(G, D, N), answer("ANSWER", false, null, [N], R) ).
-
-% R314-style declared incompatibility: the goal is proven and the incompatible body is provable
-incompatible(G, D, Id, _{type:rule, id:Id, goal:[neg, G], children:Kids}) :-
-    rule(Id, incompatible, H, B, _), active(Id), H = G, once(body(B, D, Kids)).
 
 %!  contested_why(+G, +D, -Sides, -Node)  PLAN-v3-integrity §4: the contested node of a downstream G
 contested_why(G, D, Sides, _{type:contested, goal:G, via:Via, rules:Rules, roots:RNs}) :-
@@ -140,7 +134,7 @@ qualifier(_, _, _, null).
 
 why_ids(Why, Ids) :- findall(Id, ( sub_node(Why, N), is_dict(N), get_dict(id, N, Id) ), Ids0), sort(Ids0, Ids).
 sub_node(X, X).
-sub_node(X, N) :- is_dict(X), get_dict(K, X, C), memberchk(K, [children, failed, roots]), sub_node(C, N).
+sub_node(X, N) :- is_dict(X), get_dict(K, X, C), memberchk(K, [children, failed, roots, members]), sub_node(C, N).
 sub_node(X, _{id:Id}) :- is_dict(X), get_dict(type, X, contested), get_dict(rules, X, Ms), member(Id, Ms).
 sub_node(L, N) :- is_list(L), member(X, L), sub_node(X, N).
 

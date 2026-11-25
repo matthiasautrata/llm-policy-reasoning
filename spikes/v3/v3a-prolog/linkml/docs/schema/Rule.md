@@ -405,6 +405,7 @@ attributes:
     owner: Rule
     domain_of:
     - Rule
+    - Aggregate
     range: Literal
     multivalued: true
     inlined: true

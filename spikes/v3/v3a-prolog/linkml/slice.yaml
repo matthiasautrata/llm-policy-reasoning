@@ -189,6 +189,14 @@ classes:
     attributes:
       var: {range: Var, required: true, inlined: true}
       expr: {range: Expr, required: true, inlined: true}
+  Aggregate:
+    is_a: Literal
+    description: "[:agg :sum ?x [literal ...] ?out]: sum or count of ?x over the proven solutions of the conjunction (SEMANTICS.md, Aggregates)."
+    attributes:
+      op: {range: AggregateOp, required: true}
+      var: {range: Var, required: true, inlined: true}
+      body: {range: Literal, multivalued: true, inlined_as_list: true, required: true}
+      out: {range: Var, required: true, inlined: true}
   AsOf:
     is_a: Literal
     description: "[:as_of ?d]: the evaluation date."
@@ -295,5 +303,6 @@ enums:
   Modal: {permissible_values: {certainly: {}, presumably: {}}}
   ClosedOver: {permissible_values: {known_facts: {}}}
   Additivity: {permissible_values: {additive: {}, semi-additive: {}, non-additive: {}, unknown: {}}}
+  AggregateOp: {permissible_values: {sum: {}, count: {}}}
   ComparisonOp: {permissible_values: {"<": {}, "<=": {}, ">": {}, ">=": {}, "=": {}}}
   ArithmeticOp: {permissible_values: {"+": {}, "-": {}}}

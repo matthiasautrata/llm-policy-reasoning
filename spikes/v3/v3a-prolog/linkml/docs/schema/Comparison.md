@@ -142,6 +142,7 @@ attributes:
     rank: 1000
     domain_of:
     - Comparison
+    - Aggregate
     - Expr
     range: ComparisonOp
     required: true
@@ -185,6 +186,7 @@ attributes:
     owner: Comparison
     domain_of:
     - Comparison
+    - Aggregate
     - Expr
     range: ComparisonOp
     required: true

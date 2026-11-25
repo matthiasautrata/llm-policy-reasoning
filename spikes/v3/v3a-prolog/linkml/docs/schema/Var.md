@@ -22,6 +22,7 @@ URI: [slice:var](https://example.org/llm-policy-reasoning/spike-v3/slice/var)
 | --- | --- | --- |
 | [Output](Output.md) | One entry of a fetch output map (compact form `column: ?var`) |  no  |
 | [Is](Is.md) | [:is ?x [:+ a b]]: arithmetic |  no  |
+| [Aggregate](Aggregate.md) | [:agg :sum ?x [literal  |  no  |
 
 
 
@@ -35,7 +36,7 @@ URI: [slice:var](https://example.org/llm-policy-reasoning/spike-v3/slice/var)
 | Property | Value |
 | --- | --- |
 | Range | [String](String.md) |
-| Domain Of | [Output](Output.md), [Is](Is.md) |
+| Domain Of | [Output](Output.md), [Is](Is.md), [Aggregate](Aggregate.md) |
 
 
 
@@ -71,6 +72,7 @@ name: var
 domain_of:
 - Output
 - Is
+- Aggregate
 range: string
 
 ```

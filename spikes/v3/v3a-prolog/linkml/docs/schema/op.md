@@ -21,6 +21,7 @@ URI: [slice:op](https://example.org/llm-policy-reasoning/spike-v3/slice/op)
 | Name | Description | Modifies Slot |
 | --- | --- | --- |
 | [Comparison](Comparison.md) | [:< a b] and friends: numbers or ISO dates |  no  |
+| [Aggregate](Aggregate.md) | [:agg :sum ?x [literal  |  no  |
 | [Expr](Expr.md) | [:+ a b] or [:- a b]; exactly two operands |  no  |
 
 
@@ -35,7 +36,7 @@ URI: [slice:op](https://example.org/llm-policy-reasoning/spike-v3/slice/op)
 | Property | Value |
 | --- | --- |
 | Range | [String](String.md) |
-| Domain Of | [Comparison](Comparison.md), [Expr](Expr.md) |
+| Domain Of | [Comparison](Comparison.md), [Aggregate](Aggregate.md), [Expr](Expr.md) |
 
 
 
@@ -70,6 +71,7 @@ URI: [slice:op](https://example.org/llm-policy-reasoning/spike-v3/slice/op)
 name: op
 domain_of:
 - Comparison
+- Aggregate
 - Expr
 range: string
 

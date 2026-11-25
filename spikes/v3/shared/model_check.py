@@ -57,9 +57,12 @@ def atom(L):
 def derived_body(r):
     """-> [(literal, negated)] for the derived (non-builtin, non-fetch) body literals"""
     out = []
-    for b in r.get("body") or []:
-        if b[0] == "not": out.append((b[1], True))
-        elif b[0] not in BUILTIN and b[0] != "fetch": out.append((b, False))
+    def walk(body, under_agg):
+        for b in body:
+            if b[0] == "agg": walk(b[3], True)            # aggregation is non-monotone: a "-" edge (SEMANTICS.md)
+            elif b[0] == "not": out.append((b[1], True))
+            elif b[0] not in BUILTIN and b[0] != "fetch": out.append((b, under_agg))
+    walk(r.get("body") or [], False)
     return out
 
 
@@ -154,12 +157,26 @@ class Modes:
         B = set()
         for i in bound_pos:
             B |= vars_of(args[i])
+        prob = self.run(r.get("body") or [], B)
+        if prob:
+            return False, prob
+        miss = sorted(vars_of(args) - B)
+        return (False, f"head variables {miss} unbound at the end") if miss else (True, None)
+
+    def run(self, body, B):
+        """Left-to-right binding over body (B updated in place) -> first problem or None."""
         def need(vs, what):
             miss = sorted(v for v in vs if v not in B)
             return None if not miss else f"{what}: unbound {', '.join(miss)}"
-        for b in r.get("body") or []:
+        for b in body:
             op, prob = b[0], None
-            if op == "fetch":
+            if op == "agg":                               # [:agg op ?x [body] ?out]: inner body under B, then ?out
+                if not vars_of(b[4]) or vars_of(b[4]) <= B:
+                    prob = f"agg {b[1]}: ?out must be an unbound variable"
+                else:
+                    B2 = set(B); prob = self.run(b[3], B2) or need_in(vars_of(b[2]), B2, f"agg {b[1]} value")
+                    B |= vars_of(b[4])
+            elif op == "fetch":
                 c = self.concepts.get(b[1])
                 prob = need(vars_of(b[2]), f"fetch {b[1]} filters")
                 if not prob and c:
@@ -184,9 +201,8 @@ class Modes:
                     prob = f"call {q}/{len(qa)} with bound positions {sorted(bp)}: no safe mode"
                 B |= vars_of(qa)
             if prob:
-                return False, prob
-        miss = sorted(vars_of(args) - B)
-        return (False, f"head variables {miss} unbound at the end") if miss else (True, None)
+                return prob
+        return None
 
     def infer(self):
         """Greatest fixpoint: start with every pattern safe, drop patterns under which some rule of the
@@ -207,6 +223,11 @@ class Modes:
             ms = self.safe[p]
             self.safe[p] = {m for m in ms if not any(o < m for o in ms)}
         return {p: sorted(mode_str(m, self.arity[p]) for m in self.safe[p]) for p in preds}
+
+
+def need_in(vs, B, what):
+    miss = sorted(v for v in vs if v not in B)
+    return None if not miss else f"{what}: unbound {', '.join(miss)}"
 
 
 def mode_str(m, n):
@@ -380,8 +401,11 @@ def integrity_violations(S, rules, claims):
             out.append(V("missing-additivity", [c["id"]], f"{c['id']}: :semi-additive without :unsafe_dims"))
     cl = {c["id"]: c for c in claims}
     for r in rules:
-        body = r.get("body") or []
-        uses = [f"not {atom(b[1])[0]}" for b in body if b[0] == "not"] + \
+        body = list(r.get("body") or [])
+        for b in list(body):
+            if b[0] == "agg": body += b[3]                # literals inside an aggregate count too
+        uses = [f"aggregate {b[1]}" for b in body if b[0] == "agg"] + \
+               [f"not {atom(b[1])[0]}" for b in body if b[0] == "not"] + \
                [f"fetch of measure {b[1]}" for b in body if b[0] == "fetch" and b[1] in measures]
         if not uses: continue
         comp, closed = r.get("completeness"), r.get("closed_over")

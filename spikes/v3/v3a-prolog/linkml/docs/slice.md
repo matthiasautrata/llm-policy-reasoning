@@ -126,6 +126,8 @@ A vendor's status during a period, from and to the given dates inclusive.
 | R105 | strict | finance | The headroom of a cost centre is its cap minus its booked total. |
 | R106 | defeasible | finance | A request breaches a cap if its amount plus the booked total of some centre it is charged against (its requester's centre or an ancestor) exceeds that centre's cap. |
 | R110 | strict | finance | The breaching requests in a subtree are the pending requests raised from it that breach a cap. |
+| R120 | strict | finance | Approved total of a subtree: the sum of the amounts of its pending requests whose approval is proven. |
+| R121 | strict | finance | Approved count of a subtree: the number of its pending requests whose approval is proven. |
 | R112 | strict | finance | A big capital request is a capital request over 50,000. |
 | R201 | strict | procurement | A role's approval limit, asked without a date, is the limit on the evaluation date. |
 | R202 | strict | procurement | A role's approval limit on a date is that of the version valid on the date. |

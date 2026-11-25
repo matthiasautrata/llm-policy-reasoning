@@ -26,6 +26,7 @@ URI: [slice:body](https://example.org/llm-policy-reasoning/spike-v3/slice/body)
 | Name | Description | Modifies Slot |
 | --- | --- | --- |
 | [Rule](Rule.md) | A rule envelope |  no  |
+| [Aggregate](Aggregate.md) | [:agg :sum ?x [literal  |  no  |
 
 
 
@@ -39,7 +40,7 @@ URI: [slice:body](https://example.org/llm-policy-reasoning/spike-v3/slice/body)
 | Property | Value |
 | --- | --- |
 | Range | [Literal](Literal.md) |
-| Domain Of | [Rule](Rule.md) |
+| Domain Of | [Rule](Rule.md), [Aggregate](Aggregate.md) |
 ### Cardinality and Requirements
 
 | Property | Value |
@@ -91,6 +92,7 @@ from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
 rank: 1000
 domain_of:
 - Rule
+- Aggregate
 range: Literal
 multivalued: true
 inlined: true

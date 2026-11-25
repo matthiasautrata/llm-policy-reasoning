@@ -116,6 +116,7 @@ attributes:
     domain_of:
     - Output
     - Is
+    - Aggregate
     required: true
     pattern: ^\?[A-Za-z_][A-Za-z0-9_]*$
 
@@ -148,6 +149,7 @@ attributes:
     domain_of:
     - Output
     - Is
+    - Aggregate
     range: string
     required: true
     pattern: ^\?[A-Za-z_][A-Za-z0-9_]*$

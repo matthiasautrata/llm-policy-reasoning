@@ -22,6 +22,7 @@ Name: slice
 | [Filter](Filter.md) | One entry of a fetch filter map (compact form `column: term`) |
 | [FunctionalPredicate](FunctionalPredicate.md) | A predicate whose first key_arity arguments are a key and whose last argument... |
 | [Literal](Literal.md) | A literal of a rule head or body, or a claim assertion |
+| &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Aggregate](Aggregate.md) | [:agg :sum ?x [literal  |
 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[AsOf](AsOf.md) | [:as_of ?d]: the evaluation date |
 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Comparison](Comparison.md) | [:< a b] and friends: numbers or ISO dates |
 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Derived](Derived.md) | [:pred arg  |
@@ -93,6 +94,7 @@ Name: slice
 | [name](name.md) |  |
 | [op](op.md) |  |
 | [order](order.md) | Asserter authority, strongest first |
+| [out](out.md) |  |
 | [outputs](outputs.md) |  |
 | [owner](owner.md) |  |
 | [params](params.md) |  |
@@ -128,6 +130,7 @@ Name: slice
 | Enumeration | Description |
 | --- | --- |
 | [Additivity](Additivity.md) |  |
+| [AggregateOp](AggregateOp.md) |  |
 | [ArithmeticOp](ArithmeticOp.md) |  |
 | [AssetKind](AssetKind.md) |  |
 | [ClosedOver](ClosedOver.md) |  |
