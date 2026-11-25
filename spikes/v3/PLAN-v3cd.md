@@ -90,3 +90,22 @@ Both CLIs speak the same JSON contract and support the test-only `sleep` op and 
 (Executor: append dated entries — what was decided, why.)
 
 **2026-11-24 · Installs (approved by Matthias).** `brew install erlang elixir flix` → Erlang/OTP 29.1.2, Elixir 1.20.5, Flix 0.80.0. The existing openjdk 27.0.1 is used for Flix and the JDBC drivers.
+
+**2026-11-24 · V3c library versions (checked against hexdocs and the deps' sources).** ex_datalog 0.5.0, adbc 0.12.1, nimble_parsec 1.4.2, jason 1.4.5. adbc 0.12.1 pins DuckDB 1.5.1, which cannot read `slice.duckdb` (written by DuckDB 2.0.1), so `config.exs` pins DuckDB 2.0.1 through the driver's tar.gz URL. Postgres goes through the ADBC postgres driver: `$n` placeholders, and numerics come back as strings or Decimal, which `V3c.SQL` normalises.
+
+**2026-11-24 · V3c EDN reader and validation.** `eden` was not used: its last release is 2.1.0 from 2020-10-31 (hex), and the slice needs only a small EDN subset (keywords, symbols as logic variables, vectors, maps, sets, strings, numbers). The reader is a NimbleParsec grammar (`V3c.EDN`). The record schema is a hand-written validator (`V3c.Model`) because no Elixir library maps onto the LinkML model. The same 12 negatives are rejected. As in V3b, `add` and `with_hypothesis` validate their records too.
+
+**2026-11-24 · V3c evaluator: own, not ex_datalog.** System A's defeasible evaluator is a port of V3b's `engine.clj`. Facts are fetched on demand, there is a per-op memo, and there are why trees. The evaluator runs over the immutable `%V3c.Store{}`. The per-op memo and the SQL cache live in the process dictionary of the process running the op. That gives isolation by construction, since each op is its own process in concurrent mode. ex_datalog is evaluated as a probe (`probes/datalog_probe.exs`) and not as the engine, because:
+- its stratifier rejects the defeasible meta-program;
+- its relations are fixed-arity, which forces rule bodies to be reified;
+- it materialises bottom-up over fetched relations, whereas check 5 wants bounded per-goal fetches.
+
+See RESULTS "V3c and V3d" for the numbers.
+
+**2026-11-24 · V3c Postgres latency is noisy.** Four runs of bench.py on Postgres gave decide p50/p95 of 15.5/37.7, 7.9/19.6, 15.0/36.1 and 15.0/36.6 ms. All four had 0 errors, 49/200 approved and 11.17 statements per decide. The committed `bench-postgres.json` is the first run. In-process, after a warm-up pass over the same 200 requests, one process on one connection gives p50/p95 of 4.9/12.7 ms (`beam-postgres.json`). V3b measured 5.2/17.3 ms. The statement count is identical, so the spread lies in Postgres-side and driver-side warm state, not in the evaluator. Not investigated further; this is footprint information only.
+
+**2026-11-24 · V3c probes, and what they changed.**
+- **ex_datalog** (`results/datalog-probe.txt`). Its default `timeout_ms` is 30 s per stratum, and a timeout returns `{:ok, knowledge}` with `stats.termination: :timeout`. The probe's first run compared such a truncated result with the CTEs. It now checks the termination field and passes `timeout_ms: 600_000`.
+- **Explain** is probed on a 5-edge graph. On the full ancestor relation it ran out of memory (12.7 GB RSS, process killed), because provenance stores no bindings.
+- **LiveView** was skipped. It is optional in §1.2, the timebox went to the probes above, and the contract needs no UI.
+- **Hot reload** uses `Code.compile_string/2` on a modified `engine.ex`, loaded twice, so the second load purges version 1 while the 8 workers run. A release upgrade (appup or relup) was not tried.

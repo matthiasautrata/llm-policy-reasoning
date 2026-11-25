@@ -1,0 +1,20 @@
+A. fetched 1969 cc rows, 20000 emp rows in 8.23 ms (whole edge tables: bypasses fetch/fetch_limit)
+   anc: 9497 facts, 629.05 ms (explain: 578.27 ms), 5 iterations, fixpoint
+   all-pairs CTEs (2 statements): 37.46 ms; 9497 anc, 97683 chain rows
+   anc == CTE: true   chain == CTE: skipped
+   slice concept ancestors_or_self(cc0077) subset of anc: true
+   magic sets, goal anc(cc0077, _, _): 42.23 ms, same answer: true (4 anc facts returned, termination fixpoint)
+   magic sets, goal chain(e10523, _, _): 38.94 ms, 5 facts, equal to CTE: true
+B. Explain anc{"x2", "x0", 2} on the 5-edge graph: rule 1, 17 direct children, 82195 nodes in all
+   direct children: [{"x0", "x0", 0}, {"x1", "x0", 1}, {"x1", "x1", 0}, {"x2", "x0", 2}, {"x2", "x1", 1}, {"x2", "x2", 0}, {"x3", "x0", 3}, {"x3", "x1", 2}, {"x3", "x2", 1}, {"x3", "x3", 0}, {"y1", "x0", 1}, {"y1", "y1", 0}, :base_fact, :base_fact, :base_fact, :base_fact, :base_fact]
+   derived facts named anywhere in the tree: 12 of 12 anc facts (incl. unrelated y1 ones: true)
+   a correct proof needs 3 rule nodes: anc(x2,x0,2) <- anc(x2,x1,1) + cc(x1,x0); anc(x2,x1,1) <- anc(x2,x2,0) + cc(x2,x1); anc(x2,x2,0) <- cc(x2,x1)
+C. callback fetch: ancs = MapSet.new([{"cc0077", ["cc0077", "cc0013", "cc0001", "cc0000"]}]); under_root = MapSet.new([{"cc0077"}])
+   SQL log entries in the calling process: 0 (the callbacks ran in spawn_monitor'ed processes: their SQL is invisible to the op's log and cache)
+   a callback returns ONE value per binding: a multi-row fetch comes back as a list term, not as rows the rule can join on
+D. meta-program rejected: [%ExDatalog.Validator.Error{kind: :unstratified_negation, context: %{relation: "applicable", depends_on: "unmet", scc: ["applicable", "proven", ...]}, ...}, ...]
+FULL=1 run (part A chain lines), 2026-11-24:
+   chain with the default 30 s timeout: 33982.42 ms, termination timeout, 79652 facts
+   anc: 9497 facts, 565.84 ms (explain: 581.8 ms), 5 iterations, fixpoint
+   chain: 97683 facts, 56005.35 ms, 5 iterations, fixpoint
+   anc == CTE: true   chain == CTE: true

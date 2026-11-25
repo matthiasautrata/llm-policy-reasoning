@@ -1,0 +1,134 @@
+elixir 1.20.5 — elixirc output for probes/type_probe.ex
+    warning: incompatible types given to String.upcase/1:
+
+        String.upcase(V3c.Store.new())
+
+    given types:
+
+        -dynamic(%{
+          ...,
+          ix: %{
+            assets: term(),
+            claim: term(),
+            claims: list(term()),
+            columns: term(),
+            concepts: term(),
+            functional: not false and not nil,
+            rule: term(),
+            rules: list(%{..., id: term(), superior_to: %MapSet{}}),
+            tables: term(),
+            terms: term(),
+            today: term()
+          },
+          recs: term()
+        })-
+
+    but expected one of:
+
+        binary()
+
+    type warning found at:
+    │
+ 22 │   def t6, do: String.upcase(V3c.Store.new())
+    │                      ~
+    │
+    └─ probes/type_probe.ex:22:22: TypeProbe.t6/0
+
+    warning: incompatible types given to Kernel.+/2:
+
+        x + "1"
+
+    given types:
+
+        dynamic(float() or integer()), -binary()-
+
+    but expected one of:
+
+        #1
+        integer(), integer()
+
+        #2
+        integer(), float()
+
+        #3
+        float(), integer()
+
+        #4
+        float(), float()
+
+    where "x" was given the types:
+
+        # type: dynamic()
+        # from: probes/type_probe.ex:36:10
+        x
+
+        # type: dynamic(float() or integer())
+        # from: probes/type_probe.ex:36:20
+        x + "1"
+
+    type warning found at:
+    │
+ 36 │   def t9(x), do: x + "1"
+    │                    ~
+    │
+    └─ probes/type_probe.ex:36:20: TypeProbe.t9/1
+
+    warning: V3c.Engine.ground?/2 is undefined or private. Did you mean:
+
+        * ground?/1
+
+    │
+ 39 │   def t10, do: V3c.Engine.ground?(1, 2)
+    │                           ~
+    │
+    └─ probes/type_probe.ex:39:27: TypeProbe.t10/0
+
+    warning: expected a map or struct when accessing .recs in expression:
+
+        V3c.Store.add_records(st, recs, :ext).recs
+
+    but got type:
+
+        dynamic(
+          {%{
+             ...,
+             ix: %{
+               assets: term(),
+               claim: term(),
+               claims: list(term()),
+               columns: term(),
+               concepts: term(),
+               functional: not false and not nil,
+               rule: term(),
+               rules: list(%{..., id: term(), superior_to: %MapSet{}}),
+               tables: term(),
+               terms: term(),
+               today: term()
+             },
+             recs: term()
+           }, term()}
+        )
+
+    where "recs" was given the type:
+
+        # type: dynamic()
+        # from: probes/type_probe.ex:7:14
+        recs
+
+    where "st" was given the type:
+
+        # type: dynamic()
+        # from: probes/type_probe.ex:7:10
+        st
+
+    hint: "var.field" (without parentheses) means "var" is a map() while "var.fun()" (with parentheses) means "var" is an atom()
+
+    type warning found at:
+    │
+  7 │   def t1(st, recs), do: V3c.Store.add_records(st, recs, :ext).recs
+    │                                                               ~
+    │
+    └─ probes/type_probe.ex:7:63: TypeProbe.t1/2
+
+
+caught: T1 T6 T9 T10 (T10 is the undefined-function check, not the type system); not reported: T2 T3 T4 T5 T7 T8

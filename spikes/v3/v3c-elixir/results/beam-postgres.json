@@ -1,0 +1,59 @@
+{
+  "backend": "postgres",
+  "hot_reload": {
+    "by_version": {
+      "1": 360,
+      "2": 395,
+      "3": 306
+    },
+    "errors": 0,
+    "load_ms": [
+      119.9,
+      123.3
+    ],
+    "requests": 1061,
+    "workers_alive_to_end": 8,
+    "wrong_answers": 0
+  },
+  "parallel": [
+    {
+      "decides_per_s": 85.8,
+      "errors": 0,
+      "p50": 7.947,
+      "p95": 20.516,
+      "procs": 1,
+      "same_answers": true,
+      "wall_ms": 2331.3
+    },
+    {
+      "decides_per_s": 505.0,
+      "errors": 0,
+      "p50": 8.746,
+      "p95": 30.827,
+      "procs": 8,
+      "same_answers": true,
+      "wall_ms": 396.0
+    },
+    {
+      "schedulers": 10
+    }
+  ],
+  "supervision": {
+    "errors": [
+      {
+        "error": "exit: {:killed, {GenServer, :call, [...]}}",
+        "i": 50,
+        "req": "r074869"
+      }
+    ],
+    "ops_after_first_error_all_correct": true,
+    "restart_ms": 0.46,
+    "sql_sup_children": {
+      "active": 2,
+      "specs": 2,
+      "supervisors": 0,
+      "workers": 2
+    },
+    "wrong_answers": 0
+  }
+}
