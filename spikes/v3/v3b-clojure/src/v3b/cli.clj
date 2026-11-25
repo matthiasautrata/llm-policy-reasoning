@@ -6,6 +6,7 @@
             [clojure.string :as str]
             [clojure.walk :as walk]
             [taoensso.timbre :as timbre]
+            [v3b.gate :as gate]
             [v3b.model :as model]
             [v3b.ops :as ops]
             [v3b.sql :as sql]
@@ -19,12 +20,21 @@
                               :else v))
                 x))
 
+(declare run-loaded)
+
 (defn run [script]
   (let [root (System/getProperty "v3b.root" (System/getProperty "user.dir"))
         cfg (:config script)
         t0 (System/nanoTime)]
     (sql/configure! cfg root)
     (when-let [h (:hypothesis cfg)] (swap! ops/opts assoc :hypothesis (keyword h)))
+    (reset! ops/session {:root root :load (vec (:load script)) :added []})
+    (if-let [v (seq (gate/violations root (vec (:load script)) [] []))]   ; before Malli and the store
+      {:error {:op "load" :violations (vec v)} :results [] :load_ms (/ (- (System/nanoTime) t0) 1e6)}
+      (run-loaded script root t0))))
+
+(defn- run-loaded [script root t0]
+  (do
     (reset! ops/conn (store/create!))
     (doseq [f (:load script)]
       (let [text (slurp (str root "/" f))]

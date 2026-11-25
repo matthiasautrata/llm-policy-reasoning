@@ -102,7 +102,8 @@ classes:
     description: >-
       A rule envelope. kind strict, defeasible or defeater carries head and body; superiority carries
       pred and order (asserter authority); incompatible carries head and body (head excluded when body holds).
-    slots: [id, kind, owner, rule_class, conservative, layer, doc, head, body, superior_to, pred, order, recorded_at]
+    slots: [id, kind, owner, rule_class, conservative, layer, doc, head, body, superior_to, pred, order, recorded_at,
+            completeness, closed_over]
     slot_usage:
       id: {pattern: "^R[0-9]+$"}
       kind: {range: RuleKind, required: true}
@@ -278,6 +279,8 @@ slots:
   depends_on: {multivalued: true, range: string, pattern: "^C[0-9]+(\\.[0-9]+)?$", description: Claim ids this claim requires.}
   supports: {multivalued: true, range: string, pattern: "^C[0-9]+(\\.[0-9]+)?$", description: Claim ids that support this claim.}
   recorded_at: {range: date, description: "When the record entered the store (provenance; no rule body reads it)."}
+  completeness: {multivalued: true, range: string, pattern: "^C[0-9]+(\\.[0-9]+)?$", description: "IR-005: completeness claims (predicate complete) for the scope of the rule's :not / measure fetch."}
+  closed_over: {range: ClosedOver, description: "IR-005: the rule's :not / measure fetch reads only the known facts; decide qualifies the answer."}
   additivity: {range: Additivity}
   unsafe_dims: {multivalued: true, range: string, description: "Dimensions a semi-additive measure must not be summed over."}
 
@@ -290,6 +293,7 @@ enums:
     permissible_values: {definition: {}, material_inference: {}, exception: {}, entitlement: {}, superiority: {}, incompatibility: {}}
   Owner: {permissible_values: {finance: {}, hr: {}, procurement: {}, compliance: {}, risk: {}, controller: {}}}
   Modal: {permissible_values: {certainly: {}, presumably: {}}}
+  ClosedOver: {permissible_values: {known_facts: {}}}
   Additivity: {permissible_values: {additive: {}, semi-additive: {}, non-additive: {}, unknown: {}}}
   ComparisonOp: {permissible_values: {"<": {}, "<=": {}, ">": {}, ">=": {}, "=": {}}}
   ArithmeticOp: {permissible_values: {"+": {}, "-": {}}}

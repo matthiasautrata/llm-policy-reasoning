@@ -28,6 +28,7 @@ import edn_format  # noqa: E402
 import sql  # noqa: E402  (V3a's SQL boundary, reused unchanged)
 from reference import plain  # noqa: E402  (EDN -> plain Python: keywords to names, #inst to ISO dates)
 import asp  # noqa: E402
+import integrity  # noqa: E402  (the shared integrity gate, PLAN-v3-integrity §2)
 
 CMP = ("<", "<=", ">", ">=", "=")
 BUILTIN = CMP + ("is", "as_of")
@@ -696,8 +697,13 @@ class Ops:
         self.S = session
 
     def answer(self, view, st, val, sides, why):
-        owners = sorted({view.rules[i]["owner"] for i in why_ids(why) if i in view.rules and view.rules[i].get("owner")})
-        return {"status": st, "value": val, "sides": sides, "why": why, "owners": owners, "qualifier": None}
+        ids = why_ids(why)
+        owners = sorted({view.rules[i]["owner"] for i in ids if i in view.rules and view.rules[i].get("owner")})
+        # IR-005: proven through a rule marked :closed_over :known_facts -> total only over the known facts
+        closed = st == "ANSWER" and val not in (False, None, []) and \
+            any(view.rules.get(i, {}).get("closed_over") == "known_facts" for i in ids)
+        return {"status": st, "value": val, "sides": sides, "why": why, "owners": owners,
+                "qualifier": "total over known facts in declared scope" if closed else None}
 
     def as_of(self, op):
         return op.get("as_of") or self.S.meta.today
@@ -892,11 +898,21 @@ class Ops:
 
     # ---- extension, hypotheses
     def op_add(self, op, view):
+        texts = getattr(view, "texts", [])
+        v = integrity.gate(self.S.load_paths, texts + [op["edn"]], sorted(view.withheld))
+        if v:
+            return {"error": {"op": "add", "violations": v}}
         recs = read_edn(op["edn"])
+        view.texts = texts + [op["edn"]]
         return {"added": view.add(recs if isinstance(recs, list) else [recs])}
 
     def op_with_hypothesis(self, op, view):
+        texts = getattr(view, "texts", []) + ([op["add"]] if op.get("add") else [])
+        v = integrity.gate(self.S.load_paths, texts, sorted(view.withheld | set(op.get("withhold") or [])))
+        if v:
+            return {"error": {"op": "with_hypothesis", "violations": v}}
         h = View(view)
+        h.texts = texts
         h.withheld |= set(op.get("withhold") or [])
         ids = []
         if op.get("add"):
@@ -914,7 +930,12 @@ def main():
     script = json.load(sys.stdin)
     t0 = time.time()
     sql.configure(json.dumps(script["config"]), os.getcwd())
+    v = integrity.gate(script.get("load", []))
+    if v:   # the integrity gate runs before the engine reads (or translates) anything
+        json.dump({"error": {"op": "load", "violations": v}, "results": [], "load_ms": (time.time() - t0) * 1000}, sys.stdout)
+        return
     S = Session()
+    S.load_paths = list(script.get("load", []))
     for f in script.get("load", []):
         S.load_file(f)
     O = Ops(S)

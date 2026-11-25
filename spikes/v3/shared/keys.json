@@ -1,4 +1,96 @@
 {
+ "acyclic": {
+  "Q30": {
+   "core": [
+    "CY1a",
+    "CY1b"
+   ],
+   "sides": [
+    [
+     "CY1a"
+    ],
+    [
+     "CY1b"
+    ]
+   ],
+   "status": "CONFLICT",
+   "value": null
+  },
+  "Q32": {
+   "core": [
+    "RY21"
+   ],
+   "sides": null,
+   "status": "ANSWER",
+   "value": true
+  },
+  "Q34": {
+   "core": [
+    "CY4a",
+    "RY4"
+   ],
+   "sides": null,
+   "status": "ANSWER",
+   "value": true
+  },
+  "Q35": {
+   "core": [
+    "RY51"
+   ],
+   "sides": null,
+   "status": "ANSWER",
+   "value": false
+  },
+  "Q37": {
+   "core": [
+    "RY53"
+   ],
+   "sides": null,
+   "status": "ANSWER",
+   "value": true
+  },
+  "Q40": {
+   "core": [
+    "RY55"
+   ],
+   "qualifier": "total over known facts in declared scope",
+   "sides": null,
+   "status": "ANSWER",
+   "value": true
+  },
+  "Q41": {
+   "core": [],
+   "sides": null,
+   "status": "ANSWER",
+   "value": []
+  },
+  "Q42": {
+   "core": [
+    "RY56"
+   ],
+   "sides": null,
+   "status": "ANSWER",
+   "value": [
+    699000
+   ]
+  },
+  "Q43": {
+   "core": [
+    "RY21",
+    "RY23"
+   ],
+   "sides": [
+    [
+     "RY21"
+    ],
+    [
+     "RY23"
+    ]
+   ],
+   "status": "CONFLICT",
+   "value": null
+  }
+ },
  "base": {
   "Q01": {
    "core": [
@@ -568,211 +660,34 @@
    "core": [],
    "row_count": 1,
    "value": 153646000
+  },
+  "Q26": {
+   "core": [
+    "R104"
+   ],
+   "qualifier": null,
+   "sides": null,
+   "status": "ANSWER",
+   "value": 3715000
+  },
+  "Q27": {
+   "core": [
+    "R310",
+    "R308",
+    "R301",
+    "R304",
+    "R305"
+   ],
+   "qualifier": "total over known facts in declared scope",
+   "sides": null,
+   "status": "ANSWER",
+   "value": true
   }
  },
  "changed": [
   "Q07",
   "Q14"
  ],
- "cycles": {
-  "Q30": {
-   "core": [
-    "CY1a",
-    "CY1b"
-   ],
-   "sides": [
-    [
-     "CY1a"
-    ],
-    [
-     "CY1b"
-    ]
-   ],
-   "status": "CONFLICT",
-   "value": null
-  },
-  "Q31": {
-   "core": [
-    "RY21",
-    "RY23"
-   ],
-   "sides": [
-    [
-     "RY21"
-    ],
-    [
-     "RY23"
-    ]
-   ],
-   "status": "CONFLICT",
-   "undefined": {
-    "literals": [
-     [
-      "preferred",
-      "dyne"
-     ],
-     [
-      "under_review",
-      "dyne"
-     ]
-    ],
-    "members": [
-     "RY21",
-     "RY22",
-     "RY23",
-     "RY24"
-    ]
-   },
-   "value": null
-  },
-  "Q32": {
-   "core": [
-    "RY21"
-   ],
-   "sides": null,
-   "status": "ANSWER",
-   "value": true
-  },
-  "Q33": {
-   "core": [
-    "CY3",
-    "RY32"
-   ],
-   "sides": [
-    [
-     "CY3"
-    ],
-    [
-     "RY32"
-    ]
-   ],
-   "status": "CONFLICT",
-   "undefined": {
-    "literals": [
-     [
-      "exempt_from_audit",
-      "edge"
-     ],
-     [
-      "trusted",
-      "edge"
-     ]
-    ],
-    "members": [
-     "CY3",
-     "RY31",
-     "RY32"
-    ]
-   },
-   "value": null
-  },
-  "Q34": {
-   "core": [
-    "CY4a",
-    "RY4"
-   ],
-   "sides": null,
-   "status": "ANSWER",
-   "value": true
-  },
-  "Q35": {
-   "core": [
-    "RY51"
-   ],
-   "sides": null,
-   "status": "ANSWER",
-   "value": false
-  },
-  "Q36": {
-   "core": [
-    "RY21",
-    "RY23"
-   ],
-   "sides": [
-    [
-     "RY21"
-    ],
-    [
-     "RY23"
-    ]
-   ],
-   "status": "CONFLICT",
-   "undefined": {
-    "literals": [
-     [
-      "approved_supplier",
-      "dyne"
-     ],
-     [
-      "preferred",
-      "dyne"
-     ],
-     [
-      "under_review",
-      "dyne"
-     ]
-    ],
-    "members": [
-     "RY21",
-     "RY22",
-     "RY23",
-     "RY24",
-     "RY52"
-    ]
-   },
-   "value": null
-  },
-  "Q37": {
-   "core": [
-    "RY53"
-   ],
-   "sides": null,
-   "status": "ANSWER",
-   "value": true
-  },
-  "Q38": {
-   "core": [
-    "RY21"
-   ],
-   "sides": null,
-   "status": "ANSWER",
-   "value": true
-  },
-  "Q39": {
-   "core": [
-    "RY21",
-    "RY23"
-   ],
-   "sides": [
-    [
-     "RY21"
-    ],
-    [
-     "RY23"
-    ]
-   ],
-   "status": "CONFLICT",
-   "undefined": {
-    "literals": [
-     [
-      "preferred",
-      "dyne"
-     ],
-     [
-      "under_review",
-      "dyne"
-     ]
-    ],
-    "members": [
-     "RY21",
-     "RY22",
-     "RY23",
-     "RY24"
-    ]
-   },
-   "value": null
-  }
- },
  "extended": {
   "Q01": {
    "core": [
@@ -1343,6 +1258,28 @@
    "core": [],
    "row_count": 1,
    "value": 153646000
+  },
+  "Q26": {
+   "core": [
+    "R104"
+   ],
+   "qualifier": null,
+   "sides": null,
+   "status": "ANSWER",
+   "value": 3715000
+  },
+  "Q27": {
+   "core": [
+    "R310",
+    "R308",
+    "R301",
+    "R304",
+    "R305"
+   ],
+   "qualifier": "total over known facts in declared scope",
+   "sides": null,
+   "status": "ANSWER",
+   "value": true
   }
  }
 }

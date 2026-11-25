@@ -2,6 +2,7 @@
   "V3b System A surface (CONTRACT.md): decide, why_not, claims, resolve_term, describe, fetch, add,
   with_hypothesis. Each op runs against one db value: main's, or a hypothesis's."
   (:require [v3b.engine :as e]
+            [v3b.gate :as gate]
             [v3b.why :as why]
             [v3b.sql :as sql]
             [v3b.store :as store]))
@@ -9,6 +10,16 @@
 (def ^:dynamic *db* nil)           ; the db value ops read (bound per op)
 (defonce conn (atom nil))
 (defonce opts (atom {:hypothesis :branch}))
+;; integrity gate state: the session's load paths and the EDN texts added since; *texts* / *withheld*
+;; are rebound inside a hypothesis (its add, its withhold)
+(defonce session (atom {:root nil :load [] :added []}))
+(def ^:dynamic *texts* nil)
+(def ^:dynamic *withheld* [])
+(defn- texts [] (or *texts* (:added @session)))
+(defn- gate [op added withhold]
+  (let [{:keys [root load]} @session
+        v (gate/violations root load added withhold)]
+    (when (seq v) {:error {:op op :violations v}})))
 
 (defn- ctx [op]
   (let [ix (store/index *db*)]
@@ -31,7 +42,10 @@
 (defn- answer [c st v sides why]
   {:status st :value v :sides sides :why (vec why)
    :owners (vec (sort (distinct (for [n (sub-nodes why) :let [r (e/rule-by-id c (:id n))] :when r] (name (:owner r))))))
-   :qualifier nil})
+   ;; IR-005: proven through a rule marked :closed_over :known_facts -> total only over the known facts
+   :qualifier (when (and (= st "ANSWER") (not (contains? #{false nil []} v))
+                         (some #(= :known_facts (:closed_over (e/rule-by-id c (:id %)))) (sub-nodes why)))
+                "total over known facts in declared scope")})
 
 (defn- team-proofs [sups sn]
   (vec (for [s sups] (update (:proof s) :children into (filter #(= (:id s) (:winner %)) sn)))))
@@ -152,11 +166,14 @@
 (defn- parse-goal [s] (store/read-edn s))
 
 (defn- with-hypothesis [op]
-  (let [recs (if (:add op) (store/read-edn (:add op)) [])
+  (let [ts (cond-> (vec (texts)) (:add op) (conj (:add op)))
         w (vec (:withhold op))]
-    (store/hypothesis-db @conn (:hypothesis @opts) w recs
-                         (fn [db ids]
-                           {:results (binding [*db* db] (mapv run-op (:ops op))) :added ids :withheld w}))))
+    (or (gate "with_hypothesis" ts (into *withheld* w))
+        (let [recs (if (:add op) (store/read-edn (:add op)) [])]
+          (store/hypothesis-db @conn (:hypothesis @opts) w recs
+                               (fn [db ids]
+                                 {:results (binding [*db* db *texts* ts *withheld* (into *withheld* w)] (mapv run-op (:ops op)))
+                                  :added ids :withheld w}))))))
 
 (defn- do-op [op]
   (case (:op op)
@@ -172,7 +189,11 @@
                                                                  (into (array-map) (map (fn [[k v]] [(name k) v])) (:filters op)))]
               {:concept (:concept op) :filters (:filters op) :rows rows :sql sql :params params
                :row_count (count rows) :truncated truncated})
-    "add" (let [ids (store/add-records! @conn (store/read-edn (:edn op)) :ext)] {:added ids})
+    "add" (let [ts (conj (vec (texts)) (:edn op))]
+            (or (gate "add" ts *withheld*)
+                (let [ids (store/add-records! @conn (store/read-edn (:edn op)) :ext)]
+                  (when-not *texts* (swap! session assoc :added ts))
+                  {:added ids})))
     "with_hypothesis" (with-hypothesis op)
     "sleep" (let [t0 (System/currentTimeMillis)] (Thread/sleep (long (:ms op))) {:t0 t0 :t1 (System/currentTimeMillis)})  ; test only
     (throw (ex-info (str "unknown op " (:op op)) {}))))
@@ -182,6 +203,11 @@
   (let [t0 (System/nanoTime)
         r (binding [*db* (or *db* @@conn)]
             (try (do-op op)
+                 (catch clojure.lang.ExceptionInfo ex
+                   (if-let [p (:defeat-cycle (ex-data ex))]   ; the re-entry guard, in the integrity gate's format
+                     {:status "ERROR" :error {:op (:op op) :violations [{:violation "defeat-cycle" :members (mapv pr-str p) :path p
+                                                                          :message (str "re-entered " (pr-str (first p)))}]}}
+                     {:status "ERROR" :error (str "ExceptionInfo: " (.getMessage ex))}))
                  (catch Exception ex {:status "ERROR" :error (str (.getSimpleName (class ex)) ": " (.getMessage ex))})))
         ms (/ (- (System/nanoTime) t0) 1e6)]
     (assoc r :ms ms :sql_log (if (= "with_hypothesis" (:op op)) [] (sql/take-log)))))

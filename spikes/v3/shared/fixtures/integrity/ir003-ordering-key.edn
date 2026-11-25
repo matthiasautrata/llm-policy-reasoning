@@ -1,0 +1,5 @@
+;; IR-003: a rival ordered by a :priority key instead of superiority: rebuttal-without-preference [RP1].
+[{:id :RP1 :kind :defeater :owner :finance :class :exception
+  :recorded_at #inst "2026-11-25"
+  :doc "A big capital request does not pass the cap check (outranks R304 by priority)."
+  :head [:neg [:cap_ok ?r]] :body [[:big_capital ?r]] :priority 10}]

@@ -4,7 +4,7 @@ defmodule V3c.Ops do
   with_hypothesis (+ the test op sleep). Each op runs against one store value: main's (taken from the
   `V3c.State` agent when the op starts) or a hypothesis's (passed down explicitly).
   """
-  alias V3c.{Why, SQL, Store, EDN, Model}
+  alias V3c.{Why, SQL, Store, EDN, Model, Gate}
   alias V3c.Engine, as: E
 
   defp ctx(op, db) do
@@ -25,7 +25,10 @@ defmodule V3c.Ops do
 
   defp answer(c, st, v, sides, why) do
     owners = for(n <- sub_nodes(why), r = n[:id] && E.rule_by_id(c, n[:id]), r, do: Atom.to_string(r.owner)) |> Enum.uniq() |> Enum.sort()
-    %{status: st, value: v, sides: sides, why: why, owners: owners, qualifier: nil}
+    # IR-005: proven through a rule marked :closed_over :known_facts -> total only over the known facts
+    closed = st == "ANSWER" and v not in [false, nil, []] and
+               Enum.any?(sub_nodes(why), fn n -> r = n[:id] && E.rule_by_id(c, n[:id]); r && r[:closed_over] == :known_facts end)
+    %{status: st, value: v, sides: sides, why: why, owners: owners, qualifier: if(closed, do: "total over known facts in declared scope")}
   end
 
   defp team_proofs(sups, sn), do: for(s <- sups, do: Map.update!(s.proof, :children, &(&1 ++ Enum.filter(sn, fn n -> n.winner == s.id end))))
@@ -211,11 +214,21 @@ defmodule V3c.Ops do
   end
 
   defp with_hypothesis(op, db) do
-    recs = if op["add"], do: read_recs(op["add"]), else: []
+    ts = Gate.texts() ++ if(op["add"], do: [op["add"]], else: [])
     w = op["withhold"] || []
-    {db2, ids} = Store.hypothesis(db, w, recs)
-    %{results: Enum.map(op["ops"], &run_op(&1, db2)), added: ids, withheld: w}
+    ws = Gate.withheld() ++ w
+
+    Gate.check("with_hypothesis", ts, ws) ||
+      (
+        recs = if op["add"], do: read_recs(op["add"]), else: []
+        {db2, ids} = Store.hypothesis(db, w, recs)
+        %{results: Gate.within(ts, ws, fn -> Enum.map(op["ops"], &run_op(&1, db2)) end), added: ids, withheld: w}
+      )
   end
+
+  defp lit_edn(l) when is_list(l), do: "[" <> Enum.map_join(l, " ", &lit_edn/1) <> "]"
+  defp lit_edn(a) when is_atom(a), do: ":" <> Atom.to_string(a)
+  defp lit_edn(x), do: inspect(x)
 
   defp do_op(op, db) do
     case op["op"] do
@@ -231,8 +244,15 @@ defmodule V3c.Ops do
           SQL.fetch(String.to_existing_atom(op["concept"]), Enum.sort(op["filters"] || %{}))
         %{concept: op["concept"], filters: op["filters"], rows: rows, sql: sql, params: params, row_count: length(rows), truncated: tr}
       "add" ->
-        recs = read_recs(op["edn"])
-        %{added: Agent.get_and_update(V3c.State, fn st -> {st2, ids} = Store.add_records(st, recs, :ext); {ids, st2} end)}
+        ts = Gate.texts() ++ [op["edn"]]
+
+        Gate.check("add", ts, Gate.withheld()) ||
+          (
+            recs = read_recs(op["edn"])
+            r = %{added: Agent.get_and_update(V3c.State, fn st -> {st2, ids} = Store.add_records(st, recs, :ext); {ids, st2} end)}
+            Gate.commit_add(ts)
+            r
+          )
       "with_hypothesis" -> with_hypothesis(op, db)
       "sleep" ->
         t0 = System.system_time(:millisecond)
@@ -256,6 +276,10 @@ defmodule V3c.Ops do
         e -> %{status: "ERROR", error: "#{short(e)}: #{Exception.message(e)}"}
       catch
         :exit, reason -> %{status: "ERROR", error: "exit: #{inspect(reason, limit: 5)}"}
+        # the re-entry guard, in the integrity gate's format
+        {:defeat_cycle, p} ->
+          ms = Enum.map(p, &lit_edn/1)
+          %{status: "ERROR", error: %{op: op["op"], violations: [%{violation: "defeat-cycle", members: ms, path: p, message: "re-entered " <> hd(ms)}]}}
       after
         for {{:memo, _} = k, _} <- Process.get(), do: Process.delete(k)
       end

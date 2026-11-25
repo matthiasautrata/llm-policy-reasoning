@@ -1,0 +1,6 @@
+;; IR-001b: a second authority order on cost_centre_of that reverses R313 (finance over hr):
+;; superiority-cycle, naming R313 and RS3 (and the claims C3, C4, C5 it then orders both ways).
+[{:id :RS3 :kind :superiority :owner :hr :class :superiority
+  :recorded_at #inst "2026-11-25"
+  :doc "Where hr and finance claims disagree on an employee's cost centre, hr prevails."
+  :pred :cost_centre_of :order [:hr :finance]}]

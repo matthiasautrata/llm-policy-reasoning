@@ -1,0 +1,12 @@
+;; Load-rejection fixtures (PLAN-v3-integrity §2-§3, accept.py check 8). Each is loaded on top of slice.edn +
+;; extension.edn (:load), or replaces slice.edn by a derived copy (:derive). Expected: load rejected with a
+;; violation of the named kind whose members include :members (exactly, with :exact true).
+[{:ir "IR-001a" :file "y2-even-loop.edn" :violation "defeat-cycle" :members ["RY23" "RY24"] :exact true}
+ {:ir "IR-001a" :file "y3-odd-loop.edn" :violation "defeat-cycle" :members ["RY31" "RY32"] :exact true}
+ {:ir "IR-001b" :file "ir001b-explicit.edn" :violation "superiority-cycle" :members ["RS1" "RS2"] :exact true}
+ {:ir "IR-001b" :file "ir001b-authority.edn" :violation "superiority-cycle" :members ["R313" "RS3"]}
+ {:ir "IR-002" :file "ir002-duplicate-definition.edn" :violation "duplicate-definition" :members ["R104" "RD1" "measure:booked_total"] :exact true}
+ {:ir "IR-003" :file "ir003-ordering-key.edn" :violation "rebuttal-without-preference" :members ["RP1"] :exact true}
+ {:ir "IR-004" :derive {:drop-additivity "measure:booked_total"} :violation "missing-additivity" :members ["measure:booked_total"] :exact true}
+ {:ir "IR-005" :file "ir005-no-completeness.edn" :violation "negative-without-completeness" :members ["RN1"] :exact true}
+ {:ir "IR-006" :file "ir006-unbound-call.edn" :violation "unbound-call" :members ["RU1"]}]

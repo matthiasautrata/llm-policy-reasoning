@@ -503,6 +503,8 @@ rules:
   owner: finance
   rule_class: definition
   recorded_at: '2026-09-14'
+  completeness:
+  - C10
   doc: The booked total of a cost centre rolls up over its subtree.
   head:
     type: Derived
@@ -902,6 +904,7 @@ rules:
   owner: finance
   rule_class: material_inference
   recorded_at: '2026-09-14'
+  closed_over: known_facts
   doc: A request passes the cap check if it breaches no cap.
   head:
     type: Derived
@@ -1031,6 +1034,7 @@ rules:
   owner: procurement
   rule_class: material_inference
   recorded_at: '2026-09-14'
+  closed_over: known_facts
   doc: A request is approved if it is eligible and not denied.
   head:
     type: Derived
@@ -1362,6 +1366,21 @@ claims:
   valid_from: '2026-08-01'
   recorded_at: '2026-09-14'
   backing: Finance transfer posting FT-88 (supersedes the January load for e077)
+  qualifier: certainly
+- id: C10
+  about: measure:booked_total
+  assertion:
+    type: Derived
+    pred: complete
+    args:
+    - type: Str
+      value: booked_total
+  asserted_by: finance
+  asserted_at: '2026-09-14'
+  valid_from: '2026-01-01'
+  valid_to: '2026-12-31'
+  recorded_at: '2026-09-14'
+  backing: 'Ledger close 2026-09: every booking of 2026 to date is posted to table cc'
   qualifier: certainly
 - id: C6
   about: vendor:bolt

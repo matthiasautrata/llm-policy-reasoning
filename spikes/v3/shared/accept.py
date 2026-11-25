@@ -13,11 +13,15 @@ The CLI reads a session script (CONTRACT.md) on stdin and prints {"results": [..
   5 Q17 answered through fetch, bounded: every statement <= fetch_limit rows, total rows far below a
     full load, SQL logged
   6 resolve_term probes match
-  7 defeat cycles (--only 7; PLAN-v3-cycles): load slice + extension + cycles.edn. The engine's flag
-    (capabilities.json, via model_check.py) decides: "report" -> every question must still match its
-    extended key (cycles.edn changes nothing else), and Q30-Q39 must match keys["cycles"], undefined
-    nodes re-verified; "reject" -> the shared model check must reject the rule base (and that is the pass)
-  Before the checks, model_check.py runs over the loaded rule base (moded safety on every engine).
+  7 disputes on an acyclic base (PLAN-v3-integrity §3): load slice + extension + cycles-acyclic.edn;
+    every question matches its extended key and the :state :acyclic questions match keys["acyclic"]
+    (why trees re-verified). Y6: a with_hypothesis that adds the rule closing a loop (RY24 -> Y2;
+    RY31/RY32/CY3 -> Y3) returns an error naming defeat-cycle and its members; Q32/Q43 are the same
+    before and after
+  8 integrity fixtures (fixtures/integrity/manifest.edn): each is loaded on top of slice + extension
+    (or a derived slice); the load must be rejected with the named violation and members. Also: `add`
+    of the Y2 closing rule is rejected and leaves the state unchanged
+  Before the checks, model_check.py (integrity, cycles: reject) runs over slice + extension.
 """
 import argparse, copy, json, os, pathlib, shlex, subprocess, sys, time
 
@@ -27,7 +31,8 @@ sys.path.insert(0, str(HERE))
 from reference import load, keys as ref_keys  # noqa: E402  (slice reader + key generator, not an evaluator)
 from check_why import Checker, node_ids, goals_in  # noqa: E402
 
-SLICE, EXT, CYC = "spikes/v3/shared/slice.edn", "spikes/v3/shared/extension.edn", "spikes/v3/shared/cycles.edn"
+SLICE, EXT, CYC = "spikes/v3/shared/slice.edn", "spikes/v3/shared/extension.edn", "spikes/v3/shared/cycles-acyclic.edn"
+FIX = "spikes/v3/shared/fixtures/integrity"
 FETCH_LIMIT = 10000
 CFG = {"duckdb": {"backend": "duckdb", "duckdb": "spikes/v3/shared/slice.duckdb", "fetch_limit": FETCH_LIMIT},
        "postgres": {"backend": "postgres", "postgres": os.environ.get("SPIKE_V3_PG", "dbname=spike_v3"), "fetch_limit": FETCH_LIMIT}}
@@ -119,8 +124,11 @@ def answer_fields(q, r):
     if k == "claim":
         return {"standing": r.get("standing"), "defeater": r.get("defeater"), "qualifier": sorted(r.get("qualifier") or [])}
     v = r.get("value")
-    return {"status": r.get("status"), "value": sorted(v) if isinstance(v, list) else v,
-            "sides": sorted(sorted(s) for s in r["sides"]) if r.get("sides") else None}
+    out = {"status": r.get("status"), "value": sorted(v) if isinstance(v, list) else v,
+           "sides": sorted(sorted(s) for s in r["sides"]) if r.get("sides") else None}
+    if q.get("check_qualifier"):
+        out["qualifier"] = r.get("qualifier")
+    return out
 
 
 def claim_ids(c):
@@ -147,7 +155,7 @@ def check_question(q, key, r, env, as_of_default):
         ids = node_ids(r.get("why"))
         miss = set(key.get("core") or []) - ids
         if miss: errs.append(f"core ids missing from why: {sorted(miss)}")
-        if key["status"] in ("ANSWER", "CONFLICT") and not r.get("why"):
+        if key["status"] in ("ANSWER", "CONFLICT") and not r.get("why") and key.get("value") != []:   # [] : no instance, nothing to explain
             errs.append("no why tree")
         errs += Checker(env.S, env.rules, env.claims, as_of, env.runsql, key.get("undefined"), q.get("goal")).check(r.get("why"))
         if key.get("undefined") and not any(n.get("type") == "undefined" for n in walk_nodes(r.get("why"))):
@@ -181,14 +189,34 @@ def strip(x):
     return x
 
 
+def edn_records(text, ids):
+    """EDN vector text holding only the records of `text` whose :id is in ids (top-level maps)."""
+    import edn_format as E
+    from reference import plain
+    keep = [r for r in E.loads(text) if plain(r).get("id") in ids]
+    return "[" + "\n".join(E.dumps(r) for r in keep) + "]"
+
+
+def derive_slice(text, spec):
+    """slice.edn text with spec applied: {drop-additivity: concept name} removes that concept's :additivity
+    (and :unsafe_dims), keeping everything else verbatim."""
+    import re
+    name = spec["drop-additivity"]
+    i = text.index(f':id "{name}"')
+    j = text.index("\n", text.index(":additivity", i))
+    seg = re.sub(r"\s*:additivity\s+:[\w-]+", "", text[i:j])
+    seg = re.sub(r"\s*:unsafe_dims\s+\[[^\]]*\]", "", seg)
+    return text[:i] + seg + text[j:]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--cli", required=True)
     ap.add_argument("--mutation", action="store_true", help="check 1 against mutated keys; must fail")
-    ap.add_argument("--only", default="1234567")
+    ap.add_argument("--only", default="12345678")
     ap.add_argument("--out", help="write the raw results here (JSON)")
     ap.add_argument("--mode", help="engine mode for capabilities.json (e.g. v3a: wfs | memo)")
-    ap.add_argument("--timeout", type=float, default=120, help="check 7: seconds before a session counts as looping")
+    ap.add_argument("--timeout", type=float, default=120, help="checks 7, 8: seconds before a session counts as looping")
     a = ap.parse_args()
     S, X, Q, Y, QC = load(cycles=True)
     K = ref_keys(mutate=True) if a.mutation else json.loads((HERE / "keys.json").read_text())
@@ -204,9 +232,9 @@ def main():
         flag = MC.engine_flag(engine, a.mode)
     except FileNotFoundError:
         flag = "reject"
-    S0, r0, c0, q0 = MC.rule_base(cycles=False)
-    mc = MC.check(S0, r0, c0, q0, flag, MC.declared_modes())
-    print(f"model check (slice + extension, {engine} cycles: {flag}):", "OK" if mc["ok"] else mc["errors"])
+    S0, r0, c0, q0 = MC.rule_base(cycles=True)
+    mc = MC.check(S0, r0, c0, q0, "reject", MC.declared_modes())
+    print(f"model check (slice + extension + acyclic, {engine} capability cycles: {flag}):", "OK" if mc["ok"] else mc["errors"])
 
     def verdict(n, errs, note=""):
         nonlocal green
@@ -292,33 +320,96 @@ def main():
             if q["kind"] == "resolve_term":
                 errs += [f"{q['id']}: {e}" for e in check_question(q, K["extended"][q["id"]], r, envd, today)]
         verdict(6, errs)
+    def session(load, ops):
+        """Run one session; a crash or timeout becomes one error result per op."""
+        try:
+            p = subprocess.run(shlex.split(a.cli), input=json.dumps({"config": CFG["duckdb"], "load": load, "ops": ops}),
+                               capture_output=True, text=True, cwd=ROOT, timeout=a.timeout)
+            if p.returncode == 0:
+                return json.loads(p.stdout)
+            return {"error": {"op": "crash", "violations": [], "stderr": p.stderr[-500:]}, "results": []}
+        except subprocess.TimeoutExpired:
+            return {"error": {"op": "timeout", "violations": []}, "results": []}
+
+    def rejected(err, violation, members, exact):
+        """errs for an error object that must name `violation` with `members`."""
+        if not isinstance(err, dict):
+            return [f"not rejected (got {str(err)[:160]})"]
+        vs = [v for v in err.get("violations") or [] if v.get("violation") == violation]
+        got = [set(v.get("members") or []) for v in vs]
+        ok = [m for m in got if (m == set(members) if exact else set(members) <= m)]
+        if ok:
+            return []
+        return [f"no {violation} with members {members}{' exactly' if exact else ''}: got "
+                + str([(v.get("violation"), v.get("members")) for v in err.get("violations") or []])[:300]]
+
     if "7" in a.only:
-        S1, r1, c1, q1 = MC.rule_base(cycles=True)
-        mc7 = MC.check(S1, r1, c1, q1, flag, MC.declared_modes())
-        cyc = [c["predicates"] for c in mc7["cycles"]]
-        if flag == "reject":
-            errs = [] if not mc7["ok"] and mc7["cycles"] else ["model check did not reject the cyclic rule base"]
-            verdict(7, errs, f"(cycles: reject; model check rejects {cyc}; see cycles_probe.py for the engine's own behaviour)")
+        allq = Q + QC
+        q32, q43 = (next(q for q in QC if q["id"] == i) for i in ("Q32", "Q43"))
+        probe = [op_for(q32), op_for(q43)]
+        y2 = (ROOT / FIX / "y2-even-loop.edn").read_text()
+        y3 = (ROOT / FIX / "y3-odd-loop.edn").read_text()
+        ry24 = edn_records(y2, {"RY24"})
+        t0 = time.time()
+        out = session([SLICE, EXT, CYC], [op_for(q) for q in allq] + probe
+                      + [{"op": "with_hypothesis", "add": ry24, "ops": probe},
+                         {"op": "with_hypothesis", "add": y3, "ops": probe}] + probe)
+        raw["acyclic"] = out
+        errs = []
+        if out.get("error") or len(out.get("results") or []) != len(allq) + 6:
+            errs.append(f"session failed: {str(out.get('error'))[:300]}")
         else:
-            errs = list(mc7["errors"])
-            allq = Q + QC
-            t0 = time.time()
-            try:
-                p = subprocess.run(shlex.split(a.cli), input=json.dumps({"config": CFG["duckdb"], "load": [SLICE, EXT, CYC],
-                                   "ops": [op_for(q) for q in allq]}), capture_output=True, text=True, cwd=ROOT, timeout=a.timeout)
-                out = json.loads(p.stdout) if p.returncode == 0 else {"results": [{"error": p.stderr[-500:]}] * len(allq)}
-            except subprocess.TimeoutExpired:
-                out = {"results": [{"error": f"timeout {a.timeout}s"}] * len(allq)}
-            raw["cycles"] = out
             res = [unwrap(q, r) for q, r in zip(allq, out["results"])]
             envc = Env(S, X, "duckdb", Y=Y)
             for q, r in zip(allq, res):
-                key = K["cycles"][q["id"]] if q.get("state") == "cycles" else K["extended"][q["id"]]
+                key = K["acyclic"][q["id"]] if q.get("state") == "acyclic" else K["extended"][q["id"]]
                 envq = Env(S, X, "duckdb", Y=Y, withhold=tuple((q.get("hypothesis") or {}).get("withhold") or ())) if q.get("hypothesis") else envc
-                errs += [f"cycles {q['id']}: {e}" for e in check_question(q, key, r, envq, today)]
-            got = {q["id"]: answer_fields(q, r) for q, r in zip(QC, res[len(Q):])}
-            verdict(7, errs, f"(cycles: report; negative cycles {cyc}; {time.time() - t0:.1f}s) "
-                             + " ".join(f"{i}={g.get('status')}" for i, g in got.items()))
+                errs += [f"acyclic {q['id']}: {e}" for e in check_question(q, key, r, envq, today)]
+            n = len(allq)
+            before, h2, h3, after = out["results"][n:n + 2], out["results"][n + 2], out["results"][n + 3], out["results"][n + 4:]
+            errs += [f"Y6 add RY24: {e}" for e in rejected(h2.get("error"), "defeat-cycle", ["RY23", "RY24"], True)]
+            errs += [f"Y6 add Y3: {e}" for e in rejected(h3.get("error"), "defeat-cycle", ["RY31", "RY32"], True)]
+            if [strip(r) for r in before] != [strip(r) for r in after]:
+                errs.append("Y6: Q32/Q43 changed across the rejected hypotheses")
+            for q, r in zip((q32, q43), after):
+                errs += [f"Y6 after {q['id']}: {e}" for e in check_question(q, K["acyclic"][q["id"]], r, envc, today)]
+        got = {q["id"]: answer_fields(q, unwrap(q, r)).get("status") for q, r in zip(QC, (out.get("results") or [])[len(Q):len(Q) + len(QC)])}
+        verdict(7, errs, f"({time.time() - t0:.1f}s) " + " ".join(f"{i}={g}" for i, g in got.items()))
+    if "8" in a.only:
+        import tempfile
+        import edn_format as E
+        from reference import plain
+        man = plain(list(E.loads((ROOT / FIX / "manifest.edn").read_text())))
+        errs, notes, raw["fixtures"] = [], [], {}
+        with tempfile.TemporaryDirectory() as td:
+            for m in man:
+                name = m.get("file") or "derived"
+                if m.get("derive"):
+                    pathlib.Path(td, "slice.edn").write_text(derive_slice((ROOT / SLICE).read_text(), m["derive"]))
+                    load_ = [str(pathlib.Path(td, "slice.edn")), EXT]
+                else:
+                    load_ = [SLICE, EXT, f"{FIX}/{m['file']}"]
+                t0 = time.time()
+                out = session(load_, [op_for(QC[0])])
+                dt = time.time() - t0
+                raw["fixtures"][f"{m['ir']} {name}"] = out
+                e = rejected(out.get("error"), m["violation"], m["members"], m.get("exact"))
+                if not e and (out.get("error") or {}).get("op") != "load":
+                    e = [f"error op {(out.get('error') or {}).get('op')}, want load"]
+                errs += [f"{m['ir']} {name}: {x}" for x in e]
+                notes.append(f"{m['ir']}{'' if not e else '!'}")
+            # `add` of the closing rule: rejected, state unchanged
+            ry24 = edn_records((ROOT / FIX / "y2-even-loop.edn").read_text(), {"RY24"})
+            q43 = next(q for q in QC if q["id"] == "Q43")
+            out = session([SLICE, EXT, CYC], [op_for(q43), {"op": "add", "edn": ry24}, op_for(q43)])
+            raw["fixtures"]["add RY24"] = out
+            rs = out.get("results") or []
+            if len(rs) != 3:
+                errs.append(f"add RY24: session failed {str(out.get('error'))[:200]}")
+            else:
+                errs += [f"add RY24: {x}" for x in rejected(rs[1].get("error"), "defeat-cycle", ["RY23", "RY24"], True)]
+                if strip(rs[0]) != strip(rs[2]): errs.append("add RY24: state changed by the rejected add")
+        verdict(8, errs, f"({len(man)} fixtures + add: {' '.join(notes)})")
     print("GREEN" if green else "NOT GREEN", f"(checks {a.only})")
     if a.out:
         pathlib.Path(a.out).write_text(json.dumps({"report": report, "raw": raw}, indent=1, default=str))

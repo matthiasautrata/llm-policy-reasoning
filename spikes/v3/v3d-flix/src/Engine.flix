@@ -70,7 +70,7 @@ pub mod Engine {
 
     pub type alias Ctx = {d = String, logic = List[LR], claims = List[Claim], ruleBy = Map[String, Rule],
                           claimBy = Map[String, Claim], functional = Map[String, Int32],
-                          orders = List[(String, String, List[Owner])]}
+                          orders = List[(String, String, List[Owner])], path = List[(String, Goal)]}
 
     pub def ctx(d: String, rules: List[Rule], claims: List[Claim], functional: Map[String, Int32]): Ctx =
         {d = d,
@@ -85,7 +85,8 @@ pub mod Engine {
          orders = List.filterMap(r -> match r#form {
              case Form.Order(p, os) => Some((r#id, p, os))
              case _ => None
-         }, rules)}
+         }, rules),
+         path = Nil}
 
     // ------------------------------------------------------------------ terms
 
@@ -546,15 +547,44 @@ pub mod Engine {
             }
         }
 
-    pub def evaluate(c: Ctx, l: Goal): Ev \ Eval =
-        let key = (c#d, l);
+    /// Memoised per op. Re-entry guard (PLAN-v3-integrity §3.2): the ctx carries the path of goals being
+    /// evaluated; meeting one again is a dependency cycle the integrity gate did not stop
+    /// (INTEGRITY_GATE=off). Fails with cycleTag + the violation JSON, a backstop, not a semantics.
+    pub def evaluate(c0: Ctx, l: Goal): Ev \ Eval =
+        let key = (c0#d, l);
         match Eval.memoGet(key) {
             case Some(r) => r
             case None =>
+                match List.indexOf(key, c0#path) {
+                    case Some(i) => { let gs = List.map(snd, List.drop(i, c0#path)) ++ (l :: Nil); discard Eval.fail(cycleTag() + Util.Json.toCompactString(cycleJson(gs))) }
+                    case None => ()
+                };
+                let c = {path = c0#path ++ (key :: Nil) | c0};
                 let r = classify(c, supporters(c, l), attackers(c, l));
                 Eval.memoPut(key, r);
                 r
         }
+
+    pub def cycleTag(): String = "\u0001defeat-cycle\u0001"
+
+    def termEdn(t: Term): String = match t {
+        case Val(VStr(s)) => "\"${s}\""
+        case Val(VInt(i)) => "${i}"
+        case Val(VBool(b)) => "${b}"
+        case Val(VNull) => "nil"
+        case Var(n) => n
+        case other => "${other}"
+    }
+
+    pub def goalEdn(g: Goal): String = match g {
+        case Pos(p, ts) => "[" + String.intercalate(" ", (":" + p) :: List.map(termEdn, ts)) + "]"
+        case Neg(h) => "[:neg ${goalEdn(h)}]"
+    }
+
+    def cycleJson(gs: List[Goal]): Json =
+        let ms = List.map(goalEdn, gs);
+        obj(("violation", JString("defeat-cycle")) :: ("members", jarr(List.map(JString, ms))) ::
+            ("path", jarr(List.map(goalJson, gs))) :: ("message", JString("re-entered " + Option.getWithDefault("", List.head(ms)))) :: Nil)
 
     pub def idsOf(xs: List[Sup]): List[String] = List.sort(List.distinct(List.map(x -> x#id, xs)))
 

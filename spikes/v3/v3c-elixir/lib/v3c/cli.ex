@@ -3,7 +3,7 @@ defmodule V3c.CLI do
   V3c CLI (CONTRACT.md): session script (JSON) on stdin -> {"results": [...], "load_ms": n} on stdout.
   Paths in `load` are relative to V3C_ROOT (the repo root). Optional config key "pool": SQL connections.
   """
-  alias V3c.{EDN, Model, Ops, SQL, Store}
+  alias V3c.{EDN, Gate, Model, Ops, SQL, Store}
 
   @doc "Keywords -> names; logic variables -> their source name (\"?r\"); sets -> lists."
   def jsonable(x) do
@@ -44,7 +44,18 @@ defmodule V3c.CLI do
     cfg = script["config"]
     t0 = System.monotonic_time(:microsecond)
     :ok = SQL.configure(cfg, root, pool: cfg["pool"] || 1)
-    load(script["load"] || [], root)
+    files = script["load"] || []
+    Gate.start(root, files)
+
+    # the integrity gate runs before EDN validation and the store
+    case Gate.violations(root, files, [], []) do
+      [] -> run_loaded(script, root, files, t0)
+      v -> %{error: %{op: "load", violations: v}, results: [], load_ms: (System.monotonic_time(:microsecond) - t0) / 1000}
+    end
+  end
+
+  defp run_loaded(script, root, files, t0) do
+    load(files, root)
     load_ms = (System.monotonic_time(:microsecond) - t0) / 1000
     out = %{results: Enum.map(script["ops"] || [], &Ops.run_op/1), load_ms: load_ms}
     out = if script["concurrent"], do: Map.put(out, :concurrent, Ops.run_concurrent(script["concurrent"])), else: out

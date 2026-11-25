@@ -93,8 +93,12 @@ pub mod Ops {
     def answer(c: Ctx, st: String, v: Json, sides: Option[List[List[String]]], why: List[Node]): Json =
         let owners = List.flatMap(subIds, why) |> List.filterMap(id -> Map.get(id, c#ruleBy) |> Option.map(r -> Engine.ownerName(r#owner)))
                      |> List.distinct |> List.sort;
+        // IR-005: proven through a rule marked :closed_over :known_facts -> total only over the known facts
+        let nonEmpty = match v { case JBool(false) => false case JNull => false case JArray(xs) => not Vector.isEmpty(xs) case _ => true };
+        let closed = st == "ANSWER" and nonEmpty and
+                     List.exists(id -> Option.exists(r -> r#closedOver, Map.get(id, c#ruleBy)), List.flatMap(subIds, why));
         obj(("status", jstr(st)) :: ("value", v) :: ("sides", sidesJson(sides)) :: ("why", jarr(List.map(nodeJson, why))) ::
-            ("owners", jstrs(owners)) :: ("qualifier", JNull) :: Nil)
+            ("owners", jstrs(owners)) :: ("qualifier", if (closed) jstr("total over known facts in declared scope") else JNull) :: Nil)
 
     def sidesJson(s: Option[List[List[String]]]): Json = match s {
         case Some(xs) => jarr(List.map(jstrs, xs))
@@ -325,22 +329,35 @@ pub mod Ops {
         match name {
             case "resolve_term" => (Ok(resolveTerm(db, Option.getWithDefault("", getStr("text", op)))), Nil, false)
             case "describe" => (Ok(describe(db, Option.getWithDefault("", getStr("asset", op)))), Nil, false)
-            case "add" => match readRecs(Option.getWithDefault("", getStr("edn", op))) {
-                case Err(e) => (Err(e), Nil, false)
-                case Ok(recs) =>
-                    let (st2, ids) = Store.addRecords(Ref.get(main), recs);
-                    Ref.put(st2, main);
-                    (Ok(obj(("added", jstrs(ids)) :: Nil)), Nil, false)
-            }
+            case "add" =>
+                let text = Option.getWithDefault("", getStr("edn", op));
+                let g = db#gate;
+                let added = g#added ++ (text :: Nil);
+                match Gate.violations(g#load, added, g#withheld) {
+                    case Nil => match readRecs(text) {
+                        case Err(e) => (Err(e), Nil, false)
+                        case Ok(recs) =>
+                            let (st2, ids) = Store.addRecords(Ref.get(main), recs);
+                            Ref.put({gate = {added = added | g} | st2}, main);
+                            (Ok(obj(("added", jstrs(ids)) :: Nil)), Nil, false)
+                    }
+                    case vs => (Ok(rejected("add", vs)), Nil, false)
+                }
             case "with_hypothesis" =>
-                let add = match getStr("add", op) { case Some(t) => readRecs(t) case None => Ok(Nil) };
-                match add {
-                    case Err(e) => (Err(e), Nil, true)
-                    case Ok(recs) =>
-                        let w = List.filterMap(j -> match j { case JString(s) => Some(s) case _ => None }, getList("withhold", op));
-                        let (db2, ids) = Store.hypothesis(db, w, recs);
-                        let rs = List.map(o -> runOpOn(env, main, o, Some(db2)), getList("ops", op));
-                        (Ok(obj(("results", jarr(rs)) :: ("added", jstrs(ids)) :: ("withheld", jstrs(w)) :: Nil)), Nil, true)
+                let w = List.filterMap(j -> match j { case JString(s) => Some(s) case _ => None }, getList("withhold", op));
+                let g = db#gate;
+                let g2 = {added = g#added ++ Option.toList(getStr("add", op)), withheld = g#withheld ++ w | g};
+                match Gate.violations(g2#load, g2#added, g2#withheld) {
+                    case Nil =>
+                        let add = match getStr("add", op) { case Some(t) => readRecs(t) case None => Ok(Nil) };
+                        match add {
+                            case Err(e) => (Err(e), Nil, true)
+                            case Ok(recs) =>
+                                let (db2, ids) = Store.hypothesis(db, w, recs);
+                                let rs = List.map(o -> runOpOn(env, main, o, Some({gate = g2 | db2})), getList("ops", op));
+                                (Ok(obj(("results", jarr(rs)) :: ("added", jstrs(ids)) :: ("withheld", jstrs(w)) :: Nil)), Nil, true)
+                        }
+                    case vs => (Ok(rejected("with_hypothesis", vs)), Nil, true)
                 }
             case "sleep" =>
                 let t0 = JSys.currentTimeMillis();
@@ -350,6 +367,9 @@ pub mod Ops {
             case _ => let (r, log) = engineOp(env, op, db, name); (r, log, false)
         }
 
+    /// an op the integrity gate rejected: {error: {op, violations}}, state unchanged
+    pub def rejected(op: String, vs: List[Json]): Json = obj(("error", obj(("op", jstr(op)) :: ("violations", jarr(vs)) :: Nil)) :: Nil)
+
     /// one op -> its result, with ms and sql_log (errors -> {status: ERROR, error})
     pub def runOpOn(env: Env, main: Ref[Store, r], op: Json, db0: Option[Store]): Json \ IO + r =
         let t0 = JSys.nanoTime();
@@ -358,6 +378,10 @@ pub mod Ops {
         let ms = Int64.toFloat64(JSys.nanoTime() - t0) / 1000000.0;
         let r0 = match res {
             case Ok(j) => j
+            // the re-entry guard (Engine.evaluate), in the integrity gate's format
+            case Err(e) if String.startsWith(prefix = Engine.cycleTag(), e) =>
+                let v = Util.Json.parse(String.dropLeft(String.length(Engine.cycleTag()), e)) |> Result.getWithDefault(JNull);
+                obj(("status", jstr("ERROR")) :: ("error", obj(("op", jstr(Option.getWithDefault("", getStr("op", op)))) :: ("violations", jarr(v :: Nil)) :: Nil)) :: Nil)
             case Err(e) => obj(("status", jstr("ERROR")) :: ("error", jstr(e)) :: Nil)
         };
         merge(r0, ("ms", jfloat(ms)) :: ("sql_log", jarr(if (hyp) Nil else log)) :: Nil)

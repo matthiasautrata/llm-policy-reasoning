@@ -1,0 +1,6 @@
+;; IR-002: a second definition of booked_total, by procurement, next to finance's binding (measure:booked_total,
+;; exposed by R104): duplicate-definition.
+[{:id :RD1 :kind :strict :owner :procurement :class :definition
+  :recorded_at #inst "2026-11-25" :completeness [:C10]
+  :doc "Procurement's booked total of a cost centre."
+  :head [:booked_total ?c ?v] :body [[:fetch :booked_total {:cc ?c} {:value ?v}]]}]

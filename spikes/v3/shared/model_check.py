@@ -224,7 +224,7 @@ def mentions(t, name):
     return False
 
 
-def shape_errors(S, rules, claims):
+def shape_errors(S, rules, claims, additivity=True):
     """PLAN-v3-integrity §1: flat claims, linked by ids; additivity on every measure; recorded_at is
     provenance only (no rule body reads it)."""
     errors = []
@@ -243,7 +243,7 @@ def shape_errors(S, rules, claims):
         if mentions(r.get("body") or [], "recorded_at"):
             errors.append(f"{r.get('id')}: rule body references recorded_at (provenance, not evidence)")
     for c in S.get("concepts") or []:
-        if c.get("kind") != "measure": continue
+        if c.get("kind") != "measure" or not additivity: continue
         a = c.get("additivity")
         if a not in ADDITIVITY:
             errors.append(f"{c['id']}: :additivity missing or not one of {sorted(ADDITIVITY)}: {a}")
@@ -252,37 +252,188 @@ def shape_errors(S, rules, claims):
     return errors
 
 
-def check(S, rules, claims, questions, cycles_flag="report", declared=None):
-    errors = shape_errors(S, rules, claims)
+# ------------------------------------------------------------------ 3 integrity (PLAN-v3-integrity §2)
+ORDERING_KEYS = {"priority", "weight", "rank", "salience", "overrides", "precedence", "preference", "order_by"}
+
+
+def V(violation, members, message):
+    return dict(violation=violation, members=sorted({str(m) for m in members}), message=message)
+
+
+def pred_of(x):
+    """rule head / claim assertion predicate (complement stripped)"""
+    L = x.get("head") or x.get("assertion")
+    return atom(L)[0] if L else None
+
+
+def superiority_cycles(rules, claims):
+    """IR-001b. Superiority between rivals (records whose conclusions share a predicate) and along
+    explicit :superior-to edges, combined lexicographically:
+      1 explicit :superior-to (either direction decides the pair)
+      2 authority: a superiority rule {:pred p :order [a b ...]} ranks claims on p by asserter
+      3 strict over non-strict (rules)
+      4 later asserted_at, only between claims of the same asserter; equal asserted_at: none.
+    The relation must be a strict partial order: any strongly connected component (or a self-loop)
+    of the combined relation is a violation. Also checked on its own: the asserter order per predicate
+    (several superiority rules for one predicate must not order two asserters both ways)."""
+    out = []
+    items = {x["id"]: x for x in [r for r in rules if r.get("kind") != "superiority"] + list(claims)}
+    auth, auth_src = {}, {}
+    for r in rules:
+        if r.get("kind") != "superiority": continue
+        o = r.get("order") or []
+        for i, a in enumerate(o):
+            for b in o[i + 1:]:
+                auth.setdefault(r.get("pred"), set()).add((a, b))
+                auth_src.setdefault((r.get("pred"), a, b), set()).add(r["id"])
+    for p, rel in auth.items():                       # asserter order per predicate
+        nodes = {a for e in rel for a in e}
+        succ = {}
+        for a, b in rel: succ.setdefault(a, set()).add(b)
+        for c in sccs(nodes, succ):
+            if len(c) > 1:
+                src = {i for (q, a, b), ids in auth_src.items() if q == p and a in c and b in c for i in ids}
+                out.append(V("superiority-cycle", src, f"authority order on {p} ranks {sorted(c)} both ways ({sorted(src)})"))
+    def explicit(a, b): return b in (items[a].get("superior-to") or [])
+    def authority(a, b):
+        A, B = items[a], items[b]
+        if "assertion" not in A or "assertion" not in B: return False
+        return (A.get("asserted_by"), B.get("asserted_by")) in auth.get(pred_of(A), ())
+    def strict(a, b): return items[a].get("kind") == "strict" and items[b].get("kind") not in ("strict", None)
+    def later(a, b):
+        A, B = items[a], items[b]
+        return ("assertion" in A and "assertion" in B and A.get("asserted_by") == B.get("asserted_by")
+                and str(A.get("asserted_at")) > str(B.get("asserted_at")))
+    def sup(a, b):
+        for f in (explicit, authority, strict, later):
+            if f(a, b) or f(b, a): return f(a, b)
+        return False
+    by_pred = {}
+    for i, x in items.items(): by_pred.setdefault(pred_of(x), []).append(i)
+    pairs = {(a, b) for ids in by_pred.values() for a in ids for b in ids if a != b}
+    pairs |= {(a, b) for a in items for b in (items[a].get("superior-to") or []) if b in items}
+    succ = {}
+    for a, b in pairs:
+        if sup(a, b): succ.setdefault(a, set()).add(b)
+    for a in items:
+        if explicit(a, a):
+            out.append(V("superiority-cycle", [a], f"{a} is declared superior to itself"))
+    for c in sccs(set(items), succ):
+        if len(c) > 1:
+            src = {i for (q, a, b), ids in auth_src.items() for i in ids
+                   if any(pred_of(items[m]) == q and items[m].get("asserted_by") in (a, b) for m in c)}
+            out.append(V("superiority-cycle", c | src, f"superiority is not a strict partial order over {sorted(c)}"))
+    return out
+
+
+def definition_artifacts(S, rules):
+    """IR-002. The artifacts that define a predicate (= a vocabulary term's name, term:<name>):
+      the binding artifact: the concept named <name> (a semantic-layer binding), together with its
+        :derived-by rule and any :definition rule of the term's owner whose body is a single fetch of
+        that concept (such a rule only exposes the binding as a predicate);
+      a rule artifact per owner: the remaining :class :definition rules with head predicate <name>,
+        grouped by :owner.
+    -> {predicate: [(artifact label, [ids])]}. A predicate defined by two or more artifacts violates IR-002."""
+    concepts = {kw(c["name"]): c for c in S.get("concepts") or []}
+    owner = {t["id"].split(":", 1)[1]: kw(t.get("owner")) for t in S.get("terms") or []}
+    arts = {}
+    for p, c in concepts.items():
+        if c.get("kind") in ("measure", "dimension", "entity") and f"{p}" in owner:
+            arts.setdefault(p, {})["binding"] = {c["id"]} | ({kw(c["derived-by"])} if c.get("derived-by") else set())
+    for r in rules:
+        if r.get("class") != "definition" or "head" not in r: continue
+        p, _, _ = atom(r["head"])
+        b = r.get("body") or []
+        exposes = (len(b) == 1 and b[0][0] == "fetch" and b[0][1] == p and kw(r.get("owner")) == owner.get(p))
+        if p in arts and "binding" in arts[p] and (r["id"] in arts[p]["binding"] or exposes):
+            arts[p]["binding"].add(r["id"]); continue
+        arts.setdefault(p, {}).setdefault(f"rules:{kw(r.get('owner'))}", set()).add(r["id"])
+    return {p: sorted((k, sorted(v)) for k, v in a.items()) for p, a in arts.items()}
+
+
+def kw(x):
+    return x[1:] if isinstance(x, str) and x.startswith(":") else x
+
+
+def integrity_violations(S, rules, claims, cycles_flag="reject"):
+    """IR-001a .. IR-005 over the active rule base (IR-006 is the moded check in check())."""
+    out = []
     cyc = negative_cycles(rules, claims, S.get("functional") or {})
-    if cyc and cycles_flag == "reject":
-        errors.append(f"negative cycle(s) rejected (engine flag cycles: reject): {[c['predicates'] for c in cyc]}")
+    if cycles_flag == "reject":
+        for c in cyc:
+            out.append(V("defeat-cycle", c["rules"], f"negative dependency cycle over {c['predicates']}: {c['negative_edges']}"))
+    out += superiority_cycles(rules, claims)
+    for p, arts in definition_artifacts(S, rules).items():
+        if len(arts) > 1:
+            out.append(V("duplicate-definition", [i for _, ids in arts for i in ids],
+                         f"{p} is defined by {len(arts)} artifacts: {arts}"))
+    for x in list(rules) + list(claims):
+        bad = sorted(ORDERING_KEYS & set(x))
+        if bad:
+            out.append(V("rebuttal-without-preference", [x["id"]],
+                         f"{x['id']}: {bad} would order rivals outside superiority"))
+    measures = {kw(c["name"]) for c in S.get("concepts") or [] if c.get("kind") == "measure"}
+    for c in S.get("concepts") or []:
+        if c.get("kind") != "measure": continue
+        a = c.get("additivity")
+        if a not in ADDITIVITY:
+            out.append(V("missing-additivity", [c["id"]], f"{c['id']}: :additivity missing or not one of {sorted(ADDITIVITY)}: {a}"))
+        elif a == "semi-additive" and not c.get("unsafe_dims"):
+            out.append(V("missing-additivity", [c["id"]], f"{c['id']}: :semi-additive without :unsafe_dims"))
+    cl = {c["id"]: c for c in claims}
+    for r in rules:
+        body = r.get("body") or []
+        uses = [f"not {atom(b[1])[0]}" for b in body if b[0] == "not"] + \
+               [f"fetch of measure {b[1]}" for b in body if b[0] == "fetch" and b[1] in measures]
+        if not uses: continue
+        comp, closed = r.get("completeness"), r.get("closed_over")
+        if closed == "known_facts" and not comp: continue
+        if comp and not closed and isinstance(comp, list):
+            bad = [i for i in comp if i not in cl or pred_of(cl[i]) != "complete"]
+            if not bad: continue
+            out.append(V("negative-without-completeness", [r["id"]] + bad,
+                         f"{r['id']}: :completeness {bad} is not an active [:complete ...] claim"))
+            continue
+        out.append(V("negative-without-completeness", [r["id"]],
+                     f"{r['id']} uses {uses} without :completeness [claim ids] or :closed_over :known_facts"))
+    for e in shape_errors(S, rules, claims, additivity=False):
+        out.append(V("malformed-record", [e.split(":", 1)[0]], e))
+    return out
+
+
+def check(S, rules, claims, questions, cycles_flag="reject", declared=None):
+    """-> dict(cycles, modes, violations: [{violation, members, message}], errors: [messages], ok)."""
+    viol = integrity_violations(S, rules, claims, cycles_flag)
+    cyc = negative_cycles(rules, claims, S.get("functional") or {})
+    unbound = []
     M = Modes(S, rules, claims)
     modes = M.infer()
     for p, ms in modes.items():
         if not ms:
-            errors.append(f"{p}: no safe calling mode at all")
+            unbound.append(([p], f"{p}: no safe calling mode at all"))
     declared = declared if declared is not None else {}
     for p in sorted(set(modes) | set(declared)):
         if p not in modes and p not in M.arity: continue          # declared for a predicate not in this rule base
         if sorted(declared.get(p, [])) != modes.get(p, []):
-            errors.append(f"{p}: declared modes {declared.get(p)} != inferred {modes.get(p)}")
+            unbound.append(([p], f"{p}: declared modes {declared.get(p)} != inferred {modes.get(p)}"))
     for p, n in (S.get("functional") or {}).items():
         if p in modes and not any(set(i for i, ch in enumerate(m) if ch == "+") <= set(range(n)) for m in modes[p]):
-            errors.append(f"functional {p}: every mode binds the value position (key {n})")
+            unbound.append(([p], f"functional {p}: every mode binds the value position (key {n})"))
     for r in M.rules:                                # every call site: the rule must be safe in some mode
         if r.get("kind") in ("incompatible",): continue
         p = atom(r["head"])[0]
         if not any(M.simulate(r, m)[0] for m in M.safe.get(p, ())):
-            errors.append(f"{r['id']}: unsafe in every mode: {M.simulate(r, frozenset(range(M.arity[p])))[1]}")
+            unbound.append(([r["id"]], f"{r['id']}: unsafe in every mode: {M.simulate(r, frozenset(range(M.arity[p])))[1]}"))
     for q in questions:
         g = q.get("goal")
         if not g: continue
         p, a, _ = atom(g)
         bp = frozenset(i for i, x in enumerate(a) if not vars_of(x))
         if not M.is_safe(p, bp):
-            errors.append(f"{q['id']}: goal {p} called with bound {sorted(bp)}, modes {modes.get(p)}")
-    return dict(cycles=cyc, modes=modes, errors=errors, ok=not errors)
+            unbound.append(([q["id"]], f"{q['id']}: goal {p} called with bound {sorted(bp)}, modes {modes.get(p)}"))
+    viol += [V("unbound-call", m, msg) for m, msg in unbound]
+    errors = [f"{v['violation']}: {v['message']}" for v in viol]
+    return dict(cycles=cyc, modes=modes, violations=viol, errors=errors, ok=not viol)
 
 
 def declared_modes():
@@ -295,9 +446,12 @@ def engine_flag(engine, mode=None):
     return cap["modes"][mode]["cycles"] if mode else cap["cycles"]
 
 
-def rule_base(cycles=True):
+def rule_base(cycles=True, extra=()):
+    """slice + extension (+ cycles-acyclic.edn with cycles) + the records of each extra EDN file."""
     S, X, Q, Y, QC = load(cycles=True)
     recs = X + (Y if cycles else [])
+    for f in extra:
+        recs = recs + plain(list(E.loads(pathlib.Path(f).read_text())))
     rules = list(S["rules"]) + [x for x in recs if "head" in x or "pred" in x]
     claims = list(S["claims"]) + [x for x in recs if "assertion" in x]
     return S, rules, claims, Q + (QC if cycles else [])
@@ -305,17 +459,18 @@ def rule_base(cycles=True):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--cycles", action="store_true", help="include cycles.edn")
+    ap.add_argument("--cycles", action="store_true", help="include cycles-acyclic.edn")
+    ap.add_argument("--fixture", action="append", default=[], help="add the records of this EDN file (e.g. fixtures/integrity/y2-even-loop.edn)")
     ap.add_argument("--engine", help="spike directory with capabilities.json")
     ap.add_argument("--mode", help="engine mode (capabilities.json modes)")
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args()
     flag = engine_flag(a.engine, a.mode) if a.engine else "report"
-    S, rules, claims, Q = rule_base(a.cycles)
+    S, rules, claims, Q = rule_base(a.cycles, a.fixture)
     res = check(S, rules, claims, Q, flag, declared_modes())
     if a.json:
         print(json.dumps(res, indent=1)); return 0 if res["ok"] else 1
-    print(f"rule base: slice + extension{' + cycles' if a.cycles else ''}; engine {a.engine or '-'} {a.mode or ''} cycles: {flag}")
+    print(f"rule base: slice + extension{' + cycles-acyclic' if a.cycles else ''}{''.join(' + ' + f for f in a.fixture)}; engine {a.engine or '-'} {a.mode or ''} cycles: {flag}")
     print(f"negative cycles: {len(res['cycles'])}")
     for c in res["cycles"]:
         print("  ", c["predicates"], "rules", c["rules"]); [print("     ", e) for e in c["negative_edges"]]

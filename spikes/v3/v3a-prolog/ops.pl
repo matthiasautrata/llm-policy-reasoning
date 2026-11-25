@@ -21,11 +21,19 @@ run_op(J, Out) :-
 op_result(Op, R) :-
     py_call(sql:begin_op(), _), clear_memo,
     get_time(T0),
-    catch(do_op(Op.op, Op, R0), E, ( message_to_codes(E, S), R0 = _{status:"ERROR", error:S} )),
+    catch(do_op(Op.op, Op, R0), E, op_error(Op.op, E, R0)),
     get_time(T1), Ms is (T1 - T0) * 1000,
     py_call(sql:take_log(), LogJ), atom_json_dict(LogJ, Log, [value_string_as(string)]),
     ( Op.op == "with_hypothesis" -> L = [] ; L = Log ),
     R = R0.put(_{ms:Ms, sql_log:L}).
+
+%   The re-entry guard (defeasible:evaluate/3, memo mode) throws defeat_cycle(Path): reported in the
+%   integrity gate's format, members = the goals on the cycle, outermost first.
+op_error(Op, defeat_cycle(Path), _{status:"ERROR", error:_{op:Op, violations:[V]}}) :- !,
+    maplist([G, S]>>format(string(S), "~w", [G]), Path, Ms),
+    atomic_list_concat(Ms, ' -> ', Msg0), format(string(Msg), "re-entered ~w (goal path ~w)", [Path, Msg0]),
+    V = _{violation:"defeat-cycle", members:Ms, path:Path, message:Msg}.
+op_error(_, E, _{status:"ERROR", error:S}) :- message_to_codes(E, S).
 
 message_to_codes(E, S) :- message_to_codes(E, [], Cs), !, string_codes(S, Cs).
 message_to_codes(E, S) :- format(string(S), "~q", [E]).
@@ -108,8 +116,16 @@ sups_of(undefined(_, _), []).
 value_of([V], V) :- !.
 value_of(Vs, Vs).
 
-answer(St, V, Sides, Why, _{status:St, value:V, sides:Sides, why:Why, owners:Os, qualifier:null}) :-
-    why_ids(Why, Ids), findall(O, ( member(Id, Ids), rule(Id, _, _, _, M), mget(owner, M, O) ), Os0), sort(Os0, Os).
+answer(St, V, Sides, Why, _{status:St, value:V, sides:Sides, why:Why, owners:Os, qualifier:Q}) :-
+    why_ids(Why, Ids), findall(O, ( member(Id, Ids), rule(Id, _, _, _, M), mget(owner, M, O) ), Os0), sort(Os0, Os),
+    qualifier(St, V, Ids, Q).
+
+%   IR-005: an answer proven through a rule marked :closed_over :known_facts is total only over the known
+%   facts (its :not / measure reads every fact there is, with no completeness claim behind it).
+qualifier("ANSWER", V, Ids, "total over known facts in declared scope") :-
+    V \== false, V \== null, V \== [],
+    member(Id, Ids), rule(Id, _, _, _, M), mget(closed_over, M, known_facts), !.
+qualifier(_, _, _, null).
 
 why_ids(Why, Ids) :- findall(Id, ( sub_node(Why, N), is_dict(N), get_dict(id, N, Id) ), Ids0), sort(Ids0, Ids).
 sub_node(X, X).

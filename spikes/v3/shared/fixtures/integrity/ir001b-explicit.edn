@@ -1,0 +1,9 @@
+;; IR-001b: two rivals each declared superior to the other: superiority-cycle [RS1 RS2].
+[{:id :RS1 :kind :defeasible :owner :procurement :class :material_inference
+  :recorded_at #inst "2026-11-25"
+  :doc "A big capital request needs a board sign-off."
+  :head [:board_signoff ?r] :body [[:big_capital ?r]] :superior-to [:RS2]}
+ {:id :RS2 :kind :defeater :owner :finance :class :exception
+  :recorded_at #inst "2026-11-25"
+  :doc "An emergency request needs no board sign-off."
+  :head [:neg [:board_signoff ?r]] :body [[:fetch :request {:id ?r :emergency true} {}]] :superior-to [:RS1]}]

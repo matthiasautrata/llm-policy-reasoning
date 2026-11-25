@@ -1,17 +1,23 @@
-"""Ask each cycle question (Q30-Q39) in its own session, with a timeout (PLAN-v3-cycles §4).
+"""Re-entry guard probe (PLAN-v3-integrity §3.2): what an engine does with a negative cycle when the
+integrity gate is bypassed.
 
   python spikes/v3/shared/cycles_probe.py --cli spikes/v3/v3b-clojure/cli [--timeout 30] [--out f.json] [--backend postgres]
 
-Loads slice + extension + cycles.edn, as check 7 does, but bypasses the model check: the point is
-to see what the engine itself does with a negative cycle (answer, wrong answer, error, loop).
-Prints one line per question: outcome vs keys["cycles"].
+For each loop fixture (Y2 even loop, Y3 odd loop under fixtures/integrity/) loads slice + extension +
+fixture with INTEGRITY_GATE=off, so the load is admitted, and asks the goal on the loop. A memo
+evaluator must end in a named `defeat-cycle` error (the re-entry guard: the result's error names the
+goal path) in under 1 s (the op's own ms; wall time includes process start); the PLAN-v3-cycles outcome was a stack overflow or a timeout. Engines that
+answer cycles natively (V3a wfs, V3e) print their answer instead.
+Prints one line per probe: outcome (guard | answer | crash | timeout), seconds, detail.
 """
-import argparse, json, pathlib, shlex, subprocess, sys, time
+import argparse, json, os, pathlib, shlex, subprocess, sys, time
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from reference import load  # noqa: E402
-from accept import CFG, SLICE, EXT, CYC, ROOT, op_for, unwrap, answer_fields  # noqa: E402
+from accept import CFG, SLICE, EXT, FIX, ROOT, answer_fields  # noqa: E402
+
+PROBES = [("Y2", "y2-even-loop.edn", '[:preferred "dyne"]'),
+          ("Y3", "y3-odd-loop.edn", '[:trusted "edge"]')]
 
 
 def main():
@@ -21,33 +27,35 @@ def main():
     ap.add_argument("--out")
     ap.add_argument("--backend", default="duckdb")
     a = ap.parse_args()
-    _, _, _, _, QC = load(cycles=True)
-    K = json.loads((HERE / "keys.json").read_text())["cycles"]
+    env = dict(os.environ, INTEGRITY_GATE="off")
     rows = []
-    for q in QC:
-        script = {"config": CFG[a.backend], "load": [SLICE, EXT, CYC], "ops": [op_for(q)]}
-        t = time.time()
+    for name, fix, goal in PROBES:
+        script = {"config": CFG[a.backend], "load": [SLICE, EXT, f"{FIX}/{fix}"], "ops": [{"op": "decide", "goal": goal}]}
+        t, r = time.time(), {}
         try:
             p = subprocess.run(shlex.split(a.cli), input=json.dumps(script), capture_output=True, text=True,
-                               cwd=ROOT, timeout=a.timeout)
+                               cwd=ROOT, timeout=a.timeout, env=env)
             if p.returncode != 0:
                 outcome, got = "crash", (p.stderr.strip().splitlines() or ["?"])[-1][:160]
             else:
-                r = unwrap(q, json.loads(p.stdout)["results"][0])
+                out = json.loads(p.stdout)
+                r = (out.get("results") or [{"error": out.get("error")}])[0]
                 if "error" in r:
-                    outcome, got = "error", str(r["error"])[:160]
+                    outcome = "guard" if "defeat-cycle" in json.dumps(r["error"]) else "error"
+                    got = r["error"]
                 else:
-                    f = answer_fields(q, r)
-                    want = {k: K[q["id"]].get(k) for k in f}
-                    outcome, got = ("match" if f == want else "wrong"), f
+                    outcome, got = "answer", answer_fields({"kind": "decide"}, r)
         except subprocess.TimeoutExpired:
             outcome, got = "timeout", f">{a.timeout:.0f}s"
-        rows.append(dict(id=q["id"], outcome=outcome, got=got, want={k: K[q["id"]].get(k) for k in ("status", "value", "sides")},
-                         s=round(time.time() - t, 1)))
-        print(f"{q['id']} {outcome:8} {time.time() - t:5.1f}s  got {got}  want {rows[-1]['want']}", flush=True)
+        s = time.time() - t
+        op_ms = r.get("ms") if outcome in ("guard", "answer", "error") else None
+        rows.append(dict(probe=name, goal=goal, outcome=outcome, got=got, s=round(s, 2), op_ms=op_ms,
+                         under_1s=(op_ms if op_ms is not None else s * 1000) < 1000))
+        print(f"{name} {goal:22} {outcome:8} {s:5.2f}s wall, op {op_ms} ms  {json.dumps(got, default=str)[:220]}", flush=True)
     if a.out:
         pathlib.Path(a.out).write_text(json.dumps(rows, indent=1, default=str))
-    print("matched", sum(r["outcome"] == "match" for r in rows), "of", len(rows))
+    print("guarded", sum(r["outcome"] == "guard" for r in rows), "of", len(rows),
+          "| under 1 s", sum(r["under_1s"] for r in rows))
 
 
 if __name__ == "__main__":

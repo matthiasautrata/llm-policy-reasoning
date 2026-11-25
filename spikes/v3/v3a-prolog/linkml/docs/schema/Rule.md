@@ -35,6 +35,19 @@ URI: [slice:Rule](https://example.org/llm-policy-reasoning/spike-v3/slice/Rule)
     
 
         
+      Rule : closed_over
+        
+          
+    
+        
+        
+        Rule --> "0..1" ClosedOver : closed_over
+        click ClosedOver href "../ClosedOver/"
+    
+
+        
+      Rule : completeness
+        
       Rule : conservative
         
       Rule : doc
@@ -129,6 +142,8 @@ URI: [slice:Rule](https://example.org/llm-policy-reasoning/spike-v3/slice/Rule)
 | [pred](pred.md) | 0..1 <br/> [String](String.md) |  | direct |
 | [order](order.md) | * <br/> [Owner](Owner.md) | Asserter authority, strongest first | direct |
 | [recorded_at](recorded_at.md) | 1 <br/> [date](date.md) | When the record entered the store (provenance; no rule body reads it) | direct |
+| [completeness](completeness.md) | * <br/> [String](String.md) | IR-005: completeness claims (predicate complete) for the scope of the rule's ... | direct |
+| [closed_over](closed_over.md) | 0..1 <br/> [ClosedOver](ClosedOver.md) | IR-005: the rule's :not / measure fetch reads only the known facts; decide qu... | direct |
 
 
 
@@ -224,6 +239,8 @@ slots:
 - pred
 - order
 - recorded_at
+- completeness
+- closed_over
 slot_usage:
   id:
     name: id
@@ -434,6 +451,28 @@ attributes:
     - Claim
     range: date
     required: true
+  completeness:
+    name: completeness
+    description: 'IR-005: completeness claims (predicate complete) for the scope of
+      the rule''s :not / measure fetch.'
+    from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
+    rank: 1000
+    owner: Rule
+    domain_of:
+    - Rule
+    range: string
+    multivalued: true
+    pattern: ^C[0-9]+(\.[0-9]+)?$
+  closed_over:
+    name: closed_over
+    description: 'IR-005: the rule''s :not / measure fetch reads only the known facts;
+      decide qualifies the answer.'
+    from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
+    rank: 1000
+    owner: Rule
+    domain_of:
+    - Rule
+    range: ClosedOver
 rules:
 - preconditions:
     slot_conditions:

@@ -158,4 +158,5 @@ A vendor's status during a period, from and to the given dates inclusive.
 - **C3** about `emp:e077`: `[:cost_centre_of "e077" "cc0078"]` — hr, 2026-07-01, in force 2026-07-01–open; certainly; backing: HR transfer record T-311
 - **C4** about `emp:e077`: `[:cost_centre_of "e077" "cc0077"]` — finance, 2026-01-02, in force 2026-01-01–open; certainly; backing: Finance master data load 2026-01
 - **C5** about `emp:e077`: `[:cost_centre_of "e077" "cc0078"]` — finance, 2026-08-05, in force 2026-08-01–open; certainly; backing: Finance transfer posting FT-88 (supersedes the January load for e077)
+- **C10** about `measure:booked_total`: `[:complete "booked_total"]` — finance, 2026-09-14, in force 2026-01-01–2026-12-31; certainly; backing: Ledger close 2026-09: every booking of 2026 to date is posted to table cc
 - **C6** about `vendor:bolt`: `[:sanctioned "bolt"]` — risk, 2026-06-03, in force 2026-06-01–open; certainly; backing: Sanctions list update 2026-06 (supersedes screening S-0220 for bolt)

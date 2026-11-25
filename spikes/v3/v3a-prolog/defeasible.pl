@@ -134,9 +134,20 @@ evaluate(L, D, R) :- state_token(S), memo(S, D, L, R0), !, R = R0.
 evaluate(L, D, R) :- eval_mode(wfs), !,
     wfs_eval(L, D, R0), state_token(S), assertz(memo(S, D, L, R0)), R = R0.
 evaluate(L, D, R) :-
-    supporters(L, D, Sups), attackers(L, D, Atts),
-    classify(Sups, Atts, R0),          % R0 fresh: callers pass patterns like proven(_, _)
+    guard_path(P),
+    (   append(Pre, [D-L|_], P) -> append(Pre, [D-L], Seg), cycle_goals(Seg, Path), throw(defeat_cycle(Path)) ; true ),
+    setup_call_cleanup(nb_setval(v3a_guard, [D-L|P]),
+                       once(( supporters(L, D, Sups), attackers(L, D, Atts),
+                              classify(Sups, Atts, R0) )),    % R0 fresh: callers pass patterns like proven(_, _)
+                       nb_setval(v3a_guard, P)),
     state_token(S), assertz(memo(S, D, L, R0)), R = R0.
+
+%   Re-entry guard (PLAN-v3-integrity §3.2), memo mode: a literal whose evaluation is in progress (same
+%   as_of) is being evaluated again, i.e. the rule base has a dependency cycle the integrity gate did not
+%   stop (INTEGRITY_GATE=off). A backstop, not a semantics: throws defeat_cycle(GoalPath).
+guard_path(P) :- ( nb_current(v3a_guard, P0), P0 \== [] -> P = P0 ; P = [] ).
+cycle_goals(Seg, Path) :-          % Seg: the guard stack (innermost first) down to the first entry of the goal
+    reverse(Seg, Outer), maplist([_-G, G]>>true, Outer, Path0), Path0 = [G0|_], append(Path0, [G0], Path).
 
 %!  supporters(+L, +D, -Sups)  [s(Id, Kind, Proof)]: one proof per applicable rule / in-force claim
 supporters(L, D, Sups) :-

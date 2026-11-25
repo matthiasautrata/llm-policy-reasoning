@@ -16,6 +16,9 @@
 ;;                [:as_of ?d]                        the evaluation date (decide's as_of, default :today)
 ;;   head       a literal; [:neg literal] for the complement (defeaters)
 ;;   kinds      :strict  :defeasible  :defeater  :superiority  :incompatible
+;;   scope      a rule with [:not ..] or a fetch of a :measure names :completeness [claim ids] (claims
+;;              [:complete ..]) or is :closed_over :known_facts; decide then qualifies the answer
+;;              "total over known facts in declared scope" (PLAN-v3-integrity §2, IR-005)
 {:slice/version 1
  :today #inst "2026-09-15"
 
@@ -193,7 +196,7 @@
  ;; ------------------------------------------------------------------ rules
  :rules
  [{:id :R104 :kind :strict :owner :finance :class :definition
-   :recorded_at #inst "2026-09-14"
+   :recorded_at #inst "2026-09-14" :completeness [:C10]
    :doc "The booked total of a cost centre rolls up over its subtree."
    :head [:booked_total ?c ?v]
    :body [[:fetch :booked_total {:cc ?c} {:value ?v}]]}
@@ -253,7 +256,7 @@
           [:governing_limit ?r ?role ?l]
           [:>= ?l ?a]]}
   {:id :R304 :kind :defeasible :owner :finance :class :material_inference
-   :recorded_at #inst "2026-09-14"
+   :recorded_at #inst "2026-09-14" :closed_over :known_facts
    :doc "A request passes the cap check if it breaches no cap."
    :head [:cap_ok ?r]
    :body [[:not [:cap_breach ?r]]]}
@@ -278,7 +281,7 @@
    :head [:denied ?r]
    :body [[:fetch :request {:id ?r} {:requester ?e}] [:fetch :employee {:id ?e :violation true} {}]]}
   {:id :R310 :kind :defeasible :owner :procurement :class :material_inference
-   :recorded_at #inst "2026-09-14"
+   :recorded_at #inst "2026-09-14" :closed_over :known_facts
    :doc "A request is approved if it is eligible and not denied."
    :head [:approved ?r]
    :body [[:eligible ?r] [:not [:denied ?r]]]}
@@ -360,4 +363,10 @@
   {:id :C5 :about "emp:e077" :assertion [:cost_centre_of "e077" "cc0078"]
    :asserted_by :finance :asserted_at #inst "2026-08-05" :valid_from #inst "2026-08-01" :valid_to nil
    :recorded_at #inst "2026-09-14"
-   :backing "Finance transfer posting FT-88 (supersedes the January load for e077)" :qualifier "certainly"}]}
+   :backing "Finance transfer posting FT-88 (supersedes the January load for e077)" :qualifier "certainly"}
+  ;; Completeness claim (PLAN-v3-integrity §2, IR-005): a rule that fetches a measure or uses [:not ..]
+  ;; either names such a claim (:completeness [ids]) or is marked :closed_over :known_facts.
+  {:id :C10 :about "measure:booked_total" :assertion [:complete "booked_total"]
+   :asserted_by :finance :asserted_at #inst "2026-09-14" :valid_from #inst "2026-01-01" :valid_to #inst "2026-12-31"
+   :recorded_at #inst "2026-09-14"
+   :backing "Ledger close 2026-09: every booking of 2026 to date is posted to table cc" :qualifier "certainly"}]}

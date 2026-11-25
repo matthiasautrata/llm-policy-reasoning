@@ -106,10 +106,11 @@ defmodule V3c.Model do
   defp rule(%{kind: :superiority} = r, p),
     do: closed(r, p, Map.merge(rule_common(), %{kind: fn _, _ -> [] end, pred: kw(), order: vec_of(owner())}), %{superior_to() => vec_of(kw())})
 
+  # IR-005: optional completeness claim ids and the closed-world marker
   defp rule(r, p) when is_map(r),
     do:
       closed(r, p, Map.merge(rule_common(), %{kind: enum(~w(strict defeasible defeater incompatible)a), head: lit(), body: vec_of(lit())}),
-        %{superior_to() => vec_of(kw())})
+        %{superior_to() => vec_of(kw()), completeness: vec_of(kw()), closed_over: enum([:known_facts])})
 
   defp rule(_, p), do: [{p, "a rule (map)"}]
 

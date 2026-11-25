@@ -1,0 +1,5 @@
+;; IR-005: [:not ..] without :completeness or :closed_over: negative-without-completeness [RN1].
+[{:id :RN1 :kind :defeasible :owner :finance :class :material_inference
+  :recorded_at #inst "2026-11-25"
+  :doc "A request that is not big capital passes the cap check."
+  :head [:cap_ok ?r] :body [[:fetch :request {:id ?r} {}] [:not [:big_capital ?r]]]}]

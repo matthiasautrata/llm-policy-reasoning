@@ -38,6 +38,11 @@ the op) and `"sql_log"`: the SQL statements the op issued, each `{"concept", "sq
 predicate (slice `:functional`) or the sorted list of all values otherwise. `sides`: for CONFLICT, the
 ids of the applicable rules/claims on each side, as a sorted list of sorted lists.
 
+`qualifier` (decide, IR-005): `"total over known facts in declared scope"` when the status is `ANSWER`,
+the value is not `false`, `null` or `[]`, and the why tree uses a rule marked `:closed_over :known_facts`
+(the answer rests on NAF over the known facts); otherwise `null`. An `ANSWER` whose value is `[]` (no
+binding) has an empty `why`.
+
 Claim standing: `holds`, `holds_with_qualifier` (qualifier lists the defeated *supporting* sub-claims),
 `rebutted` (defeater names the winning claim, possibly via a required sub-claim), `contested`
 (no superiority either way; sides), `not_in_force`.
@@ -46,6 +51,24 @@ Claims are stored flat and linked by id (PLAN-v3-integrity §1.1). In the `claim
 `subclaims` are its active linked members: `:depends_on` members first (`role` `"required"`), then
 `:supports` members (`role` `"supporting"`). The top-level list (and `describe`) holds the claims about the
 asset that no active claim links to; withholding a parent therefore lists its members at top level.
+
+## Integrity gate and errors (PLAN-v3-integrity §2–§3)
+
+Every engine runs the shared gate `shared/integrity.py` (stdin `{"load": [paths], "added": [EDN texts],
+"withhold": [ids]}` → `{"ok", "violations", "ms"}`) on the rule base an op would produce, **before** its
+own schema validation and before the store sees anything: at load, on every `add`, on every
+`with_hypothesis` (its `add` and `withhold` on top of the running state). A violation is
+`{"violation": <IR name>, "members": [ids], "message"}`; for `defeat-cycle` the members are rule ids.
+
+- Load rejected: the output is `{"error": {"op": "load", "violations": [...]}, "results": []}`.
+- `add` / `with_hypothesis` rejected: that op's result is `{"error": {"op", "violations"}}` (plus `ms`);
+  the state is unchanged and later ops run as if it had not been sent.
+- `INTEGRITY_GATE=off` in the environment admits everything (used only by `cycles_probe.py`).
+
+Re-entry guard (memo evaluators: V3a memo, V3b, V3c, V3d): meeting a goal already on the evaluation
+path is a dependency cycle the gate did not stop. The op ends with `{"status": "ERROR", "error": {"op",
+"violations": [{"violation": "defeat-cycle", "members": [goal EDN, outermost first, ending with the
+repeated goal], "path": [goals], "message"}]}}`. V3a wfs and V3e evaluate cycles natively and need no guard.
 
 ## Why trees
 

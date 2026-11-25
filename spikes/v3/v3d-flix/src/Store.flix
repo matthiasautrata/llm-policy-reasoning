@@ -10,7 +10,11 @@ pub mod Store {
 
     use Model.{Rule, Claim, Rec, Slice, TermRec}
 
-    pub type alias Store = {meta = Slice, rules = List[Rule], claims = List[Claim], keys = Map[String, List[String]]}
+    /// gate: what the integrity gate needs to re-check this value's rule base (load paths, EDN texts
+    /// added since, ids withheld by enclosing hypotheses); carried in the value, so a hypothesis gets its own
+    pub type alias GateIn = {load = List[String], added = List[String], withheld = List[String]}
+
+    pub type alias Store = {meta = Slice, rules = List[Rule], claims = List[Claim], keys = Map[String, List[String]], gate = GateIn}
 
     /// resolve_term normalisation: lowercase, non-alphanumerics to spaces, collapse.
     pub def norm(s: String): String =
@@ -29,7 +33,7 @@ pub mod Store {
 
     pub def fromSlice(s: Slice): Store =
         let keys = List.toMap(List.map((t: TermRec) -> (t#id, List.distinct(List.map(norm, t#label :: t#synonyms))), s#terms));
-        let st = {meta = {recs = Nil | s}, rules = Nil, claims = Nil, keys = keys};
+        let st = {meta = {recs = Nil | s}, rules = Nil, claims = Nil, keys = keys, gate = {load = Nil, added = Nil, withheld = Nil}};
         fst(addRecords(st, s#recs))
 
     /// Withhold record ids (each record alone, as Datahike's retractEntity), then add records.

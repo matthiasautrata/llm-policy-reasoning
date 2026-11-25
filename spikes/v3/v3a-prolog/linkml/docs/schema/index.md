@@ -59,12 +59,14 @@ Name: slice
 | [backing](backing.md) |  |
 | [body](body.md) | Literals, evaluated left to right |
 | [claims](claims.md) |  |
+| [closed_over](closed_over.md) | IR-005: the rule's :not / measure fetch reads only the known facts; decide qu... |
 | [code_list](code_list.md) |  |
 | [code_lists](code_lists.md) |  |
 | [column](column.md) |  |
 | [column_type](column_type.md) |  |
 | [columns](columns.md) |  |
 | [columns_out](columns_out.md) | Output columns of the concept's rows |
+| [completeness](completeness.md) | IR-005: completeness claims (predicate complete) for the scope of the rule's ... |
 | [concept](concept.md) |  |
 | [concept_name](concept_name.md) | The concept's name as rules reference it in fetch literals |
 | [concepts](concepts.md) |  |
@@ -128,6 +130,7 @@ Name: slice
 | [Additivity](Additivity.md) |  |
 | [ArithmeticOp](ArithmeticOp.md) |  |
 | [AssetKind](AssetKind.md) |  |
+| [ClosedOver](ClosedOver.md) |  |
 | [ColumnType](ColumnType.md) |  |
 | [ComparisonOp](ComparisonOp.md) |  |
 | [ConceptKind](ConceptKind.md) |  |

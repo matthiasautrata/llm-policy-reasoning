@@ -20,7 +20,8 @@ Probes (a separate Flix project in `probes/`; its `src/` symlinks System A's sou
 | `src/Engine.flix` | defeasible evaluator (port of V3b `engine.clj` / V3c `engine.ex`) and why / why_not trees |
 | `src/Ops.flix` | the contract's ops |
 | `src/Sql.flix` | concept bindings → SQL through JDBC (`\ IO`) |
-| `src/Main.flix`, `cli` | JSON CLI, `concurrent` / `after` keys (a thread per op list, a connection per thread) |
+| `src/Main.flix`, `cli` | JSON CLI, `concurrent` / `after` keys (a thread per op list, a connection per thread); runs the integrity gate on the load before EDN parsing |
+| `src/Gate.flix` | the shared integrity gate (`shared/integrity.py`) as a subprocess (ProcessBuilder, temp-file redirects); the gate inputs ride in the `Store` value, so a hypothesis carries its own; the re-entry guard is in `Engine.evaluate` |
 | `probes/src/Typed.flix` | Q1 (iii)/Q4: Flix Datalog closures over SQL rows vs CTEs, `pquery` provenance |
 | `probes/src/Reified.flix` | Q1 (ii): rules as data, a fixed meta-program in Flix Datalog |
 | `probes/src/Translate.flix` | Q1 (i): slice rules → runtime `Fixpoint3` AST values, solved over materialised SQL facts |
@@ -29,4 +30,4 @@ Probes (a separate Flix project in `probes/`; its `src/` symlinks System A's sou
 | `probes/types/` | planted defects T01–T10 (V3c analogs) plus E1, E2; `run.sh <scratch dir>` checks each alone |
 | `probes/hyp_latency.py` | hypothesis latency, 50 runs per variant |
 | `probes/par.py` | the bench's 200 decides, 1 vs 8 threads |
-| `results/` | raw outputs of the shared checks and the probes |
+| `results/` | raw outputs of the shared checks and the probes; `accept.txt` (checks 1–8), `guard-probe.txt` / `guard-probe-duckdb.json` (re-entry guard); `cycles-probe*` are the PLAN-v3-cycles runs |

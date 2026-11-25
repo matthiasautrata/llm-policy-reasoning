@@ -1,8 +1,11 @@
 ;; Spike v3 questions. Keys: keys.json (reference.py), per state "base" (slice.edn) and "extended"
 ;; (slice.edn + extension.edn). :kind is the System A call: :decide, :why_not, :claim (claims/2 standing
 ;; of one claim), :resolve_term, :fetch (one concept lookup). :hypothesis asks the question inside with_hypothesis.
-;; :state :cycles marks the defeat-cycle questions (PLAN-v3-cycles): asked with cycles.edn loaded on top, keyed
-;; under keys.json "cycles", and left out of the base / extended question list.
+;; :state :acyclic marks the dispute questions (PLAN-v3-integrity §3.1): asked with cycles-acyclic.edn loaded on top,
+;; keyed under keys.json "acyclic", and left out of the base / extended question list. Q30-Q39 of PLAN-v3-cycles:
+;; Q30 Q32 Q34 Q35 Q37 kept (same goal, same key); Q31 Q33 (the loops) retired to fixtures/integrity (load
+;; rejection, accept check 8); Q36 (downstream of the Y2 loop) retired; Q38 Q39 (Y6) became accept check 7's
+;; hypothesis tests. :check_qualifier true: decide's qualifier is part of the key (IR-005 branches).
 [{:id :Q01 :kind :decide :goal [:booked_total "cc0009" ?v] :text "What is the booked total of cost centre cc0009?"}
  {:id :Q02 :kind :decide :goal [:headroom "cc0009" ?v] :text "What headroom does cc0009 have?"}
  {:id :Q03 :kind :decide :goal [:role_limit "manager" ?l] :as_of "2026-07-15" :text "What was a manager's approval limit on 15 July?"}
@@ -31,14 +34,19 @@
   :text "What is the pending exposure of the root cost centre? (A1 regression: the sum exceeds INT32)"}
  {:id :Q25 :kind :fetch :concept :booked_total :filters {:cc "cc0000"}
   :text "What is the booked total of the root cost centre? (integer-cast regression: the SUM is cast to BIGINT)"}
- {:id :Q30 :state :cycles :kind :decide :goal [:blacklisted "fern"] :text "Y1: is fern blacklisted (risk says yes, compliance says no)?"}
- {:id :Q31 :state :cycles :kind :decide :goal [:preferred "dyne"] :text "Y2: is dyne (approved now, suspended earlier) preferred?"}
- {:id :Q32 :state :cycles :kind :decide :goal [:preferred "acme"] :text "Y2 control: is acme (never suspended) preferred?"}
- {:id :Q33 :state :cycles :kind :decide :goal [:trusted "edge"] :text "Y3: is edge trusted (odd loop)?"}
- {:id :Q34 :state :cycles :kind :decide :goal [:watchlisted "cog"] :text "Y4: is cog watchlisted (risk prevails over compliance)?"}
- {:id :Q35 :state :cycles :kind :decide :goal [:flagged "fern"] :text "Y5a: is fern flagged (downstream of the blocked Y1)?"}
- {:id :Q36 :state :cycles :kind :decide :goal [:approved_supplier "dyne"] :text "Y5b: is dyne an approved supplier (downstream of the undefined Y2)?"}
- {:id :Q37 :state :cycles :kind :decide :goal [:cleared_for_tender "fern"] :text "Y5c: is fern cleared for tender (the attacker's body is the blocked Y1)?"}
- {:id :Q38 :state :cycles :kind :decide :goal [:preferred "dyne"] :hypothesis {:withhold [:RY23]}
-  :text "Y6: is dyne preferred without defeater RY23?"}
- {:id :Q39 :state :cycles :kind :decide :goal [:preferred "dyne"] :text "Y6 after: is dyne preferred (base unchanged after the hypothesis)?"}]
+ {:id :Q26 :kind :decide :goal [:booked_total "cc0009" ?v] :check_qualifier true
+  :text "IR-005 completeness branch: booked total of cc0009 (R104 names completeness claim C10; no qualifier)"}
+ {:id :Q27 :kind :decide :goal [:approved "r000005"] :check_qualifier true
+  :text "IR-005 closed-over branch: is r000005 approved (R310, R304 closed over known facts: qualified)?"}
+ {:id :Q30 :state :acyclic :kind :decide :goal [:blacklisted "fern"] :text "Y1: is fern blacklisted (risk says yes, compliance says no)?"}
+ {:id :Q32 :state :acyclic :kind :decide :goal [:preferred "acme"] :text "Y2 control: is acme (never suspended) preferred?"}
+ {:id :Q34 :state :acyclic :kind :decide :goal [:watchlisted "cog"] :text "Y4: is cog watchlisted (risk prevails over compliance)?"}
+ {:id :Q35 :state :acyclic :kind :decide :goal [:flagged "fern"] :text "Y5a: is fern flagged (supporter on the contested Y1)?"}
+ {:id :Q37 :state :acyclic :kind :decide :goal [:cleared_for_tender "fern"] :text "Y5c: is fern cleared for tender (the attacker's body is the contested Y1)?"}
+ {:id :Q40 :state :acyclic :kind :decide :goal [:screening_clear "fern"] :check_qualifier true
+  :text "Y5d: does fern pass screening ([:not] of the contested Y1; closed over known facts)?"}
+ {:id :Q41 :state :acyclic :kind :decide :goal [:home_budget "e077" ?v] :as_of "2026-07-15" :hypothesis {:withhold [:R313]}
+  :text "Y5e: e077's home budget on 15 July without R313 (a measure over the contested cost_centre_of)?"}
+ {:id :Q42 :state :acyclic :kind :decide :goal [:home_budget "e077" ?v] :as_of "2026-07-15"
+  :text "Y5e control: e077's home budget on 15 July (R313 resolves the cost centre)?"}
+ {:id :Q43 :state :acyclic :kind :decide :goal [:preferred "dyne"] :text "Y2 acyclic: is dyne preferred (RY21 against the unordered defeater RY23)?"}]

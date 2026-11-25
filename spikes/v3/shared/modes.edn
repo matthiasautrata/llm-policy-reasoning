@@ -14,4 +14,9 @@
  ;; cycles.edn
  :preferred "+" :under_review "+" :approved_supplier "+"
  :trusted "-" :exempt_from_audit "-"   ; CY3 is a claim: enumerable
- :flagged "-" :cleared_for_tender "-"}
+ :flagged "-" :cleared_for_tender "-"
+ ;; cycles-acyclic.edn (PLAN-v3-integrity §3.1)
+ :screening_clear "+"     ; RY55: [:not [:blacklisted ?v]] needs ?v bound
+ :home_budget "--"        ; RY56: cost_centre_of is claims-only (enumerable)
+ ;; fixtures/integrity (declared so each fixture fails on its own violation only)
+ :board_signoff "+"}

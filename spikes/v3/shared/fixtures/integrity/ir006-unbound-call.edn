@@ -1,0 +1,5 @@
+;; IR-006: a call site that leaves the callee's required argument free: unbound-call [RU1].
+[{:id :RU1 :kind :defeasible :owner :procurement :class :material_inference
+  :recorded_at #inst "2026-11-25"
+  :doc "A request has an approver if any request passes the cap check."
+  :head [:has_approver ?r] :body [[:fetch :request {:id ?r} {}] [:cap_ok ?x]]}]

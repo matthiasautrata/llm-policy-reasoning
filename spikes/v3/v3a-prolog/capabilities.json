@@ -1,1 +1,1 @@
-{"cycles": "report", "default_mode": "wfs", "modes": {"wfs": {"cycles": "report"}, "memo": {"cycles": "reject"}}}
+{"cycles": "reject", "default_mode": "wfs", "modes": {"wfs": {"cycles": "reject"}, "memo": {"cycles": "reject"}}}

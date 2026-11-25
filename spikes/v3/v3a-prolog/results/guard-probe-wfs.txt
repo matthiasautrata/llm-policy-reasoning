@@ -1,0 +1,3 @@
+Y2 [:preferred "dyne"]    answer    0.13s wall, op 2.2020339965820312 ms  {"status": "CONFLICT", "value": null, "sides": [["RY21"], ["RY23"]]}
+Y3 [:trusted "edge"]      answer    0.13s wall, op 0.3972053527832031 ms  {"status": "CONFLICT", "value": null, "sides": [["CY3"], ["RY32"]]}
+guarded 0 of 2 | under 1 s 2

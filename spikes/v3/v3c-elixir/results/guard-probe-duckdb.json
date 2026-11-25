@@ -1,0 +1,74 @@
+[
+ {
+  "probe": "Y2",
+  "goal": "[:preferred \"dyne\"]",
+  "outcome": "guard",
+  "got": {
+   "op": "decide",
+   "violations": [
+    {
+     "members": [
+      "[:preferred \"dyne\"]",
+      "[:under_review \"dyne\"]",
+      "[:preferred \"dyne\"]"
+     ],
+     "message": "re-entered [:preferred \"dyne\"]",
+     "path": [
+      [
+       "preferred",
+       "dyne"
+      ],
+      [
+       "under_review",
+       "dyne"
+      ],
+      [
+       "preferred",
+       "dyne"
+      ]
+     ],
+     "violation": "defeat-cycle"
+    }
+   ]
+  },
+  "s": 0.36,
+  "op_ms": 6.79,
+  "under_1s": true
+ },
+ {
+  "probe": "Y3",
+  "goal": "[:trusted \"edge\"]",
+  "outcome": "guard",
+  "got": {
+   "op": "decide",
+   "violations": [
+    {
+     "members": [
+      "[:trusted \"edge\"]",
+      "[:exempt_from_audit \"edge\"]",
+      "[:trusted \"edge\"]"
+     ],
+     "message": "re-entered [:trusted \"edge\"]",
+     "path": [
+      [
+       "trusted",
+       "edge"
+      ],
+      [
+       "exempt_from_audit",
+       "edge"
+      ],
+      [
+       "trusted",
+       "edge"
+      ]
+     ],
+     "violation": "defeat-cycle"
+    }
+   ]
+  },
+  "s": 0.35,
+  "op_ms": 1.83,
+  "under_1s": true
+ }
+]

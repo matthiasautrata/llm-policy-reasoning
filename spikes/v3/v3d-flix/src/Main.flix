@@ -54,9 +54,21 @@ def main(): Unit \ IO + Chan + NonDet = region rc {
     };
     let cfgJ = Option.getWithDefault(Util.Json.Json.JNull, Ops.get("config", script));
     let t0 = JSys.nanoTime();
-    match loadAll(strs(Ops.getList("load", script))) {
+    let files = strs(Ops.getList("load", script));
+    // the integrity gate runs before EDN parsing / validation and the store
+    match Gate.violations(files, Nil, Nil) {
+        case Nil => ()
+        case vs =>
+            let ms = Int64.toFloat64(JSys.nanoTime() - t0) / 1000000.0;
+            JSys.out.print(Util.Json.toCompactString(Engine.obj(("error", Engine.obj(("op", Util.Json.Json.JString("load")) :: ("violations", Engine.jarr(vs)) :: Nil)) ::
+                                                                 ("results", Engine.jarr(Nil)) :: ("load_ms", Ops.jfloat(ms)) :: Nil)));
+            JSys.out.flush();
+            JSys.exit(0)
+    };
+    match loadAll(files) {
         case Err(e) => die(e)
-        case Ok(st) =>
+        case Ok(st0) =>
+            let st = {gate = {load = files, added = Nil, withheld = Nil} | st0};
             let cfg = cfgOf(cfgJ, conceptsOf(st));
             match Sql.connect(cfg) {
                 case Err(e) => die(e)

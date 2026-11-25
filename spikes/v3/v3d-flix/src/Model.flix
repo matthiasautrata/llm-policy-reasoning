@@ -64,7 +64,7 @@ pub mod Model {
         case Order(String, List[Owner])
     }
 
-    pub type alias Rule = {id = String, owner = Owner, cls = Class, doc = String, superiorTo = List[String], form = Form}
+    pub type alias Rule = {id = String, owner = Owner, cls = Class, doc = String, superiorTo = List[String], closedOver = Bool, form = Form}
 
     /// A claim (flat): it holds only if every claim in `dependsOn` holds; failing `supports` give a qualifier.
     pub type alias Claim = {id = String, about = String, dependsOn = List[String], supports = List[String], assertion = Goal,
@@ -282,16 +282,25 @@ pub mod Model {
                   c <- req(path, "class", cls, m); p <- req(path, "pred", kw, m);
                   ord <- req(path, "order", (q, x) -> vec(q, owner, x), m);
                   sup <- optList(path, "superior-to", kw, m))
-                yield {id = id, owner = o, cls = c, doc = d, superiorTo = sup, form = Form.Order(p, ord)}
+                yield {id = id, owner = o, cls = c, doc = d, superiorTo = sup, closedOver = false, form = Form.Order(p, ord)}
         else
-            forM (m <- closed(path, "id" :: "kind" :: "owner" :: "doc" :: "class" :: "head" :: "body" :: "superior-to" :: "recorded_at" :: Nil, e);
+            forM (m <- closed(path, "id" :: "kind" :: "owner" :: "doc" :: "class" :: "head" :: "body" :: "superior-to" :: "recorded_at" ::
+                                  "completeness" :: "closed_over" :: Nil, e);
                   _ <- req(path, "recorded_at", date, m);
                   id <- req(path, "id", kw, m); o <- req(path, "owner", owner, m); d <- req(path, "doc", str, m);
                   c <- req(path, "class", cls, m); k <- req(path, "kind", kind, m);
                   h <- req(path, "head", goal, m);
                   b <- req(path, "body", (q, x) -> vec(q, lit, x), m);
-                  sup <- optList(path, "superior-to", kw, m))
-                yield {id = id, owner = o, cls = c, doc = d, superiorTo = sup, form = Form.Logic(k, h, b)}
+                  sup <- optList(path, "superior-to", kw, m);
+                  // IR-005: completeness claim ids (checked by the integrity gate) and the closed-world marker
+                  _ <- optList(path, "completeness", kw, m);
+                  co <- opt(path, "closed_over", closedOver, m))
+                yield {id = id, owner = o, cls = c, doc = d, superiorTo = sup, closedOver = co == Some(true), form = Form.Logic(k, h, b)}
+    }
+
+    def closedOver(path: String, e: Edn): R[Bool] = match e {
+        case EKw("known_facts") => Ok(true)
+        case _ => fail(path, "should be :known_facts")
     }
 
     def claimCore(): List[String] =

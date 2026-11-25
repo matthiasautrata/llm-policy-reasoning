@@ -14,13 +14,15 @@ Key shape per question:
   claim         {standing, defeater, qualifier, core}
   resolve_term  {status, candidates}
   fetch         {value, row_count, core}             (Q24, Q25: the integer-cast regressions, pending exposure and booked total of the root)
-Cycle questions (:state :cycles, keys["cycles"]) use the class Cyc: a hand-grounded cycle theory
-(cycles.edn) read as the metaprogram of SEMANTICS-cycles.md and solved by an alternating fixpoint
-(well-founded model). Undefined goals add  undefined {literals, members}  to the key.
+Dispute questions (:state :acyclic, keys["acyclic"]) use the class Cyc: the hand-grounded theory of
+cycles-acyclic.edn read as the metaprogram of SEMANTICS-cycles.md and solved by an alternating fixpoint
+(on an acyclic theory the well-founded model is total: ambiguity blocking). Y5d (RY55, [:not ..]) and
+Y5e (RY56, a measure over cost_centre_of) are answered outside Cyc. Questions with :check_qualifier add
+qualifier (decide: "total over known facts in declared scope" when the proof uses a :closed_over rule).
 `core` lists the rule / claim ids an explanation must contain.
 """
 import argparse, datetime, json, pathlib, re, sys
-import duckdb, edn_format as E
+import edn_format as E  # duckdb is imported where the reference reads data (integrity.py needs only the reader)
 
 HERE = pathlib.Path(__file__).resolve().parent
 K = E.Keyword
@@ -48,6 +50,7 @@ class Ref:
     def __init__(self, slice_, extended, mutate=False):
         self.S, self.ext, self.mut = slice_, extended, mutate
         self.today = slice_["today"]
+        import duckdb
         con = duckdb.connect(str(HERE / "slice.duckdb"), read_only=True)
         q = lambda s: con.execute(s).fetchall()
         self.cc = {r[0]: dict(parent=r[1], booked=r[2], cap=r[3]) for r in q("SELECT id, parent, booked, cap FROM cc")}
@@ -222,8 +225,18 @@ class Ref:
         return dict(status="none" if not cands else "concept" if len(cands) == 1 else "several", candidates=cands)
 
 
+CLOSED = "total over known facts in declared scope"
+
+
 def answer(R, q):
     """The key for question q (plain dict) in reference R."""
+    k = answer1(R, q)
+    if q.get("check_qualifier"):
+        k["qualifier"] = CLOSED if k["status"] == "ANSWER" and set(k["core"]) & {"R304", "R310"} and k["value"] else None
+    return k
+
+
+def answer1(R, q):
     k, g, d = q["kind"], q.get("goal"), q.get("as_of") or R.today
     A = lambda v, core: dict(status="ANSWER", value=v, sides=None, core=core)
     if k == "fetch":
@@ -251,7 +264,7 @@ def answer(R, q):
         if R.denied(r): failed.append(["denied", r])      # shown as the NAF condition that failed
         if not R.auto_approved(r): failed.append(["auto_approved", r]); core.append("R311")
         return dict(status="ANSWER", value=False, failed=failed, core=sorted(set(core)))
-    if p == "booked_total": return A(R.booked_total(g[1]), ["R104"])
+    if p == "booked_total": return A(R.booked_total(g[1]), ["R104"])     # R104 names completeness C10
     if p == "headroom": return A(R.headroom(g[1]), ["R105", "R104"])
     if p == "role_limit": return A(R.limit_on(g[1], d), ["R201", "R202"])
     if p == "governing_limit": return A(R.limit_on(g[2], R.req[g[1]]["date"]), ["R203", "R202"])
@@ -285,6 +298,7 @@ class Cyc:
 
     def __init__(self, R, d, withhold=()):
         self.R, self.d = R, d
+        present = {y["id"] for y in R.cyc_recs}
         V = sorted({v for v, *_ in R.vstat})
         ok = lambda v: any(x == v and s == "approved" and f <= d <= t for x, s, f, t in R.vstat)
         sus = lambda v: any(x == v and s == "suspended" for x, s, *_ in R.vstat)
@@ -303,7 +317,7 @@ class Cyc:
         self.claims = {c["id"]: c for c in R.cyc_claims}
         for c in R.cyc_claims:
             rules.append((c["id"], "claim", plain(c["assertion"]), [], R.in_force(c, d)))
-        self.rules = [r for r in rules if r[4] and r[0] not in withhold]
+        self.rules = [r for r in rules if r[4] and r[0] not in withhold and r[0] in present]
         self.auth = {} if "RY4" in withhold else {"watchlisted": ["risk", "compliance"]}   # RY4
         self.solve()
 
@@ -412,22 +426,34 @@ class Cyc:
         return dict(status="ANSWER", value=False, sides=None, core=sorted({r[0] for r in self.supporters(L)}))
 
 
-def answer_cycles(R, q):
+def answer_acyclic(R, q):
     w = tuple((q.get("hypothesis") or {}).get("withhold") or ())
-    return Cyc(R, q.get("as_of") or R.today, w).answer(q["goal"])
+    d, g = q.get("as_of") or R.today, q["goal"]
+    if g[0] == "screening_clear":                      # RY55: [:not [:blacklisted ?v]], closed over known facts
+        v = Cyc(R, d, w).val(["blacklisted", g[1]]) != "true"
+        return dict(status="ANSWER", value=v, sides=None, core=["RY55"], qualifier=CLOSED if v else None)
+    if g[0] == "home_budget":                          # RY56: booked total of the (claimed) cost centre
+        st, c, _, core = R.cost_centre_of(g[1], d, "R313" not in w)
+        if st != "ANSWER":
+            return dict(status="ANSWER", value=[], sides=None, core=[])
+        return dict(status="ANSWER", value=[R.booked_total(c)], sides=None, core=["RY56"])
+    k = Cyc(R, d, w).answer(g)
+    if q.get("check_qualifier"):
+        k["qualifier"] = None
+    return k
 
 
 def load(cycles=False):
-    """-> slice, extension, questions (base / extended list; with cycles=True also the cycle records
-    and the :state :cycles questions)."""
+    """-> slice, extension, questions (base / extended list; with cycles=True also the records of
+    cycles-acyclic.edn and the :state :acyclic questions)."""
     S = plain(E.loads((HERE / "slice.edn").read_text()))
     X = plain(list(E.loads((HERE / "extension.edn").read_text())))
     QA = plain(list(E.loads((HERE / "questions.edn").read_text())))
-    Q = [q for q in QA if q.get("state") != "cycles"]
+    Q = [q for q in QA if q.get("state") != "acyclic"]
     if not cycles:
         return S, X, Q
-    Y = plain(list(E.loads((HERE / "cycles.edn").read_text())))
-    return S, X, Q, Y, [q for q in QA if q.get("state") == "cycles"]
+    Y = plain(list(E.loads((HERE / "cycles-acyclic.edn").read_text())))
+    return S, X, Q, Y, [q for q in QA if q.get("state") == "acyclic"]
 
 
 def keys(mutate=False):
@@ -438,8 +464,8 @@ def keys(mutate=False):
         out[state] = {q["id"]: answer(R, q) for q in Q}
     out["changed"] = sorted(i for i in out["base"] if out["base"][i] != out["extended"][i])
     R = Ref(S, X, mutate)
-    R.cyc_claims = [y for y in Y if "assertion" in y]
-    out["cycles"] = {q["id"]: answer_cycles(R, q) for q in QC}
+    R.cyc_claims, R.cyc_recs = [y for y in Y if "assertion" in y], Y
+    out["acyclic"] = {q["id"]: answer_acyclic(R, q) for q in QC}
     return out
 
 
@@ -453,5 +479,5 @@ if __name__ == "__main__":
         for i, v in k["extended"].items():
             print(i, {x: (y if not isinstance(y, list) or len(y) < 8 else f"[{len(y)} items]") for x, y in v.items()})
         print("changed by the extension:", k["changed"])
-        for i, v in k["cycles"].items():
+        for i, v in k["acyclic"].items():
             print(i, v)

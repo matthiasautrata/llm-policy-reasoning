@@ -245,11 +245,20 @@
           [:defeated a sups (vec (for [s sups] {:type "superior" :winner (:id a) :loser (:id s) :source (sup1 ctx (:id a) (:id s))}))]
           [:blocked sups (vec unbeaten)])))))
 
-(defn evaluate [ctx l]
+(defn evaluate
+  "Memoised per op. Re-entry guard (PLAN-v3-integrity §3.2): ctx carries the path of literals being
+  evaluated; meeting one again means a dependency cycle the integrity gate did not stop
+  (INTEGRITY_GATE=off). Throws ex-info {:defeat-cycle goal-path}, a backstop, not a semantics."
+  [ctx l]
   (let [k [(:d ctx) l]]
     (or (get @(:memo ctx) k)
-        (let [r (classify ctx (vec (supporters ctx l)) (vec (attackers ctx l)))]
-          (swap! (:memo ctx) assoc k r)
-          r))))
+        (let [path (:path ctx [])
+              i (first (keep-indexed (fn [i x] (when (= x k) i)) path))]
+          (when i
+            (throw (ex-info "defeat-cycle" {:defeat-cycle (conj (mapv second (subvec path i)) l)})))
+          (let [ctx' (assoc ctx :path (conj path k))
+                r (classify ctx' (vec (supporters ctx' l)) (vec (attackers ctx' l)))]
+            (swap! (:memo ctx) assoc k r)
+            r)))))
 
 (defn ids-of [xs] (vec (sort (distinct (map :id xs)))))

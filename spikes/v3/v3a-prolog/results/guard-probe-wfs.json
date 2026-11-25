@@ -1,0 +1,42 @@
+[
+ {
+  "probe": "Y2",
+  "goal": "[:preferred \"dyne\"]",
+  "outcome": "answer",
+  "got": {
+   "status": "CONFLICT",
+   "value": null,
+   "sides": [
+    [
+     "RY21"
+    ],
+    [
+     "RY23"
+    ]
+   ]
+  },
+  "s": 0.13,
+  "op_ms": 2.2020339965820312,
+  "under_1s": true
+ },
+ {
+  "probe": "Y3",
+  "goal": "[:trusted \"edge\"]",
+  "outcome": "answer",
+  "got": {
+   "status": "CONFLICT",
+   "value": null,
+   "sides": [
+    [
+     "CY3"
+    ],
+    [
+     "RY32"
+    ]
+   ]
+  },
+  "s": 0.13,
+  "op_ms": 0.3972053527832031,
+  "under_1s": true
+ }
+]

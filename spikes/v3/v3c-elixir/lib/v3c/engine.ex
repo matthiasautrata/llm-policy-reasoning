@@ -341,6 +341,11 @@ defmodule V3c.Engine do
     end
   end
 
+  @doc """
+  Memoised per op. Re-entry guard (PLAN-v3-integrity §3.2): ctx carries the path of literals being
+  evaluated; meeting one again is a dependency cycle the integrity gate did not stop
+  (INTEGRITY_GATE=off). Throws {:defeat_cycle, goal_path}, a backstop, not a semantics.
+  """
   def evaluate(ctx, l) do
     k = {ctx.d, l}
     memo = Process.get(ctx.memo, %{})
@@ -350,6 +355,9 @@ defmodule V3c.Engine do
         r
 
       _ ->
+        path = Map.get(ctx, :path, [])
+        if i = Enum.find_index(path, &(&1 == k)), do: throw({:defeat_cycle, Enum.map(Enum.drop(path, i), &elem(&1, 1)) ++ [l]})
+        ctx = Map.put(ctx, :path, path ++ [k])
         r = classify(ctx, supporters(ctx, l), attackers(ctx, l))
         Process.put(ctx.memo, Map.put(Process.get(ctx.memo, %{}), k, r))
         r

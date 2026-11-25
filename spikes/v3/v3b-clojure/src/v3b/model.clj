@@ -37,7 +37,9 @@
 
 (def rule-common [[:id keyword?] [:owner owner] [:doc string?] [:recorded_at date]
                   [:class [:enum :definition :material_inference :exception :entitlement :superiority :incompatibility]]
-                  [:superior-to {:optional true} [:vector keyword?]]])
+                  [:superior-to {:optional true} [:vector keyword?]]
+                  [:completeness {:optional true} [:vector keyword?]]          ; IR-005: completeness claim ids
+                  [:closed_over {:optional true} [:= :known_facts]]])         ; IR-005: total over known facts
 
 (def Rule
   (s [:multi {:dispatch :kind}

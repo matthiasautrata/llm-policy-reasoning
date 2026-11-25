@@ -1,0 +1,22 @@
+;; IR-001a (PLAN-v3-integrity §3.1): Y2 from cycles.edn, the even loop preferred <-> under_review through
+;; the defeaters RY23 and RY24. Loaded on top of slice + extension: must be rejected with defeat-cycle [RY23 RY24].
+[{:id :RY21 :kind :defeasible :owner :procurement :class :material_inference
+  :recorded_at #inst "2026-09-15"
+  :doc "A vendor approved in the register on the evaluation date is preferred."
+  :head [:preferred ?v]
+  :body [[:as_of ?d] [:fetch :vendor_status {:vendor ?v :status "approved"} {:valid_from ?f :valid_to ?t}] [:<= ?f ?d] [:<= ?d ?t]]}
+ {:id :RY22 :kind :defeasible :owner :compliance :class :material_inference
+  :recorded_at #inst "2026-09-15"
+  :doc "A vendor with a suspension on record in the register is under review."
+  :head [:under_review ?v]
+  :body [[:fetch :vendor_status {:vendor ?v :status "suspended"} {}]]}
+ {:id :RY23 :kind :defeater :owner :compliance :class :exception
+  :recorded_at #inst "2026-09-15"
+  :doc "A vendor under review is not preferred."
+  :head [:neg [:preferred ?v]]
+  :body [[:under_review ?v]]}
+ {:id :RY24 :kind :defeater :owner :procurement :class :exception
+  :recorded_at #inst "2026-09-15"
+  :doc "A preferred vendor is not under review."
+  :head [:neg [:under_review ?v]]
+  :body [[:preferred ?v]]}]

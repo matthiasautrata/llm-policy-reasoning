@@ -1,0 +1,3 @@
+Y2 [:preferred "dyne"]    guard     3.07s wall, op 26.768125 ms  {"op": "decide", "violations": [{"violation": "defeat-cycle", "members": ["[:preferred \"dyne\"]", "[:under_review \"dyne\"]", "[:preferred \"dyne\"]"], "path": [["preferred", "dyne"], ["under_review", "dyne"], ["preferr
+Y3 [:trusted "edge"]      guard     3.47s wall, op 21.751584 ms  {"op": "decide", "violations": [{"violation": "defeat-cycle", "members": ["[:trusted \"edge\"]", "[:exempt_from_audit \"edge\"]", "[:trusted \"edge\"]"], "path": [["trusted", "edge"], ["exempt_from_audit", "edge"], ["tru
+guarded 2 of 2 | under 1 s 2
