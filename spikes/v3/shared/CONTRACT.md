@@ -37,11 +37,13 @@ the op) and `"sql_log"`: the SQL statements the op issued, each `{"concept", "sq
 predicate (slice `:functional`) or the sorted list of all values otherwise. `sides`: for CONFLICT, the
 ids of the applicable rules/claims on each side, as a sorted list of sorted lists.
 
-`qualifier` (decide, IR-005): `"total over known facts in declared scope"` when the status is `ANSWER`
-and the answer rests on absence (`SEMANTICS.md`, Qualifier): a positive value whose why tree uses a rule
-marked `:closed_over :known_facts`; a ground `false` with no live supporter, or defeated by an attacker whose
-proof uses such a rule; an open `null` or `[]`; in each negative case unless an in-force `[:complete "P"]`
-claim covers the goal's predicate. Otherwise `null`. Every decide key holds the qualifier. An `ANSWER` whose value is `[]` (no
+`qualifier` (decide, IR-005 as amended 2026-11-25): `"total over known facts in declared scope"` when the
+status is `ANSWER` and the answer rests on absence (`SEMANTICS.md`, Qualifier). That means one of:
+- a positive value whose why tree uses an uncovered rule marked `:closed_over :known_facts`;
+- a ground `false` with no live supporter and an uncovered goal predicate, or one defeated by an attacker whose proof uses an uncovered `:closed_over` rule;
+- an open `null` or `[]` with an uncovered goal predicate.
+
+Otherwise `null`. Coverage is derived: either an in-force `[:complete "N"]` claim names the predicate, or every rule that concludes or attacks it reads only covered predicates and complete concepts. Every decide key holds the qualifier. An `ANSWER` whose value is `[]` (no
 binding) has an empty `why`.
 
 Claim standing: `holds`, `holds_with_qualifier` (qualifier lists the defeated *supporting* sub-claims),
@@ -93,7 +95,12 @@ goal depends on; `why` holds one `contested` node per contested ground instance 
 whose candidate instances include a contested one is CONFLICT as a whole). A root CONFLICT keeps the list
 of side proofs as its `why`. A claim whose `depends_on` member is contested is `contested`.
 
-Aggregates: a contested aggregate gives the downstream CONFLICT above. Its contested node's `goal` binds ?out to the aggregate over the proven members only, and `via` lists the contested members' literals. A truncated fetch inside an aggregate's conjunction ends the op with `{"status": "ERROR", "error": {"op", "aggregate": <goal>, "truncated": <concept>, "message"}}`.
+Aggregates: a contested aggregate gives the downstream CONFLICT above. Its contested node's `goal` binds ?out to the aggregate over the proven members only, and `via` lists the contested members' literals. The conjunction is evaluated set-at-a-time, and every fetch inside it is paged (`SEMANTICS.md`, Aggregates). V3a evaluates it in rounds:
+- Each round proves every member against the per-op fetch cache. A cache miss records the `(concept, filters)` it needed and fails that branch for this round, and no memo entry is kept for a literal whose evaluation missed.
+- After each round, the recorded needs are fetched in batches: one statement per concept and filter shape. The statement is an `IN` list when only one column filter varies, and a `UNION ALL` of the single-key statements otherwise. It is paged with `ORDER BY ALL LIMIT fetch_limit OFFSET k`.
+- The rounds end when one completes without a miss. Only that round's result is kept.
+
+`sql_log` lists the batched and paged statements. A `fetch` node in the why tree carries the single-key statement without a `LIMIT`, so `check_why.py` re-runs it and gets the same rows.
 
 Declared incompatibility (R314): an `:incompatible` rule is an attacker of its head (`SEMANTICS.md`), so `approved` against `denied` is a root conflict. Its side proof is a `rule` node with goal `[neg, head]`.
 

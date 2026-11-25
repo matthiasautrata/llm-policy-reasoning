@@ -54,8 +54,9 @@ The body literal `[:agg Op ?x [L1 .. Ln] ?out]` aggregates over the solutions of
   - It is **contested** if any solution is contested. Its contested literals are those of the contested solutions, so the roots of the contested members become the sides of a downstream CONFLICT.
   - It is never refuted: ?out must be unbound, which `modes.edn` enforces.
 - **The proven part.** A contested aggregate still binds ?out, to the aggregate over the proven members only. This bound value appears only in the goal of the `contested` why node. It is never an answer value, because the status is CONFLICT.
-- **Truncation.** A truncated fetch reached while evaluating the conjunction (more than `fetch_limit` rows) makes the op an ERROR. A truncated member set would give a wrong total, not a qualified one.
+- **Paging, not truncation.** A fetch reached while evaluating the conjunction is read in full, in pages of at most `fetch_limit` rows, so the member set is never truncated and no statement returns more than `fetch_limit` rows. Before 2026-11-25 a fetch over `fetch_limit` made the op an ERROR. How the engine batches these fetches does not change any value. V3a's batching is described in `CONTRACT.md` under Aggregates.
 - **IR-005.** An aggregate is an aggregation, so its rule must name `:completeness` or be `:closed_over :known_facts`. The answer is total only over the known facts.
+- **IR-007 (unsafe aggregation).** A `:sum` must not add up a `:semi-additive` measure across one of the measure's `:unsafe_dims`. The gate rejects a `:sum` whose ?x is the value of such a measure when some parameter of the measure is local to the conjunction, meaning bound inside it rather than by the rule head or an earlier body literal. The value can come straight from a `fetch` of the measure. It can also come through a derived predicate that carries it: its rule binds a head argument from the measure's value column and binds the measure's parameters from head arguments, as R104 does for `booked_total`. The slice does not map parameters to dimensions, so every parameter of a semi-additive measure counts as possibly unsafe. That is conservative: it can only reject more. Every slice measure has one parameter, the cost centre, which is its unsafe dimension. No slice rule is rejected; a fixture is.
 - **Stratification.** Aggregation is not monotone, so the dependency graph gives each derived literal inside the conjunction a `-` edge. As for `[:not ..]`, a cycle through an aggregate is rejected.
 
 **Known limitation.** A comparison or arithmetic literal placed after a contested binding is evaluated on the bound value. It contributes no contested literal of its own, which is sound only because the body is already contested by the literal that bound the value. A builtin that refutes such a solution therefore hides the contest. No slice body has a builtin after a contested binding.
@@ -71,15 +72,32 @@ The body literal `[:agg Op ?x [L1 .. Ln] ?out]` aggregates over the solutions of
 
 `UNDERDETERMINED` and `OUT_OF_SCOPE` are unchanged.
 
-## Qualifier: answers that rest on absence (IR-005)
+## Qualifier: answers that rest on absence (IR-005, amended 2026-11-25)
 
-`decide` qualifies an `ANSWER` with `"total over known facts in declared scope"` when the answer rests on absence, that is, on failing to find a fact rather than on a fact found:
+`decide` qualifies an `ANSWER` with `"total over known facts in declared scope"` when the answer rests on absence, that is, on failing to find a fact rather than on a fact found. The amendment does two things. It extends IR-005 from positive answers to negative ones, and it derives coverage instead of reading it off a claim's name. IR-005 keeps its id, and the code keeps citing it.
 
-- **A positive answer** (not `false`, `null` or `[]`) is qualified when its why tree uses a rule marked `:closed_over :known_facts`: a `:not` that succeeded, an aggregate, or a measure fetch without a completeness claim. This is the rule as before. A rule that names `:completeness [ids]` does not qualify the answer; the claim covers it.
-- **A ground `false`** is qualified when no supporter of the goal was live (value `none`): nothing was found that would support it. A `false` by defeat rests on the winning attacker's proof, and is qualified only when that proof uses a `:closed_over` rule.
-- **An open `null` or `[]`** is always qualified: the answer is that no binding is known.
+**Coverage.** On a date d, a name N (a predicate or a fetch concept) is **covered** in either of two cases:
+- **(a)** an active claim `[:complete "N"]` is in force on d. C10 covers `booked_total`, which names both the predicate and the measure concept;
+- **(b)** N is a predicate with no claim asserting N or ~N, at least one active rule concludes or attacks it, and every body literal of each such rule is covered.
+  - The rules that count are the supporters, defeaters and `:incompatible` rules with head N or ~N, so the attackers are included. Withheld rules do not count.
+  - A predicate fed by claims (`cost_centre_of`, `fit_for_use`) is therefore covered only by (a): nothing says the claims are all the facts.
 
-The exception: an in-force claim `[:complete "P"]`, where P is the goal's predicate, covers a negative answer, which is then not qualified. (No slice question reaches the exception: C10 names `booked_total`, and an unknown cost centre's booked total is 0, not absent.) `CONFLICT` and the other statuses carry no qualifier.
+For (b), a body literal is covered in these cases:
+- a derived literal or `[:not L]`: its predicate is covered;
+- a `fetch` of concept C: C is covered by (a);
+- an aggregate: every literal of its conjunction is covered;
+- a builtin or `as_of`: always.
+
+A predicate met again while its own coverage is being decided (positive recursion) counts as covered: recursion adds no gap of its own. A rule is **covered** when every literal of its body is covered. C10 does not cover `cap_breach`: R106 also reads `request`, `employee`, `ancestors_or_self` and `cost_centre`, and no claim declares those complete.
+
+**When an answer is qualified.**
+- **A positive answer** (not `false`, `null` or `[]`): when its why tree uses an **uncovered** rule marked `:closed_over :known_facts`, such as a `:not` that succeeded or an aggregate. A rule that names `:completeness [ids]` does not qualify the answer, because the claim covers it.
+- **A ground `false`**:
+  - with no live supporter of the goal (value `none`), when the goal's predicate is not covered;
+  - by defeat, the answer rests on the winning attacker's proof, so it is qualified only when that proof uses an uncovered `:closed_over` rule.
+- **An open `null` or `[]`**: when the goal's predicate is not covered.
+
+`CONFLICT` and the other statuses carry no qualifier. In the slice nothing beyond `booked_total` is covered, so no base answer changes. Q53–Q55 add completeness claims inside `with_hypothesis` to show derived coverage at work.
 
 ## Why tree for a downstream CONFLICT
 
