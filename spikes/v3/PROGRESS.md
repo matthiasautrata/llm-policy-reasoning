@@ -16,6 +16,8 @@ Newest first. `HISTORY.md` holds the earlier phases. `RESULTS.md` describes the 
   - §2.2 the absence qualifier on every `decide` key, Q47;
   - §2.3 R315/R316 downstream of C3/C4 and R312/R314, Q48–Q52.
   - Gate: GREEN 1, 3–8 (36 base questions); `--mutation` fails check 1; isolation PASS; negatives 15/15 (90 literals round-trip); guard probe 2/2; bench 0 errors, 11.92 SQL per decide.
+- [x] PROGRESS 11–15 (2026-11-25; Decisions in `PLAN-v3-preconditions.md`): IR-007 with fixture RA1; derived coverage (IR-005 amended), Q53–Q55; Q26/Q27 removed; the aggregate push-down, measured to the root (693 statements, 207 s, 12.1 GB; RESULTS "Fetch volume").
+  - Gate: keys changed only by Q26/Q27 removed and Q53–Q55 added; GREEN 1, 3–8 (37 base questions); `--mutation` fails check 1; isolation PASS; negatives unchanged; guard probe 2/2; bench 0 errors.
 - [ ] Harvest `PLAN-v3-preconditions.md` into HISTORY and remove it, once Matthias has reviewed its Decisions.
 
 ## Questions for Matthias
@@ -30,9 +32,9 @@ Newest first. `HISTORY.md` holds the earlier phases. `RESULTS.md` describes the 
     - R301 was "may approve" (`entitlement`) in `rules/rules.yaml` and became the `material_inference` `has_approver` in the slice.
     - Should deontic rules enter as their own kind, either a `:modality` (permission / obligation / prohibition) beside `:class` or a separate record type issued by an authority? Should R301 go back to a permission?
     - **Open, deferred** with the vocabulary work.
-11. **Integrity candidate** (§2.1): reject aggregating a `:semi-additive` measure across one of its `:unsafe_dims`. Accept it into the ledger, and with which id? Nothing in the slice triggers it.
-12. **IR-005 extended to absence** (§2.2): the qualifier now also covers negative answers, with the `[:complete "P"]` exception. Is this a changed IR-005 or a new ledger entry? The code cites IR-005.
-13. **Duplicate questions:** Q26 and Q27 now duplicate Q01 and Q09 (the qualifier is keyed on every `decide`). Remove them?
-14. **`cap_breach` and C10:** `cap_ok` rests on `[:not [:cap_breach ?r]]`, and `cap_breach` reads `booked_total`, which C10 declares complete. Should C10 then cover the absence, so that Q09 is not qualified? Today completeness covers by predicate name only, and C10 names `booked_total`.
-15. **Aggregate push-down** (RESULTS, residual 2): build the set-at-a-time evaluation before the benchmark, or measure the benchmark at L2 and below?
+11. ~~Integrity candidate~~: answered 2026-11-25. Accepted as IR-007 `unsafe-aggregation`, with the negative fixture RA1 (`fixtures/integrity/ir007-unsafe-aggregation.edn`).
+12. ~~IR-005 extended to absence~~: answered 2026-11-25. It is an amendment to IR-005, and the code citations stay.
+13. ~~Duplicate questions Q26/Q27~~: answered 2026-11-25. Removed: Q01 and Q09 key the same goals and qualifiers, so neither adds a branch.
+14. ~~`cap_breach` and C10~~: answered 2026-11-25. Completeness is derived: a predicate is covered only if every predicate and concept it reads, attackers included, is covered. C10 does not cover `cap_breach`. Q53–Q55 probe it (`SEMANTICS.md`, Qualifier).
+15. ~~Aggregate push-down~~: answered 2026-11-25. It is built (set-at-a-time rounds, batched and paged fetches) and measured at the root (RESULTS, "Fetch volume").
 

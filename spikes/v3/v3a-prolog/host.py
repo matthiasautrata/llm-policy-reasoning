@@ -40,6 +40,8 @@ def main():
         json.dump({"error": {"op": "load", "violations": v}, "results": [], "load_ms": (time.time() - t0) * 1000}, sys.stdout)
         return
     janus.consult(str(HERE / "ops.pl"))
+    if "stack_limit" in script["config"]:   # bytes; the root aggregate needs more than SWI's 1 GB default
+        janus.query_once("set_prolog_flag(stack_limit, L)", {"L": int(script["config"]["stack_limit"])})
     sql.configure(json.dumps(script["config"]), root)
     if "hypothesis" in script["config"]:   # "snapshot" (default) | "assert" (original, not isolated)
         janus.query_once("ops:set_hyp_mode(M)", {"M": script["config"]["hypothesis"]})

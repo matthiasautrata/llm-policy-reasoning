@@ -94,24 +94,25 @@ Bench runs drift by about ±10 % on p50, so differences smaller than that are no
 
 **Aggregation over derived literals** (`SEMANTICS.md`, Aggregates).
 - Form: `[:agg Op ?x [L1 .. Ln] ?out]`, Op `:sum` or `:count`. R120 (`approved_total`) and R121 (`approved_count`) sum or count the pending requests of a subtree whose approval is proven.
-- Members are the proven solutions; refuted ones are excluded; no members gives 0. Any contested solution contests the aggregate, and its roots become the CONFLICT's sides. A truncated fetch inside the body is an ERROR, not a qualified total.
+- Members are the proven solutions; refuted ones are excluded; no members gives 0. Any contested solution contests the aggregate, and its roots become the CONFLICT's sides. Every fetch inside the body is read in full, in pages of at most `fetch_limit` rows, so the member set is never truncated.
 - IR-005 applies: R120/R121 are `:closed_over :known_facts`; an aggregate without either is rejected (`negative-without-completeness`).
 - Questions: Q44 (cc0058, ANSWER 1512000), Q45 (leaf cc0290, count), Q46 (cc0105, CONFLICT `[[R312],[R314]]` through r000001).
 
-**Fetch volume.** The inner body is evaluated one solution at a time: one `approved` proof per pending member. Measured on `[:approved_total C ?v]` at 10⁵ requests:
+**Fetch volume.** The body is evaluated set-at-a-time in rounds (`CONTRACT.md`, Aggregates): each round proves every member against the per-op cache, and its misses are fetched together, one paged statement per concept and filter shape. Measured on `[:approved_total C ?v]` at 10⁵ requests, one session per row (before → after the push-down):
 
-| Centre (level) | Result | ms | statements | rows | max rows |
+| Centre (level) | Result | statements | ms | rows | max rows |
 |---|---|---|---|---|---|
-| cc0290 (L4) | ANSWER 32000 | 139 | 170 | 214 | 53 |
-| cc0681 (L4) | CONFLICT | 204 | 212 | 252 | 65 |
-| cc0058 (L3) | ANSWER 1512000 | 960 | 1034 | 1265 | 337 |
-| cc0105 (L3) | CONFLICT | 1165 | 1290 | 1618 | 439 |
-| cc0018 (L2) | CONFLICT | 6665 | 6631 | 8406 | 2224 |
-| cc0002 (L1), cc0000 (L0) | ERROR | | | 10000 | `request_in_subtree` truncated at `fetch_limit` |
+| cc0290 (L4) | ANSWER 32000 | 170 → 12 | 139 → 149 | 231 | 64 |
+| cc0681 (L4) | CONFLICT | 212 → 12 | 204 → 174 | 270 | 65 |
+| cc0058 (L3) | ANSWER 1512000 | 1034 → 12 | 960 → 799 | 1323 | 341 |
+| cc0105 (L3) | CONFLICT | 1290 → 12 | 1165 → 1085 | 1715 | 451 |
+| cc0018 (L2) | CONFLICT | 6631 → 24 | 6665 → 5269 | 8830 | 2398 |
+| cc0002 (L1) | CONFLICT | ERROR → 95 | 25 487 | 44 444 | 10000 |
+| cc0000 (L0, root) | CONFLICT | ERROR → 693 | 207 674 | | 10000 |
 
-Cost is linear, about 2.9 statements and 3 ms per pending member. Every statement stays bounded (check 5 holds), but the root (90 028 pending) would need about 260 000 statements and 270 s, and its member fetch exceeds `fetch_limit`.
-
-*Push-down (proposed, not implemented):* evaluate the body set-at-a-time. Fetch the members once, then prove `approved` for all of them with one batched fetch per concept (an `IN` list or a join on the member query), so the statement count is O(number of concepts) rather than O(members). Strict conditions expressible in SQL (category, amount thresholds) go into the subtree query itself.
+- The statement count is now O(concepts × rounds × pages), not O(members): 693 at the root against about 260 000 projected one at a time. No statement returns more than `fetch_limit` rows (check 5 holds).
+- Latency is still linear in the members (about 2.3 ms per pending member at the root). The cost has moved from SQL into the evaluator: at cc0002, rule lookup by id (`live_sup`/`live_att` scanning `rule/5`) is 17 % of the profile and `py_call` 9 %.
+- The root (90 028 pending) needs more than SWI's default 1 GB stack and peaks at 12.1 GB RSS, with about 925 000 memo entries; it runs with `stack_limit` 8 GB in the CLI config. Its response is 13.8 MB, of which the why tree is 0.4 MB. The bench session's peak RSS rose from 153 to 656 MB; the cause is not yet attributed.
 
 **IR-007 `unsafe-aggregation`** (`SEMANTICS.md`, Aggregates). The gate rejects a `:sum` of a `:semi-additive` measure across one of the measure's parameters. That covers both a direct fetch of the measure and a predicate that carries it, as R104 carries `booked_total`. Every parameter counts as unsafe, because the slice maps no parameter to a dimension. No slice rule is rejected. The fixture RA1 sums `booked_total` over a chain of ancestors.
 
@@ -167,7 +168,7 @@ V3a matched every key without an engine change. Q48–Q52 are in checks 1 and 3.
 ## Known residuals
 
 1. **IR-005 checks existence, not scope.** It requires a completeness claim (`:closed_over :known_facts`) for a rule that rests on negation as failure, but it does not check that the claim's scope covers the query. The slice has no scope language.
-2. **Aggregates are evaluated one member at a time.** The cost is linear in the members, and subtrees at L1 and above exceed `fetch_limit` (ERROR). The push-down above is not built.
+2. **Aggregate latency and memory at the root.** The push-down bounds the statements (693 at the root), not the evaluation: 207 s and 12.1 GB for 90 028 members, with an 8 GB stack. Rule lookup by head rather than by id is the next cost to remove.
 3. **A builtin after a contested binding hides the contest** if it refutes the solution (`SEMANTICS.md`, Known limitation). No slice body has one.
 4. **Propagation's cost on a dispute-heavy base is unmeasured.** The slice now has five questions downstream of two root conflicts (C3/C4, R312/R314), not a dispute-heavy base.
 5. **Rule classes are not deontic** (PROGRESS question 10). `:class` records a rule's inferential role, not whether it grants a permission, obligation or prohibition.

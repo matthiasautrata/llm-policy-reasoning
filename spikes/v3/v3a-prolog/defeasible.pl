@@ -21,21 +21,22 @@
     for the complement and, for functional predicates, for the same key with another value; defeaters
     attack only. Superiority: explicit :superior-to, strict over non-strict, asserter authority (a
     :superiority rule, scoped to its :pred), later asserted_at for the same asserter.
-    Memoised per op and state (memo/4), cleared whenever the rule/claim set changes.
+    Memoised per op and state (memo/5), cleared whenever the rule/claim set changes.
 
     evaluate/3 recurses through the live supporters/attackers (eval3/3). A dependency cycle the integrity
     gate missed (INTEGRITY_GATE=off) hits the re-entry guard.
 */
 :- module(defeasible, [eval3/3, body3/5, candidate3/2, value3/2, contested_info/5, load_file/1, add_records/3, retract_source/1, evaluate/3, prove/3, body/3, lit/3,
                        sup/3, in_force/3, active/1, clear_memo/0, pred_of/2,
-                       state_token/1, with_state/2, memo/4,
+                       state_token/1, with_state/2, memo/5, clear_fetched/0,
                        fetch_rows/5, cmp_lit/1, ev/2, ids_of/2, derived_lit/1,
                        rule/5, claim/10, claim_link/3, top_claim/2, functional/2, concept/2, term/2, today/1, withheld/1, slice/1, asset/2, src/2]).
 :- use_module(edn).
+:- thread_local fetched/4, needed/1.
 :- use_module(library(janus)).
 :- use_module(library(json)).
 
-:- dynamic rule/5, claim/10, claim_link/3, top_claim/2, functional/2, concept/2, term/2, today/1, withheld/1, memo/4, slice/1, asset/2, src/2.
+:- dynamic rule/5, claim/10, claim_link/3, top_claim/2, functional/2, concept/2, term/2, today/1, withheld/1, memo/5, slice/1, asset/2, src/2.
 
 %   Memo entries are keyed by a state token: `base`, or hyp(N) inside the N-th hypothesis. The token is a
 %   global variable, which SWI keeps per thread. Under snapshot/1, entries asserted inside the hypothesis are
@@ -98,7 +99,12 @@ retract_source(Src) :-
     retractall(src(_, Src)), clear_memo.
 
 %   clear_memo runs at the start of every op.
-clear_memo :- retractall(memo(_, _, _, _)).
+clear_memo :- retractall(memo(_, _, _, _, _)).
+
+%   memo(Hash, State, AsOf, Key, Result): Hash = variant_hash(Key) gives first-argument indexing (Key is a
+%   list or an agg/3 term with variables, which SWI does not index on).
+memo_get(S, D, K, R) :- variant_hash(K, H), memo(H, S, D, K0, R0), K0 =@= K, !, R = R0.
+memo_put(S, D, K, R) :- variant_hash(K, H), assertz(memo(H, S, D, K, R)).
 
 active(Id) :- \+ withheld(Id).
 
@@ -114,14 +120,27 @@ prove(L, D, P) :-
 
 with_children(P0, Extra, P) :- get_dict(children, P0, Cs0), append(Cs0, Extra, Cs), put_dict(children, P0, Cs, P).
 
-evaluate(L, D, R) :- state_token(S), memo(S, D, L, R0), !, R = R0.
+evaluate(L, D, R) :- state_token(S), memo_get(S, D, L, R0), !, R = R0.
+evaluate(L, D, R) :- round(Rd), state_token(S), memo_get(S, D, missed(Rd, L), R0), !, miss, R = R0.
 evaluate(L, D, R) :-
     guard_path(P),
     (   append(Pre, [D-L|_], P) -> append(Pre, [D-L], Seg), cycle_goals(Seg, Path), throw(defeat_cycle(Path)) ; true ),
+    misses(M0),
     setup_call_cleanup(nb_setval(v3a_guard, [D-L|P]),
                        once(eval3(L, D, R0)),          % R0 fresh: callers pass patterns like proven(_, _)
                        nb_setval(v3a_guard, P)),
-    state_token(S), assertz(memo(S, D, L, R0)), R = R0.
+    state_token(S), memo_unless_missed(M0, S, D, L, R0), R = R0.
+
+%   Collect mode (CONTRACT.md, Aggregates): a fetch inside an aggregate that misses the cache counts a
+%   miss and fails. A result computed while a miss happened is memoised for the current round only, as
+%   missed(Round, L), and replaying it counts a miss again; the next round recomputes it.
+misses(M) :- ( nb_current(v3a_miss, M0), integer(M0) -> M = M0 ; M = 0 ).
+miss :- misses(M), M1 is M + 1, nb_setval(v3a_miss, M1).
+round(Rd) :- nb_current(v3a_round, Rd), integer(Rd).
+memo_unless_missed(M0, S, D, L, R0) :-
+    (   misses(M0) -> memo_put(S, D, L, R0)
+    ;   round(Rd) -> memo_put(S, D, missed(Rd, L), R0)
+    ;   true ).
 
 %   Re-entry guard (PLAN-v3-integrity §3.2): a literal whose evaluation is in progress (same
 %   as_of) is being evaluated again, i.e. the rule base has a dependency cycle the integrity gate did not
@@ -252,16 +271,18 @@ derived_lit([P|_]) :- \+ memberchk(P, [fetch, not, as_of, is, <, <=, >, >=, =, a
 %!  agg3(+Op, ?X, +B, +D, -Val, -Node, -V, -CL)  SEMANTICS.md, Aggregates: members are the proven solutions
 %   (distinct bindings of B's local variables); any contested solution contests the literal (CL: the
 %   contested literals of those solutions), and Val is then the aggregate over the proven members only.
-%   Memoised per op and state like evaluate/3. A truncated fetch inside B throws agg_truncated/2.
+%   Memoised per op and state like evaluate/3. B is evaluated set-at-a-time in rounds (CONTRACT.md,
+%   Aggregates): the outermost aggregate repeats the findall, flushing the recorded fetch needs as batches
+%   after each round with a miss, until a round has none; a nested one runs once inside the outer round.
 agg3(Op, X, B, D, Val, N, V, CL) :-
     copy_term(agg(Op, X, B), K), state_token(S),
-    (   memo(S, D, agg(K0), R0), K0 =@= K -> true
+    (   memo_get(S, D, agg(K), R0) -> true
+    ;   round(Rd), memo_get(S, D, missed(Rd, agg(K)), R0) -> miss
     ;   term_variables(B, Loc),
-        agg_depth(Depth), Depth1 is Depth + 1,
-        catch(setup_call_cleanup(nb_setval(v3a_agg, Depth1),
-                                 findall(Loc-X-V1-Kids-C1, body3(B, D, Kids, V1, C1), Sols0),
-                                 nb_setval(v3a_agg, Depth)),
-              agg_truncated(C), ( json_safe_agg([agg, Op, X, B], G), throw(agg_truncated(G, C)) )),
+        agg_depth(Depth), Depth1 is Depth + 1, misses(M0),
+        setup_call_cleanup(nb_setval(v3a_agg, Depth1),
+                           agg_rounds(Depth, Loc-X-V1-Kids-C1, body3(B, D, Kids, V1, C1), Sols0),
+                           nb_setval(v3a_agg, Depth)),
         agg_group(Sols0, Mem, Cont),
         maplist([_-Xi-_-_-_, Xi]>>true, Mem, Xs),
         (   Op == sum -> sum_list(Xs, Val0) ; length(Xs, Val0) ),
@@ -269,23 +290,36 @@ agg3(Op, X, B, D, Val, N, V, CL) :-
         findall(Y, ( member(_-_-_-_-C1, Cont), member(Y, C1) ), CL0), sort(CL0, CL1),
         ( Cont == [] -> V0 = proven ; V0 = contested ),
         R0 = r(Val0, _{type:aggregate, op:Op, value:Val0, members:MNs}, V0, CL1),
-        assertz(memo(S, D, agg(K), R0)) ),
+        memo_unless_missed(M0, S, D, agg(K), R0) ),
     R0 = r(Val, N, V, CL).
+
+agg_rounds(Depth, T, G, Sols) :-
+    (   Depth =:= 0
+    ->  setup_call_cleanup(true, agg_round(T, G, Sols),
+                           ( nb_setval(v3a_round, none), retractall(memo(_, _, _, missed(_, _), _)) ))
+    ;   findall(T, G, Sols) ).
+
+agg_round(T, G, Sols) :-
+    flag(v3a_round, Rd, Rd + 1), nb_setval(v3a_round, Rd),
+    misses(M0), findall(T, G, Sols0),
+    (   misses(M0) -> Sols = Sols0
+    ;   nb_setval(v3a_miss, M0), retractall(memo(_, _, _, missed(Rd, _), _)),
+        retractall(needed(_)), py_call(sql:flush(), _), agg_round(T, G, Sols) ).
 
 agg_depth(V) :- ( nb_current(v3a_agg, V0), integer(V0) -> V = V0 ; V = 0 ).
 
-%   One entry per distinct binding: proven if some solution under it is proven, else contested.
+%   One entry per distinct binding, in binding order: the first proven solution under it, else the first
+%   contested one. Grouped by keysort (stable), not by list search: the root has ~90k members.
 agg_group(Sols, Mem, Cont) :-
-    agg_group(Sols, [], Mem0, Cont0), reverse(Mem0, Mem), reverse(Cont0, Cont).
-agg_group([], Acc, Mem, Cont) :- partition([_-_-V-_-_]>>(V == proven), Acc, Mem, Cont).
-agg_group([E|Es], Acc, Mem, Cont) :-
-    E = Loc-_-V-_-_,
-    (   memberchk(Loc-_-_-_-_, Acc)
-    ->  (   V == proven, select(Loc-_-contested-_-_, Acc, Acc1) -> agg_group(Es, [E|Acc1], Mem, Cont)
-        ;   agg_group(Es, Acc, Mem, Cont) )
-    ;   agg_group(Es, [E|Acc], Mem, Cont) ).
+    numbered(Sols, 0, Ns), keysort(Ns, Sorted), group_pairs_by_key(Sorted, Groups),
+    maplist(pick_sol, Groups, Picked0), keysort(Picked0, Picked), pairs_values(Picked, Best),
+    partition([_-_-V-_-_]>>(V == proven), Best, Mem, Cont).
 
-json_safe_agg(T0, T) :- copy_term(T0, T1), numbervars(T1, 0, _), with_output_to(string(T), print(T1)).
+numbered([], _, []).
+numbered([E|Es], I, [Loc-(I-E)|Ns]) :- E = Loc-_-_-_-_, I1 is I + 1, numbered(Es, I1, Ns).
+
+pick_sol(_-IEs, P) :-
+    (   member(P, IEs), P = _-(_-_-proven-_-_) -> true ; IEs = [P|_] ).
 
 %!  candidate3(?L, +D)  a ground instance of L with a live supporter
 candidate3(L, D) :-
@@ -323,7 +357,6 @@ lit([fetch, C, map(F), map(O)], _, Node) :- !,
     length(Rows, N),
     member(Row, Rows),
     maplist([Col-V]>>get_dict(Col, Row, V), O),
-    (   Info.truncated == true, nb_current(v3a_agg, Dp), integer(Dp), Dp > 0 -> throw(agg_truncated(C)) ; true ),
     Node = Info.put(_{type:fetch, concept:C, filters:Filters, rows:N, row:Row}).
 lit([not, L], D, _{type:absent, goal:L}) :- !,           % L refuted (a contested L is not absent)
     (   ground(L) -> evaluate(L, D, E), value3(E, refuted) ; \+ prove(L, D, _) ).
@@ -354,9 +387,19 @@ fetch_rows(C, F, Rows, _{sql:Sql, params:Ps, truncated:Tr}, FD) :-
     (   forall(member(_-V, F), ground(V)) -> true
     ;   throw(error(fetch_unbound(C, F), _)) ),
     dict_pairs(FD, _, F),
-    with_output_to(string(J), json_write_dict(current_output, FD, [width(0)])),
-    py_call(sql:fetch(C, J), Out),
-    atom_json_dict(Out, R, [value_string_as(string)]),
+    ( agg_depth(Dp), Dp > 0 -> Agg = true ; Agg = false ),
+    variant_hash(C-FD, H),
+    (   fetched(H, C, FD, R), ( Agg == false ; R.truncated == false ) -> true
+    ;   with_output_to(string(J), json_write_dict(current_output, FD, [width(0)])),
+        (   Agg == true                                % collect mode: a miss records the need and fails
+        ->  ( needed(H) -> miss, fail ; true ),
+            py_call(sql:need(C, J), Out), ( ( Out == '' ; Out == "" ) -> assertz(needed(H)), miss, fail ; true )
+        ;   py_call(sql:fetch(C, J), Out) ),
+        atom_json_dict(Out, R, [value_string_as(string)]),
+        retractall(fetched(H, C, FD, _)), assertz(fetched(H, C, FD, R)) ),
     Rows = R.rows, Sql = R.sql, Ps = R.params, Tr = R.truncated.
+
+%   The parsed per-op fetch cache (mirrors sql.py's, so a repeated literal does not cross janus again).
+clear_fetched :- retractall(fetched(_, _, _, _)), retractall(needed(_)).
 
 ids_of(Xs, Ids) :- maplist([X, Id]>>arg(1, X, Id), Xs, Ids0), sort(Ids0, Ids).

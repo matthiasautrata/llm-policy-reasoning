@@ -96,7 +96,7 @@ whose candidate instances include a contested one is CONFLICT as a whole). A roo
 of side proofs as its `why`. A claim whose `depends_on` member is contested is `contested`.
 
 Aggregates: a contested aggregate gives the downstream CONFLICT above. Its contested node's `goal` binds ?out to the aggregate over the proven members only, and `via` lists the contested members' literals. The conjunction is evaluated set-at-a-time, and every fetch inside it is paged (`SEMANTICS.md`, Aggregates). V3a evaluates it in rounds:
-- Each round proves every member against the per-op fetch cache. A cache miss records the `(concept, filters)` it needed and fails that branch for this round, and no memo entry is kept for a literal whose evaluation missed.
+- Each round proves every member against the per-op fetch cache. A cache miss records the `(concept, filters)` it needed and fails that branch for this round, and a literal whose evaluation missed is memoised for this round only (a replay repeats the miss), never across rounds.
 - After each round, the recorded needs are fetched in batches: one statement per concept and filter shape. The statement is an `IN` list when only one column filter varies, and a `UNION ALL` of the single-key statements otherwise. It is paged with `ORDER BY ALL LIMIT fetch_limit OFFSET k`.
 - The rounds end when one completes without a miss. Only that round's result is kept.
 

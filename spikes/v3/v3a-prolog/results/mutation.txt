@@ -1,5 +1,5 @@
 model check (slice + extension + acyclic): OK
-check 1: FAIL (37 questions, 4.0s wall)
+check 1: FAIL (37 questions, 2.6s wall)
     duckdb Q08: status: got CONFLICT, want ANSWER
     duckdb Q08: value: got None, want False
     duckdb Q08: sides: got [['R312'], ['R314']], want None

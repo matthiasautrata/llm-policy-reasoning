@@ -19,7 +19,7 @@ run_op(J, Out) :-
     with_output_to(string(Out), json_write_dict(current_output, R, [width(0)])).
 
 op_result(Op, R) :-
-    py_call(sql:begin_op(), _), clear_memo,
+    py_call(sql:begin_op(), _), clear_fetched, clear_memo,
     get_time(T0),
     catch(do_op(Op.op, Op, R0), E, op_error(Op.op, E, R0)),
     get_time(T1), Ms is (T1 - T0) * 1000,
@@ -33,8 +33,6 @@ op_error(Op, defeat_cycle(Path), _{status:"ERROR", error:_{op:Op, violations:[V]
     maplist([G, S]>>format(string(S), "~w", [G]), Path, Ms),
     atomic_list_concat(Ms, ' -> ', Msg0), format(string(Msg), "re-entered ~w (goal path ~w)", [Path, Msg0]),
     V = _{violation:"defeat-cycle", members:Ms, path:Path, message:Msg}.
-op_error(Op, agg_truncated(G, C), _{status:"ERROR", error:_{op:Op, aggregate:G, truncated:C, message:M}}) :- !,
-    format(string(M), "aggregate ~w: fetch ~w returned more than fetch_limit rows; the total would be wrong", [G, C]).
 op_error(_, E, _{status:"ERROR", error:S}) :- message_to_codes(E, S).
 
 message_to_codes(E, S) :- message_to_codes(E, [], Cs), !, string_codes(S, Cs).
@@ -315,11 +313,11 @@ memo_test(Out) :-
     G = _{op:"decide", goal:"[:cost_centre_of \"e077\" ?c]", as_of:"2026-07-15"},
     clear_memo,
     do_op("decide", G, B1),                                    % populates memo(base, ...)
-    aggregate_all(count, memo(base, _, _, _), NBase),
+    aggregate_all(count, memo(_, base, _, _, _), NBase),
     snapshot(with_state(hyp(t), ( assertz(withheld('R313')), do_op("decide", G, H) ))),
     snapshot(( assertz(withheld('R313')), do_op("decide", G, Leak) )),     % control: token stays base
     do_op("decide", G, B2),
-    aggregate_all(count, memo(hyp(_), _, _, _), NHyp),
+    aggregate_all(count, memo(_, hyp(_), _, _, _), NHyp),
     Out = _{base_before:B1.status-B1.value, base_memo_entries:NBase, hypothesis:H.status, control_same_token:Leak.status,
             base_after:B2.status-B2.value, hyp_entries_left:NHyp}.
 do_op(Name, _, _) :- throw(error(unknown_op(Name), _)).
