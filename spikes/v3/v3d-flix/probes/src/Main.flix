@@ -18,7 +18,7 @@ def main(): Unit \ IO = {
         case _ => println("slice did not load")
     } else ();
     if (which == "negatives" or which == "all") {
-        // the 12 negatives (Model.negatives): each mutates the slice EDN; pass iff the unmodified slice loads and all 12 are rejected
+        // the 15 negatives (Model.negatives): each mutates the slice EDN; pass iff the unmodified slice loads and all 15 are rejected
         match Edn.read(Files.readString((new File("spikes/v3/shared/slice.edn")).toPath())) {
             case Err(e) => println("slice EDN did not parse: ${e}")
             case Ok(e) =>

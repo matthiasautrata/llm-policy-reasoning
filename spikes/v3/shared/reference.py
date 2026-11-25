@@ -13,7 +13,7 @@ Key shape per question:
   why_not       {status, value, failed, core}         failed: literals that must be shown as failed
   claim         {standing, defeater, qualifier, core}
   resolve_term  {status, candidates}
-  fetch         {value, row_count, core}             (Q24, the A1 regression: pending exposure of the root)
+  fetch         {value, row_count, core}             (Q24, Q25: the integer-cast regressions, pending exposure and booked total of the root)
 Cycle questions (:state :cycles, keys["cycles"]) use the class Cyc: a hand-grounded cycle theory
 (cycles.edn) read as the metaprogram of SEMANTICS-cycles.md and solved by an alternating fixpoint
 (well-founded model). Undefined goals add  undefined {literals, members}  to the key.
@@ -64,8 +64,6 @@ class Ref:
         self.claims = {}
         for c in claims:
             self.claims[c["id"]] = c
-            for s in c.get("subclaims") or []:
-                self.claims[s["id"]] = dict(s, parent=c["id"], about=c["about"])
         self.has_R307 = any(x["id"] == "R307" for x in extended)
 
     # ---- R104 / R105: booked total over the subtree; headroom
@@ -205,13 +203,14 @@ class Ref:
         if st == "contested":
             return dict(standing="contested", defeater=None, qualifier=[], core=[cid] + B)
         qual, core = [], [cid]
-        for s in c.get("subclaims") or []:
-            r = self.standing(s["id"], d)
+        links = [(m, "required") for m in c.get("depends_on") or []] + [(m, "supporting") for m in c.get("supports") or []]
+        for sid, role in links:
+            r = self.standing(sid, d)
             if r["standing"] in ("holds", "holds_with_qualifier"):
                 continue
-            if kw(s["role"]) == "required":
-                return dict(standing="rebutted", defeater=r["defeater"], qualifier=[], core=[cid, s["id"]] + ([r["defeater"]] if r["defeater"] else []))
-            qual.append(s["id"]); core += [s["id"]] + ([r["defeater"]] if r["defeater"] else [])
+            if role == "required":
+                return dict(standing="rebutted", defeater=r["defeater"], qualifier=[], core=[cid, sid] + ([r["defeater"]] if r["defeater"] else []))
+            qual.append(sid); core += [sid] + ([r["defeater"]] if r["defeater"] else [])
         return dict(standing="holds_with_qualifier" if qual else "holds", defeater=None, qualifier=sorted(qual), core=core)
 
     # ---- vocabulary
@@ -228,7 +227,9 @@ def answer(R, q):
     k, g, d = q["kind"], q.get("goal"), q.get("as_of") or R.today
     A = lambda v, core: dict(status="ANSWER", value=v, sides=None, core=core)
     if k == "fetch":
-        assert q["concept"] == "pending_exposure"
+        assert q["concept"] in ("pending_exposure", "booked_total")
+        if q["concept"] == "booked_total":
+            return dict(value=R.booked_total(q["filters"]["cc"]), row_count=1, core=[])
         sub = set(R.subtree(q["filters"]["cc"]))
         v = sum(x["amount"] for x in R.req.values() if x["status"] == "pending" and R.emp[x["requester"]]["cc"] in sub)
         return dict(value=v, row_count=1, core=[])

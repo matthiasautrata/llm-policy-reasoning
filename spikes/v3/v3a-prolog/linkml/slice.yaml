@@ -44,10 +44,18 @@ classes:
       A semantic-layer entry (measure, dimension, entity or hierarchy) bound to tables. Its SQL template
       uses $name for required parameters and @iso(x) for an ISO date string; other filters are applied
       around the template. A derived concept has no SQL and names the rule that computes it.
-    slots: [id, concept_name, kind, doc, tables, params, columns_out, sql, derived_by]
+    slots: [id, concept_name, kind, doc, tables, params, columns_out, sql, derived_by, additivity, unsafe_dims]
     slot_usage:
       kind: {range: ConceptKind, required: true}
       tables: {range: string, required: true, inlined: false, description: Ids of the tables the concept binds to.}
+    # PLAN-v3-integrity §1.3: every measure declares its additivity (no default); semi-additive names the
+    # dimensions it must not be summed over. On Concept, not Measure: the concepts range admits Concept
+    # itself, so a measure missing the slot would still validate as a plain Concept.
+    rules:
+      - preconditions: {slot_conditions: {kind: {equals_string: measure}}}
+        postconditions: {slot_conditions: {additivity: {required: true}}}
+      - preconditions: {slot_conditions: {additivity: {equals_string: semi-additive}}}
+        postconditions: {slot_conditions: {unsafe_dims: {required: true}}}
     # A class-level any_of, not a `rules` entry: gen-json-schema turns a rule without preconditions into a bare
     # JSON Schema `then` (no `if`), which validators ignore (PLAN-v3a-fix Decisions, F2.3).
     any_of: &sql_or_derived
@@ -94,44 +102,36 @@ classes:
     description: >-
       A rule envelope. kind strict, defeasible or defeater carries head and body; superiority carries
       pred and order (asserter authority); incompatible carries head and body (head excluded when body holds).
-    slots: [id, kind, owner, rule_class, conservative, layer, doc, head, body, superior_to, pred, order]
+    slots: [id, kind, owner, rule_class, conservative, layer, doc, head, body, superior_to, pred, order, recorded_at]
     slot_usage:
       id: {pattern: "^R[0-9]+$"}
       kind: {range: RuleKind, required: true}
       owner: {required: true}
+      recorded_at: {required: true}
     rules:
       - preconditions: {slot_conditions: {kind: {equals_string: superiority}}}
         postconditions: {slot_conditions: {pred: {required: true}, order: {required: true}}}
       - preconditions: {slot_conditions: {kind: {any_of: [{equals_string: strict}, {equals_string: defeasible}, {equals_string: defeater}, {equals_string: incompatible}]}}}
         postconditions: {slot_conditions: {head: {required: true}}}
 
-  ClaimCore:
-    abstract: true
+  Claim:
     description: >-
       A Toulmin claim: an assertion about an asset by an asserter, in force from valid_from to valid_to
-      (inclusive; open when absent), with warrant, backing and qualifier.
-    slots: [id, assertion, asserted_by, asserted_at, valid_from, valid_to, warrant, backing, qualifier]
+      (inclusive; open when absent), with warrant, backing and qualifier. Claims are flat
+      (PLAN-v3-integrity §1.1): a claim holds only if every depends_on member holds (a failing one rebuts
+      it); a failing supports member leaves it holding with a qualifier that lists it. Each claim carries
+      its own asserter and times; nothing is inherited. recorded_at is provenance (when the record entered
+      the store), not evidence.
+    slots: [id, about, assertion, asserted_by, asserted_at, valid_from, valid_to, warrant, backing, qualifier,
+            depends_on, supports, recorded_at]
     slot_usage:
       id: {pattern: "^C[0-9]+(\\.[0-9]+)?$"}
+      about: {required: true}
       assertion: {required: true}
       asserted_by: {required: true}
       asserted_at: {required: true}
       valid_from: {required: true}
-
-  Claim:
-    is_a: ClaimCore
-    slots: [about, subclaims]
-    slot_usage:
-      about: {required: true}
-
-  SubClaim:
-    is_a: ClaimCore
-    description: >-
-      One level of nesting. A defeated required sub-claim rebuts its parent; a defeated supporting
-      sub-claim leaves the parent holding with a qualifier that lists it.
-    slots: [role]
-    slot_usage:
-      role: {required: true}
+      recorded_at: {required: true}
 
   # ---------------------------------------------------------------- the rule language (slice.edn header)
   # Each literal and term is an object whose `type` names its class (designates_type). Classes are closed, so
@@ -242,7 +242,6 @@ slots:
   functional: {range: FunctionalPredicate, multivalued: true, inlined_as_list: true}
   rules: {range: Rule, multivalued: true, inlined_as_list: true}
   claims: {range: Claim, multivalued: true, inlined_as_list: true}
-  subclaims: {range: SubClaim, multivalued: true, inlined_as_list: true}
   params: {multivalued: true}
   columns_out: {multivalued: true, description: Output columns of the concept's rows.}
   sql: {}
@@ -276,7 +275,11 @@ slots:
   backing: {}
   qualifier: {range: Modal}
   about: {range: string, pattern: "^[a-z]+:[A-Za-z0-9_/]+$"}
-  role: {range: SubClaimRole}
+  depends_on: {multivalued: true, range: string, pattern: "^C[0-9]+(\\.[0-9]+)?$", description: Claim ids this claim requires.}
+  supports: {multivalued: true, range: string, pattern: "^C[0-9]+(\\.[0-9]+)?$", description: Claim ids that support this claim.}
+  recorded_at: {range: date, description: "When the record entered the store (provenance; no rule body reads it)."}
+  additivity: {range: Additivity}
+  unsafe_dims: {multivalued: true, range: string, description: "Dimensions a semi-additive measure must not be summed over."}
 
 enums:
   AssetKind: {permissible_values: {vendor: {}, employee: {}}}
@@ -287,6 +290,6 @@ enums:
     permissible_values: {definition: {}, material_inference: {}, exception: {}, entitlement: {}, superiority: {}, incompatibility: {}}
   Owner: {permissible_values: {finance: {}, hr: {}, procurement: {}, compliance: {}, risk: {}, controller: {}}}
   Modal: {permissible_values: {certainly: {}, presumably: {}}}
-  SubClaimRole: {permissible_values: {required: {}, supporting: {}}}
+  Additivity: {permissible_values: {additive: {}, semi-additive: {}, non-additive: {}, unknown: {}}}
   ComparisonOp: {permissible_values: {"<": {}, "<=": {}, ">": {}, ">=": {}, "=": {}}}
   ArithmeticOp: {permissible_values: {"+": {}, "-": {}}}

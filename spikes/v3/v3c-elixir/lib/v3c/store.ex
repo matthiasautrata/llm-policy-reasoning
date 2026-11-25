@@ -26,17 +26,15 @@ defmodule V3c.Store do
 
   defp put(st, type, rec, src), do: %{st | seq: st.seq + 1, recs: [{st.seq + 1, type, rec, src} | st.recs]}
 
-  defp claim_recs(st, m, parent, about, src) do
-    id = rid(m.id)
-    rec = m |> Map.delete(:subclaims) |> Map.merge(%{id: id, parent: parent, about: about})
-    Enum.reduce(Map.get(m, :subclaims, []), put(st, :claim, rec, src), &claim_recs(&2, &1, id, about, src))
-  end
+  # Claims are flat (PLAN-v3-integrity §1.1): one record per claim, its own asserter, times and :about.
+  # The links (:depends_on, :supports) stay on the record; reindex derives parent, role and members.
+  defp claim_rec(st, m, src), do: put(st, :claim, Map.put(m, :id, rid(m.id)), src)
 
   @doc "Rule and claim records -> {state, ids in the order given}. Rules first, then claims (as V3b)."
   def add_records(st, recs, src) do
     {claims, rules} = Enum.split_with(recs, &Map.has_key?(&1, :assertion))
     st = Enum.reduce(rules, st, &put(&2, :rule, &1, src))
-    st = Enum.reduce(claims, st, &claim_recs(&2, &1, nil, &1.about, src))
+    st = Enum.reduce(claims, st, &claim_rec(&2, &1, src))
     {reindex(st), Enum.map(recs, &rid(&1.id))}
   end
 
@@ -73,7 +71,17 @@ defmodule V3c.Store do
         m |> Map.put(:id, rid(m.id)) |> Map.put(:superior_to, MapSet.new(Map.get(m, :"superior-to", []), &rid/1))
       end
 
-    claims = for m <- Map.get(by, :claim, []), do: Map.merge(%{role: nil, valid_to: nil}, m)
+    cl = Map.get(by, :claim, [])
+    links =
+      for m <- cl, {k, role} <- [depends_on: "required", supports: "supporting"], x <- Map.get(m, k, []), into: %{},
+        do: {rid(x), {m.id, role}}
+
+    claims =
+      for m <- cl do
+        {parent, role} = Map.get(links, m.id, {nil, nil})
+        members = Enum.map(Map.get(m, :depends_on, []) ++ Map.get(m, :supports, []), &rid/1)
+        Map.merge(%{valid_to: nil}, m) |> Map.merge(%{parent: parent, role: role, members: members})
+      end
 
     %{st | ix: %{
       today: slice[:today], functional: slice[:functional] || %{},

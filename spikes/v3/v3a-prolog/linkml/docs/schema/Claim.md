@@ -5,6 +5,11 @@ search:
 
 # Class: Claim 
 
+
+_A Toulmin claim: an assertion about an asset by an asserter, in force from valid_from to valid_to (inclusive; open when absent), with warrant, backing and qualifier. Claims are flat (PLAN-v3-integrity §1.1): a claim holds only if every depends_on member holds (a failing one rebuts it); a failing supports member leaves it holding with a qualifier that lists it. Each claim carries its own asserter and times; nothing is inherited. recorded_at is provenance (when the record entered the store), not evidence._
+
+
+
 <div data-search-exclude markdown="1">
 
 
@@ -19,9 +24,6 @@ URI: [slice:Claim](https://example.org/llm-policy-reasoning/spike-v3/slice/Claim
  classDiagram
     class Claim
     click Claim href "../Claim/"
-      ClaimCore <|-- Claim
-        click ClaimCore href "../ClaimCore/"
-      
       Claim : about
         
       Claim : asserted_at
@@ -50,6 +52,8 @@ URI: [slice:Claim](https://example.org/llm-policy-reasoning/spike-v3/slice/Claim
         
       Claim : backing
         
+      Claim : depends_on
+        
       Claim : id
         
       Claim : qualifier
@@ -63,16 +67,9 @@ URI: [slice:Claim](https://example.org/llm-policy-reasoning/spike-v3/slice/Claim
     
 
         
-      Claim : subclaims
+      Claim : recorded_at
         
-          
-    
-        
-        
-        Claim --> "*" SubClaim : subclaims
-        click SubClaim href "../SubClaim/"
-    
-
+      Claim : supports
         
       Claim : valid_from
         
@@ -86,27 +83,25 @@ URI: [slice:Claim](https://example.org/llm-policy-reasoning/spike-v3/slice/Claim
 
 
 
-
-## Inheritance
-* [ClaimCore](ClaimCore.md)
-    * **Claim**
-
+<!-- no inheritance hierarchy -->
 
 ## Slots
 
 | Name | Cardinality and Range | Description | Inheritance |
 | ---  | --- | --- | --- |
+| [id](id.md) | 1 <br/> [String](String.md) |  | direct |
 | [about](about.md) | 1 <br/> [String](String.md) |  | direct |
-| [subclaims](subclaims.md) | * <br/> [SubClaim](SubClaim.md) |  | direct |
-| [id](id.md) | 1 <br/> [String](String.md) |  | [ClaimCore](ClaimCore.md) |
-| [assertion](assertion.md) | 1 <br/> [Literal](Literal.md) | A literal, e | [ClaimCore](ClaimCore.md) |
-| [asserted_by](asserted_by.md) | 1 <br/> [Owner](Owner.md) |  | [ClaimCore](ClaimCore.md) |
-| [asserted_at](asserted_at.md) | 1 <br/> [date](date.md) |  | [ClaimCore](ClaimCore.md) |
-| [valid_from](valid_from.md) | 1 <br/> [date](date.md) |  | [ClaimCore](ClaimCore.md) |
-| [valid_to](valid_to.md) | 0..1 <br/> [date](date.md) |  | [ClaimCore](ClaimCore.md) |
-| [warrant](warrant.md) | 0..1 <br/> [String](String.md) |  | [ClaimCore](ClaimCore.md) |
-| [backing](backing.md) | 0..1 <br/> [String](String.md) |  | [ClaimCore](ClaimCore.md) |
-| [qualifier](qualifier.md) | 0..1 <br/> [Modal](Modal.md) |  | [ClaimCore](ClaimCore.md) |
+| [assertion](assertion.md) | 1 <br/> [Literal](Literal.md) | A literal, e | direct |
+| [asserted_by](asserted_by.md) | 1 <br/> [Owner](Owner.md) |  | direct |
+| [asserted_at](asserted_at.md) | 1 <br/> [date](date.md) |  | direct |
+| [valid_from](valid_from.md) | 1 <br/> [date](date.md) |  | direct |
+| [valid_to](valid_to.md) | 0..1 <br/> [date](date.md) |  | direct |
+| [warrant](warrant.md) | 0..1 <br/> [String](String.md) |  | direct |
+| [backing](backing.md) | 0..1 <br/> [String](String.md) |  | direct |
+| [qualifier](qualifier.md) | 0..1 <br/> [Modal](Modal.md) |  | direct |
+| [depends_on](depends_on.md) | * <br/> [String](String.md) | Claim ids this claim requires | direct |
+| [supports](supports.md) | * <br/> [String](String.md) | Claim ids that support this claim | direct |
+| [recorded_at](recorded_at.md) | 1 <br/> [date](date.md) | When the record entered the store (provenance; no rule body reads it) | direct |
 
 
 
@@ -164,14 +159,49 @@ URI: [slice:Claim](https://example.org/llm-policy-reasoning/spike-v3/slice/Claim
 <details>
 ```yaml
 name: Claim
+description: 'A Toulmin claim: an assertion about an asset by an asserter, in force
+  from valid_from to valid_to (inclusive; open when absent), with warrant, backing
+  and qualifier. Claims are flat (PLAN-v3-integrity §1.1): a claim holds only if every
+  depends_on member holds (a failing one rebuts it); a failing supports member leaves
+  it holding with a qualifier that lists it. Each claim carries its own asserter and
+  times; nothing is inherited. recorded_at is provenance (when the record entered
+  the store), not evidence.'
 from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
-is_a: ClaimCore
 slots:
+- id
 - about
-- subclaims
+- assertion
+- asserted_by
+- asserted_at
+- valid_from
+- valid_to
+- warrant
+- backing
+- qualifier
+- depends_on
+- supports
+- recorded_at
 slot_usage:
+  id:
+    name: id
+    pattern: ^C[0-9]+(\.[0-9]+)?$
   about:
     name: about
+    required: true
+  assertion:
+    name: assertion
+    required: true
+  asserted_by:
+    name: asserted_by
+    required: true
+  asserted_at:
+    name: asserted_at
+    required: true
+  valid_from:
+    name: valid_from
+    required: true
+  recorded_at:
+    name: recorded_at
     required: true
 
 ```
@@ -182,34 +212,37 @@ slot_usage:
 <details>
 ```yaml
 name: Claim
+description: 'A Toulmin claim: an assertion about an asset by an asserter, in force
+  from valid_from to valid_to (inclusive; open when absent), with warrant, backing
+  and qualifier. Claims are flat (PLAN-v3-integrity §1.1): a claim holds only if every
+  depends_on member holds (a failing one rebuts it); a failing supports member leaves
+  it holding with a qualifier that lists it. Each claim carries its own asserter and
+  times; nothing is inherited. recorded_at is provenance (when the record entered
+  the store), not evidence.'
 from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
-is_a: ClaimCore
 slot_usage:
+  id:
+    name: id
+    pattern: ^C[0-9]+(\.[0-9]+)?$
   about:
     name: about
+    required: true
+  assertion:
+    name: assertion
+    required: true
+  asserted_by:
+    name: asserted_by
+    required: true
+  asserted_at:
+    name: asserted_at
+    required: true
+  valid_from:
+    name: valid_from
+    required: true
+  recorded_at:
+    name: recorded_at
     required: true
 attributes:
-  about:
-    name: about
-    from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
-    rank: 1000
-    owner: Claim
-    domain_of:
-    - Claim
-    range: string
-    required: true
-    pattern: ^[a-z]+:[A-Za-z0-9_/]+$
-  subclaims:
-    name: subclaims
-    from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
-    rank: 1000
-    owner: Claim
-    domain_of:
-    - Claim
-    range: SubClaim
-    multivalued: true
-    inlined: true
-    inlined_as_list: true
   id:
     name: id
     from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
@@ -225,10 +258,20 @@ attributes:
     - CodeList
     - Taxonomy
     - Rule
-    - ClaimCore
+    - Claim
     range: string
     required: true
     pattern: ^C[0-9]+(\.[0-9]+)?$
+  about:
+    name: about
+    from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
+    rank: 1000
+    owner: Claim
+    domain_of:
+    - Claim
+    range: string
+    required: true
+    pattern: ^[a-z]+:[A-Za-z0-9_/]+$
   assertion:
     name: assertion
     description: A literal, e.g. [:cost_centre_of "e077" "cc0078"].
@@ -236,7 +279,7 @@ attributes:
     rank: 1000
     owner: Claim
     domain_of:
-    - ClaimCore
+    - Claim
     range: Literal
     required: true
     inlined: true
@@ -246,7 +289,7 @@ attributes:
     rank: 1000
     owner: Claim
     domain_of:
-    - ClaimCore
+    - Claim
     range: Owner
     required: true
   asserted_at:
@@ -255,7 +298,7 @@ attributes:
     rank: 1000
     owner: Claim
     domain_of:
-    - ClaimCore
+    - Claim
     range: date
     required: true
   valid_from:
@@ -264,7 +307,7 @@ attributes:
     rank: 1000
     owner: Claim
     domain_of:
-    - ClaimCore
+    - Claim
     range: date
     required: true
   valid_to:
@@ -273,7 +316,7 @@ attributes:
     rank: 1000
     owner: Claim
     domain_of:
-    - ClaimCore
+    - Claim
     range: date
   warrant:
     name: warrant
@@ -281,7 +324,7 @@ attributes:
     rank: 1000
     owner: Claim
     domain_of:
-    - ClaimCore
+    - Claim
     range: string
     pattern: ^R[0-9]+$
   backing:
@@ -290,7 +333,7 @@ attributes:
     rank: 1000
     owner: Claim
     domain_of:
-    - ClaimCore
+    - Claim
     range: string
   qualifier:
     name: qualifier
@@ -298,8 +341,42 @@ attributes:
     rank: 1000
     owner: Claim
     domain_of:
-    - ClaimCore
+    - Claim
     range: Modal
+  depends_on:
+    name: depends_on
+    description: Claim ids this claim requires.
+    from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
+    rank: 1000
+    owner: Claim
+    domain_of:
+    - Claim
+    range: string
+    multivalued: true
+    pattern: ^C[0-9]+(\.[0-9]+)?$
+  supports:
+    name: supports
+    description: Claim ids that support this claim.
+    from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
+    rank: 1000
+    owner: Claim
+    domain_of:
+    - Claim
+    range: string
+    multivalued: true
+    pattern: ^C[0-9]+(\.[0-9]+)?$
+  recorded_at:
+    name: recorded_at
+    description: When the record entered the store (provenance; no rule body reads
+      it).
+    from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
+    rank: 1000
+    owner: Claim
+    domain_of:
+    - Rule
+    - Claim
+    range: date
+    required: true
 
 ```
 </details></div>

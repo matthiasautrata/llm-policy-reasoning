@@ -191,7 +191,7 @@ class View:
 
     def __init__(self, parent=None):
         self.rules = dict(parent.rules) if parent else {}
-        self.claims = dict(parent.claims) if parent else {}       # sub-claims flattened (parent, about)
+        self.claims = dict(parent.claims) if parent else {}       # flat; linked by :depends_on / :supports
         self.text = dict(parent.text) if parent else {}
         self.withheld = set(parent.withheld) if parent else set()
         self.meta = parent.meta if parent else None
@@ -202,22 +202,26 @@ class View:
         for r in recs:
             ids.append(r["id"])
             if "assertion" in r:
-                self._claim(r, None, r["about"])
+                self.text[r["id"]] = asp.translate_claim(r)
+                self.claims[r["id"]] = r
             else:
                 self.text[r["id"]] = asp.translate_rule(r, self.meta.modes, self.meta.concept_cols)
                 self.rules[r["id"]] = r
         self._order = None
         return ids
 
-    def _claim(self, c, parent, about):
-        c = dict(c, parent=parent, about=about, role=c.get("role"))
-        self.text[c["id"]] = asp.translate_claim(c)
-        self.claims[c["id"]] = c
-        for s in c.get("subclaims") or []:
-            self._claim(s, c["id"], about)
-
     def active(self, i):
         return i not in self.withheld
+
+    def members(self, c):
+        """active members of claim c: (id, role), depends_on first, then supports"""
+        ms = [(i, "required") for i in c.get("depends_on") or []] + [(i, "supporting") for i in c.get("supports") or []]
+        return [(i, r) for i, r in ms if i in self.claims and self.active(i)]
+
+    def linked(self, i):
+        """some active claim links to i"""
+        return any(i in (p.get("depends_on") or []) + (p.get("supports") or [])
+                   for j, p in self.claims.items() if self.active(j))
 
     def order(self, i):
         if self._order is None:
@@ -798,18 +802,18 @@ class Ops:
     # ---- claims
     def op_claims(self, op, view):
         A, D = op["asset"], self.as_of(op)
-        top = [i for i, c in view.claims.items() if c["about"] == A and c["parent"] is None and view.active(i)]
+        top = [i for i, c in view.claims.items() if c["about"] == A and not view.linked(i) and view.active(i)]
         goals = [c["assertion"] for c in view.claims.values() if c["about"] == A]
         W = World(view, D, goals) if top else None
         return {"asset": A, "claims": [self.standing(W, i) for i in top]}
 
-    def standing(self, W, cid):
+    def standing(self, W, cid, role=None):
         V = W.V
         c = V.claims[cid]
         base = {"id": cid, "about": c["about"], "assertion": c["assertion"], "asserted_by": c["asserted_by"],
                 "asserted_at": c["asserted_at"], "valid_from": c["valid_from"], "valid_to": c.get("valid_to"),
-                "backing": c.get("backing"), "modal": c.get("qualifier"), "role": c.get("role")}
-        subs = [self.standing(W, i) for i, s in V.claims.items() if s["parent"] == cid and V.active(i)]
+                "backing": c.get("backing"), "modal": c.get("qualifier"), "role": role}
+        subs = [self.standing(W, i, r) for i, r in V.members(c)]
         if not V.in_force(c, W.D):
             st = {"standing": "not_in_force", "defeater": None, "qualifier": [], "sides": None}
         else:
@@ -859,7 +863,7 @@ class Ops:
 
     def op_describe(self, op, view):
         A, M = op["asset"], self.S.meta
-        cs = [i for i, c in view.claims.items() if c["about"] == A and c["parent"] is None]
+        cs = [i for i, c in view.claims.items() if c["about"] == A and not view.linked(i)]
         meta = None
         for a in M.assets:
             if a["id"] == A: meta = (a.get("kind"), a.get("doc"), None); break

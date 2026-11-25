@@ -218,11 +218,11 @@ pub mod Ops {
         case _ => st("holds")
     }
 
-    def subStanding(subs: List[(Claim, St, Json)]): St =
-        match List.find(match (cl, s, _) -> cl#role == Some(Role.Required) and failing(s), subs) {
-            case Some((cl, s, _)) => {defeater = s#defeater, via = Some(cl#id) | st("rebutted")}
+    def subStanding(subs: List[(Role, Claim, St, Json)]): St =
+        match List.find(match (r, _, s, _) -> r == Role.Required and failing(s), subs) {
+            case Some((_, cl, s, _)) => {defeater = s#defeater, via = Some(cl#id) | st("rebutted")}
             case None =>
-                match List.filterMap(match (cl, s, _) -> if (cl#role == Some(Role.Supporting) and failing(s)) Some(cl#id) else None, subs) |> List.sort {
+                match List.filterMap(match (r, cl, s, _) -> if (r == Role.Supporting and failing(s)) Some(cl#id) else None, subs) |> List.sort {
                     case Nil => st("holds")
                     case q => {qualifier = q | st("holds_with_qualifier")}
                 }
@@ -230,8 +230,17 @@ pub mod Ops {
 
     def roleName(r: Role): String = match r { case Role.Required => "required" case Role.Supporting => "supporting" }
 
-    def standing(c: Ctx, cl: Claim): (Claim, St, Json) \ Engine.Eval =
-        let subs = List.filter(s -> s#parent == Some(cl#id), c#claims) |> List.map(s -> standing(c, s));
+    /// a claim's members (active ones), `depends_on` first then `supports`, with their roles
+    def members(c: Ctx, cl: Claim): List[(Role, Claim)] =
+        let find = r -> sid -> List.find(x -> x#id == sid, c#claims) |> Option.map(x -> (r, x));
+        List.filterMap(find(Role.Required), cl#dependsOn) ++ List.filterMap(find(Role.Supporting), cl#supports)
+
+    /// top-level: no active claim links to it
+    def isTop(c: Ctx, cl: Claim): Bool =
+        not List.exists(p -> List.memberOf(cl#id, p#dependsOn ++ p#supports), c#claims)
+
+    def standing(c: Ctx, role: Option[Role], cl: Claim): (Role, Claim, St, Json) \ Engine.Eval =
+        let subs = members(c, cl) |> List.map(match (r, s) -> standing(c, Some(r), s));
         let s = if (Engine.inForce(cl, c#d)) {
             let s0 = ownStanding(Engine.evaluate(c, cl#assertion));
             if (s0#standing == "holds") subStanding(subs) else s0
@@ -239,11 +248,11 @@ pub mod Ops {
         let j = obj(("id", jstr(cl#id)) :: ("about", jstr(cl#about)) :: ("assertion", goalJson(cl#assertion)) ::
                     ("asserted_by", jstr(Engine.ownerName(cl#assertedBy))) :: ("asserted_at", jstr(cl#assertedAt)) ::
                     ("valid_from", jstr(cl#validFrom)) :: ("valid_to", jopt(cl#validTo)) :: ("backing", jopt(cl#backing)) ::
-                    ("modal", jopt(cl#modal)) :: ("role", jopt(Option.map(roleName, cl#role))) ::
+                    ("modal", jopt(cl#modal)) :: ("role", jopt(Option.map(roleName, role))) ::
                     ("standing", jstr(s#standing)) :: ("defeater", jopt(s#defeater)) :: ("qualifier", jstrs(s#qualifier)) ::
-                    ("sides", sidesJson(s#sides)) :: ("subclaims", jarr(List.map(match (_, _, x) -> x, subs))) ::
+                    ("sides", sidesJson(s#sides)) :: ("subclaims", jarr(List.map(match (_, _, _, x) -> x, subs))) ::
                     (match s#via { case Some(v) => ("via", jstr(v)) :: Nil case None => Nil }));
-        (cl, s, j)
+        (Option.getWithDefault(Role.Required, role), cl, s, j)
 
     // ------------------------------------------------------------------ vocabulary, metadata
 
@@ -295,8 +304,8 @@ pub mod Ops {
                 case "why_not" => whyNot(c, parseGoal(goalText()))
                 case "claims" =>
                     let a = Option.getWithDefault("", getStr("asset", op));
-                    let cls = List.filter(cl -> cl#about == a and Option.isEmpty(cl#parent), c#claims);
-                    obj(("asset", jstr(a)) :: ("claims", jarr(List.map(cl -> { let (_, _, j) = standing(c, cl); j }, cls))) :: Nil)
+                    let cls = List.filter(cl -> cl#about == a and isTop(c, cl), c#claims);
+                    obj(("asset", jstr(a)) :: ("claims", jarr(List.map(cl -> { let (_, _, _, j) = standing(c, None, cl); j }, cls))) :: Nil)
                 case "fetch" =>
                     let cn = Option.getWithDefault("", getStr("concept", op));
                     let fs = match get("filters", op) { case Some(JObject(fm)) => Map.toList(fm) case _ => Nil };

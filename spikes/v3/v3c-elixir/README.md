@@ -9,7 +9,7 @@ Plan: `../PLAN-v3cd.md`. Results: `../RESULTS.md` ("V3c and V3d").
 | File | What |
 |---|---|
 | `lib/v3c/edn.ex` | EDN reader (NimbleParsec) |
-| `lib/v3c/model.ex` | validator over the EDN data, rule bodies included; the 12 negatives |
+| `lib/v3c/model.ex` | validator over the EDN data, rule bodies included; the 15 negatives (PLAN-v3 12, #9 re-expressed, PLAN-v3-integrity §1.5 13-15) |
 | `lib/v3c/store.ex` | the state as one immutable value; hypotheses are derived values |
 | `lib/v3c/engine.ex` | defeasible evaluator (port of V3b `engine.clj`) |
 | `lib/v3c/why.ex` | why / why_not trees |

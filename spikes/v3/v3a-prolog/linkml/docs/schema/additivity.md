@@ -4,19 +4,21 @@ search:
 ---
 
 
-# Enum: SubClaimRole 
+# Enum: Additivity 
 
 
 
 <div data-search-exclude markdown="1">
 
-URI: [slice:SubClaimRole](https://example.org/llm-policy-reasoning/spike-v3/slice/SubClaimRole)
+URI: [slice:Additivity](https://example.org/llm-policy-reasoning/spike-v3/slice/Additivity)
 
 ## Permissible Values
 | Value | Meaning | Description |
 | --- | --- | --- |
-| required | None |  |
-| supporting | None |  |
+| additive | None |  |
+| semi-additive | None |  |
+| non-additive | None |  |
+| unknown | None |  |
 
 
 
@@ -25,7 +27,7 @@ URI: [slice:SubClaimRole](https://example.org/llm-policy-reasoning/spike-v3/slic
 
 | Name | Description |
 | ---  | --- |
-| [role](role.md) |  |
+| [additivity](additivity.md) |  |
 
 
 
@@ -56,14 +58,18 @@ URI: [slice:SubClaimRole](https://example.org/llm-policy-reasoning/spike-v3/slic
 
 <details>
 ```yaml
-name: SubClaimRole
+name: Additivity
 from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
 rank: 1000
 permissible_values:
-  required:
-    text: required
-  supporting:
-    text: supporting
+  additive:
+    text: additive
+  semi-additive:
+    text: semi-additive
+  non-additive:
+    text: non-additive
+  unknown:
+    text: unknown
 
 ```
 </details>

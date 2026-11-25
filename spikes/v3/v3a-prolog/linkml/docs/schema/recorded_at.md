@@ -3,13 +3,18 @@ search:
   boost: 5.0
 ---
 
-# Slot: role 
+# Slot: recorded_at 
+
+
+_When the record entered the store (provenance; no rule body reads it)._
+
+
 
 <div data-search-exclude markdown="1">
 
 
 
-URI: [slice:role](https://example.org/llm-policy-reasoning/spike-v3/slice/role)
+URI: [slice:recorded_at](https://example.org/llm-policy-reasoning/spike-v3/slice/recorded_at)
 <!-- no inheritance hierarchy -->
 
 
@@ -20,7 +25,8 @@ URI: [slice:role](https://example.org/llm-policy-reasoning/spike-v3/slice/role)
 
 | Name | Description | Modifies Slot |
 | --- | --- | --- |
-| [SubClaim](SubClaim.md) | One level of nesting |  yes  |
+| [Rule](Rule.md) | A rule envelope |  yes  |
+| [Claim](Claim.md) | A Toulmin claim: an assertion about an asset by an asserter, in force from va... |  yes  |
 
 
 
@@ -33,8 +39,8 @@ URI: [slice:role](https://example.org/llm-policy-reasoning/spike-v3/slice/role)
 
 | Property | Value |
 | --- | --- |
-| Range | [SubClaimRole](SubClaimRole.md) |
-| Domain Of | [SubClaim](SubClaim.md) |
+| Range | [date](date.md) |
+| Domain Of | [Rule](Rule.md), [Claim](Claim.md) |
 
 
 
@@ -63,8 +69,8 @@ URI: [slice:role](https://example.org/llm-policy-reasoning/spike-v3/slice/role)
 
 | Mapping Type | Mapped Value |
 | ---  | ---  |
-| self | slice:role |
-| native | slice:role |
+| self | slice:recorded_at |
+| native | slice:recorded_at |
 
 
 
@@ -73,12 +79,14 @@ URI: [slice:role](https://example.org/llm-policy-reasoning/spike-v3/slice/role)
 
 <details>
 ```yaml
-name: role
+name: recorded_at
+description: When the record entered the store (provenance; no rule body reads it).
 from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
 rank: 1000
 domain_of:
-- SubClaim
-range: SubClaimRole
+- Rule
+- Claim
+range: date
 
 ```
 </details></div>

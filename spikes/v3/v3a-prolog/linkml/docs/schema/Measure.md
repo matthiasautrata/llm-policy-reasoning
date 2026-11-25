@@ -27,6 +27,17 @@ URI: [slice:Measure](https://example.org/llm-policy-reasoning/spike-v3/slice/Mea
       Concept <|-- Measure
         click Concept href "../Concept/"
       
+      Measure : additivity
+        
+          
+    
+        
+        
+        Measure --> "0..1" Additivity : additivity
+        click Additivity href "../Additivity/"
+    
+
+        
       Measure : columns_out
         
       Measure : concept_name
@@ -54,6 +65,8 @@ URI: [slice:Measure](https://example.org/llm-policy-reasoning/spike-v3/slice/Mea
         
       Measure : tables
         
+      Measure : unsafe_dims
+        
       
 ```
 
@@ -79,6 +92,8 @@ URI: [slice:Measure](https://example.org/llm-policy-reasoning/spike-v3/slice/Mea
 | [columns_out](columns_out.md) | * <br/> [String](String.md) | Output columns of the concept's rows | [Concept](Concept.md) |
 | [sql](sql.md) | 0..1 <br/> [String](String.md) |  | [Concept](Concept.md) |
 | [derived_by](derived_by.md) | 0..1 <br/> [String](String.md) |  | [Concept](Concept.md) |
+| [additivity](additivity.md) | 0..1 <br/> [Additivity](Additivity.md) |  | [Concept](Concept.md) |
+| [unsafe_dims](unsafe_dims.md) | * <br/> [String](String.md) | Dimensions a semi-additive measure must not be summed over | [Concept](Concept.md) |
 
 <details>
 <summary>Expressions & Logic</summary>
@@ -181,7 +196,7 @@ attributes:
     - CodeList
     - Taxonomy
     - Rule
-    - ClaimCore
+    - Claim
     range: string
     required: true
   concept_name:
@@ -266,6 +281,24 @@ attributes:
     - Concept
     range: string
     pattern: ^R[0-9]+$
+  additivity:
+    name: additivity
+    from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
+    rank: 1000
+    owner: Measure
+    domain_of:
+    - Concept
+    range: Additivity
+  unsafe_dims:
+    name: unsafe_dims
+    description: Dimensions a semi-additive measure must not be summed over.
+    from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
+    rank: 1000
+    owner: Measure
+    domain_of:
+    - Concept
+    range: string
+    multivalued: true
 any_of:
 - slot_conditions:
     sql:

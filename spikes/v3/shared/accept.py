@@ -90,8 +90,6 @@ class Env:
         for c in claims:
             if c["id"] in withhold: continue
             self.claims[c["id"]] = c
-            for s in c.get("subclaims") or []:
-                self.claims[s["id"]] = dict(s, about=c["about"])
         self.backend = backend
         self._con = None
 

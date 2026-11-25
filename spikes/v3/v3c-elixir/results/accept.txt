@@ -1,7 +1,9 @@
-check 1: PASS (23 questions, 0.6s wall)
+model check (slice + extension, v3c-elixir cycles: reject): OK
+check 1: PASS (25 questions, 0.7s wall)
 check 2: PASS (0.6s wall)
 check 3: PASS (changed ['Q07', 'Q14'])
 check 4: PASS (inside CONFLICT [['C3'], ['C4']], after cc0077)
 check 5: PASS (551 statements, 1006 rows, max 425)
 check 6: PASS 
-GREEN (checks 123456)
+check 7: PASS (cycles: reject; model check rejects [['exempt_from_audit', 'trusted'], ['preferred', 'under_review']]; see cycles_probe.py for the engine's own behaviour)
+GREEN (checks 1234567)

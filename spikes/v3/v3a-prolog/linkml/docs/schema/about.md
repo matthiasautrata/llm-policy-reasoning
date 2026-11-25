@@ -20,7 +20,7 @@ URI: [slice:about](https://example.org/llm-policy-reasoning/spike-v3/slice/about
 
 | Name | Description | Modifies Slot |
 | --- | --- | --- |
-| [Claim](Claim.md) |  |  yes  |
+| [Claim](Claim.md) | A Toulmin claim: an assertion about an asset by an asserter, in force from va... |  yes  |
 
 
 

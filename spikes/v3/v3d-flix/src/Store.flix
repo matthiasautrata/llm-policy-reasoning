@@ -1,6 +1,6 @@
 ///
 /// V3d store: one immutable value. The slice's metadata (today, functional, assets, tables, columns,
-/// concepts, terms) and the rules and claims in authoring order (claims flattened, parent first).
+/// concepts, terms) and the rules and claims in authoring order (claims flat, linked by id).
 ///
 /// The running session holds the value in a Ref (Main); `add` replaces it. A hypothesis derives a new
 /// value (records withheld, records added) and passes it down; the main value is untouched by
@@ -43,5 +43,6 @@ pub mod Store {
         List.filterMap(t -> if (List.memberOf(key, Map.getWithDefault(t#id, Nil, st#keys))) Some(t#id) else None, st#meta#terms)
 
     pub def claimsAbout(st: Store, asset: String): List[String] =
-        List.filterMap(c -> if (c#about == asset and Option.isEmpty(c#parent)) Some(c#id) else None, st#claims)
+        let linked = List.flatMap(c -> c#dependsOn ++ c#supports, st#claims);
+        List.filterMap(c -> if (c#about == asset and not List.memberOf(c#id, linked)) Some(c#id) else None, st#claims)
 }

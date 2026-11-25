@@ -126,15 +126,15 @@ why_not(G, D, R) :-
 
 do_op("claims", Op, _{asset:A, claims:Cs}) :- !,
     as_of(Op, D), A = Op.asset,
-    findall(C, ( claim(Id, _, _, _, _, _, A, null, _, _), active(Id), standing(Id, D, C) ), Cs).
+    findall(C, ( top_claim(Id, A), active(Id), standing(Id, D, null, C) ), Cs).
 
-%!  standing(+Id, +D, -Dict): holds | holds_with_qualifier | rebutted | contested | not_in_force
-standing(Id, D, R) :-
-    claim(Id, A, By, At, F, T, About, _, Role, M),
+%!  standing(+Id, +D, +Role, -Dict): holds | holds_with_qualifier | rebutted | contested | not_in_force
+standing(Id, D, Role, R) :-
+    claim(Id, A, By, At, F, T, About, _, _, M),
     mget(backing, M, Bk, null), mget(qualifier, M, Modal, null),
     Base = _{id:Id, about:About, assertion:A, asserted_by:By, asserted_at:At, valid_from:F, valid_to:T,
              backing:Bk, modal:Modal, role:Role},
-    findall(S, ( claim(SId, _, _, _, _, _, _, Id, _, _), active(SId), standing(SId, D, S) ), Subs),
+    findall(S, ( claim_link(Id, SId, SR), active(SId), standing(SId, D, SR, S) ), Subs),
     (   \+ in_force(F, T, D) -> St = _{standing:"not_in_force", defeater:null, qualifier:[], sides:null}
     ;   evaluate(A, D, E), own_standing(E, St0),
         (   St0.standing == "holds" -> sub_standing(Subs, St) ; St = St0 ) ),
@@ -178,7 +178,7 @@ norm(S, N) :-
 do_op("describe", Op, R) :- !, describe(Op.asset, R).
 
 describe(A, R) :-
-    findall(C, claim(C, _, _, _, _, _, A, null, _, _), Cs),
+    findall(C, top_claim(C, A), Cs),
     ( asset_meta(A, K, Doc, B) -> St = "ANSWER" ; K = null, Doc = null, B = null, St = "OUT_OF_SCOPE" ),
     R = _{status:St, asset:A, kind:K, doc:Doc, bindings:B, claims:Cs}.
 

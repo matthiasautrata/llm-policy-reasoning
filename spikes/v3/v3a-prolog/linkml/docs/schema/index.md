@@ -13,9 +13,7 @@ Name: slice
 | Class | Description |
 | --- | --- |
 | [Asset](Asset.md) | Anything significant a claim can attach to that is not a table, column, conce... |
-| [ClaimCore](ClaimCore.md) | A Toulmin claim: an assertion about an asset by an asserter, in force from va... |
-| &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Claim](Claim.md) |  |
-| &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[SubClaim](SubClaim.md) | One level of nesting |
+| [Claim](Claim.md) | A Toulmin claim: an assertion about an asset by an asserter, in force from va... |
 | [CodeList](CodeList.md) | The admissible codes of an enumerated column |
 | [Column](Column.md) | A column of a physical table |
 | [Concept](Concept.md) | A semantic-layer entry (measure, dimension, entity or hierarchy) bound to tab... |
@@ -52,6 +50,7 @@ Name: slice
 | Slot | Description |
 | --- | --- |
 | [about](about.md) |  |
+| [additivity](additivity.md) |  |
 | [args](args.md) |  |
 | [asserted_at](asserted_at.md) |  |
 | [asserted_by](asserted_by.md) |  |
@@ -72,6 +71,7 @@ Name: slice
 | [conservative](conservative.md) |  |
 | [date](date.md) |  |
 | [definition](definition.md) |  |
+| [depends_on](depends_on.md) | Claim ids this claim requires |
 | [derived_by](derived_by.md) |  |
 | [doc](doc.md) |  |
 | [expr](expr.md) |  |
@@ -96,14 +96,14 @@ Name: slice
 | [params](params.md) |  |
 | [pred](pred.md) |  |
 | [qualifier](qualifier.md) |  |
+| [recorded_at](recorded_at.md) | When the record entered the store (provenance; no rule body reads it) |
 | [right](right.md) |  |
-| [role](role.md) |  |
 | [rule_class](rule_class.md) |  |
 | [rules](rules.md) |  |
 | [see](see.md) |  |
 | [sql](sql.md) |  |
-| [subclaims](subclaims.md) |  |
 | [superior_to](superior_to.md) |  |
+| [supports](supports.md) | Claim ids that support this claim |
 | [synonyms](synonyms.md) |  |
 | [tables](tables.md) |  |
 | [taxonomies](taxonomies.md) |  |
@@ -111,6 +111,7 @@ Name: slice
 | [terms](terms.md) |  |
 | [today](today.md) |  |
 | [type](type.md) |  |
+| [unsafe_dims](unsafe_dims.md) | Dimensions a semi-additive measure must not be summed over |
 | [valid_from](valid_from.md) |  |
 | [valid_to](valid_to.md) |  |
 | [value](value.md) |  |
@@ -124,6 +125,7 @@ Name: slice
 
 | Enumeration | Description |
 | --- | --- |
+| [Additivity](Additivity.md) |  |
 | [ArithmeticOp](ArithmeticOp.md) |  |
 | [AssetKind](AssetKind.md) |  |
 | [ColumnType](ColumnType.md) |  |
@@ -133,7 +135,6 @@ Name: slice
 | [Owner](Owner.md) |  |
 | [RuleClass](RuleClass.md) |  |
 | [RuleKind](RuleKind.md) |  |
-| [SubClaimRole](SubClaimRole.md) |  |
 
 
 ## Types

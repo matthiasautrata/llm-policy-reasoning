@@ -29,6 +29,8 @@
  {:id :Q23 :kind :resolve_term :text "department"}
  {:id :Q24 :kind :fetch :concept :pending_exposure :filters {:cc "cc0000"}
   :text "What is the pending exposure of the root cost centre? (A1 regression: the sum exceeds INT32)"}
+ {:id :Q25 :kind :fetch :concept :booked_total :filters {:cc "cc0000"}
+  :text "What is the booked total of the root cost centre? (integer-cast regression: the SUM is cast to BIGINT)"}
  {:id :Q30 :state :cycles :kind :decide :goal [:blacklisted "fern"] :text "Y1: is fern blacklisted (risk says yes, compliance says no)?"}
  {:id :Q31 :state :cycles :kind :decide :goal [:preferred "dyne"] :text "Y2: is dyne (approved now, suspended earlier) preferred?"}
  {:id :Q32 :state :cycles :kind :decide :goal [:preferred "acme"] :text "Y2 control: is acme (never suspended) preferred?"}

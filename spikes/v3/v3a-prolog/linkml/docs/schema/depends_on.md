@@ -3,13 +3,18 @@ search:
   boost: 5.0
 ---
 
-# Slot: subclaims 
+# Slot: depends_on 
+
+
+_Claim ids this claim requires._
+
+
 
 <div data-search-exclude markdown="1">
 
 
 
-URI: [slice:subclaims](https://example.org/llm-policy-reasoning/spike-v3/slice/subclaims)
+URI: [slice:depends_on](https://example.org/llm-policy-reasoning/spike-v3/slice/depends_on)
 <!-- no inheritance hierarchy -->
 
 
@@ -20,7 +25,7 @@ URI: [slice:subclaims](https://example.org/llm-policy-reasoning/spike-v3/slice/s
 
 | Name | Description | Modifies Slot |
 | --- | --- | --- |
-| [Claim](Claim.md) |  |  no  |
+| [Claim](Claim.md) | A Toulmin claim: an assertion about an asset by an asserter, in force from va... |  no  |
 
 
 
@@ -33,13 +38,20 @@ URI: [slice:subclaims](https://example.org/llm-policy-reasoning/spike-v3/slice/s
 
 | Property | Value |
 | --- | --- |
-| Range | [SubClaim](SubClaim.md) |
+| Range | [String](String.md) |
 | Domain Of | [Claim](Claim.md) |
 ### Cardinality and Requirements
 
 | Property | Value |
 | --- | --- |
 | Multivalued | Yes |
+
+
+### Value Constraints
+
+| Property | Value |
+| --- | --- |
+| Regex Pattern | `^C[0-9]+(\.[0-9]+)?$` |
 
 
 
@@ -70,8 +82,8 @@ URI: [slice:subclaims](https://example.org/llm-policy-reasoning/spike-v3/slice/s
 
 | Mapping Type | Mapped Value |
 | ---  | ---  |
-| self | slice:subclaims |
-| native | slice:subclaims |
+| self | slice:depends_on |
+| native | slice:depends_on |
 
 
 
@@ -80,15 +92,15 @@ URI: [slice:subclaims](https://example.org/llm-policy-reasoning/spike-v3/slice/s
 
 <details>
 ```yaml
-name: subclaims
+name: depends_on
+description: Claim ids this claim requires.
 from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
 rank: 1000
 domain_of:
 - Claim
-range: SubClaim
+range: string
 multivalued: true
-inlined: true
-inlined_as_list: true
+pattern: ^C[0-9]+(\.[0-9]+)?$
 
 ```
 </details></div>

@@ -35,7 +35,7 @@
 
 (def literal (s [:and vector? ::literal]))
 
-(def rule-common [[:id keyword?] [:owner owner] [:doc string?]
+(def rule-common [[:id keyword?] [:owner owner] [:doc string?] [:recorded_at date]
                   [:class [:enum :definition :material_inference :exception :entitlement :superiority :incompatibility]]
                   [:superior-to {:optional true} [:vector keyword?]]])
 
@@ -49,11 +49,14 @@
   [[:id keyword?] [:assertion [:and vector? ::literal]] [:asserted_by owner] [:asserted_at date]
    [:valid_from date] [:valid_to {:optional true} [:maybe date]]
    [:backing {:optional true} string?] [:qualifier {:optional true} [:enum "certainly" "presumably"]]
-   [:warrant {:optional true} keyword?]])
+   [:warrant {:optional true} keyword?] [:recorded_at date]])
 
-(def SubClaim (s (into [:map {:closed true} [:role [:enum :required :supporting]]] claim-core)))
+;; Flat claims (PLAN-v3-integrity §1.1): every claim is top level with its own asserter and times; a parent
+;; names its members by id. That the ids resolve is checked on the Slice (claim-links-resolve).
+(def claim-id [:and keyword? [:fn {:error/message "a claim id (:C<n> or :C<n>.<m>)"} #(re-matches #"C[0-9]+(\.[0-9]+)?" (name %))]])
 (def Claim (s (into [:map {:closed true} [:about [:re #"^[a-z]+:[A-Za-z0-9_/]+$"]]
-                     [:subclaims {:optional true} [:vector SubClaim]]] claim-core)))
+                     [:depends_on {:optional true} [:vector claim-id]]
+                     [:supports {:optional true} [:vector claim-id]]] claim-core)))
 
 (def Column (s [:map {:closed true} [:id [:re #"^col:[a-z_]+/[a-z_]+$"]] [:name string?]
                 [:type [:enum :id :int :enum :bool :date]] [:doc string?]]))
@@ -62,21 +65,30 @@
   (s [:and [:map {:closed true} [:id [:re #"^(measure|dim|entity|hier):[a-z_]+$"]] [:name keyword?]
             [:kind [:enum :entity :dimension :hierarchy :measure]] [:tables [:vector [:re #"^table:"]]] [:doc string?]
             [:columns {:optional true} [:vector keyword?]] [:params {:optional true} [:vector keyword?]]
-            [:sql {:optional true} string?] [:derived-by {:optional true} keyword?]]
-      [:fn {:error/message "a concept has :sql or :derived-by"} #(or (:sql %) (:derived-by %))]]))
+            [:sql {:optional true} string?] [:derived-by {:optional true} keyword?]
+            [:additivity {:optional true} [:enum :additive :semi-additive :non-additive :unknown]]
+            [:unsafe_dims {:optional true} [:vector keyword?]]]
+      [:fn {:error/message "a concept has :sql or :derived-by"} #(or (:sql %) (:derived-by %))]
+      [:fn {:error/message "a measure declares :additivity (PLAN-v3-integrity §1.3)"}
+       #(or (not= :measure (:kind %)) (:additivity %))]
+      [:fn {:error/message "a semi-additive measure names its :unsafe_dims"}
+       #(or (not= :semi-additive (:additivity %)) (seq (:unsafe_dims %)))]]))
 (def Term (s [:map {:closed true} [:id [:re #"^term:[a-z_]+$"]] [:label string?] [:synonyms [:vector string?]]
               [:owner owner] [:definition string?]
               [:concept {:optional true} [:re #"^(measure|dim|entity|hier):"]] [:see {:optional true} [:vector [:re #"^term:"]]]]))
 (def Asset (s [:map {:closed true} [:id string?] [:kind [:enum :vendor :employee]] [:doc string?]]))
 
 (def Slice
-  (s [:map {:closed true}
+  (s [:and [:map {:closed true}
       [:slice/version int?] [:today date]
       [:assets [:vector Asset]] [:tables [:vector Table]] [:concepts [:vector Concept]] [:terms [:vector Term]]
       [:code-lists [:vector [:map [:id [:re #"^codes:"]] [:values [:vector string?]]]]]
       [:taxonomies [:vector [:map [:id string?] [:code-list string?] [:tree [:map-of string? [:vector string?]]]]]]
       [:functional [:map-of keyword? pos-int?]]
-      [:rules [:vector Rule]] [:claims [:vector Claim]]]))
+      [:rules [:vector Rule]] [:claims [:vector Claim]]]
+      [:fn {:error/message "every :depends_on / :supports id names a claim of the slice"}
+       (fn [x] (let [ids (set (map :id (:claims x)))]
+                 (every? ids (mapcat #(concat (:depends_on %) (:supports %)) (:claims x)))))]]))
 
 (def Extension (s [:vector [:or Rule Claim]]))
 
@@ -149,7 +161,8 @@
                ["" "## Claims" ""]
                (mapcat (fn [c] (cons (str "- **" (nm (:id c)) "** about `" (:about c) "`: " (claim-line c) "; "
                                           (:qualifier c "") "; backing: " (:backing c ""))
-                                     (for [x (:subclaims c)] (str "  - " (nm (:id x)) " (" (nm (:role x)) "): " (claim-line x)))))
+                                     (concat (for [x (:depends_on c)] (str "  - depends on " (nm x)))
+                                             (for [x (:supports c)] (str "  - supported by " (nm x))))))
                        claims)
                [""]))))
 
@@ -166,11 +179,18 @@
    ["comparison with three arguments" #(update-in % [:rules 1 :body] conj '[:< ?x 1 2])]
    ["bad date in a claim" #(assoc-in % [:claims 0 :asserted_at] "2026-3-1")]
    ["unknown key on a claim (closed map)" #(assoc-in % [:claims 0 :confidence] 0.9)]
-   ["sub-claim role not required/supporting" #(assoc-in % [:claims 0 :subclaims 0 :role] :optional)]
+   ["depends_on member not a claim id" #(assoc-in % [:claims 0 :depends_on] [:R101])]
    ["superiority order with unknown owner" #(update % :rules conj {:id :R999 :kind :superiority :owner :controller
-                                                                  :class :superiority :doc "x" :pred :p :order [:hr :sales]})]
+                                                                  :class :superiority :doc "x" :pred :p :order [:hr :sales]
+                                                                  :recorded_at (get-in % [:rules 0 :recorded_at])})]
    ["rule kind unknown" #(assoc-in % [:rules 0 :kind] :presumption)]
-   ["negated literal wrapping a non-literal" #(assoc-in % [:rules 0 :head] [:neg "x"])]])
+   ["negated literal wrapping a non-literal" #(assoc-in % [:rules 0 :head] [:neg "x"])]
+   ;; PLAN-v3-integrity §1.5
+   ["nested :subclaims (claims are flat)" #(assoc-in % [:claims 0 :subclaims] [(get-in % [:claims 1])])]
+   ["measure without :additivity"
+    (fn [s] (update s :concepts (fn [cs] (let [i (first (keep-indexed #(when (= :measure (:kind %2)) %1) cs))]
+                                           (update cs i dissoc :additivity)))))]
+   ["dangling depends_on id" #(update-in % [:claims 0 :depends_on] conj :C9.9)]])
 
 (defn -main [& [results]]
   (let [root (System/getProperty "v3b.root" "../../..")

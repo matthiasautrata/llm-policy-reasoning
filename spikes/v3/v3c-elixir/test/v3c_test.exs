@@ -10,10 +10,10 @@ defmodule V3cTest do
     assert Model.errors(read("extension.edn")) == []
   end
 
-  test "the 12 negatives are rejected" do
+  test "the 15 negatives are rejected" do
     s = read("slice.edn")
     rejected = for {name, f} <- Model.negatives(), Model.errors(f.(s)) != [], do: name
-    assert length(Model.negatives()) == 12
-    assert length(rejected) == 12
+    assert length(Model.negatives()) == 15
+    assert length(rejected) == 15
   end
 end

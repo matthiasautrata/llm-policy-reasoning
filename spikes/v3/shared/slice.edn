@@ -72,6 +72,10 @@
              {:id "col:vendor_status/valid_to" :name "valid_to" :type :date :doc "Last day."}]}]
 
  ;; ------------------------------------------------------------------ semantic layer
+ ;; Every :measure declares :additivity: :additive, :semi-additive (with :unsafe_dims, the dimensions it must
+ ;; not be summed over), :non-additive or :unknown; no default. booked_total and pending_exposure are
+ ;; subtree roll-ups: summing them over an ancestor and its descendant double-counts. headroom is a cap
+ ;; minus a total and sums over nothing.
  ;; A concept binds to tables and yields a SQL template. $name is a required parameter (pushed into
  ;; the template); every other filter is applied as WHERE t."col" = value around the template.
  ;; @iso(x) is a dialect macro: an ISO yyyy-mm-dd string from a DATE (DuckDB strftime, Postgres to_char).
@@ -121,14 +125,17 @@
    :columns [:emp :cc :source :effective]
    :sql "SELECT emp, cc, source, @iso(effective) AS effective FROM assignment"}
   {:id "measure:booked_total" :name :booked_total :kind :measure :tables ["table:cc"]
+   :additivity :semi-additive :unsafe_dims [:cost_centre]
    :doc "Sum of the spend booked directly on every cost centre in the subtree of a centre (zero where nothing is booked)."
    :params [:cc] :columns [:cc :value]
-   :sql "WITH RECURSIVE sub(id) AS (SELECT id FROM cc WHERE id = $cc UNION ALL SELECT c.id FROM cc c JOIN sub s ON c.parent = s.id) SELECT CAST($cc AS VARCHAR) AS cc, CAST(COALESCE(SUM(cc.booked), 0) AS INTEGER) AS value FROM cc JOIN sub ON cc.id = sub.id"}
+   :sql "WITH RECURSIVE sub(id) AS (SELECT id FROM cc WHERE id = $cc UNION ALL SELECT c.id FROM cc c JOIN sub s ON c.parent = s.id) SELECT CAST($cc AS VARCHAR) AS cc, CAST(COALESCE(SUM(cc.booked), 0) AS BIGINT) AS value FROM cc JOIN sub ON cc.id = sub.id"}
   {:id "measure:pending_exposure" :name :pending_exposure :kind :measure :tables ["table:req" "table:emp" "table:cc"]
+   :additivity :semi-additive :unsafe_dims [:cost_centre]
    :doc "Sum of the amounts of pending requests whose requester's cost centre lies in the subtree of a centre."
    :params [:cc] :columns [:cc :value]
    :sql "WITH RECURSIVE sub(id) AS (SELECT id FROM cc WHERE id = $cc UNION ALL SELECT c.id FROM cc c JOIN sub s ON c.parent = s.id) SELECT CAST($cc AS VARCHAR) AS cc, CAST(COALESCE(SUM(r.amount), 0) AS BIGINT) AS value FROM req r JOIN emp e ON e.id = r.requester JOIN sub ON sub.id = e.cc WHERE r.status = 'pending'"}
   {:id "measure:headroom" :name :headroom :kind :measure :tables ["table:cc"]
+   :additivity :non-additive
    :doc "Cap minus booked total. Computed by rule R105 over measure:booked_total; no SQL of its own."
    :derived-by :R105}]
 
@@ -186,14 +193,17 @@
  ;; ------------------------------------------------------------------ rules
  :rules
  [{:id :R104 :kind :strict :owner :finance :class :definition
+   :recorded_at #inst "2026-09-14"
    :doc "The booked total of a cost centre rolls up over its subtree."
    :head [:booked_total ?c ?v]
    :body [[:fetch :booked_total {:cc ?c} {:value ?v}]]}
   {:id :R105 :kind :strict :owner :finance :class :definition
+   :recorded_at #inst "2026-09-14"
    :doc "The headroom of a cost centre is its cap minus its booked total."
    :head [:headroom ?c ?h]
    :body [[:booked_total ?c ?b] [:fetch :cost_centre {:id ?c} {:cap ?k}] [:is ?h [:- ?k ?b]]]}
   {:id :R106 :kind :defeasible :owner :finance :class :material_inference
+   :recorded_at #inst "2026-09-14"
    :doc "A request breaches a cap if its amount plus the booked total of some centre it is charged against (its requester's centre or an ancestor) exceeds that centre's cap."
    :head [:cap_breach ?r]
    :body [[:fetch :request {:id ?r} {:requester ?e :amount ?a}]
@@ -203,32 +213,39 @@
           [:fetch :cost_centre {:id ?c} {:cap ?k}]
           [:> [:+ ?b ?a] ?k]]}
   {:id :R110 :kind :strict :owner :finance :class :definition
+   :recorded_at #inst "2026-09-14"
    :doc "The breaching requests in a subtree are the pending requests raised from it that breach a cap."
    :head [:breach_in ?x ?r]
    :body [[:fetch :request_in_subtree {:root ?x :status "pending"} {:id ?r}] [:cap_breach ?r]]}
   {:id :R112 :kind :strict :owner :finance :class :definition
+   :recorded_at #inst "2026-09-14"
    :doc "A big capital request is a capital request over 50,000."
    :head [:big_capital ?r]
    :body [[:fetch :request {:id ?r :category "capital"} {:amount ?a}] [:> ?a 50000]]}
   {:id :R201 :kind :strict :owner :procurement :class :definition
+   :recorded_at #inst "2026-09-14"
    :doc "A role's approval limit, asked without a date, is the limit on the evaluation date."
    :head [:role_limit ?role ?l]
    :body [[:as_of ?d] [:limit_on ?role ?d ?l]]}
   {:id :R202 :kind :strict :owner :procurement :class :definition
+   :recorded_at #inst "2026-09-14"
    :doc "A role's approval limit on a date is that of the version valid on the date."
    :head [:limit_on ?role ?d ?l]
    :body [[:fetch :role_limit_version {:role ?role} {:limit ?l :valid_from ?f :valid_to ?t}] [:<= ?f ?d] [:<= ?d ?t]]}
   {:id :R203 :kind :strict :owner :procurement :class :definition
+   :recorded_at #inst "2026-09-14"
    :doc "The approval limit that governs a request is the one valid on the date the request was raised, not today's."
    :head [:governing_limit ?r ?role ?l]
    :body [[:fetch :request {:id ?r} {:date ?d}] [:limit_on ?role ?d ?l]]}
   {:id :R204 :kind :strict :owner :procurement :class :definition
+   :recorded_at #inst "2026-09-14"
    :doc "A request's vendor status is the vendor's status on the request date."
    :head [:vendor_status_for ?r ?s]
    :body [[:fetch :request {:id ?r} {:vendor ?v :date ?d}]
           [:fetch :vendor_status {:vendor ?v} {:status ?s :valid_from ?f :valid_to ?t}]
           [:<= ?f ?d] [:<= ?d ?t]]}
   {:id :R301 :kind :defeasible :owner :procurement :class :material_inference
+   :recorded_at #inst "2026-09-14"
    :doc "A request has an approver if someone in the requester's reporting chain has a governing limit of at least the amount."
    :head [:has_approver ?r]
    :body [[:fetch :request {:id ?r} {:requester ?e :amount ?a}]
@@ -236,41 +253,51 @@
           [:governing_limit ?r ?role ?l]
           [:>= ?l ?a]]}
   {:id :R304 :kind :defeasible :owner :finance :class :material_inference
+   :recorded_at #inst "2026-09-14"
    :doc "A request passes the cap check if it breaches no cap."
    :head [:cap_ok ?r]
    :body [[:not [:cap_breach ?r]]]}
   {:id :R305 :kind :defeasible :owner :procurement :class :material_inference
+   :recorded_at #inst "2026-09-14"
    :doc "A request passes the vendor check if its vendor is approved on the request date."
    :head [:vendor_cleared ?r]
    :body [[:vendor_status_for ?r "approved"]]}
   {:id :R306 :kind :defeasible :owner :procurement :class :exception
+   :recorded_at #inst "2026-09-14"
    :doc "Exception: an emergency request passes the vendor check even though its vendor is suspended."
    :head [:vendor_cleared ?r]
    :body [[:fetch :request {:id ?r :emergency true} {}] [:vendor_status_for ?r "suspended"]]}
   {:id :R308 :kind :defeasible :owner :procurement :class :material_inference
+   :recorded_at #inst "2026-09-14"
    :doc "A request is eligible if it has an approver, passes the cap check and passes the vendor check."
    :head [:eligible ?r]
    :body [[:has_approver ?r] [:cap_ok ?r] [:vendor_cleared ?r]]}
   {:id :R309 :kind :defeasible :owner :compliance :class :material_inference
+   :recorded_at #inst "2026-09-14"
    :doc "A request is denied if its requester has a recorded policy violation."
    :head [:denied ?r]
    :body [[:fetch :request {:id ?r} {:requester ?e}] [:fetch :employee {:id ?e :violation true} {}]]}
   {:id :R310 :kind :defeasible :owner :procurement :class :material_inference
+   :recorded_at #inst "2026-09-14"
    :doc "A request is approved if it is eligible and not denied."
    :head [:approved ?r]
    :body [[:eligible ?r] [:not [:denied ?r]]]}
   {:id :R311 :kind :defeasible :owner :procurement :class :entitlement
+   :recorded_at #inst "2026-09-14"
    :doc "A software request under 10,000 is approved automatically, without further checks."
    :head [:auto_approved ?r]
    :body [[:fetch :request {:id ?r :category "software"} {:amount ?a}] [:< ?a 10000]]}
   {:id :R312 :kind :defeasible :owner :procurement :class :entitlement
+   :recorded_at #inst "2026-09-14"
    :doc "An automatically approved request is approved (a second sufficient condition)."
    :head [:approved ?r]
    :body [[:auto_approved ?r]]}
   {:id :R313 :kind :superiority :owner :controller :class :superiority
+   :recorded_at #inst "2026-09-14"
    :doc "Where hr and finance claims disagree on an employee's cost centre, finance prevails."
    :pred :cost_centre_of :order [:finance :hr]}
   {:id :R314 :kind :incompatible :owner :procurement :class :incompatibility
+   :recorded_at #inst "2026-09-14"
    :doc "A denied request is never approved. Declared, not inferred: deriving both is a CONFLICT."
    :head [:approved ?r]
    :body [[:denied ?r]]}]
@@ -279,40 +306,58 @@
  ;; A claim is a defeasible fact about an asset, in force from valid_from to valid_to (inclusive; nil open).
  ;; Superiority between competing claims: explicit, then asserter authority (R313, scoped to a predicate),
  ;; then, for the same asserter, the later asserted_at.
+;; Claims are flat. A claim holds only if every claim in :depends_on holds; claims in :supports never change
+;; its standing beyond a qualifier and appear in `why` only. Each claim carries its own asserter and times.
+;; Three time axes: :asserted_at (when the asserter said it), :valid_from/:valid_to (when it applies),
+;; :recorded_at (when the system recorded it; append-only, audit and replay only, never in a rule body).
  :claims
  [{:id :C1 :about "vendor:bolt" :assertion [:fit_for_use "bolt"]
    :asserted_by :procurement :asserted_at #inst "2026-03-01" :valid_from #inst "2026-01-01" :valid_to #inst "2026-12-31"
+   :recorded_at #inst "2026-09-14"
    :backing "Vendor onboarding file VO-17" :qualifier "presumably"
-   :subclaims [{:id :C1.1 :role :required :assertion [:due_diligence_passed "bolt"]
-                :asserted_by :compliance :asserted_at #inst "2026-02-15" :valid_from #inst "2026-01-01" :valid_to nil
-                :backing "KYC review 2026-02" :qualifier "certainly"}
-               {:id :C1.2 :role :required :assertion [:neg [:sanctioned "bolt"]]
-                :asserted_by :risk :asserted_at #inst "2026-02-20" :valid_from #inst "2026-01-01" :valid_to #inst "2026-12-31"
-                :backing "Sanctions screening run S-0220" :qualifier "certainly"}
-               {:id :C1.3 :role :supporting :assertion [:price_within_benchmark "bolt"]
-                :asserted_by :finance :asserted_at #inst "2026-02-25" :valid_from #inst "2026-01-01" :valid_to nil
-                :backing "Benchmark B-12: within 5%" :qualifier "presumably"}]}
+   :depends_on [:C1.1 :C1.2] :supports [:C1.3]}
+  {:id :C1.1 :about "vendor:bolt" :assertion [:due_diligence_passed "bolt"]
+   :asserted_by :compliance :asserted_at #inst "2026-02-15" :valid_from #inst "2026-01-01" :valid_to nil
+   :recorded_at #inst "2026-09-14"
+   :backing "KYC review 2026-02" :qualifier "certainly"}
+  {:id :C1.2 :about "vendor:bolt" :assertion [:neg [:sanctioned "bolt"]]
+   :asserted_by :risk :asserted_at #inst "2026-02-20" :valid_from #inst "2026-01-01" :valid_to #inst "2026-12-31"
+   :recorded_at #inst "2026-09-14"
+   :backing "Sanctions screening run S-0220" :qualifier "certainly"}
+  {:id :C1.3 :about "vendor:bolt" :assertion [:price_within_benchmark "bolt"]
+   :asserted_by :finance :asserted_at #inst "2026-02-25" :valid_from #inst "2026-01-01" :valid_to nil
+   :recorded_at #inst "2026-09-14"
+   :backing "Benchmark B-12: within 5%" :qualifier "presumably"}
   {:id :C2 :about "vendor:cog" :assertion [:fit_for_use "cog"]
    :asserted_by :procurement :asserted_at #inst "2026-03-01" :valid_from #inst "2026-01-01" :valid_to #inst "2026-12-31"
+   :recorded_at #inst "2026-09-14"
    :backing "Vendor onboarding file VO-21" :qualifier "presumably"
-   :subclaims [{:id :C2.1 :role :required :assertion [:due_diligence_passed "cog"]
-                :asserted_by :compliance :asserted_at #inst "2026-02-15" :valid_from #inst "2026-01-01" :valid_to nil
-                :backing "KYC review 2026-02" :qualifier "certainly"}
-               {:id :C2.2 :role :required :assertion [:neg [:sanctioned "cog"]]
-                :asserted_by :risk :asserted_at #inst "2026-02-20" :valid_from #inst "2026-01-01" :valid_to #inst "2026-12-31"
-                :backing "Sanctions screening run S-0220" :qualifier "certainly"}
-               {:id :C2.3 :role :supporting :assertion [:price_within_benchmark "cog"]
-                :asserted_by :finance :asserted_at #inst "2026-02-25" :valid_from #inst "2026-01-01" :valid_to nil
-                :backing "Benchmark B-12: within 5%" :qualifier "presumably"}]}
+   :depends_on [:C2.1 :C2.2] :supports [:C2.3]}
+  {:id :C2.1 :about "vendor:cog" :assertion [:due_diligence_passed "cog"]
+   :asserted_by :compliance :asserted_at #inst "2026-02-15" :valid_from #inst "2026-01-01" :valid_to nil
+   :recorded_at #inst "2026-09-14"
+   :backing "KYC review 2026-02" :qualifier "certainly"}
+  {:id :C2.2 :about "vendor:cog" :assertion [:neg [:sanctioned "cog"]]
+   :asserted_by :risk :asserted_at #inst "2026-02-20" :valid_from #inst "2026-01-01" :valid_to #inst "2026-12-31"
+   :recorded_at #inst "2026-09-14"
+   :backing "Sanctions screening run S-0220" :qualifier "certainly"}
+  {:id :C2.3 :about "vendor:cog" :assertion [:price_within_benchmark "cog"]
+   :asserted_by :finance :asserted_at #inst "2026-02-25" :valid_from #inst "2026-01-01" :valid_to nil
+   :recorded_at #inst "2026-09-14"
+   :backing "Benchmark B-12: within 5%" :qualifier "presumably"}
   {:id :C7 :about "vendor:cog" :assertion [:neg [:price_within_benchmark "cog"]]
    :asserted_by :finance :asserted_at #inst "2026-05-10" :valid_from #inst "2026-05-10" :valid_to nil
+   :recorded_at #inst "2026-09-14"
    :backing "Benchmark B-19: 12% above" :qualifier "certainly"}
   {:id :C3 :about "emp:e077" :assertion [:cost_centre_of "e077" "cc0078"]
    :asserted_by :hr :asserted_at #inst "2026-07-01" :valid_from #inst "2026-07-01" :valid_to nil
+   :recorded_at #inst "2026-09-14"
    :backing "HR transfer record T-311" :qualifier "certainly"}
   {:id :C4 :about "emp:e077" :assertion [:cost_centre_of "e077" "cc0077"]
    :asserted_by :finance :asserted_at #inst "2026-01-02" :valid_from #inst "2026-01-01" :valid_to nil
+   :recorded_at #inst "2026-09-14"
    :backing "Finance master data load 2026-01" :qualifier "certainly"}
   {:id :C5 :about "emp:e077" :assertion [:cost_centre_of "e077" "cc0078"]
    :asserted_by :finance :asserted_at #inst "2026-08-05" :valid_from #inst "2026-08-01" :valid_to nil
+   :recorded_at #inst "2026-09-14"
    :backing "Finance transfer posting FT-88 (supersedes the January load for e077)" :qualifier "certainly"}]}

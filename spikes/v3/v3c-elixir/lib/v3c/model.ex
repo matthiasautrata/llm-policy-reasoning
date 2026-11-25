@@ -101,7 +101,7 @@ defmodule V3c.Model do
 
   # ---------------------------------------------------------------- records
 
-  defp rule_common, do: %{id: kw(), owner: owner(), doc: str(), class: enum(@classes)}
+  defp rule_common, do: %{id: kw(), owner: owner(), doc: str(), class: enum(@classes), recorded_at: date()}
 
   defp rule(%{kind: :superiority} = r, p),
     do: closed(r, p, Map.merge(rule_common(), %{kind: fn _, _ -> [] end, pred: kw(), order: vec_of(owner())}), %{superior_to() => vec_of(kw())})
@@ -116,15 +116,25 @@ defmodule V3c.Model do
   defp superior_to, do: :"superior-to"
 
   defp claim_core,
-    do: %{id: kw(), assertion: lit(), asserted_by: owner(), asserted_at: date(), valid_from: date()}
+    do: %{id: kw(), assertion: lit(), asserted_by: owner(), asserted_at: date(), valid_from: date(), recorded_at: date()}
 
   defp claim_opt,
     do: %{valid_to: maybe(date()), backing: str(), qualifier: enum(["certainly", "presumably"]), warrant: kw()}
 
-  defp subclaim(c, p), do: closed(c, p, Map.put(claim_core(), :role, enum([:required, :supporting])), claim_opt())
+  # Flat claims (PLAN-v3-integrity §1.1): a parent names its members by id; links_resolve/2 checks the ids.
+  defp claim_id, do: is(&(is_atom(&1) and Regex.match?(~r/^C[0-9]+(\.[0-9]+)?$/, Atom.to_string(&1))), "a claim id")
 
   defp claim(c, p),
-    do: closed(c, p, Map.put(claim_core(), :about, re(~r/^[a-z]+:[A-Za-z0-9_\/]+$/)), Map.put(claim_opt(), :subclaims, vec_of(&subclaim/2)))
+    do:
+      closed(c, p, Map.put(claim_core(), :about, re(~r/^[a-z]+:[A-Za-z0-9_\/]+$/)),
+        Map.merge(claim_opt(), %{depends_on: vec_of(claim_id()), supports: vec_of(claim_id())}))
+
+  defp links_resolve(s, p) do
+    cs = if is_map(s) and is_list(s[:claims]), do: Enum.filter(s.claims, &is_map/1), else: []
+    ids = MapSet.new(cs, &Map.get(&1, :id))
+    for c <- cs, k <- [:depends_on, :supports], l = Map.get(c, k), is_list(l), x <- l, not MapSet.member?(ids, x),
+      do: {p ++ [:claims, Map.get(c, :id), k], "names unknown claim #{inspect(x)}"}
+  end
 
   defp record(%{kind: _} = r, p), do: rule(r, p)
   defp record(%{assertion: _} = c, p), do: claim(c, p)
@@ -141,8 +151,12 @@ defmodule V3c.Model do
   defp concept(c, p) do
     closed(c, p, %{id: re(~r/^(measure|dim|entity|hier):[a-z_]+$/), name: kw(), kind: enum(~w(entity dimension hierarchy measure)a),
         tables: vec_of(re(~r/^table:/)), doc: str()},
-      %{columns: vec_of(kw()), params: vec_of(kw()), sql: str(), "derived-by": kw()}) ++
-      check(not is_map(c) or Map.has_key?(c, :sql) or Map.has_key?(c, :"derived-by"), p, "a concept has :sql or :derived-by")
+      %{columns: vec_of(kw()), params: vec_of(kw()), sql: str(), "derived-by": kw(),
+        additivity: enum(~w(additive semi-additive non-additive unknown)a), unsafe_dims: vec_of(kw())}) ++
+      check(not is_map(c) or Map.has_key?(c, :sql) or Map.has_key?(c, :"derived-by"), p, "a concept has :sql or :derived-by") ++
+      check(not is_map(c) or c[:kind] != :measure or Map.has_key?(c, :additivity), p, "a measure declares :additivity") ++
+      check(not is_map(c) or c[:additivity] != :"semi-additive" or c[:unsafe_dims] not in [nil, []], p,
+        "a semi-additive measure names its :unsafe_dims")
   end
 
   defp term_rec(t, p),
@@ -171,10 +185,10 @@ defmodule V3c.Model do
         functional: fn m, q -> if is_map(m), do: Enum.flat_map(m, fn {k, v} -> kw().(k, q) ++ check(is_integer(v) and v > 0, q ++ [k], "a positive integer") end), else: [{q, "a map"}] end,
         rules: vec_of(&rule/2),
         claims: vec_of(&claim/2)
-      }, %{})
+      }, %{}) ++ links_resolve(s, p)
   end
 
-  # ---------------------------------------------------------------- negative tests (the same 12 as V3a and V3b)
+  # ---------------------------------------------------------------- negative tests (the same 15 as V3a and V3b)
 
   defp upd(s, path, f), do: update_in(s, Enum.map(path, &acc/1), f)
   defp acc(i) when is_integer(i), do: Access.at(i)
@@ -190,11 +204,16 @@ defmodule V3c.Model do
       {"comparison with three arguments", &upd(&1, [:rules, 1, :body], fn b -> b ++ [[:<, {:var, "?x"}, 1, 2]] end)},
       {"bad date in a claim", &upd(&1, [:claims, 0, :asserted_at], fn _ -> "2026-3-1" end)},
       {"unknown key on a claim (closed map)", &upd(&1, [:claims, 0], fn c -> Map.put(c, :confidence, 0.9) end)},
-      {"sub-claim role not required/supporting", &upd(&1, [:claims, 0, :subclaims, 0, :role], fn _ -> :optional end)},
+      {"depends_on member not a claim id", &upd(&1, [:claims, 0], fn c -> Map.put(c, :depends_on, [:R101]) end)},
       {"superiority order with unknown owner",
-       &upd(&1, [:rules], fn rs -> rs ++ [%{id: :R999, kind: :superiority, owner: :controller, class: :superiority, doc: "x", pred: :p, order: [:hr, :sales]}] end)},
+       &upd(&1, [:rules], fn rs -> rs ++ [%{id: :R999, kind: :superiority, owner: :controller, class: :superiority, doc: "x", pred: :p, order: [:hr, :sales], recorded_at: hd(rs)[:recorded_at]}] end)},
       {"rule kind unknown", &upd(&1, [:rules, 0, :kind], fn _ -> :presumption end)},
-      {"negated literal wrapping a non-literal", &upd(&1, [:rules, 0, :head], fn _ -> [:neg, "x"] end)}
+      {"negated literal wrapping a non-literal", &upd(&1, [:rules, 0, :head], fn _ -> [:neg, "x"] end)},
+      # PLAN-v3-integrity §1.5
+      {"nested :subclaims (claims are flat)", fn s -> upd(s, [:claims, 0], &Map.put(&1, :subclaims, [Enum.at(s.claims, 1)])) end},
+      {"measure without :additivity",
+       &upd(&1, [:concepts], fn cs -> Enum.map(cs, fn c -> if c.kind == :measure, do: Map.delete(c, :additivity), else: c end) end)},
+      {"dangling depends_on id", &upd(&1, [:claims, 0, :depends_on], fn l -> l ++ [:"C9.9"] end)}
     ]
   end
 end

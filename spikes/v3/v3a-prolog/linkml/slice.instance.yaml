@@ -316,11 +316,14 @@ concepts:
   kind: measure
   tables:
   - table:cc
+  additivity: semi-additive
+  unsafe_dims:
+  - cost_centre
   doc: Sum of the spend booked directly on every cost centre in the subtree of a centre (zero where nothing is booked).
   params:
   - cc
   sql: WITH RECURSIVE sub(id) AS (SELECT id FROM cc WHERE id = $cc UNION ALL SELECT c.id FROM cc c JOIN sub s ON c.parent
-    = s.id) SELECT CAST($cc AS VARCHAR) AS cc, CAST(COALESCE(SUM(cc.booked), 0) AS INTEGER) AS value FROM cc JOIN sub ON cc.id
+    = s.id) SELECT CAST($cc AS VARCHAR) AS cc, CAST(COALESCE(SUM(cc.booked), 0) AS BIGINT) AS value FROM cc JOIN sub ON cc.id
     = sub.id
   concept_name: booked_total
   columns_out:
@@ -332,12 +335,15 @@ concepts:
   - table:req
   - table:emp
   - table:cc
+  additivity: semi-additive
+  unsafe_dims:
+  - cost_centre
   doc: Sum of the amounts of pending requests whose requester's cost centre lies in the subtree of a centre.
   params:
   - cc
   sql: WITH RECURSIVE sub(id) AS (SELECT id FROM cc WHERE id = $cc UNION ALL SELECT c.id FROM cc c JOIN sub s ON c.parent
-    = s.id) SELECT CAST($cc AS VARCHAR) AS cc, CAST(COALESCE(SUM(r.amount), 0) AS INTEGER) AS value FROM req r JOIN emp e
-    ON e.id = r.requester JOIN sub ON sub.id = e.cc WHERE r.status = 'pending'
+    = s.id) SELECT CAST($cc AS VARCHAR) AS cc, CAST(COALESCE(SUM(r.amount), 0) AS BIGINT) AS value FROM req r JOIN emp e ON
+    e.id = r.requester JOIN sub ON sub.id = e.cc WHERE r.status = 'pending'
   concept_name: pending_exposure
   columns_out:
   - cc
@@ -346,6 +352,7 @@ concepts:
   kind: measure
   tables:
   - table:cc
+  additivity: non-additive
   doc: Cap minus booked total. Computed by rule R105 over measure:booked_total; no SQL of its own.
   derived_by: R105
   concept_name: headroom
@@ -495,6 +502,7 @@ rules:
   kind: strict
   owner: finance
   rule_class: definition
+  recorded_at: '2026-09-14'
   doc: The booked total of a cost centre rolls up over its subtree.
   head:
     type: Derived
@@ -517,6 +525,7 @@ rules:
   kind: strict
   owner: finance
   rule_class: definition
+  recorded_at: '2026-09-14'
   doc: The headroom of a cost centre is its cap minus its booked total.
   head:
     type: Derived
@@ -559,6 +568,7 @@ rules:
   kind: defeasible
   owner: finance
   rule_class: material_inference
+  recorded_at: '2026-09-14'
   doc: A request breaches a cap if its amount plus the booked total of some centre it is charged against (its requester's
     centre or an ancestor) exceeds that centre's cap.
   head:
@@ -626,6 +636,7 @@ rules:
   kind: strict
   owner: finance
   rule_class: definition
+  recorded_at: '2026-09-14'
   doc: The breaching requests in a subtree are the pending requests raised from it that breach a cap.
   head:
     type: Derived
@@ -656,6 +667,7 @@ rules:
   kind: strict
   owner: finance
   rule_class: definition
+  recorded_at: '2026-09-14'
   doc: A big capital request is a capital request over 50,000.
   head:
     type: Derived
@@ -687,6 +699,7 @@ rules:
   kind: strict
   owner: procurement
   rule_class: definition
+  recorded_at: '2026-09-14'
   doc: A role's approval limit, asked without a date, is the limit on the evaluation date.
   head:
     type: Derived
@@ -714,6 +727,7 @@ rules:
   kind: strict
   owner: procurement
   rule_class: definition
+  recorded_at: '2026-09-14'
   doc: A role's approval limit on a date is that of the version valid on the date.
   head:
     type: Derived
@@ -756,6 +770,7 @@ rules:
   kind: strict
   owner: procurement
   rule_class: definition
+  recorded_at: '2026-09-14'
   doc: The approval limit that governs a request is the one valid on the date the request was raised, not today's.
   head:
     type: Derived
@@ -789,6 +804,7 @@ rules:
   kind: strict
   owner: procurement
   rule_class: definition
+  recorded_at: '2026-09-14'
   doc: A request's vendor status is the vendor's status on the request date.
   head:
     type: Derived
@@ -838,6 +854,7 @@ rules:
   kind: defeasible
   owner: procurement
   rule_class: material_inference
+  recorded_at: '2026-09-14'
   doc: A request has an approver if someone in the requester's reporting chain has a governing limit of at least the amount.
   head:
     type: Derived
@@ -884,6 +901,7 @@ rules:
   kind: defeasible
   owner: finance
   rule_class: material_inference
+  recorded_at: '2026-09-14'
   doc: A request passes the cap check if it breaches no cap.
   head:
     type: Derived
@@ -903,6 +921,7 @@ rules:
   kind: defeasible
   owner: procurement
   rule_class: material_inference
+  recorded_at: '2026-09-14'
   doc: A request passes the vendor check if its vendor is approved on the request date.
   head:
     type: Derived
@@ -922,6 +941,7 @@ rules:
   kind: defeasible
   owner: procurement
   rule_class: exception
+  recorded_at: '2026-09-14'
   doc: 'Exception: an emergency request passes the vendor check even though its vendor is suspended.'
   head:
     type: Derived
@@ -951,6 +971,7 @@ rules:
   kind: defeasible
   owner: procurement
   rule_class: material_inference
+  recorded_at: '2026-09-14'
   doc: A request is eligible if it has an approver, passes the cap check and passes the vendor check.
   head:
     type: Derived
@@ -978,6 +999,7 @@ rules:
   kind: defeasible
   owner: compliance
   rule_class: material_inference
+  recorded_at: '2026-09-14'
   doc: A request is denied if its requester has a recorded policy violation.
   head:
     type: Derived
@@ -1008,6 +1030,7 @@ rules:
   kind: defeasible
   owner: procurement
   rule_class: material_inference
+  recorded_at: '2026-09-14'
   doc: A request is approved if it is eligible and not denied.
   head:
     type: Derived
@@ -1032,6 +1055,7 @@ rules:
   kind: defeasible
   owner: procurement
   rule_class: entitlement
+  recorded_at: '2026-09-14'
   doc: A software request under 10,000 is approved automatically, without further checks.
   head:
     type: Derived
@@ -1063,6 +1087,7 @@ rules:
   kind: defeasible
   owner: procurement
   rule_class: entitlement
+  recorded_at: '2026-09-14'
   doc: An automatically approved request is approved (a second sufficient condition).
   head:
     type: Derived
@@ -1080,6 +1105,7 @@ rules:
   kind: superiority
   owner: controller
   rule_class: superiority
+  recorded_at: '2026-09-14'
   doc: Where hr and finance claims disagree on an employee's cost centre, finance prevails.
   pred: cost_centre_of
   order:
@@ -1089,6 +1115,7 @@ rules:
   kind: incompatible
   owner: procurement
   rule_class: incompatibility
+  recorded_at: '2026-09-14'
   doc: 'A denied request is never approved. Declared, not inferred: deriving both is a CONFLICT.'
   head:
     type: Derived
@@ -1106,6 +1133,7 @@ rules:
   kind: defeater
   owner: procurement
   rule_class: exception
+  recorded_at: '2026-09-15'
   doc: 'Exception to the exception: the emergency waiver (R306) does not apply to a big capital request.'
   head:
     type: Neg
@@ -1153,51 +1181,59 @@ claims:
   asserted_at: '2026-03-01'
   valid_from: '2026-01-01'
   valid_to: '2026-12-31'
+  recorded_at: '2026-09-14'
   backing: Vendor onboarding file VO-17
   qualifier: presumably
-  subclaims:
-  - id: C1.1
-    role: required
-    assertion:
+  depends_on:
+  - C1.1
+  - C1.2
+  supports:
+  - C1.3
+- id: C1.1
+  about: vendor:bolt
+  assertion:
+    type: Derived
+    pred: due_diligence_passed
+    args:
+    - type: Str
+      value: bolt
+  asserted_by: compliance
+  asserted_at: '2026-02-15'
+  valid_from: '2026-01-01'
+  recorded_at: '2026-09-14'
+  backing: KYC review 2026-02
+  qualifier: certainly
+- id: C1.2
+  about: vendor:bolt
+  assertion:
+    type: Neg
+    literal:
       type: Derived
-      pred: due_diligence_passed
+      pred: sanctioned
       args:
       - type: Str
         value: bolt
-    asserted_by: compliance
-    asserted_at: '2026-02-15'
-    valid_from: '2026-01-01'
-    backing: KYC review 2026-02
-    qualifier: certainly
-  - id: C1.2
-    role: required
-    assertion:
-      type: Neg
-      literal:
-        type: Derived
-        pred: sanctioned
-        args:
-        - type: Str
-          value: bolt
-    asserted_by: risk
-    asserted_at: '2026-02-20'
-    valid_from: '2026-01-01'
-    valid_to: '2026-12-31'
-    backing: Sanctions screening run S-0220
-    qualifier: certainly
-  - id: C1.3
-    role: supporting
-    assertion:
-      type: Derived
-      pred: price_within_benchmark
-      args:
-      - type: Str
-        value: bolt
-    asserted_by: finance
-    asserted_at: '2026-02-25'
-    valid_from: '2026-01-01'
-    backing: 'Benchmark B-12: within 5%'
-    qualifier: presumably
+  asserted_by: risk
+  asserted_at: '2026-02-20'
+  valid_from: '2026-01-01'
+  valid_to: '2026-12-31'
+  recorded_at: '2026-09-14'
+  backing: Sanctions screening run S-0220
+  qualifier: certainly
+- id: C1.3
+  about: vendor:bolt
+  assertion:
+    type: Derived
+    pred: price_within_benchmark
+    args:
+    - type: Str
+      value: bolt
+  asserted_by: finance
+  asserted_at: '2026-02-25'
+  valid_from: '2026-01-01'
+  recorded_at: '2026-09-14'
+  backing: 'Benchmark B-12: within 5%'
+  qualifier: presumably
 - id: C2
   about: vendor:cog
   assertion:
@@ -1210,51 +1246,59 @@ claims:
   asserted_at: '2026-03-01'
   valid_from: '2026-01-01'
   valid_to: '2026-12-31'
+  recorded_at: '2026-09-14'
   backing: Vendor onboarding file VO-21
   qualifier: presumably
-  subclaims:
-  - id: C2.1
-    role: required
-    assertion:
+  depends_on:
+  - C2.1
+  - C2.2
+  supports:
+  - C2.3
+- id: C2.1
+  about: vendor:cog
+  assertion:
+    type: Derived
+    pred: due_diligence_passed
+    args:
+    - type: Str
+      value: cog
+  asserted_by: compliance
+  asserted_at: '2026-02-15'
+  valid_from: '2026-01-01'
+  recorded_at: '2026-09-14'
+  backing: KYC review 2026-02
+  qualifier: certainly
+- id: C2.2
+  about: vendor:cog
+  assertion:
+    type: Neg
+    literal:
       type: Derived
-      pred: due_diligence_passed
+      pred: sanctioned
       args:
       - type: Str
         value: cog
-    asserted_by: compliance
-    asserted_at: '2026-02-15'
-    valid_from: '2026-01-01'
-    backing: KYC review 2026-02
-    qualifier: certainly
-  - id: C2.2
-    role: required
-    assertion:
-      type: Neg
-      literal:
-        type: Derived
-        pred: sanctioned
-        args:
-        - type: Str
-          value: cog
-    asserted_by: risk
-    asserted_at: '2026-02-20'
-    valid_from: '2026-01-01'
-    valid_to: '2026-12-31'
-    backing: Sanctions screening run S-0220
-    qualifier: certainly
-  - id: C2.3
-    role: supporting
-    assertion:
-      type: Derived
-      pred: price_within_benchmark
-      args:
-      - type: Str
-        value: cog
-    asserted_by: finance
-    asserted_at: '2026-02-25'
-    valid_from: '2026-01-01'
-    backing: 'Benchmark B-12: within 5%'
-    qualifier: presumably
+  asserted_by: risk
+  asserted_at: '2026-02-20'
+  valid_from: '2026-01-01'
+  valid_to: '2026-12-31'
+  recorded_at: '2026-09-14'
+  backing: Sanctions screening run S-0220
+  qualifier: certainly
+- id: C2.3
+  about: vendor:cog
+  assertion:
+    type: Derived
+    pred: price_within_benchmark
+    args:
+    - type: Str
+      value: cog
+  asserted_by: finance
+  asserted_at: '2026-02-25'
+  valid_from: '2026-01-01'
+  recorded_at: '2026-09-14'
+  backing: 'Benchmark B-12: within 5%'
+  qualifier: presumably
 - id: C7
   about: vendor:cog
   assertion:
@@ -1268,6 +1312,7 @@ claims:
   asserted_by: finance
   asserted_at: '2026-05-10'
   valid_from: '2026-05-10'
+  recorded_at: '2026-09-14'
   backing: 'Benchmark B-19: 12% above'
   qualifier: certainly
 - id: C3
@@ -1283,6 +1328,7 @@ claims:
   asserted_by: hr
   asserted_at: '2026-07-01'
   valid_from: '2026-07-01'
+  recorded_at: '2026-09-14'
   backing: HR transfer record T-311
   qualifier: certainly
 - id: C4
@@ -1298,6 +1344,7 @@ claims:
   asserted_by: finance
   asserted_at: '2026-01-02'
   valid_from: '2026-01-01'
+  recorded_at: '2026-09-14'
   backing: Finance master data load 2026-01
   qualifier: certainly
 - id: C5
@@ -1313,6 +1360,7 @@ claims:
   asserted_by: finance
   asserted_at: '2026-08-05'
   valid_from: '2026-08-01'
+  recorded_at: '2026-09-14'
   backing: Finance transfer posting FT-88 (supersedes the January load for e077)
   qualifier: certainly
 - id: C6
@@ -1326,6 +1374,7 @@ claims:
   asserted_by: risk
   asserted_at: '2026-06-03'
   valid_from: '2026-06-01'
+  recorded_at: '2026-09-15'
   backing: Sanctions list update 2026-06 (supersedes screening S-0220 for bolt)
   qualifier: certainly
 version: 1

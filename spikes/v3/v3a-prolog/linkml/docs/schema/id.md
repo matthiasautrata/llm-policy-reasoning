@@ -28,11 +28,9 @@ URI: [slice:id](https://example.org/llm-policy-reasoning/spike-v3/slice/id)
 | [CodeList](CodeList.md) | The admissible codes of an enumerated column |  no  |
 | [Taxonomy](Taxonomy.md) | A two-level grouping over a code list |  no  |
 | [Rule](Rule.md) | A rule envelope |  yes  |
-| [ClaimCore](ClaimCore.md) | A Toulmin claim: an assertion about an asset by an asserter, in force from va... |  yes  |
+| [Claim](Claim.md) | A Toulmin claim: an assertion about an asset by an asserter, in force from va... |  yes  |
 | [Measure](Measure.md) | A concept whose kind is measure (an aggregate over the detail data) |  no  |
 | [Dimension](Dimension.md) | A concept whose kind is dimension |  no  |
-| [Claim](Claim.md) |  |  no  |
-| [SubClaim](SubClaim.md) | One level of nesting |  no  |
 
 
 
@@ -46,7 +44,7 @@ URI: [slice:id](https://example.org/llm-policy-reasoning/spike-v3/slice/id)
 | Property | Value |
 | --- | --- |
 | Range | [String](String.md) |
-| Domain Of | [Asset](Asset.md), [Table](Table.md), [Column](Column.md), [Concept](Concept.md), [Term](Term.md), [CodeList](CodeList.md), [Taxonomy](Taxonomy.md), [Rule](Rule.md), [ClaimCore](ClaimCore.md) |
+| Domain Of | [Asset](Asset.md), [Table](Table.md), [Column](Column.md), [Concept](Concept.md), [Term](Term.md), [CodeList](CodeList.md), [Taxonomy](Taxonomy.md), [Rule](Rule.md), [Claim](Claim.md) |
 ### Cardinality and Requirements
 
 | Property | Value |
@@ -112,7 +110,7 @@ domain_of:
 - CodeList
 - Taxonomy
 - Rule
-- ClaimCore
+- Claim
 range: string
 required: true
 

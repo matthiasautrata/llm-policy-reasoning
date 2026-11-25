@@ -63,16 +63,27 @@
 
 (defn- inst [s] (java.util.Date/from (java.time.Instant/parse (str s "T00:00:00Z"))))
 
-(defn- claim-ents [m parent about src]
-  (let [id (rid (:id m))
-        e (cond-> (ent :claim id (dissoc m :subclaims) src)
-            true (assoc :claim/pred (pred-of (:assertion m)) :claim/about about
-                        :claim/asserted-by (:asserted_by m) :claim/asserted-at (:asserted_at m)
-                        :claim/valid-from (:valid_from m))
-            (:valid_to m) (assoc :claim/valid-to (:valid_to m))
-            parent (assoc :claim/parent parent)
-            (:role m) (assoc :claim/role (:role m)))]
-    (into [e] (mapcat #(claim-ents % id about src) (:subclaims m)))))
+(defn- claim-ents
+  "Claims are flat (PLAN-v3-integrity §1.1): one entity per claim, with its own asserter, times and :about.
+  Links (:depends_on, :supports) stay in the record's EDN; links/1 reads them. :claim/parent and
+  :claim/role are no longer written (probe.clj's PLAN-v3 queries used them)."
+  [m src]
+  [(cond-> (ent :claim (rid (:id m)) m src)
+     true (assoc :claim/pred (pred-of (:assertion m)) :claim/about (:about m)
+                 :claim/asserted-by (:asserted_by m) :claim/asserted-at (:asserted_at m)
+                 :claim/valid-from (:valid_from m))
+     (:valid_to m) (assoc :claim/valid-to (:valid_to m)))])
+
+(defn links
+  "claim records -> {member-id [parent-id role]}; role \"required\" for :depends_on, \"supporting\" for :supports."
+  [claims]
+  (into {} (for [c claims [k role] [[:depends_on "required"] [:supports "supporting"]] x (k c)]
+             [(rid x) [(rid (:id c)) role]])))
+
+(defn link-order
+  "claim record -> member ids in output order: depends_on, then supports."
+  [c]
+  (mapv rid (concat (:depends_on c) (:supports c))))
 
 (defn- rule-ent [m src]
   (cond-> (ent :rule (rid (:id m)) m src)
@@ -86,7 +97,7 @@
   (let [{claims true rules false} (group-by #(contains? % :assertion) recs)]
     (when (seq rules) (d/transact conn (mapv #(rule-ent % src) rules)))
     (doseq [c claims]
-      (d/transact conn {:tx-data (claim-ents c nil (:about c) src)
+      (d/transact conn {:tx-data (claim-ents c src)
                         :tx-meta {:tx/asserted-by (:asserted_by c) :db/txInstant (inst (:asserted_at c))}}))
     (mapv (comp rid :id) recs)))
 
@@ -114,14 +125,15 @@
                          :where [?e :rec/seq ?seq] [?e :rec/type ?type] [?e :rec/edn ?edn] [?e :rec/source ?src]] db)
                   (sort-by first)
                   (map (fn [[_ t e src]] [t (assoc (read-edn e) ::source src)])))
-        parent (into {} (d/q '[:find ?id ?p :where [?e :claim/parent ?p] [?e :rec/id ?id]] db))
         about (into {} (d/q '[:find ?id ?a :where [?e :claim/about ?a] [?e :rec/id ?id]] db))
         by-type (group-by first recs)
         slice (second (first (by-type :slice)))
         rules (vec (for [[_ m] (by-type :rule)]
                      (assoc m :id (rid (:id m)) :superior-to (set (map rid (:superior-to m))))))
-        claims (vec (for [[_ m] (by-type :claim) :let [id (rid (:id m))]]
-                      (assoc m :id id :parent (parent id) :about (about id) :role (:role m) :valid_to (:valid_to m))))]
+        L (links (map second (by-type :claim)))
+        claims (vec (for [[_ m] (by-type :claim) :let [id (rid (:id m)) [p role] (L id)]]
+                      (assoc m :id id :parent p :about (about id) :role role :members (link-order m)
+                             :valid_to (:valid_to m))))]
     {:today (:today slice) :functional (:functional slice)
      :rules rules :claims claims
      :rule (into {} (map (juxt :id identity) rules))
@@ -148,9 +160,10 @@
 (defn claims-about
   "Top-level claim ids about an asset, in authoring order."
   [db asset]
-  (->> (d/q '[:find ?seq ?id :in $ ?a
-              :where [?e :claim/about ?a] [?e :rec/id ?id] [?e :rec/seq ?seq] (not [?e :claim/parent _])] db asset)
-       sort (mapv second)))
+  (let [L (links (map read-edn (d/q '[:find [?edn ...] :where [?e :rec/type :claim] [?e :rec/edn ?edn]] db)))]
+    (->> (d/q '[:find ?seq ?id :in $ ?a
+                :where [?e :claim/about ?a] [?e :rec/id ?id] [?e :rec/seq ?seq]] db asset)
+         sort (map second) (remove L) vec)))
 
 ;; ------------------------------------------------------------------ hypotheses
 

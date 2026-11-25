@@ -89,6 +89,8 @@ URI: [slice:Rule](https://example.org/llm-policy-reasoning/spike-v3/slice/Rule)
         
       Rule : pred
         
+      Rule : recorded_at
+        
       Rule : rule_class
         
           
@@ -126,6 +128,7 @@ URI: [slice:Rule](https://example.org/llm-policy-reasoning/spike-v3/slice/Rule)
 | [superior_to](superior_to.md) | * <br/> [String](String.md) |  | direct |
 | [pred](pred.md) | 0..1 <br/> [String](String.md) |  | direct |
 | [order](order.md) | * <br/> [Owner](Owner.md) | Asserter authority, strongest first | direct |
+| [recorded_at](recorded_at.md) | 1 <br/> [date](date.md) | When the record entered the store (provenance; no rule body reads it) | direct |
 
 
 
@@ -220,6 +223,7 @@ slots:
 - superior_to
 - pred
 - order
+- recorded_at
 slot_usage:
   id:
     name: id
@@ -230,6 +234,9 @@ slot_usage:
     required: true
   owner:
     name: owner
+    required: true
+  recorded_at:
+    name: recorded_at
     required: true
 rules:
 - preconditions:
@@ -283,6 +290,9 @@ slot_usage:
   owner:
     name: owner
     required: true
+  recorded_at:
+    name: recorded_at
+    required: true
 attributes:
   id:
     name: id
@@ -299,7 +309,7 @@ attributes:
     - CodeList
     - Taxonomy
     - Rule
-    - ClaimCore
+    - Claim
     range: string
     required: true
     pattern: ^R[0-9]+$
@@ -412,6 +422,18 @@ attributes:
     - Rule
     range: Owner
     multivalued: true
+  recorded_at:
+    name: recorded_at
+    description: When the record entered the store (provenance; no rule body reads
+      it).
+    from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
+    rank: 1000
+    owner: Rule
+    domain_of:
+    - Rule
+    - Claim
+    range: date
+    required: true
 rules:
 - preconditions:
     slot_conditions:

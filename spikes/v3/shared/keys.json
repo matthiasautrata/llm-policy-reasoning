@@ -563,6 +563,11 @@
    "core": [],
    "row_count": 1,
    "value": 3830473000
+  },
+  "Q25": {
+   "core": [],
+   "row_count": 1,
+   "value": 153646000
   }
  },
  "changed": [
@@ -1333,6 +1338,11 @@
    "core": [],
    "row_count": 1,
    "value": 3830473000
+  },
+  "Q25": {
+   "core": [],
+   "row_count": 1,
+   "value": 153646000
   }
  }
 }

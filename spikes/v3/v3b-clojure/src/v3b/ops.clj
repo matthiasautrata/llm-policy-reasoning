@@ -112,14 +112,14 @@
         {:standing "holds_with_qualifier" :defeater nil :qualifier q :sides nil}))))
 
 (defn standing [c cl]
-  (let [subs (vec (for [s (get-in c [:ix :claims]) :when (= (:id cl) (:parent s))] (standing c s)))
+  (let [subs (vec (for [sid (:members cl) :let [s (get-in c [:ix :claim sid])] :when s] (standing c s)))
         st (if-not (e/in-force? cl (:d c))
              {:standing "not_in_force" :defeater nil :qualifier [] :sides nil}
              (let [st0 (own-standing (e/evaluate c (:assertion cl)))]
                (if (= "holds" (:standing st0)) (sub-standing subs) st0)))]
     (merge {:id (:id cl) :about (:about cl) :assertion (:assertion cl) :asserted_by (:asserted_by cl)
             :asserted_at (:asserted_at cl) :valid_from (:valid_from cl) :valid_to (:valid_to cl)
-            :backing (:backing cl) :modal (:qualifier cl) :role (some-> (:role cl) name)}
+            :backing (:backing cl) :modal (:qualifier cl) :role (:role cl)}
            st {:subclaims subs})))
 
 ;; ------------------------------------------------------------------ vocabulary, metadata

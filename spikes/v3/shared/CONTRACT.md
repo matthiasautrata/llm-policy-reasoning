@@ -42,6 +42,11 @@ Claim standing: `holds`, `holds_with_qualifier` (qualifier lists the defeated *s
 `rebutted` (defeater names the winning claim, possibly via a required sub-claim), `contested`
 (no superiority either way; sides), `not_in_force`.
 
+Claims are stored flat and linked by id (PLAN-v3-integrity §1.1). In the `claims` output, a claim's
+`subclaims` are its active linked members: `:depends_on` members first (`role` `"required"`), then
+`:supports` members (`role` `"supporting"`). The top-level list (and `describe`) holds the claims about the
+asset that no active claim links to; withholding a parent therefore lists its members at top level.
+
 ## Why trees
 
 Goals are JSON arrays, predicate first: `["approved", "r000005"]`; `["neg", [...]]` for a complement.

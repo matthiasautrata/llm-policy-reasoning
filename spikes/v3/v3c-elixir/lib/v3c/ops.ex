@@ -152,7 +152,7 @@ defmodule V3c.Ops do
   end
 
   def standing(c, cl) do
-    subs = for s <- c.ix.claims, s.parent == cl.id, do: standing(c, s)
+    subs = for sid <- cl.members, s = c.ix.claim[sid], do: standing(c, s)
 
     st =
       if E.in_force?(cl, c.d) do
@@ -164,7 +164,7 @@ defmodule V3c.Ops do
 
     %{id: cl.id, about: cl.about, assertion: cl.assertion, asserted_by: cl.asserted_by, asserted_at: cl.asserted_at,
       valid_from: cl.valid_from, valid_to: cl[:valid_to], backing: cl[:backing], modal: cl[:qualifier],
-      role: cl[:role] && Atom.to_string(cl.role)}
+      role: cl[:role]}
     |> Map.merge(st)
     |> Map.put(:subclaims, subs)
   end

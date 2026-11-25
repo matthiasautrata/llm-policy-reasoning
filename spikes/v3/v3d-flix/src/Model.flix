@@ -66,15 +66,16 @@ pub mod Model {
 
     pub type alias Rule = {id = String, owner = Owner, cls = Class, doc = String, superiorTo = List[String], form = Form}
 
-    /// A claim, sub-claims flattened in authoring order (parent first); `about` is the top claim's.
-    pub type alias Claim = {id = String, about = String, parent = Option[String], role = Option[Role], assertion = Goal,
+    /// A claim (flat): it holds only if every claim in `dependsOn` holds; failing `supports` give a qualifier.
+    pub type alias Claim = {id = String, about = String, dependsOn = List[String], supports = List[String], assertion = Goal,
                             assertedBy = Owner, assertedAt = String, validFrom = String, validTo = Option[String],
                             backing = Option[String], modal = Option[String], warrant = Option[String]}
 
     pub enum Source with Eq, ToString { case Sql(String), case DerivedBy(String) }
 
     pub type alias Concept = {id = String, name = String, kind = String, tables = List[String], doc = String,
-                              columns = List[String], params = List[String], source = Source}
+                              columns = List[String], params = List[String], source = Source,
+                              additivity = Option[String], unsafeDims = List[String]}
 
     pub type alias TermRec = {id = String, label = String, synonyms = List[String], owner = Owner, definition = String,
                               concept = Option[String], see = List[String]}
@@ -153,9 +154,6 @@ pub mod Model {
     def kind(path: String, e: Edn): R[Kind] =
         oneOf(path, ("strict", Kind.Strict) :: ("defeasible", Kind.Defeasible) :: ("defeater", Kind.Defeater) ::
                     ("incompatible", Kind.Incompatible) :: Nil, e)
-
-    def role(path: String, e: Edn): R[Role] =
-        oneOf(path, ("required", Role.Required) :: ("supporting", Role.Supporting) :: Nil, e)
 
     def enumKw(xs: List[String], path: String, e: Edn): R[String] = oneOf(path, List.map(x -> (x, x), xs), e)
 
@@ -278,14 +276,16 @@ pub mod Model {
             case Err(_) => false
         };
         if (isSup)
-            forM (m <- closed(path, "id" :: "kind" :: "owner" :: "doc" :: "class" :: "pred" :: "order" :: "superior-to" :: Nil, e);
+            forM (m <- closed(path, "id" :: "kind" :: "owner" :: "doc" :: "class" :: "pred" :: "order" :: "superior-to" :: "recorded_at" :: Nil, e);
+                  _ <- req(path, "recorded_at", date, m);
                   id <- req(path, "id", kw, m); o <- req(path, "owner", owner, m); d <- req(path, "doc", str, m);
                   c <- req(path, "class", cls, m); p <- req(path, "pred", kw, m);
                   ord <- req(path, "order", (q, x) -> vec(q, owner, x), m);
                   sup <- optList(path, "superior-to", kw, m))
                 yield {id = id, owner = o, cls = c, doc = d, superiorTo = sup, form = Form.Order(p, ord)}
         else
-            forM (m <- closed(path, "id" :: "kind" :: "owner" :: "doc" :: "class" :: "head" :: "body" :: "superior-to" :: Nil, e);
+            forM (m <- closed(path, "id" :: "kind" :: "owner" :: "doc" :: "class" :: "head" :: "body" :: "superior-to" :: "recorded_at" :: Nil, e);
+                  _ <- req(path, "recorded_at", date, m);
                   id <- req(path, "id", kw, m); o <- req(path, "owner", owner, m); d <- req(path, "doc", str, m);
                   c <- req(path, "class", cls, m); k <- req(path, "kind", kind, m);
                   h <- req(path, "head", goal, m);
@@ -297,22 +297,19 @@ pub mod Model {
     def claimCore(): List[String] =
         "id" :: "assertion" :: "asserted_by" :: "asserted_at" :: "valid_from" :: "valid_to" :: "backing" :: "qualifier" :: "warrant" :: Nil
 
-    /// a claim (top: about, subclaims; sub: role) -> itself and its sub-claims, flattened
-    def claim(path: String, about0: Option[String], parent: Option[String], e: Edn): R[List[Claim]] = {
-        let keys = match parent {
-            case None => "about" :: "subclaims" :: claimCore()
-            case Some(_) => "role" :: claimCore()
-        };
-        forM (m <- closed(path, keys, e);
+    def claimId(path: String, e: Edn): R[String] = match e {
+        case EKw(k) if String.isMatch(regex = "C[0-9]+(\\.[0-9]+)?", k) => Ok(k)
+        case _ => fail(path, "a claim id (:C<n> or :C<n>.<m>)")
+    }
+
+    /// a flat claim; links by id in :depends_on / :supports
+    def claim(path: String, e: Edn): R[List[Claim]] =
+        forM (m <- closed(path, "about" :: "depends_on" :: "supports" :: "recorded_at" :: claimCore(), e);
               id <- req(path, "id", kw, m);
-              about <- (match about0 {
-                  case Some(a) => Ok(a)
-                  case None => req(path, "about", (q, x) -> re("[a-z]+:[A-Za-z0-9_/]+", q, x), m)
-              });
-              rl <- (match parent {
-                  case Some(_) => req(path, "role", role, m) |> Result.map(Some)
-                  case None => Ok(None)
-              });
+              about <- req(path, "about", (q, x) -> re("[a-z]+:[A-Za-z0-9_/]+", q, x), m);
+              dep <- optList(path, "depends_on", claimId, m);
+              sup <- optList(path, "supports", claimId, m);
+              _ <- req(path, "recorded_at", date, m);
               a <- req(path, "assertion", goal, m);
               by <- req(path, "asserted_by", owner, m);
               at <- req(path, "asserted_at", date, m);
@@ -324,16 +321,14 @@ pub mod Model {
                   case EStr("presumably") => Ok("presumably")
                   case _ => fail(p, "should be one of [\"certainly\", \"presumably\"]")
               }, m);
-              w <- opt(path, "warrant", kw, m);
-              subs <- optList(path, "subclaims", (p, x) -> claim(p, Some(about), Some(id), x), m))
-            yield {id = id, about = about, parent = parent, role = rl, assertion = a, assertedBy = by, assertedAt = at,
-                   validFrom = vf, validTo = vt, backing = bk, modal = q, warrant = w} :: List.flatten(subs)
-    }
+              w <- opt(path, "warrant", kw, m))
+            yield {id = id, about = about, dependsOn = dep, supports = sup, assertion = a, assertedBy = by, assertedAt = at,
+                   validFrom = vf, validTo = vt, backing = bk, modal = q, warrant = w} :: Nil
 
     def record(path: String, e: Edn): R[Rec] = match open(path, e) {
         case Ok(m) if Map.memberOf("kind", m) => rule(path, e) |> Result.map(Rec.RRule)
         case Ok(m) if Map.memberOf("assertion", m) =>
-            claim(path, None, None, e) |> Result.map(cs -> Rec.RClaim(List.head(cs) |> Option.map(c -> c#id) |> Option.getWithDefault(""), cs))
+            claim(path, e) |> Result.map(cs -> Rec.RClaim(List.head(cs) |> Option.map(c -> c#id) |> Option.getWithDefault(""), cs))
         case _ => fail(path, "a rule or claim record")
     }
 
@@ -356,7 +351,8 @@ pub mod Model {
             yield ({id = id, name = n, doc = d}, cs)
 
     def concept(path: String, e: Edn): R[Concept] =
-        forM (m <- closed(path, "id" :: "name" :: "kind" :: "tables" :: "doc" :: "columns" :: "params" :: "sql" :: "derived-by" :: Nil, e);
+        forM (m <- closed(path, "id" :: "name" :: "kind" :: "tables" :: "doc" :: "columns" :: "params" :: "sql" :: "derived-by" ::
+                                "additivity" :: "unsafe_dims" :: Nil, e);
               id <- req(path, "id", (q, x) -> re("(measure|dim|entity|hier):[a-z_]+", q, x), m);
               n <- req(path, "name", kw, m);
               k <- req(path, "kind", (q, x) -> enumKw("entity" :: "dimension" :: "hierarchy" :: "measure" :: Nil, q, x), m);
@@ -366,12 +362,20 @@ pub mod Model {
               ps <- optList(path, "params", kw, m);
               sql <- opt(path, "sql", str, m);
               db <- opt(path, "derived-by", kw, m);
+              ad <- opt(path, "additivity", (q, x) -> enumKw("additive" :: "semi-additive" :: "non-additive" :: "unknown" :: Nil, q, x), m);
+              ud <- optList(path, "unsafe_dims", kw, m);
+              _ <- (match (k, ad) {
+                  case ("measure", None) => fail("${path}.additivity", "a measure declares :additivity")
+                  case (_, Some("semi-additive")) if List.isEmpty(ud) => fail("${path}.unsafe_dims", "a semi-additive measure names :unsafe_dims")
+                  case _ => Ok(())
+              });
               src <- (match (sql, db) {
                   case (Some(s), _) => Ok(Source.Sql(s))
                   case (None, Some(r)) => Ok(Source.DerivedBy(r))
                   case (None, None) => fail(path, "a concept has :sql or :derived-by")
               }))
-            yield {id = id, name = n, kind = k, tables = ts, doc = d, columns = cols, params = ps, source = src}
+            yield {id = id, name = n, kind = k, tables = ts, doc = d, columns = cols, params = ps, source = src,
+                   additivity = ad, unsafeDims = ud}
 
     def termRec(path: String, e: Edn): R[TermRec] =
         forM (m <- closed(path, "id" :: "label" :: "synonyms" :: "owner" :: "definition" :: "concept" :: "see" :: Nil, e);
@@ -427,10 +431,20 @@ pub mod Model {
               _ <- req(path, "taxonomies", (q, x) -> vec(q, taxonomy, x), m);
               fun <- req(path, "functional", functional, m);
               rules <- req(path, "rules", (q, x) -> vec(q, rule, x), m);
-              claims <- req(path, "claims", (q, x) -> vec(q, (p, y) -> claim(p, None, None, y), x), m))
+              claims <- req(path, "claims", (q, x) -> vec(q, claim, x), m);
+              _ <- linksResolve(List.flatten(claims)))
             yield {today = today, assets = assets, tables = List.map(fst, tcs), columns = List.flatMap(snd, tcs),
                    concepts = concepts, terms = terms, functional = fun,
                    recs = List.map(Rec.RRule, rules) ++ List.map(cs -> Rec.RClaim(List.head(cs) |> Option.map(c -> c#id) |> Option.getWithDefault(""), cs), claims)}
+
+    /// every :depends_on / :supports id names a claim of the slice
+    def linksResolve(cs: List[Claim]): R[Unit] = {
+        let ids = List.map(c -> c#id, cs);
+        match List.flatMap(c -> List.map(x -> (c#id, x), c#dependsOn ++ c#supports), cs) |> List.find(match (_, x) -> not List.memberOf(x, ids)) {
+            case Some((c, x)) => fail("slice.claims.${c}", "links to unknown claim :${x}")
+            case None => Ok(())
+        }
+    }
 
     /// A map is a slice; a vector is an extension.
     pub def load(e: Edn): R[Loaded] = match e {
@@ -441,7 +455,7 @@ pub mod Model {
 
     pub def records(e: Edn): R[List[Rec]] = vec("records", record, e)
 
-    // ------------------------------------------------------------------ negative tests (the same 12 as V3a-V3c)
+    // ------------------------------------------------------------------ negative tests (the same 15 as V3a-V3c)
 
     enum Key { case I(Int32), case K(String) }
 
@@ -486,11 +500,33 @@ pub mod Model {
         ("comparison with three arguments", upd(rule1 ++ (Key.K("body") :: Nil), append(EVec(EKw("<") :: v("?x") :: EInt(1i64) :: EInt(2i64) :: Nil)))) ::
         ("bad date in a claim", upd(Key.K("claims") :: Key.I(0) :: Key.K("asserted_at") :: Nil, _ -> EStr("2026-3-1"))) ::
         ("unknown key on a claim (closed map)", upd(Key.K("claims") :: Key.I(0) :: Nil, putKey("confidence", EFloat(0.9)))) ::
-        ("sub-claim role not required/supporting", upd(Key.K("claims") :: Key.I(0) :: Key.K("subclaims") :: Key.I(0) :: Key.K("role") :: Nil, _ -> EKw("optional"))) ::
+        ("depends_on member not a claim id", upd(Key.K("claims") :: Key.I(0) :: Key.K("depends_on") :: Nil, _ -> EVec(EKw("R101") :: Nil))) ::
         ("superiority order with unknown owner", upd(Key.K("rules") :: Nil, append(EMap(
             (EKw("id"), EKw("R999")) :: (EKw("kind"), EKw("superiority")) :: (EKw("owner"), EKw("controller")) ::
             (EKw("class"), EKw("superiority")) :: (EKw("doc"), EStr("x")) :: (EKw("pred"), EKw("p")) ::
-            (EKw("order"), EVec(EKw("hr") :: EKw("sales") :: Nil)) :: Nil)))) ::
+            (EKw("order"), EVec(EKw("hr") :: EKw("sales") :: Nil)) :: (EKw("recorded_at"), EStr("2026-09-14")) :: Nil)))) ::
         ("rule kind unknown", upd(rule0 ++ (Key.K("kind") :: Nil), _ -> EKw("presumption"))) ::
-        ("negated literal wrapping a non-literal", upd(rule0 ++ (Key.K("head") :: Nil), _ -> EVec(EKw("neg") :: EStr("x") :: Nil))) :: Nil
+        ("negated literal wrapping a non-literal", upd(rule0 ++ (Key.K("head") :: Nil), _ -> EVec(EKw("neg") :: EStr("x") :: Nil))) ::
+        ("nested :subclaims (claims are flat)", e -> upd(Key.K("claims") :: Key.I(0) :: Nil, putKey("subclaims", EVec(nth(1, claimsOf(e)) :: Nil)), e)) ::
+        ("measure without :additivity", upd(Key.K("concepts") :: Nil, firstMeasure(dropKeys("additivity" :: Nil)))) ::
+        ("dangling depends_on id", upd(Key.K("claims") :: Key.I(0) :: Key.K("depends_on") :: Nil, append(EKw("C9.9")))) :: Nil
+
+    def claimsOf(e: Edn): Edn = match e {
+        case EMap(ps) => List.find(match (k, _) -> k == EKw("claims"), ps) |> Option.map(snd) |> Option.getWithDefault(ENil)
+        case _ => ENil
+    }
+
+    def nth(i: Int32, e: Edn): Edn = match e {
+        case EVec(xs) => List.nth(i, xs) |> Option.getWithDefault(ENil)
+        case _ => ENil
+    }
+
+    /// apply f to the first concept whose :kind is :measure
+    def firstMeasure(f: Edn -> Edn, e: Edn): Edn = match e {
+        case EVec(xs) =>
+            let isM = x -> match x { case EMap(ps) => List.memberOf((EKw("kind"), EKw("measure")), ps) case _ => false };
+            let i = List.zipWithIndex(xs) |> List.find(match (_, x) -> isM(x)) |> Option.map(fst) |> Option.getWithDefault(-1);
+            EVec(List.mapWithIndex((j, x) -> if (j == i) f(x) else x, xs))
+        case _ => e
+    }
 }

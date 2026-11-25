@@ -2,7 +2,7 @@
 
     Store (dynamic, asserted from slice.edn / extension.edn / add / with_hypothesis):
       rule(Id, Kind, Head, Body, Meta)        Kind: strict | defeasible | defeater | superiority | incompatible
-      claim(Id, Assertion, By, At, From, To, About, Parent, Role, Meta)   sub-claims: Parent \== null
+      claim(Id, Assertion, By, At, From, To, About, null, null, Meta)   flat; links: claim_link/3
       functional(Pred, KeyArity)  concept(Name, Map)  term(Id, Map)  today(Date)  withheld(Id)
 
     Literals are lists [Pred|Args]; [neg, L] is the complement. evaluate/3 decides a ground literal:
@@ -32,12 +32,12 @@
                        state_token/1, with_state/2, memo/4, set_eval_mode/1, eval_mode/1,
                        set_table_policy/1, table_policy/1, clear_tables/0, wval/3,
                        fetch_rows/5, cmp_lit/1, ev/2, ids_of/2,
-                       rule/5, claim/10, functional/2, concept/2, term/2, today/1, withheld/1, slice/1, asset/2, src/2]).
+                       rule/5, claim/10, claim_link/3, top_claim/2, functional/2, concept/2, term/2, today/1, withheld/1, slice/1, asset/2, src/2]).
 :- use_module(edn).
 :- use_module(library(janus)).
 :- use_module(library(json)).
 
-:- dynamic rule/5, claim/10, functional/2, concept/2, term/2, today/1, withheld/1, memo/4, slice/1, asset/2, src/2.
+:- dynamic rule/5, claim/10, claim_link/3, top_claim/2, functional/2, concept/2, term/2, today/1, withheld/1, memo/4, slice/1, asset/2, src/2.
 :- dynamic eval_mode/1, table_policy/1.
 eval_mode(wfs).
 table_policy(op).
@@ -80,17 +80,25 @@ add_records(Recs, Src, Ids) :-
 
 add_record(Src, M, Ids0, [Id|Ids0]) :-
     mget(id, M, Id),
-    (   mget(assertion, M, _) -> add_claim(M, null, Src)
+    (   mget(assertion, M, _) -> add_claim(M, Src)
     ;   edn_vars(M, MV), mget(kind, MV, K), mget(head, MV, H, none), mget(body, MV, B, []),
         assertz(rule(Id, K, H, B, MV)), assertz(src(Id, Src)) ).
 
-add_claim(M, Parent, Src) :-
+%   Claims are flat (PLAN-v3-integrity §1): a claim links its members by id, :depends_on (role required)
+%   and :supports (role supporting). The Parent and Role arguments of claim/10 stay null; claim_link/3
+%   gives the links and top_claim/2 the claims no active claim links to.
+add_claim(M, Src) :-
     mget(id, M, Id), mget(assertion, M, A), mget(asserted_by, M, By), mget(asserted_at, M, At),
-    mget(valid_from, M, F), mget(valid_to, M, T, null), mget(role, M, Role, null),
-    (   Parent == null -> mget(about, M, About) ; claim(Parent, _, _, _, _, _, About, _, _, _) ),
-    assertz(claim(Id, A, By, At, F, T, About, Parent, Role, M)), assertz(src(Id, Src)),
-    mget(subclaims, M, Subs, []),
-    forall(member(S, Subs), add_claim(S, Id, Src)).
+    mget(valid_from, M, F), mget(valid_to, M, T, null), mget(about, M, About),
+    assertz(claim(Id, A, By, At, F, T, About, null, null, M)), assertz(src(Id, Src)).
+
+claim_link(P, C, Role) :-
+    claim(P, _, _, _, _, _, _, _, _, M),
+    (   mget(depends_on, M, L, []), Role = required ; mget(supports, M, L, []), Role = supporting ),
+    member(C, L).
+
+linked(C) :- claim_link(P, C, _), active(P), !.          % a withheld parent no longer hides its members
+top_claim(Id, About) :- claim(Id, _, _, _, _, _, About, _, _, _), \+ linked(Id).
 
 retract_source(Src) :-
     forall(src(Id, Src), ( retractall(rule(Id, _, _, _, _)), retractall(claim(Id, _, _, _, _, _, _, _, _, _)) )),

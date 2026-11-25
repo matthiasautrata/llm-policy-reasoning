@@ -16,7 +16,7 @@ System A over the shared slice and contract, plus the defeat-cycle extension (`.
 | `cli` | `exec .venv/bin/python host.py` |
 | `capabilities.json` | `{"cycles": "report"}`: the model check reports negative cycles rather than rejecting them |
 | `probes.py` | plain stable models for Y1–Y3; clingexplaid MUS for Y3; base vs hypothesis latency (ground/solve split); xclingo trial |
-| `negatives.py` | the 12 negatives, by V3a's LinkML model (`v3a-prolog/linkml/build.py` `negatives`) |
+| `negatives.py` | the 15 negatives, by V3a's LinkML model plus the shared `model_check.shape_errors` (`v3a-prolog/linkml/build.py` `negatives`) |
 | `results/` | `accept.txt`, `bench-{duckdb,postgres}.json`, `cycles-probe-{duckdb,postgres}.json`, `probes.json`, `negatives.txt`, `mutation.txt`, `isolation-{duckdb,postgres}.txt` |
 
 ## How a decide runs

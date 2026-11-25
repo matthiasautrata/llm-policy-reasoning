@@ -214,8 +214,46 @@ def mode_str(m, n):
     return "".join("+" if i in m else "-" for i in range(n))
 
 
-def check(S, rules, claims, questions, cycles_flag="report", declared=None):
+ADDITIVITY = {"additive", "semi-additive", "non-additive", "unknown"}
+
+
+def mentions(t, name):
+    if t == name: return True
+    if isinstance(t, (list, tuple)): return any(mentions(x, name) for x in t)
+    if isinstance(t, dict): return any(k == name or mentions(v, name) for k, v in t.items())
+    return False
+
+
+def shape_errors(S, rules, claims):
+    """PLAN-v3-integrity §1: flat claims, linked by ids; additivity on every measure; recorded_at is
+    provenance only (no rule body reads it)."""
     errors = []
+    ids = {c.get("id") for c in claims}
+    for c in claims:
+        if "subclaims" in c:
+            errors.append(f"{c.get('id')}: nested :subclaims (claims are flat; link with :depends_on / :supports)")
+        for k in ("depends_on", "supports"):
+            v = c.get(k)
+            if v is None: continue
+            if not isinstance(v, list):
+                errors.append(f"{c.get('id')}: :{k} must be a vector of claim ids"); continue
+            for m in v:
+                if m not in ids: errors.append(f"{c.get('id')}: :{k} names unknown claim {m}")
+    for r in rules:
+        if mentions(r.get("body") or [], "recorded_at"):
+            errors.append(f"{r.get('id')}: rule body references recorded_at (provenance, not evidence)")
+    for c in S.get("concepts") or []:
+        if c.get("kind") != "measure": continue
+        a = c.get("additivity")
+        if a not in ADDITIVITY:
+            errors.append(f"{c['id']}: :additivity missing or not one of {sorted(ADDITIVITY)}: {a}")
+        elif a == "semi-additive" and not c.get("unsafe_dims"):
+            errors.append(f"{c['id']}: :semi-additive without :unsafe_dims")
+    return errors
+
+
+def check(S, rules, claims, questions, cycles_flag="report", declared=None):
+    errors = shape_errors(S, rules, claims)
     cyc = negative_cycles(rules, claims, S.get("functional") or {})
     if cyc and cycles_flag == "reject":
         errors.append(f"negative cycle(s) rejected (engine flag cycles: reject): {[c['predicates'] for c in cyc]}")
@@ -262,8 +300,6 @@ def rule_base(cycles=True):
     recs = X + (Y if cycles else [])
     rules = list(S["rules"]) + [x for x in recs if "head" in x or "pred" in x]
     claims = list(S["claims"]) + [x for x in recs if "assertion" in x]
-    for c in list(claims):
-        claims += [dict(s, about=c["about"]) for s in c.get("subclaims") or []]
     return S, rules, claims, Q + (QC if cycles else [])
 
 

@@ -20,9 +20,7 @@ URI: [slice:valid_from](https://example.org/llm-policy-reasoning/spike-v3/slice/
 
 | Name | Description | Modifies Slot |
 | --- | --- | --- |
-| [ClaimCore](ClaimCore.md) | A Toulmin claim: an assertion about an asset by an asserter, in force from va... |  yes  |
-| [Claim](Claim.md) |  |  no  |
-| [SubClaim](SubClaim.md) | One level of nesting |  no  |
+| [Claim](Claim.md) | A Toulmin claim: an assertion about an asset by an asserter, in force from va... |  yes  |
 
 
 
@@ -36,7 +34,7 @@ URI: [slice:valid_from](https://example.org/llm-policy-reasoning/spike-v3/slice/
 | Property | Value |
 | --- | --- |
 | Range | [date](date.md) |
-| Domain Of | [ClaimCore](ClaimCore.md) |
+| Domain Of | [Claim](Claim.md) |
 
 
 
@@ -79,7 +77,7 @@ name: valid_from
 from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
 rank: 1000
 domain_of:
-- ClaimCore
+- Claim
 range: date
 
 ```

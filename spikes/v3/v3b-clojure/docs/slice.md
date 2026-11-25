@@ -147,13 +147,19 @@ A vendor's status during a period, from and to the given dates inclusive.
 ## Claims
 
 - **C1** about `vendor:bolt`: `[:fit_for_use "bolt"]` — procurement, 2026-03-01, in force 2026-01-01–2026-12-31; presumably; backing: Vendor onboarding file VO-17
-  - C1.1 (required): `[:due_diligence_passed "bolt"]` — compliance, 2026-02-15, in force 2026-01-01–open
-  - C1.2 (required): `[:neg [:sanctioned "bolt"]]` — risk, 2026-02-20, in force 2026-01-01–2026-12-31
-  - C1.3 (supporting): `[:price_within_benchmark "bolt"]` — finance, 2026-02-25, in force 2026-01-01–open
+  - depends on C1.1
+  - depends on C1.2
+  - supported by C1.3
+- **C1.1** about `vendor:bolt`: `[:due_diligence_passed "bolt"]` — compliance, 2026-02-15, in force 2026-01-01–open; certainly; backing: KYC review 2026-02
+- **C1.2** about `vendor:bolt`: `[:neg [:sanctioned "bolt"]]` — risk, 2026-02-20, in force 2026-01-01–2026-12-31; certainly; backing: Sanctions screening run S-0220
+- **C1.3** about `vendor:bolt`: `[:price_within_benchmark "bolt"]` — finance, 2026-02-25, in force 2026-01-01–open; presumably; backing: Benchmark B-12: within 5%
 - **C2** about `vendor:cog`: `[:fit_for_use "cog"]` — procurement, 2026-03-01, in force 2026-01-01–2026-12-31; presumably; backing: Vendor onboarding file VO-21
-  - C2.1 (required): `[:due_diligence_passed "cog"]` — compliance, 2026-02-15, in force 2026-01-01–open
-  - C2.2 (required): `[:neg [:sanctioned "cog"]]` — risk, 2026-02-20, in force 2026-01-01–2026-12-31
-  - C2.3 (supporting): `[:price_within_benchmark "cog"]` — finance, 2026-02-25, in force 2026-01-01–open
+  - depends on C2.1
+  - depends on C2.2
+  - supported by C2.3
+- **C2.1** about `vendor:cog`: `[:due_diligence_passed "cog"]` — compliance, 2026-02-15, in force 2026-01-01–open; certainly; backing: KYC review 2026-02
+- **C2.2** about `vendor:cog`: `[:neg [:sanctioned "cog"]]` — risk, 2026-02-20, in force 2026-01-01–2026-12-31; certainly; backing: Sanctions screening run S-0220
+- **C2.3** about `vendor:cog`: `[:price_within_benchmark "cog"]` — finance, 2026-02-25, in force 2026-01-01–open; presumably; backing: Benchmark B-12: within 5%
 - **C7** about `vendor:cog`: `[:neg [:price_within_benchmark "cog"]]` — finance, 2026-05-10, in force 2026-05-10–open; certainly; backing: Benchmark B-19: 12% above
 - **C3** about `emp:e077`: `[:cost_centre_of "e077" "cc0078"]` — hr, 2026-07-01, in force 2026-07-01–open; certainly; backing: HR transfer record T-311
 - **C4** about `emp:e077`: `[:cost_centre_of "e077" "cc0077"]` — finance, 2026-01-02, in force 2026-01-01–open; certainly; backing: Finance master data load 2026-01

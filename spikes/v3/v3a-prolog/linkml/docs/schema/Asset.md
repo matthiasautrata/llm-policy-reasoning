@@ -156,7 +156,7 @@ attributes:
     - CodeList
     - Taxonomy
     - Rule
-    - ClaimCore
+    - Claim
     range: string
     required: true
   kind:

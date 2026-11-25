@@ -25,9 +25,7 @@ URI: [slice:assertion](https://example.org/llm-policy-reasoning/spike-v3/slice/a
 
 | Name | Description | Modifies Slot |
 | --- | --- | --- |
-| [ClaimCore](ClaimCore.md) | A Toulmin claim: an assertion about an asset by an asserter, in force from va... |  yes  |
-| [Claim](Claim.md) |  |  no  |
-| [SubClaim](SubClaim.md) | One level of nesting |  no  |
+| [Claim](Claim.md) | A Toulmin claim: an assertion about an asset by an asserter, in force from va... |  yes  |
 
 
 
@@ -41,7 +39,7 @@ URI: [slice:assertion](https://example.org/llm-policy-reasoning/spike-v3/slice/a
 | Property | Value |
 | --- | --- |
 | Range | [Literal](Literal.md) |
-| Domain Of | [ClaimCore](ClaimCore.md) |
+| Domain Of | [Claim](Claim.md) |
 
 
 
@@ -85,7 +83,7 @@ description: A literal, e.g. [:cost_centre_of "e077" "cc0078"].
 from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
 rank: 1000
 domain_of:
-- ClaimCore
+- Claim
 range: Literal
 inlined: true
 

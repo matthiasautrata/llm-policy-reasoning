@@ -7,8 +7,11 @@ negatives: unmodified slice loads
   rejected  comparison with three arguments: slice.rules[1].body[3]: :<: wrong arity or shape
   rejected  bad date in a claim: slice.claims[0].asserted_at: should match \d{4}-\d{2}-\d{2}
   rejected  unknown key on a claim (closed map): slice.claims[0].confidence: disallowed key
-  rejected  sub-claim role not required/supporting: slice.claims[0].subclaims[0].role: should be one of required, supporting
+  rejected  depends_on member not a claim id: slice.claims[0].depends_on[0]: a claim id (:C<n> or :C<n>.<m>)
   rejected  superiority order with unknown owner: slice.rules[20].order[1]: should be one of finance, hr, procurement, compliance, risk, controller
   rejected  rule kind unknown: slice.rules[0].kind: should be one of strict, defeasible, defeater, incompatible
   rejected  negated literal wrapping a non-literal: slice.rules[0].head[1]: a literal (vector)
-negatives rejected: 12/12
+  rejected  nested :subclaims (claims are flat): slice.claims[0].subclaims: disallowed key
+  rejected  measure without :additivity: slice.concepts[11].additivity: a measure declares :additivity
+  rejected  dangling depends_on id: slice.claims.C1: links to unknown claim :C9.9
+negatives rejected: 15/15
