@@ -152,8 +152,8 @@ class Ref:
 
     # ---- R120 / R121: aggregate over the pending requests of a subtree whose approval is proven
     def approved_agg(self, x, op):
-        """-> (status, value, sides, contested): members = approved proven; any contested member contests
-        the aggregate (sides = the members' root sides); the contested instance binds the proven part."""
+        """-> (status, value, sides, contested, count): members = approved proven (count of them); any contested
+        member contests the aggregate (sides = the members' root sides); the contested instance binds the proven part."""
         sub = set(self.subtree(x))
         reqs = sorted(r for r, q in self.req.items() if q["status"] == "pending" and self.emp[q["requester"]]["cc"] in sub)
         val = lambda rs: sum(self.req[r]["amount"] for r in rs) if op == "sum" else len(rs)
@@ -161,10 +161,10 @@ class Ref:
         mem = [r for r in reqs if res[r][0] == "ANSWER" and res[r][1]]
         cont = [r for r in reqs if res[r][0] == "CONFLICT"]
         if not cont:
-            return "ANSWER", val(mem), None, None
+            return "ANSWER", val(mem), None, None, len(mem)
         sides = sorted({json.dumps(sd) for r in cont for sd in res[r][2]})
         return "CONFLICT", val(mem), [json.loads(sd) for sd in sides], {
-            "via": [["approved", r] for r in cont], "roots": [dict(goal=["approved", r], sides=res[r][2]) for r in cont]}
+            "via": [["approved", r] for r in cont], "roots": [dict(goal=["approved", r], sides=res[r][2]) for r in cont]}, len(mem)
 
     # ---- claims: defeasible facts with superiority (explicit, R313 authority, later same asserter)
     def in_force(self, c, d):
@@ -408,8 +408,8 @@ def answer1(R, q):
     if p == "cap_breach": return A(R.cap_breach(g[1]), ["R106"])
     if p in ("approved_total", "approved_count"):
         rid = {"approved_total": "R120", "approved_count": "R121"}[p]
-        st, v, sides, c = R.approved_agg(g[1], "sum" if p == "approved_total" else "count")
-        if st == "ANSWER": return A(v, [rid])
+        st, v, sides, c, n = R.approved_agg(g[1], "sum" if p == "approved_total" else "count")
+        if st == "ANSWER": return dict(A(v, [rid]), agg_count=n)   # the aggregate node's count (PLAN-v3-memory §2)
         return dict(status=st, value=None, sides=sides, core=sorted({rid} | {i for sd in sides for i in sd}),
                     contested={json.dumps([p, g[1], v]): dict(via=c["via"], rules=[rid], roots=c["roots"])})
     terms = {x["id"] for x in R.S["terms"]}

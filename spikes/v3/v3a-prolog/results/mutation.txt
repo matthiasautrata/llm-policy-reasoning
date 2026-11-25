@@ -1,5 +1,5 @@
 model check (slice + extension + acyclic): OK
-check 1: FAIL (37 questions, 1.8s wall)
+check 1: FAIL (37 questions, 1.7s wall)
     duckdb Q08: status: got CONFLICT, want ANSWER
     duckdb Q08: value: got None, want False
     duckdb Q08: sides: got [['R312'], ['R314']], want None
@@ -15,6 +15,7 @@ check 1: FAIL (37 questions, 1.8s wall)
     duckdb Q44: core ids missing from why: ['R314']
     duckdb Q44: contested goal ["approved_total", "cc0058", 2952000] without a contested node
     duckdb Q45: value: got 9, want 5
+    duckdb Q45: why[0]<R121>[0]: count 9 != reference 5
     duckdb Q46: why[0]: contested node for ['approved_total', 'cc0105', 1526000], which the reference does not contest downstream
     duckdb Q46: contested goal ["approved_total", "cc0105", 3587000] without a contested node
     duckdb Q50: status: got CONFLICT, want ANSWER
@@ -24,5 +25,4 @@ check 1: FAIL (37 questions, 1.8s wall)
     duckdb Q50: why[0]: contested node for ['po_issued', 'r000001'], which the reference does not contest downstream
     duckdb Q51: value: got True, want False
     duckdb Q53: value: got False, want True
-    duckdb Q53: qualifier: got total over known facts in declared scope, want None
 mutation test: OK (check 1 failed as it must)

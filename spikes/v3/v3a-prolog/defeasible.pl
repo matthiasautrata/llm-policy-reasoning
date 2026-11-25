@@ -21,12 +21,13 @@
     for the complement and, for functional predicates, for the same key with another value; defeaters
     attack only. Superiority: explicit :superior-to, strict over non-strict, asserter authority (a
     :superiority rule, scoped to its :pred), later asserted_at for the same asserter.
-    Memoised per op and state (memo/5), cleared whenever the rule/claim set changes.
+    Memoised per op and state (memo/5), cleared whenever the rule/claim set changes. The memo holds
+    statuses only (status/3); evaluate/3 rebuilds the proofs of a result on demand (hydrate/4).
 
     evaluate/3 recurses through the live supporters/attackers (eval3/3). A dependency cycle the integrity
     gate missed (INTEGRITY_GATE=off) hits the re-entry guard.
 */
-:- module(defeasible, [eval3/3, body3/5, candidate3/2, value3/2, contested_info/5, load_file/1, add_records/3, retract_source/1, evaluate/3, prove/3, body/3, lit/3,
+:- module(defeasible, [eval3/3, body3/5, candidates/3, status/3, hydrate/4, set_agg_sample/1, value3/2, contested_info/5, load_file/1, add_records/3, retract_source/1, evaluate/3, prove/3, body/3, lit/3,
                        sup/3, in_force/3, active/1, clear_memo/0, pred_of/2,
                        state_token/1, with_state/2, memo/5, clear_fetched/0,
                        fetch_rows/5, cmp_lit/1, ev/2, ids_of/2, derived_lit/1,
@@ -118,23 +119,28 @@ active(Id) :- \+ withheld(Id).
 % ------------------------------------------------------------------ evaluation
 
 %!  prove(?L, +AsOf, -Proof) is nondet.   L defeasibly provable (+∂); binds L to each proven instance.
-prove(L, D, P) :- ground(L), !,
-    evaluate(L, D, proven(Sups, SupN)), Sups = [s(_, _, P0)|_], with_children(P0, SupN, P).
-prove(L, D, P) :-
-    findall(L, candidate3(L, D), Ls0), sort(Ls0, Ls),
-    member(L, Ls), ground(L),
-    evaluate(L, D, proven(Sups, SupN)), Sups = [s(_, _, P0)|_], with_children(P0, SupN, P).
+%   Proof is the first supporter's tree (with the superiority nodes), or - in status mode.
+prove(L, D, P) :- ground(L), !, prove1(L, D, P).
+prove(L, D, P) :- candidates(L, D, Ls), member(L, Ls), ground(L), prove1(L, D, P).
+
+prove1(L, D, P) :-
+    status(L, D, proven([S0|_], SupN)),
+    (   proofs(true) -> hyd(L, D, S0, s(_, _, P0)), with_children(P0, SupN, P) ; P = (-) ).
 
 with_children(P0, Extra, P) :- get_dict(children, P0, Cs0), append(Cs0, Extra, Cs), put_dict(children, P0, Cs, P).
 
-evaluate(L, D, R) :- state_token(S), memo_get(S, D, L, R0), !, R = R0.
-evaluate(L, D, R) :- round(Rd), state_token(S), memo_get(S, D, missed(Rd, L), R0), !, miss, R = R0.
-evaluate(L, D, R) :-
+%!  evaluate(+L, +D, -R)  status/3, with the proof of every supporter and attacker in R rebuilt (hydrate/4).
+evaluate(L, D, R) :- status(L, D, R0), hydrate(L, D, R0, R).
+
+%!  status(+L, +D, -R)  the memoised result of eval3/3: eterms carry - for their proof (PLAN-v3-memory §2).
+status(L, D, R) :- state_token(S), memo_get(S, D, L, R0), !, R = R0.
+status(L, D, R) :- round(Rd), state_token(S), memo_get(S, D, missed(Rd, L), R0), !, miss, R = R0.
+status(L, D, R) :-
     guard_path(P),
     (   append(Pre, [D-L|_], P) -> append(Pre, [D-L], Seg), cycle_goals(Seg, Path), throw(defeat_cycle(Path)) ; true ),
     misses(M0),
     setup_call_cleanup(nb_setval(v3a_guard, [D-L|P]),
-                       once(eval3(L, D, R0)),          % R0 fresh: callers pass patterns like proven(_, _)
+                       with_proofs(false, eval3(L, D, R0)),   % R0 fresh: callers pass patterns like proven(_, _)
                        nb_setval(v3a_guard, P)),
     state_token(S), memo_unless_missed(M0, S, D, L, R0), R = R0.
 
@@ -155,6 +161,37 @@ memo_unless_missed(M0, S, D, L, R0) :-
 guard_path(P) :- ( nb_current(v3a_guard, P0), P0 \== [] -> P = P0 ; P = [] ).
 cycle_goals(Seg, Path) :-          % Seg: the guard stack (innermost first) down to the first entry of the goal
     reverse(Seg, Outer), maplist([_-G, G]>>true, Outer, Path0), Path0 = [G0|_], append(Path0, [G0], Path).
+
+%   Proofs mode (PLAN-v3-memory §2): evaluation runs with proofs off, so body literals yield - for their
+%   nodes and the memo holds no proof dicts. A why tree is rebuilt on demand, in proofs mode, from the ids
+%   and ground instances in the memo: hydrate/4 re-runs the eterm's first body solution (best_sol/7 is
+%   deterministic, so the rebuilt solution is the one evaluation found).
+proofs(B) :- ( nb_current(v3a_proofs, false) -> B = false ; B = true ).
+with_proofs(B, G) :-
+    proofs(B0),
+    (   B0 == B -> once(G)
+    ;   setup_call_cleanup(nb_setval(v3a_proofs, B), once(G), nb_setval(v3a_proofs, B0)) ).
+
+hydrate(_, _, E, E) :- proofs(false), !.
+hydrate(L, D, proven(S0, N), proven(S, N)) :- maplist(hyd(L, D), S0, S).
+hydrate(L, D, defeated(A0, S0, N), defeated(A, S, N)) :- hyd(L, D, A0, A), maplist(hyd(L, D), S0, S).
+hydrate(L, D, none(A0), none(A)) :- maplist(hyd(L, D), A0, A).
+hydrate(L, D, blocked(S0, A0), blocked(S, A)) :- maplist(hyd(L, D), S0, S), maplist(hyd(L, D), A0, A).
+hydrate(_, _, contested(Rs, Vs), contested(Rs, Vs)).
+
+hyd(_, _, s(Id, claim, _), s(Id, claim, P)) :- !, claim_proof(Id, P).
+hyd(L, D, s(Id, K, _), s(Id, K, _{type:rule, id:Id, goal:L, children:Kids})) :- !, sol_kids(Id, L, D, Kids).
+hyd(_, _, a(Id, claim, H, _), a(Id, claim, H, P)) :- !, claim_proof(Id, P).
+hyd(L, D, a(Id, incompatible, H, _), a(Id, incompatible, H, _{type:rule, id:Id, goal:H, children:Kids})) :- !,
+    sol_kids(Id, L, D, Kids).
+hyd(_, D, a(Id, K, H, _), a(Id, K, H, _{type:rule, id:Id, goal:H, children:Kids})) :- sol_kids(Id, H, D, Kids).
+
+sol_kids(Id, H, D, Kids) :-
+    (   with_proofs(true, best_sol(Id, H, D, true, _, Kids, _)) -> true
+    ;   throw(error(hydrate_failed(Id, H), _)) ).
+
+claim_proof(Id, _{type:claim, id:Id, goal:G, asserted_by:By, asserted_at:At, children:[]}) :-
+    claim(Id, G, By, At, _, _, _, _, _, _).
 
 rival([neg, X], X, true) :- !.
 rival(L, [neg, L], true).
@@ -192,25 +229,23 @@ eval3(L, D, R) :-
     findall(a(Id, K, H, P)-V-CL, live_att(L, D, Id, K, H, P, V, CL), A0), dedup_e(A0, A),
     classify3(S, A, R).
 
-live_sup(L, D, Id, K, _{type:rule, id:Id, goal:L, children:Kids}, V, CL) :-
+live_sup(L, D, Id, K, -, V, CL) :-
     head_rule(L, Id), rule(Id, K, L0, _, _), memberchk(K, [strict, defeasible]), active(Id), \+ L0 \= L,
-    best_sol(Id, L, D, true, V, Kids, CL).
-live_sup(L, D, Id, claim, P, proven, []) :-
-    claim(Id, L, By, At, F, T, _, _, _, _), active(Id), in_force(F, T, D),
-    P = _{type:claim, id:Id, goal:L, asserted_by:By, asserted_at:At, children:[]}.
+    best_sol(Id, L, D, true, V, _, CL).
+live_sup(L, D, Id, claim, -, proven, []) :-
+    claim(Id, L, _, _, F, T, _, _, _, _), active(Id), in_force(F, T, D).
 
-live_att(L, D, Id, K, H, _{type:rule, id:Id, goal:H, children:Kids}, V, CL) :-
+live_att(L, D, Id, K, H, -, V, CL) :-
     rival(L, H0, Diff0),
     head_rule(H0, Id), rule(Id, K, Hr, _, _), memberchk(K, [strict, defeasible, defeater]), active(Id),
     copy_term(H0-Diff0, H-Diff), \+ Hr \= H,
-    best_sol(Id, H, D, differs(Diff), V, Kids, CL).
-live_att(L, D, Id, incompatible, [neg, L], _{type:rule, id:Id, goal:[neg, L], children:Kids}, V, CL) :-
+    best_sol(Id, H, D, differs(Diff), V, _, CL).
+live_att(L, D, Id, incompatible, [neg, L], -, V, CL) :-
     head_rule(L, Id), rule(Id, incompatible, Hr, _, _), active(Id), \+ Hr \= L,    % R314: a declared incompatibility attacks its head
-    best_sol(Id, L, D, true, V, Kids, CL).
-live_att(L, D, Id, claim, H, P, proven, []) :-
+    best_sol(Id, L, D, true, V, _, CL).
+live_att(L, D, Id, claim, H, -, proven, []) :-
     rival(L, H0, Diff0), copy_term(H0-Diff0, H-Diff),
-    claim(Id, H, By, At, F, T, _, _, _, _), active(Id), in_force(F, T, D), differs(Diff),
-    P = _{type:claim, id:Id, goal:H, asserted_by:By, asserted_at:At, children:[]}.
+    claim(Id, H, _, _, F, T, _, _, _, _), active(Id), in_force(F, T, D), differs(Diff).
 
 %   A proven body solution if there is one, else a contested one (binds H on the way).
 best_sol(Id, H, D, Chk, V, Kids, CL) :-
@@ -261,14 +296,14 @@ body3([L|Ls], D, [K|Ks], V, CL) :-
     ( V1 == proven, V2 == proven -> V = proven ; V = contested ), append(C1, C2, CL).
 
 lit3([not, X], D, N, V, CL) :- ground(X), !,
-    evaluate(X, D, E), value3(E, V0),
+    status(X, D, E), value3(E, V0),
     (   V0 == refuted -> V = proven, CL = [], N = _{type:absent, goal:X}
     ;   V0 == contested -> V = contested, CL = [X], N = _{type:contested_lit, goal:X} ).
 lit3([agg, Op, X, B, Out], D, N, V, CL) :- !,
     agg3(Op, X, B, D, Val, N, V, CL), Out = Val.
 lit3(L, D, N, V, CL) :- derived_lit(L), !,
-    (   ground(L) -> Ls = [L] ; findall(L, candidate3(L, D), Ls0), sort(Ls0, Ls) ),
-    member(L, Ls), evaluate(L, D, E), value3(E, V0),
+    (   ground(L) -> Ls = [L] ; candidates(L, D, Ls) ),
+    member(L, Ls), status(L, D, E), value3(E, V0),
     (   V0 == proven -> V = proven, CL = [], once(prove(L, D, N))
     ;   V0 == contested -> V = contested, CL = [L], N = _{type:contested_lit, goal:L} ).
 lit3(L, D, N, proven, []) :- lit(L, D, N).
@@ -278,27 +313,39 @@ derived_lit([P|_]) :- \+ memberchk(P, [fetch, not, as_of, is, <, <=, >, >=, =, a
 %!  agg3(+Op, ?X, +B, +D, -Val, -Node, -V, -CL)  SEMANTICS.md, Aggregates: members are the proven solutions
 %   (distinct bindings of B's local variables); any contested solution contests the literal (CL: the
 %   contested literals of those solutions), and Val is then the aggregate over the proven members only.
-%   Memoised per op and state like evaluate/3. B is evaluated set-at-a-time in rounds (CONTRACT.md,
-%   Aggregates): the outermost aggregate repeats the findall, flushing the recorded fetch needs as batches
-%   after each round with a miss, until a round has none; a nested one runs once inside the outer round.
+%   Memoised per op and state like status/3, as r(Value, Count, Sample, V, CL): Count the number of proven
+%   members, Sample the bindings of the first agg_sample of them (default 20, set_agg_sample/1). B is
+%   evaluated set-at-a-time in rounds, with proofs off (CONTRACT.md, Aggregates): the outermost aggregate
+%   repeats the findall, flushing the recorded fetch needs as batches after each round with a miss, until
+%   a round has none; a nested one runs once inside the outer round. In proofs mode the node is rebuilt
+%   from the sample (agg_node/6).
 agg3(Op, X, B, D, Val, N, V, CL) :-
-    copy_term(agg(Op, X, B), K), state_token(S),
+    copy_term(agg(Op, X, B), K), state_token(S), term_variables(B, Loc),
     (   memo_get(S, D, agg(K), R0) -> true
     ;   round(Rd), memo_get(S, D, missed(Rd, agg(K)), R0) -> miss
-    ;   term_variables(B, Loc),
-        agg_depth(Depth), Depth1 is Depth + 1, misses(M0),
+    ;   agg_depth(Depth), Depth1 is Depth + 1, misses(M0),
         setup_call_cleanup(nb_setval(v3a_agg, Depth1),
-                           agg_rounds(Depth, Loc-X-V1-Kids-C1, body3(B, D, Kids, V1, C1), Sols0),
+                           with_proofs(false, agg_rounds(Depth, Loc-X-V1-C1, body3(B, D, _, V1, C1), Sols0)),
                            nb_setval(v3a_agg, Depth)),
         agg_group(Sols0, Mem, Cont),
-        maplist([_-Xi-_-_-_, Xi]>>true, Mem, Xs),
+        maplist([_-Xi-_-_, Xi]>>true, Mem, Xs),
         (   Op == sum -> sum_list(Xs, Val0) ; length(Xs, Val0) ),
-        maplist([_-Xi-_-Ki-_, _{value:Xi, children:Ki}]>>true, Mem, MNs),
-        findall(Y, ( member(_-_-_-_-C1, Cont), member(Y, C1) ), CL0), sort(CL0, CL1),
+        length(Mem, Cnt), agg_sample(Max), Take is min(Max, Cnt), length(Smp0, Take), append(Smp0, _, Mem),
+        maplist([Li-_-_-_, Li]>>true, Smp0, Smp),
+        findall(Y, ( member(_-_-_-C1, Cont), member(Y, C1) ), CL0), sort(CL0, CL1),
         ( Cont == [] -> V0 = proven ; V0 = contested ),
-        R0 = r(Val0, _{type:aggregate, op:Op, value:Val0, members:MNs}, V0, CL1),
+        R0 = r(Val0, Cnt, Smp, V0, CL1),
         memo_unless_missed(M0, S, D, agg(K), R0) ),
-    R0 = r(Val, N, V, CL).
+    R0 = r(Val, Cnt1, Smp1, V, CL),
+    (   proofs(true) -> agg_node(Op, Loc-X-B, D, Val, Cnt1-Smp1, N) ; N = (-) ).
+
+%   The aggregate node (CONTRACT.md, Why trees): each sampled member's first proven body solution.
+agg_node(Op, T, D, Val, Cnt-Smp, _{type:aggregate, op:Op, value:Val, count:Cnt, members:MNs}) :-
+    findall(_{value:Xi, children:Kids},
+            ( member(Li, Smp), copy_term(T, Li-Xi-Bi), once(body3(Bi, D, Kids, proven, _)) ), MNs).
+
+agg_sample(N) :- ( current_prolog_flag(v3a_agg_sample, N0) -> N = N0 ; N = 20 ).
+set_agg_sample(N) :- must_be(nonneg, N), create_prolog_flag(v3a_agg_sample, N, [type(integer)]).
 
 agg_rounds(Depth, T, G, Sols) :-
     (   Depth =:= 0
@@ -320,15 +367,17 @@ agg_depth(V) :- ( nb_current(v3a_agg, V0), integer(V0) -> V = V0 ; V = 0 ).
 agg_group(Sols, Mem, Cont) :-
     numbered(Sols, 0, Ns), keysort(Ns, Sorted), group_pairs_by_key(Sorted, Groups),
     maplist(pick_sol, Groups, Picked0), keysort(Picked0, Picked), pairs_values(Picked, Best),
-    partition([_-_-V-_-_]>>(V == proven), Best, Mem, Cont).
+    partition([_-_-V-_]>>(V == proven), Best, Mem, Cont).
 
 numbered([], _, []).
-numbered([E|Es], I, [Loc-(I-E)|Ns]) :- E = Loc-_-_-_-_, I1 is I + 1, numbered(Es, I1, Ns).
+numbered([E|Es], I, [Loc-(I-E)|Ns]) :- E = Loc-_-_-_, I1 is I + 1, numbered(Es, I1, Ns).
 
 pick_sol(_-IEs, P) :-
-    (   member(P, IEs), P = _-(_-_-proven-_-_) -> true ; IEs = [P|_] ).
+    (   member(P, IEs), P = _-(_-_-proven-_) -> true ; IEs = [P|_] ).
 
-%!  candidate3(?L, +D)  a ground instance of L with a live supporter
+%!  candidates(?L, +D, -Ls)  the sorted ground instances of L with a live supporter (found with proofs off)
+candidates(L, D, Ls) :- with_proofs(false, findall(L, candidate3(L, D), Ls0)), sort(Ls0, Ls).
+
 candidate3(L, D) :-
     (   head_rule(L, Id), rule(Id, K, L, B, _), memberchk(K, [strict, defeasible]), active(Id), body3(B, D, _, _, _)
     ;   claim(Id, L, _, _, F, T, _, _, _, _), active(Id), in_force(F, T, D) ),
@@ -344,7 +393,8 @@ contested_info(G, D, Via, Rules, Roots) :-
 cwalk([], _, _, V, Ru, Ro, V, Ru, Ro).
 cwalk([X|Xs], D, Seen, V0, Ru0, Ro0, V, Ru, Ro) :-
     (   memberchk(X, Seen) -> cwalk(Xs, D, Seen, V0, Ru0, Ro0, V, Ru, Ro)
-    ;   evaluate(X, D, E),
+    ;   status(X, D, E0),
+        (   E0 = blocked(_, _) -> hydrate(X, D, E0, E) ; E = E0 ),
         (   E = blocked(Sp, Ap)
         ->  ids_of(Sp, I1), ids_of(Ap, I2), sort([I1, I2], Sides),
             maplist([s(_, _, P), P]>>true, Sp, P1), maplist([a(_, _, _, P), P]>>true, Ap, P2), append(P1, P2, Ps),
@@ -366,7 +416,7 @@ lit([fetch, C, map(F), map(O)], _, Node) :- !,
     maplist([Col-V]>>get_dict(Col, Row, V), O),
     Node = Info.put(_{type:fetch, concept:C, filters:Filters, rows:N, row:Row}).
 lit([not, L], D, _{type:absent, goal:L}) :- !,           % L refuted (a contested L is not absent)
-    (   ground(L) -> evaluate(L, D, E), value3(E, refuted) ; \+ prove(L, D, _) ).
+    (   ground(L) -> status(L, D, E), value3(E, refuted) ; candidates(L, D, Ls), \+ ( member(L, Ls), status(L, D, proven(_, _)) ) ).
 lit([as_of, X], D, _{type:fact, goal:[as_of, D]}) :- !, X = D.
 lit([is, X, E], _, _{type:fact, goal:[is, V, E1]}) :- !, ev(E, V), X = V, inst(E, E1).
 lit([Op, A, B], _, _{type:fact, goal:[Op, A1, B1]}) :- cmp_op(Op), !, inst(A, A1), inst(B, B1), cmp_lit([Op, A1, B1]).

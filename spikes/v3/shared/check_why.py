@@ -147,11 +147,12 @@ def goals_in(nodes, out=None):
 
 
 class Checker:
-    def __init__(self, slice_, rules, claims, as_of, runsql, undefined=None, goal=None, contested=None):
+    def __init__(self, slice_, rules, claims, as_of, runsql, undefined=None, goal=None, contested=None, agg_count=None):
         """slice_: plain slice; rules: {id: rule}; claims: {id: claim incl. sub-claims}; runsql(sql, params) -> [dict];
-        undefined: the reference's undefined component {literals, members} for the question goal (cycles)"""
+        undefined: the reference's undefined component {literals, members} for the question goal (cycles);
+        agg_count: the reference's member count for the question's aggregate"""
         self.S, self.rules, self.claims, self.as_of, self.runsql = slice_, rules, claims, as_of, runsql
-        self.undef, self.goal, self.cont = undefined, goal, contested or {}
+        self.undef, self.goal, self.cont, self.agg_count = undefined, goal, contested or {}, agg_count
         self.errors, self._sql = [], {}
 
     def err(self, path, msg):
@@ -280,9 +281,11 @@ class Checker:
         return s
 
     def aggregate(self, lit, k, s, path):
-        """[:agg op ?x [body] ?out]: every member a proof of the conjunction under s, distinct bindings,
-        and the aggregate recomputed (SEMANTICS.md, Aggregates). That refuted bindings are refuted is
-        the reference's part (the value is in the key)."""
+        """[:agg op ?x [body] ?out]: every reported member a proof of the conjunction under s, distinct
+        bindings, at most `count` of them; `count` equal to the reference's when the key gives it. All members
+        reported: the aggregate is recomputed; a sample (CONTRACT.md, Why trees): a :count value must equal
+        `count`, a :sum value is the key's (SEMANTICS.md, Aggregates). That refuted bindings are refuted is
+        the reference's part."""
         _, op, x, body, out = lit
         if k.get("type") != "aggregate" or k.get("op") != op:
             self.err(path, f"expected aggregate {op}, got {k.get('type')} {k.get('op')}")
@@ -301,10 +304,18 @@ class Checker:
             xv = ev(x, sm)
             if norm(m.get("value")) != norm(xv): self.err(f"{path}.members[{i}]", f"member value {m.get('value')} != {xv}")
             xs.append(xv)
-        val = sum(xs) if op == "sum" else len(xs)
-        if norm(k.get("value")) != norm(val):
-            self.err(path, f"aggregate value {k.get('value')} != recomputed {val}")
-        return unify(out, val, s)
+        cnt, ms = k.get("count"), k.get("members") or []
+        if not isinstance(cnt, int) or len(ms) > cnt:
+            self.err(path, f"count {cnt} for {len(ms)} members"); return None
+        if self.agg_count is not None and cnt != self.agg_count:
+            self.err(path, f"count {cnt} != reference {self.agg_count}")
+        if len(ms) == cnt:
+            val = sum(xs) if op == "sum" else len(xs)
+            if norm(k.get("value")) != norm(val):
+                self.err(path, f"aggregate value {k.get('value')} != recomputed {val}")
+        elif op == "count" and k.get("value") != cnt:
+            self.err(path, f"count value {k.get('value')} != count {cnt}")
+        return unify(out, k.get("value"), s)
 
     def literal(self, lit, k, s, path):
         op = lit[0]

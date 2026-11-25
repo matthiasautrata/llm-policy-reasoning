@@ -14,6 +14,9 @@ running state, so runtime extension is tested without restart.
  "ops": [ <op>, ... ]}
 ```
 
+Optional config keys: `agg_sample` (default 20), the number of proven members an `aggregate` why node shows;
+`stack_limit` (bytes), SWI-Prolog's stack limit for V3a; `hypothesis` (`snapshot` | `assert`).
+
 Output: `{"results": [<result>, ...], "load_ms": <number>}`. Every result carries `"ms"` (wall time of
 the op) and `"sql_log"`: the SQL statements the op issued, each `{"concept", "sql", "params", "rows"}`.
 
@@ -87,7 +90,7 @@ Goals are JSON arrays, predicate first: `["approved", "r000005"]`; `["neg", [...
 | `defeated_by` | `id`, `target`, `children` | rule/claim `id` defeated `target`; children: its own proof and a `superior` node |
 | `superior` | `winner`, `loser`, `source` | `source`: `explicit`, `authority:R313`, `later`, `strict` |
 | `contested` | `goal`, `via`, `rules`, `roots` | ambiguity propagation (`SEMANTICS.md`): `goal` (ground) is contested only because it rests on contested literals. `via`: every contested literal reached through the bodies of its live supporters and live unbeaten attackers, roots included (`[:not L]` as L); `rules`: the ids of those live supporters / attackers of `goal` and of each non-root `via` literal; `roots`: one `conflict` node per root, sorted by goal |
-| `aggregate` | `op`, `value`, `members` | an `[:agg Op ?x [..] ?out]` body literal (`SEMANTICS.md`, Aggregates). `members`: one `{value, children}` per proven solution, in binding order. `value` is that solution's ?x, and `children` are the proofs of the conjunction's literals, as for a rule. `check_why.py` re-verifies every member and recomputes the aggregate |
+| `aggregate` | `op`, `value`, `count`, `members` | a proven `[:agg Op ?x [..] ?out]` body literal (`SEMANTICS.md`, Aggregates). `count`: the number of proven solutions (members). `members`: the first `agg_sample` of them in binding order, each `{value, children}`; `value` is that solution's ?x, and `children` are the proofs of the conjunction's literals, as for a rule. Contested members never appear here: a contested aggregate gives a `contested` node, whose `via` and `roots` report every contested member in full. `check_why.py` re-verifies every shown member and checks `count` against the reference; when all members are shown it recomputes the aggregate, otherwise a `:count` value must equal `count` and a `:sum` value is checked by the key |
 | `conflict` | `goal`, `sides`, `children` | a root conflict: a proven-bodied supporter meets a proven-bodied unbeaten attacker; children are the proofs of the side members |
 
 Downstream CONFLICT (PLAN-v3-integrity §4): `sides` are the deduplicated, sorted sides of every root the

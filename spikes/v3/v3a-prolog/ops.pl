@@ -127,10 +127,10 @@ winner_is(Id, N) :- get_dict(winner, N, Id).
 
 decide_open(G, D, R) :-
     term_variables(G, Vs),
-    findall(G, candidate3(G, D), Gs0), sort(Gs0, Gs),
-    findall(G-E, ( member(G, Gs), evaluate(G, D, E) ), GEs),
-    include([_-E]>>(E = proven(_, _)), GEs, Won),
-    include([_-E]>>value3(E, contested), GEs, Cont),
+    candidates(G, D, Gs),
+    findall(G-E, ( member(G, Gs), status(G, D, E) ), GEs0),     % statuses; proofs only for what is reported
+    include([_-E]>>(E = proven(_, _)), GEs0, Won0), maplist(hydrate_pair(D), Won0, Won),
+    include([_-E]>>value3(E, contested), GEs0, Cont0), maplist(hydrate_pair(D), Cont0, Cont),
     pred_of(G, P),
     (   Cont \== []                                    % propagation: any contested instance contests the goal
     ->  findall(Sd-W, ( member(Gi-Ei, Cont), inst_conflict(Gi, D, Ei, Sd, W) ), SWs),
@@ -138,8 +138,9 @@ decide_open(G, D, R) :-
         answer("CONFLICT", null, Sides, Why, D, R)
     ;   functional(P, _)
     ->  (   Won = [G1-proven(S, SN)] -> G = G1, value_of(Vs, V), team_proofs(S, SN, Why), answer("ANSWER", V, null, Why, D, R)
-        ;   Won = [], GEs \== []
-        ->  findall(Ids, ( member(_-E, GEs), sups_of(E, Ss), Ss \== [], ids_of(Ss, Ids) ), Sides0), sort(Sides0, Sides),
+        ;   Won = [], GEs0 \== []
+        ->  maplist(hydrate_pair(D), GEs0, GEs),
+            findall(Ids, ( member(_-E, GEs), sups_of(E, Ss), Ss \== [], ids_of(Ss, Ids) ), Sides0), sort(Sides0, Sides),
             findall(Pf, ( member(_-E, GEs), sups_of(E, Ss), member(s(_, _, Pf), Ss) ), Why),
             answer("CONFLICT", null, Sides, Why, D, R)
         ;   Won = [] -> explain_not(G, D, N), absence(G, D, open, Abs), answer("ANSWER", null, null, [N], Abs, D, R)
@@ -149,6 +150,8 @@ decide_open(G, D, R) :-
         pairs_keys_values(VWs, Vals0, Whys), sort(Vals0, Vals), append(Whys, Why),
         ( Vals == [] -> absence(G, D, open, Abs) ; Abs = false ),
         answer("ANSWER", Vals, null, Why, Abs, D, R) ).
+
+hydrate_pair(D, G-E0, G-E) :- hydrate(G, D, E0, E).
 
 sups_of(proven(S, _), S).
 sups_of(defeated(_, S, _), S).

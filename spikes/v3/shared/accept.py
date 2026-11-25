@@ -150,7 +150,7 @@ def check_question(q, key, r, env, as_of_default):
         if key["status"] in ("ANSWER", "CONFLICT") and not r.get("why") and key.get("value") != []:   # [] : no instance, nothing to explain
             errs.append("no why tree")
         errs += Checker(env.S, env.rules, env.claims, as_of, env.runsql, key.get("undefined"), q.get("goal"),
-                        key.get("contested")).check(r.get("why"))
+                        key.get("contested"), key.get("agg_count")).check(r.get("why"))
         tops = {json.dumps(n.get("goal")) for n in r.get("why") or [] if n.get("type") == "contested"}
         for g in key.get("contested") or {}:     # propagation: every contested instance explained at the top
             if g not in tops: errs.append(f"contested goal {g} without a contested node")
