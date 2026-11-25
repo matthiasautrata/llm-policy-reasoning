@@ -112,3 +112,118 @@ The two deciding facts:
 2. **The model has to see the rules.** Malli checked every rule body and enforced the class rule. LinkML treated the 53 rule and claim bodies as strings and let the class rule through.
 
 What would change this: if the adoption gate never needs isolation (single-user, batch), or if generated DDL and schema docs matter more than rule validation, V3a's lighter stack wins on every measured number except Postgres latency.
+
+## After the V3a fixes
+
+Added 2026-11-24 after `PLAN-v3a-fix.md` (F1 isolated hypotheses, F2 structured rule bodies in LinkML; the details are in that plan's Decisions). The sections above are left as written. Where they disagree with this section, this section is current.
+
+**Re-run.**
+
+| Run | V3a | V3b |
+|---|---|---|
+| `accept.py` (DuckDB and Postgres, check 2) | GREEN 1–6 | GREEN 1–6 |
+| `accept.py --mutation` | fails, as it must | fails, as it must |
+| `shared/isolation.py`, both backends | PASS with `snapshot`; FAIL with the old `assert` mode, kept as a control | PASS with `branch` and with `with` |
+| `bench.py`, both backends | 0 errors, 49/200 approved, 11.17 statements per decide | same |
+
+**Isolation test.** A concurrent op B decides on the base while op A's hypothesis is open, and B must not see the hypothesis. This also covers V3b's `d/with` mode, which `accept.py` does not reach (PROGRESS question 4).
+
+### Changed §7 rows, old → new
+
+| Criterion | V3a old | V3a new | V3b old | V3b new |
+|---|---|---|---|---|
+| Adoption gate | assert/retract under `setup_call_cleanup`; 0.1 ms; no isolation | `snapshot/1` with a memo keyed by state. p50/p95: 0.11/0.12 ms; 0.23/0.26 ms with the extension added. Concurrent test PASS on both backends | `d/with` 2.7 ms; branch 103 ms; isolated by construction (untested) | Unchanged, now tested: PASS in both modes, both backends |
+| Model / validation | Envelope only; 53 heads/bodies/assertions opaque strings; the class rule not enforced | Bodies structured (literal and term classes). **12/12 negatives rejected** by linkml-validate and by `jsonschema` on the generated schema. Round trip structure → EDN → `edn.pl` 80/80 | 12/12 (Malli) | Unchanged |
+| Performance (DuckDB) | decide p50/p95 4.3/9.2 ms; cold start 0.13 s; RSS 60/128 MB | 4.4/9.3 ms; 0.12 s; 60/126 MB (unchanged) | 5.9/13.0 ms; 2.4 s; RSS 374/644 MB | 6.0/13.1 ms; 2.4 s; 367/645 MB (unchanged) |
+| Performance (Postgres) | decide p50/p95 12.6/29.9 ms | 8.5/21.7 ms (repeats 7.7–7.9 / 18.7–19.0). The pre-fix commit `8828f1b`, measured today, gives 8.6/21.4, so the old figure was run-to-run variation, not an effect of F1 | 4.5/17.0 ms | 5.2/17.3 ms |
+| Authoring (size only) | LinkML schema 199 lines; instance YAML 760 | Schema 292; instance YAML **1331** (`slice.edn` is 318) | Malli schemas about 80 lines | Unchanged |
+| Lines: model / validation | `edn2yaml.py` 61 + `build.py` 203 + `slice.yaml` 199 | 158 + 278 + 292 | `model.clj` 195 | Unchanged |
+| Lines: surface / SQL / glue | `defeasible.pl` 209, `ops.pl` 207, `sql.py` 95, `host.py` 26 | 219, 253, 107, 37 | `ops.clj` 186, `sql.clj` 91, `cli.clj` 47 | 194, 95, 49 |
+
+`shared/isolation.py` (64 lines) is new and shared. Both spikes gained a test-only `sleep` op and the `concurrent`/`after` script keys. In both, the SQL per-op cache and log became thread-local and statements are serialised on the one connection.
+
+### What SWI-Prolog snapshots do and do not guarantee
+
+**Guaranteed** by `snapshot/1` in SWI-Prolog 11.0.0 (manual §4.14.1.3):
+- The goal sees the dynamic database as of the snapshot's start, plus its own changes.
+- No other thread ever sees those changes.
+- The changes are always discarded: on success, failure and exception alike.
+- Isolation costs nothing measurable here: 0.11 ms, the same as the old assert/retract.
+
+**Not covered:**
+1. **Anything that is not the dynamic database.**
+   - Global variables (`nb_setval`) and flags (`flag/3`) are not rolled back.
+   - Static code and files loaded inside the goal become global.
+   - Side effects through `py_call` happen. Here they are read-only SQL, and the Python-side cache had to be made thread-local by hand.
+   - Shared tabling should not be combined with transactions. V3a uses no tabling.
+2. **State visible from before the snapshot.**
+   - Facts the base asserted before the snapshot, such as the memo, are visible inside it.
+   - V3a therefore had to key the memo by a state token. Without the key, the hypothesis reuses base results; `memo_test`'s control case shows this.
+   - This obligation falls on every cache the evaluator adds. It is a discipline, not a property of the construct.
+3. **Concurrent writers.** Commits are atomic, but consistency between writers needs a mutex or `transaction/3` constraints. Hypotheses never commit, so this does not arise yet.
+
+**Compared with V3b:** V3b's isolation covers everything the evaluator reads, because the db value is passed as an argument. V3a's covers the dynamic database, plus whatever the evaluator's authors key correctly. Both are now isolated and tested. The kinds of guarantee differ.
+
+### What LinkML can and cannot express or enforce (1.12.1)
+
+**Can (as used here):**
+- polymorphic rule literals and terms via `designates_type` on an abstract parent, with closed classes;
+- variable naming via `pattern`;
+- arity via named slots, with surplus positions rejected by the closed class;
+- operator sets via enums;
+- fetch filter and output maps via keyed, inlined classes; the compact `{column: value}` form is accepted;
+- "sql or derived_by" via a class-level `any_of` of `slot_conditions`;
+- from the same schema, gen-doc, gen-sqlddl and JSON Schema. Malli has no doc or DDL generators.
+
+**Cannot, or only with friction:**
+- **No positional notation.** EDN vectors such as `[:< ?x 1]` have to be converted into objects.
+  - The converter (158 lines) is part of the trust chain: LinkML validates a *converted copy*, while the engine still runs `slice.edn` through `edn.pl`. The round-trip check guards that gap; Malli validates the values the engine runs.
+  - The YAML is 1331 lines against 318 in `slice.edn`.
+- **Two silent no-ops found** (F2.3):
+  - A `rules` entry without `preconditions` becomes a JSON Schema `then` with no `if`, which is ignored.
+  - A class-level `any_of` is not inherited through `is_a`, while ranges admit descendants. A concept with neither key validated as a `Measure` until the condition was repeated on each subclass.
+  - In both cases the schema validated cleanly and the rule simply did not apply. Only a negative test exposed them.
+- **No custom error messages.** `slot_conditions` has no message slot. See below.
+
+**Error messages** (all 12 in `v3a-prolog/linkml/negatives.md`, compared with Malli in the F2.4 Decision):
+- Enum, pattern, date and closed-class errors: good in both.
+- Errors inside a polymorphic literal: linkml-validate is *more* specific than Malli. It names the deepest failing slot (`… in /rules/0/head/args/0/name`), where Malli lists every `:orn` alternative first.
+- Arity and wrong-kind errors: vague in both. LinkML says "not valid under any of the given schemas"; Malli says "input remaining".
+- The class rule: only Malli carries a readable message.
+
+Neither model checks rule semantics, such as variable safety or a `derived_by` that names an existing rule. Neither was tested for it.
+
+### Recommendation, revisited
+
+**Neither of the two deciding facts above still holds as stated.**
+1. *"Hypotheses as values are isolated by construction at about 3 ms; V3a is correct only because nothing runs concurrently."*
+   - V3a now isolates hypotheses with `snapshot/1` at 0.11 ms, and it passes the same concurrent test as V3b on both backends.
+   - What remains is the kind of guarantee, described above, not whether there is one.
+2. *"The model has to see the rules; LinkML treated the bodies as strings and let the class rule through."*
+   - LinkML now sees the bodies and rejects 12/12, the same as Malli.
+   - What remains:
+     - it validates a converted copy through a converter that must track the rule language;
+     - it took two non-obvious schema fixes, which a negative test was needed to find.
+
+**So the spike no longer measures a fact that forces the shape choice.** The shape elements recommended above can be built in either stack, and both spikes now have them:
+- rules and claims as data;
+- a schema that sees rule bodies;
+- isolated hypotheses;
+- valid time and assertion provenance as attributes.
+
+**What still separates the two shapes:**
+- **Notation.**
+  - V3b uses one notation, EDN, for slice, rules, schema and validation, applied to the values the engine runs.
+  - V3a has two: EDN, authored and run, and LinkML/YAML for model, docs and DDL, at about 4× the lines.
+- **State as a value.**
+  - In Clojure it is the idiom: every reader gets isolation for free.
+  - In Prolog it is an opt-in primitive, plus discipline for everything outside the dynamic database, such as memo keys, global variables and the Python side.
+  - F1.6 (threading state as a value through the Prolog evaluator) was not attempted. Estimate: most of `defeasible.pl` and `why.pl` would change.
+- **Transaction time.** Only Datahike offers the "known when" audit axis (§3).
+- **Generators.** LinkML's gen-doc, DDL and JSON Schema come with the schema. Malli gives only JSON Schema.
+- **Footprint and latency (information only).**
+  - V3a is lighter: 0.12 s cold start versus 2.4 s, and about 60–130 MB RSS versus 370–645 MB.
+  - V3a is faster on DuckDB: 4.4 ms p50 versus 6.0 ms.
+  - On Postgres the gap is smaller than first reported: V3a 8.5 ms p50 versus V3b 5.2 ms.
+
+**Carry forward the shape; the stack is open.** The remaining differences are qualitative trade-offs. On one side: one notation and isolation by construction. On the other: generators, a smaller footprint and isolation by primitive plus discipline. Readability of the two notations is Matthias's call.

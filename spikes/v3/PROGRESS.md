@@ -4,6 +4,7 @@ Updated as work proceeds; newest first.
 
 ## Status
 
+- [x] PLAN-v3a-fix (2026-11-24, committed locally, not pushed): F1 V3a hypotheses via `snapshot/1` with a state-keyed memo, and `shared/isolation.py` (V3a snapshot PASS, old assert mode FAIL, V3b branch and with PASS, DuckDB and Postgres); F2 LinkML rule bodies structured, 12/12 negatives, class rule now enforced (two LinkML pitfalls found); F3 both spikes still GREEN 1–6 with mutation failing as required, benches rerun. RESULTS.md has a new section "After the V3a fixes": neither deciding fact of the original Recommendation still holds
 - [x] Shared world: `shared/gen.py` (1969 cc, 20k emp, 100k req; DuckDB and Postgres 18 identical, `--check`)
 - [x] `shared/slice.edn`, `extension.edn`, `questions.edn` (Q01–Q23), `reference.py` → `keys.json` (extension changes Q07, Q14)
 - [x] `shared/CONTRACT.md`: CLI session script, ops, why-tree shape
@@ -23,4 +24,5 @@ Updated as work proceeds; newest first.
 1. Tooling: Postgres 18 via `brew services` (socket /tmp:5432, db `spike_v3`); clojure + babashka via brew; Python deps via uv into `.venv`. OK to keep the brew service running?
 2. RESULTS recommends V3b's *shape* (rules as data + schema into bodies + immutable state, hypotheses as values), not its engine. Does that framing match what you wanted from an exploration, or do you want a stack-level pick?
 3. Optional search (Scriptum/Lucene, HNSW) was skipped: plain Datalog matching passes check 6. Worth a follow-up?
-4. V3b's `d/with` hypothesis mode is verified by probe/timing, not by `accept.py` (which has no config switch for it). Add one?
+4. ~~V3b's `d/with` mode is untested by `accept.py`~~: now covered by `shared/isolation.py --hypothesis with`.
+5. With both deciding facts gone, RESULTS ends in "carry forward the shape; the stack is open". Is a tie-break wanted (for example, trying F1.6, state-as-value in Prolog), or is the trade-off list enough?
