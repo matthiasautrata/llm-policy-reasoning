@@ -118,7 +118,7 @@ def answer_fields(q, r):
     v = r.get("value")
     out = {"status": r.get("status"), "value": sorted(v) if isinstance(v, list) else v,
            "sides": sorted(sorted(s) for s in r["sides"]) if r.get("sides") else None}
-    if q.get("check_qualifier"):
+    if k == "decide":                                  # every decide key holds the qualifier (SEMANTICS.md, Qualifier)
         out["qualifier"] = r.get("qualifier")
     return out
 

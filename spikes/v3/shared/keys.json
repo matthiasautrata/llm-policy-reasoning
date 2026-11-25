@@ -5,6 +5,7 @@
     "CY1a",
     "CY1b"
    ],
+   "qualifier": null,
    "sides": [
     [
      "CY1a"
@@ -20,6 +21,7 @@
    "core": [
     "RY21"
    ],
+   "qualifier": null,
    "sides": null,
    "status": "ANSWER",
    "value": true
@@ -29,6 +31,7 @@
     "CY4a",
     "RY4"
    ],
+   "qualifier": null,
    "sides": null,
    "status": "ANSWER",
    "value": true
@@ -68,6 +71,7 @@
     "CY1b",
     "RY51"
    ],
+   "qualifier": null,
    "sides": [
     [
      "CY1a"
@@ -116,6 +120,7 @@
     "RY53",
     "RY54"
    ],
+   "qualifier": null,
    "sides": [
     [
      "CY1a"
@@ -240,6 +245,7 @@
     "C4",
     "RY56"
    ],
+   "qualifier": null,
    "sides": [
     [
      "C3"
@@ -255,6 +261,7 @@
    "core": [
     "RY56"
    ],
+   "qualifier": null,
    "sides": null,
    "status": "ANSWER",
    "value": [
@@ -266,6 +273,7 @@
     "RY21",
     "RY23"
    ],
+   "qualifier": null,
    "sides": [
     [
      "RY21"
@@ -283,6 +291,7 @@
    "core": [
     "R104"
    ],
+   "qualifier": null,
    "sides": null,
    "status": "ANSWER",
    "value": 3715000
@@ -292,6 +301,7 @@
     "R105",
     "R104"
    ],
+   "qualifier": null,
    "sides": null,
    "status": "ANSWER",
    "value": 1857000
@@ -301,6 +311,7 @@
     "R201",
     "R202"
    ],
+   "qualifier": null,
    "sides": null,
    "status": "ANSWER",
    "value": 25000
@@ -310,6 +321,7 @@
     "R201",
     "R202"
    ],
+   "qualifier": null,
    "sides": null,
    "status": "ANSWER",
    "value": 40000
@@ -319,6 +331,7 @@
     "R203",
     "R202"
    ],
+   "qualifier": null,
    "sides": null,
    "status": "ANSWER",
    "value": 25000
@@ -328,6 +341,7 @@
     "R306",
     "R204"
    ],
+   "qualifier": null,
    "sides": null,
    "status": "ANSWER",
    "value": true
@@ -337,6 +351,7 @@
     "R306",
     "R204"
    ],
+   "qualifier": null,
    "sides": null,
    "status": "ANSWER",
    "value": true
@@ -346,6 +361,7 @@
     "R312",
     "R314"
    ],
+   "qualifier": null,
    "sides": [
     [
      "R312"
@@ -365,6 +381,7 @@
     "R304",
     "R305"
    ],
+   "qualifier": "total over known facts in declared scope",
    "sides": null,
    "status": "ANSWER",
    "value": true
@@ -374,6 +391,7 @@
     "C4",
     "R313"
    ],
+   "qualifier": null,
    "sides": null,
    "status": "ANSWER",
    "value": "cc0077"
@@ -383,6 +401,7 @@
     "C3",
     "C4"
    ],
+   "qualifier": null,
    "sides": [
     [
      "C3"
@@ -399,6 +418,7 @@
     "C3",
     "C5"
    ],
+   "qualifier": null,
    "sides": null,
    "status": "ANSWER",
    "value": "cc0078"
@@ -462,6 +482,7 @@
     "R110",
     "R106"
    ],
+   "qualifier": null,
    "sides": null,
    "status": "ANSWER",
    "value": [
@@ -805,18 +826,21 @@
     "R305",
     "R306"
    ],
+   "qualifier": "total over known facts in declared scope",
    "sides": null,
    "status": "ANSWER",
    "value": false
   },
   "Q19": {
    "core": [],
+   "qualifier": null,
    "sides": null,
    "status": "UNDERDETERMINED",
    "value": null
   },
   "Q20": {
    "core": [],
+   "qualifier": null,
    "sides": null,
    "status": "OUT_OF_SCOPE",
    "value": null
@@ -923,6 +947,7 @@
     "R312",
     "R314"
    ],
+   "qualifier": null,
    "sides": [
     [
      "R312"
@@ -933,6 +958,15 @@
    ],
    "status": "CONFLICT",
    "value": null
+  },
+  "Q47": {
+   "core": [
+    "R309"
+   ],
+   "qualifier": "total over known facts in declared scope",
+   "sides": null,
+   "status": "ANSWER",
+   "value": false
   }
  },
  "changed": [
@@ -944,6 +978,7 @@
    "core": [
     "R104"
    ],
+   "qualifier": null,
    "sides": null,
    "status": "ANSWER",
    "value": 3715000
@@ -953,6 +988,7 @@
     "R105",
     "R104"
    ],
+   "qualifier": null,
    "sides": null,
    "status": "ANSWER",
    "value": 1857000
@@ -962,6 +998,7 @@
     "R201",
     "R202"
    ],
+   "qualifier": null,
    "sides": null,
    "status": "ANSWER",
    "value": 25000
@@ -971,6 +1008,7 @@
     "R201",
     "R202"
    ],
+   "qualifier": null,
    "sides": null,
    "status": "ANSWER",
    "value": 40000
@@ -980,6 +1018,7 @@
     "R203",
     "R202"
    ],
+   "qualifier": null,
    "sides": null,
    "status": "ANSWER",
    "value": 25000
@@ -989,6 +1028,7 @@
     "R306",
     "R204"
    ],
+   "qualifier": null,
    "sides": null,
    "status": "ANSWER",
    "value": true
@@ -997,6 +1037,7 @@
    "core": [
     "R307"
    ],
+   "qualifier": null,
    "sides": null,
    "status": "ANSWER",
    "value": false
@@ -1006,6 +1047,7 @@
     "R312",
     "R314"
    ],
+   "qualifier": null,
    "sides": [
     [
      "R312"
@@ -1025,6 +1067,7 @@
     "R304",
     "R305"
    ],
+   "qualifier": "total over known facts in declared scope",
    "sides": null,
    "status": "ANSWER",
    "value": true
@@ -1034,6 +1077,7 @@
     "C4",
     "R313"
    ],
+   "qualifier": null,
    "sides": null,
    "status": "ANSWER",
    "value": "cc0077"
@@ -1043,6 +1087,7 @@
     "C3",
     "C4"
    ],
+   "qualifier": null,
    "sides": [
     [
      "C3"
@@ -1059,6 +1104,7 @@
     "C3",
     "C5"
    ],
+   "qualifier": null,
    "sides": null,
    "status": "ANSWER",
    "value": "cc0078"
@@ -1124,6 +1170,7 @@
     "R110",
     "R106"
    ],
+   "qualifier": null,
    "sides": null,
    "status": "ANSWER",
    "value": [
@@ -1467,18 +1514,21 @@
     "R305",
     "R306"
    ],
+   "qualifier": "total over known facts in declared scope",
    "sides": null,
    "status": "ANSWER",
    "value": false
   },
   "Q19": {
    "core": [],
+   "qualifier": null,
    "sides": null,
    "status": "UNDERDETERMINED",
    "value": null
   },
   "Q20": {
    "core": [],
+   "qualifier": null,
    "sides": null,
    "status": "OUT_OF_SCOPE",
    "value": null
@@ -1585,6 +1635,7 @@
     "R312",
     "R314"
    ],
+   "qualifier": null,
    "sides": [
     [
      "R312"
@@ -1595,6 +1646,15 @@
    ],
    "status": "CONFLICT",
    "value": null
+  },
+  "Q47": {
+   "core": [
+    "R309"
+   ],
+   "qualifier": "total over known facts in declared scope",
+   "sides": null,
+   "status": "ANSWER",
+   "value": false
   }
  }
 }

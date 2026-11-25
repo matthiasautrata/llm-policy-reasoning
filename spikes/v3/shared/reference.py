@@ -9,14 +9,14 @@ functional predicates); every rule is a Python function below. Data: a full load
 reference is not System A and may hold the rows).
 
 Key shape per question:
-  decide        {status, value, sides, core}          sides: sorted list of sorted id lists, or null
+  decide        {status, value, sides, core, qualifier}        sides: sorted list of sorted id lists, or null
   why_not       {status, value, failed, core}         failed: literals that must be shown as failed
   claim         {standing, defeater, qualifier, core}
   resolve_term  {status, candidates}
   fetch         {value, row_count, core}             (Q24, Q25: the integer-cast regressions, pending exposure and booked total of the root)
 Dispute questions (:state :acyclic, keys["acyclic"]) use the class Prop: the hand-grounded theory of
-cycles-acyclic.edn under ambiguity propagation (SEMANTICS.md). Questions with :check_qualifier add
-qualifier (decide: "total over known facts in declared scope" when the proof uses a :closed_over rule).
+cycles-acyclic.edn under ambiguity propagation (SEMANTICS.md). Every decide key adds qualifier
+("total over known facts in declared scope" when the answer rests on absence: SEMANTICS.md, Qualifier).
 `core` lists the rule / claim ids an explanation must contain.
 """
 import argparse, datetime, json, pathlib, re, sys
@@ -245,12 +245,39 @@ CLOSED = "total over known facts in declared scope"
 
 
 def answer(R, q):
-    """The key for question q (plain dict) in reference R."""
+    """The key for question q (plain dict) in reference R; every decide key holds the qualifier."""
     k = answer1(R, q)
-    if q.get("check_qualifier"):
-        closed = {kw(r["id"]) for r in R.S["rules"] if kw(r.get("closed_over")) == "known_facts"}
-        k["qualifier"] = CLOSED if k["status"] == "ANSWER" and set(k["core"]) & closed and k["value"] not in (False, None, []) else None
+    if q["kind"] == "decide":
+        k["qualifier"] = qualifier(R, q, k)
     return k
+
+
+def qualifier(R, q, k):
+    """SEMANTICS.md, Qualifier (IR-005): CLOSED when the ANSWER rests on absence."""
+    if k["status"] != "ANSWER":
+        return None
+    closed = {kw(r["id"]) for r in R.S["rules"] if kw(r.get("closed_over")) == "known_facts"}
+    g, d = q["goal"], q.get("as_of") or R.today
+    if k["value"] not in (False, None, []):
+        return CLOSED if set(k["core"]) & closed else None
+    covered = any(plain(c["assertion"]) == ["complete", g[0]] and R.in_force(c, d) for c in R.claims.values())
+    return None if covered else CLOSED if absent(R, g, k["value"], closed) else None
+
+
+def absent(R, g, v, closed):
+    """A negative value rests on absence: open null/[] always; a ground false when no supporter was live,
+    or when the defeater that refutes it is :closed_over. Reasoned per predicate from the rule docs."""
+    if v is not False:
+        return True                                    # open: no binding is known
+    p = g[0]
+    if p == "approved":                                # R310 needs [:not denied], so R314 never meets a live R310,
+        return True                                    # and a live R312 gives true or CONFLICT: false is none
+    if p == "denied":                                  # R309 is the only supporter; nothing attacks it
+        return True
+    if p == "vendor_cleared":                          # none: neither R305 nor R306 live; else defeated by R307
+        _, _, dft = R.vendor_cleared(g[1])
+        return dft is None or dft in closed
+    raise AssertionError(f"absence of a false {p} not reasoned in the reference")
 
 
 def answer1(R, q):
@@ -298,6 +325,7 @@ def answer1(R, q):
         core = sorted(set(core + (["R313"] if r313 and st == "ANSWER" and d < "2026-08-01" else [])))
         return dict(status=st, value=v, sides=sides, core=core)
     if p == "breach_in": return A(R.breach_in(g[1]), ["R110", "R106"])
+    if p == "denied": return A(R.denied(g[1]), ["R309"])
     if p in ("approved_total", "approved_count"):
         rid = {"approved_total": "R120", "approved_count": "R121"}[p]
         st, v, sides, c = R.approved_agg(g[1], "sum" if p == "approved_total" else "count")
@@ -476,6 +504,18 @@ class Prop:
 
 
 def answer_acyclic(R, q):
+    k = answer_acyclic1(R, q)
+    if k["status"] != "ANSWER":
+        k["qualifier"] = None
+    elif k["value"] in (False, None, []):              # open [] (no RY56 instance proven): absence; false: not reasoned
+        assert k["value"] == [], "a false in the acyclic theory: absence not reasoned in the reference"
+        k["qualifier"] = CLOSED
+    else:                                              # RY55 is the one :closed_over rule of the theory
+        k["qualifier"] = CLOSED if "RY55" in k["core"] else None
+    return k
+
+
+def answer_acyclic1(R, q):
     w = tuple((q.get("hypothesis") or {}).get("withhold") or ())
     d, g = q.get("as_of") or R.today, q["goal"]
     P = Prop(R, d, w)
@@ -486,10 +526,7 @@ def answer_acyclic(R, q):
             return P.conflict({k: inst[k] for k, v in vals.items() if v == CONTESTED})
         won = sorted(inst[k][2] for k, v in vals.items() if v == PROVEN)
         return dict(status="ANSWER", value=won, sides=None, core=["RY56"] if won else [])
-    k = P.answer(g)
-    if q.get("check_qualifier"):                       # RY55 is :closed_over :known_facts
-        k["qualifier"] = CLOSED if k["status"] == "ANSWER" and k["value"] and "RY55" in k["core"] else None
-    return k
+    return P.answer(g)
 
 
 def load(cycles=False):

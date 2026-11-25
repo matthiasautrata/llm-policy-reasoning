@@ -5,7 +5,7 @@
 ;; keyed under keys.json "acyclic", and left out of the base / extended question list. Q30-Q39 of PLAN-v3-cycles:
 ;; Q30 Q32 Q34 Q35 Q37 kept (same goal, same key); Q31 Q33 (the loops) retired to fixtures/integrity (load
 ;; rejection, accept check 8); Q36 (downstream of the Y2 loop) retired; Q38 Q39 (Y6) became accept check 7's
-;; hypothesis tests. :check_qualifier true: decide's qualifier is part of the key (IR-005 branches).
+;; hypothesis tests. Every decide key holds the qualifier (IR-005; SEMANTICS.md, Qualifier).
 [{:id :Q01 :kind :decide :goal [:booked_total "cc0009" ?v] :text "What is the booked total of cost centre cc0009?"}
  {:id :Q02 :kind :decide :goal [:headroom "cc0009" ?v] :text "What headroom does cc0009 have?"}
  {:id :Q03 :kind :decide :goal [:role_limit "manager" ?l] :as_of "2026-07-15" :text "What was a manager's approval limit on 15 July?"}
@@ -34,22 +34,24 @@
   :text "What is the pending exposure of the root cost centre? (A1 regression: the sum exceeds INT32)"}
  {:id :Q25 :kind :fetch :concept :booked_total :filters {:cc "cc0000"}
   :text "What is the booked total of the root cost centre? (integer-cast regression: the SUM is cast to BIGINT)"}
- {:id :Q26 :kind :decide :goal [:booked_total "cc0009" ?v] :check_qualifier true
+ {:id :Q26 :kind :decide :goal [:booked_total "cc0009" ?v]
   :text "IR-005 completeness branch: booked total of cc0009 (R104 names completeness claim C10; no qualifier)"}
- {:id :Q27 :kind :decide :goal [:approved "r000005"] :check_qualifier true
+ {:id :Q27 :kind :decide :goal [:approved "r000005"]
   :text "IR-005 closed-over branch: is r000005 approved (R310, R304 closed over known facts: qualified)?"}
- {:id :Q44 :kind :decide :goal [:approved_total "cc0058" ?v] :check_qualifier true
+ {:id :Q44 :kind :decide :goal [:approved_total "cc0058" ?v]
   :text "§2.1 (a): approved total of the cc0058 subtree (every member's approval proven or refuted)"}
- {:id :Q45 :kind :decide :goal [:approved_count "cc0290" ?n] :check_qualifier true
+ {:id :Q45 :kind :decide :goal [:approved_count "cc0290" ?n]
   :text "§2.1 (a): how many pending requests of leaf cc0290 are approved?"}
  {:id :Q46 :kind :decide :goal [:approved_total "cc0105" ?v]
   :text "§2.1 (b): approved total of the cc0105 subtree (r000001's approval is contested, R312 vs R314)"}
+ {:id :Q47 :kind :decide :goal [:denied "r000005"]
+  :text "§2.2: is r000005 denied? (no: R309 is not live, so the answer rests on absence: qualified)"}
  {:id :Q30 :state :acyclic :kind :decide :goal [:blacklisted "fern"] :text "Y1: is fern blacklisted (risk says yes, compliance says no)?"}
  {:id :Q32 :state :acyclic :kind :decide :goal [:preferred "acme"] :text "Y2 control: is acme (never suspended) preferred?"}
  {:id :Q34 :state :acyclic :kind :decide :goal [:watchlisted "cog"] :text "Y4: is cog watchlisted (risk prevails over compliance)?"}
  {:id :Q35 :state :acyclic :kind :decide :goal [:flagged "fern"] :text "Y5a: is fern flagged (supporter on the contested Y1)?"}
  {:id :Q37 :state :acyclic :kind :decide :goal [:cleared_for_tender "fern"] :text "Y5c: is fern cleared for tender (the attacker's body is the contested Y1)?"}
- {:id :Q40 :state :acyclic :kind :decide :goal [:screening_clear "fern"] :check_qualifier true
+ {:id :Q40 :state :acyclic :kind :decide :goal [:screening_clear "fern"]
   :text "Y5d: does fern pass screening ([:not] of the contested Y1; closed over known facts)?"}
  {:id :Q41 :state :acyclic :kind :decide :goal [:home_budget "e077" ?v] :as_of "2026-07-15" :hypothesis {:withhold [:R313]}
   :text "Y5e: e077's home budget on 15 July without R313 (a measure over the contested cost_centre_of)?"}
