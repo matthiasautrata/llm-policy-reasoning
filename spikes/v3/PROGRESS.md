@@ -4,12 +4,13 @@ Newest first. `HISTORY.md` holds the earlier phases. `RESULTS.md` describes the 
 
 ## Status
 
-- [x] Pruning to Python + Prolog (2026-11-25, `PLAN-v3-housekeeping.md`):
+- [x] Pruning to Python + Prolog (2026-11-25, `PLAN-v3-housekeeping.md` at tag `spike-v3-housekeeping`):
   - tagged `spike-v3-five-platforms`, then deleted V3b–V3e, V3a's WFS mode, the blocking semantics, `cycles.edn`, `SEMANTICS-cycles.md` and the executed plans (each removal is listed in the plan's Decisions);
   - wrote `HISTORY.md`;
   - rewrote RESULTS to the current state.
   - Gate: keys byte-identical; V3a GREEN 1–8; `--mutation` fails check 1; isolation PASS on DuckDB and Postgres; negatives 15/15; bench on both backends; guard probe 2/2 (`v3a-prolog/results/`).
-- [x] Repo-wide inventory (2026-11-25, `INVENTORY.md` at the repo root, a proposal with a root HISTORY skeleton). Awaiting Matthias: nothing outside `spikes/` is removed until he decides.
+- [x] Repo-wide inventory (2026-11-25): approved and executed (`PLAN-v3-preconditions.md` §1.1); summarised in the root `HISTORY.md`.
+- [ ] `PLAN-v3-preconditions.md`: Postgres retired, `.venv` cleanup, then the three benchmark preconditions (§2).
 
 ## Questions for Matthias
 

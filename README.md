@@ -2,7 +2,7 @@
 
 Which layer of meaning does a question about a rule-based policy need, and in which representation and mode does a language model use it reliably?
 
-v2 is under construction; the plan, hypotheses and milestones are in [`REWORK.md`](REWORK.md).
+v2, "Layers of Meaning", is finished: paper [`paper/v2/PAPER.md`](paper/v2/PAPER.md); plan and decision log [`REWORK.md`](REWORK.md).
 It crosses four cumulative layers (L0 schema, L1 ontology, L2 context, L3 warrant) with three representations (text, structured, formal) and two modes (*read*: the model answers from the material; *compile*: the model writes a Prolog goal that an engine executes), on a synthetic procurement-approval policy whose answer keys are computed by SWI-Prolog and checked by an independent Python implementation.
 
 ## v1
@@ -11,9 +11,12 @@ v1, "Rules in Context", asked whether notation matters and when an engine is nee
 Paper: [`paper/v1/PAPER.md`](paper/v1/PAPER.md) · PDF: [`paper/v1/whitepaper.pdf`](paper/v1/whitepaper.pdf).
 Its studies, transcripts and results are at git tag `v1` (see [`paper/v1/README.md`](paper/v1/README.md)).
 
+The v3 spike (`spikes/v3/`, branch `spike/v3`) builds System A: rules and claims as data, a defeasible engine (SWI-Prolog via janus) over bounded SQL fetch on DuckDB. Current state: [`spikes/v3/RESULTS.md`](spikes/v3/RESULTS.md). How the repo got here: [`HISTORY.md`](HISTORY.md).
+
 ## Layout
 
 ```
+HISTORY.md    v1, v2, v3 spike: one line each, with tags and commit ranges
 REWORK.md     v2 plan and decision log
 world/        world generator and domain model
 rules/        rules.yaml: rule records (id, layer, class, conservative, owner, english, prolog)
@@ -25,12 +28,14 @@ harness/      model runs, compile-mode IM validation, scoring
 worlds/       generated worlds used in runs (committed)
 results/      run records
 paper/        v2 paper sources; paper/v1/ holds the frozen v1 report
+spikes/v3/    System A spike (engine, oracle, integrity gate, acceptance tests)
 ```
 
 ## Prerequisites
 
 - Python ≥ 3.10 (`pip install -r requirements.txt`, ideally into `.venv/`; the Makefile uses `.venv/bin/python` when present)
 - [SWI-Prolog](https://www.swi-prolog.org) 9+ on `PATH` (developed on 11.0)
+- For `spikes/v3` only: the packages marked spike v3 in `requirements.txt`
 - For `make verify-v1` only: [Soufflé](https://souffle-lang.github.io) 2.4+ on `PATH`, and `pip install pyshacl rdflib`
 
 ```

@@ -117,15 +117,20 @@ How spike v3 (System A: rules and claims as data, a defeasible engine, a bounded
 - No engine is native for three-valued propagation; each needed a three-valued twin of `lit`/`body`/`classify`, about 140–210 lines.
 - The rule-class report: `:class` records inferential role, not deontic status (PROGRESS question on deontic rules).
 
-### 6 Pruning to Python + Prolog (2026-11-25; 006b2dd..)
+### 6 Pruning to Python + Prolog (2026-11-25; 006b2dd..86924f8, tag `spike-v3-housekeeping`)
 
 **Question.** Keep only what the decided platform needs.
 
 **What was done.**
 - Tagged `spike-v3-five-platforms`.
-- Deleted V3b–V3e, V3a's WFS mode, the blocking semantics and the executed plans.
-- Rewrote RESULTS and PROGRESS to the current state.
-- `PLAN-v3-housekeeping.md` Decisions lists each removal.
+- Deleted V3b–V3e, V3a's WFS mode, the blocking semantics, `cycles.edn`, `SEMANTICS-cycles.md` and the executed plans.
+- Rewrote RESULTS and PROGRESS to the current state, and wrote the repo-wide `INVENTORY.md`, which is now summarised in the root `HISTORY.md`.
+- `PLAN-v3-housekeeping.md` (at the tag) lists each removal with its line counts, for example defeasible.pl −185/+12 and reference.py −167/+10.
+
+**Findings.**
+- Keys were byte-identical before and after the pruning, and every check of the gate passed on both backends.
+- One defect was introduced and caught by the gate: a stray `}` in `model_check.py`'s f-string, left by removing the engine flag.
+- Kept because current claims cite them: `gen.py`, `hyp_latency.py` and the LinkML artefacts.
 
 ## Platform lessons (platforms dropped, lessons kept)
 

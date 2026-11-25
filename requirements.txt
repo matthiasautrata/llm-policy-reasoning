@@ -1,3 +1,7 @@
 pyyaml>=6.0        # rules/rules.yaml, questions/bank.yaml
 litellm>=1.40      # only for model runs (harness/run.py)
 matplotlib>=3.8    # only for paper figures
+duckdb>=2.0        # spike v3: detail data (developed on 2.0.1)
+janus-swi>=1.5     # spike v3: Python <-> SWI-Prolog (1.5.3)
+edn_format>=0.8    # spike v3: slice and rules in EDN (0.8.0)
+linkml>=1.12       # spike v3: slice model and negatives (1.12.1)
