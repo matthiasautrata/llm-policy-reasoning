@@ -1,7 +1,7 @@
-"""Spike v3 data: the v2 procurement world at scale, loaded identically into DuckDB and Postgres.
+"""Spike v3 data: the v2 procurement world at scale, loaded into DuckDB.
 
-  python spikes/v3/shared/gen.py                # -> shared/slice.duckdb + Postgres db spike_v3
-  python spikes/v3/shared/gen.py --check        # row counts and checksums per table, both backends
+  python spikes/v3/shared/gen.py                # -> shared/slice.duckdb
+  python spikes/v3/shared/gen.py --check        # row counts and checksums per table
 
 Reuses v2 world/domain.py (role limits, vendor periods, amounts, categories, dates) read-only and
 v2 world/gen.py's construction (one manager per centre, analysts in leaves, caps around the booked
@@ -9,7 +9,7 @@ total, hr/finance assignment divergence after transfers). Scale: ~2,000 cost cen
 employees, 100,000 requests. Planted requests r000001..r000008 exercise the rule interactions the
 questions ask about (see PLANTED). Detail data only: System A never holds these rows.
 """
-import argparse, hashlib, json, os, pathlib, random, sys
+import argparse, hashlib, json, pathlib, random, sys
 from datetime import date, timedelta
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -22,7 +22,6 @@ FANOUT = [8, 5, 6, 7]           # children per level: 1 + 8 + 40 + 240 + 1680 = 
 N_EMP, N_REQ = 20000, 100000
 P_VIOLATION, P_EMERGENCY, P_CANCELLED, P_TRANSFER = 0.05, 0.25, 0.10, 0.08
 DUCK = HERE / "slice.duckdb"
-PG_DSN = os.environ.get("SPIKE_V3_PG", "dbname=spike_v3")
 
 DDL = {
     "cc": "id VARCHAR PRIMARY KEY, parent VARCHAR, level INTEGER NOT NULL, org_unit VARCHAR NOT NULL, booked INTEGER NOT NULL, cap INTEGER NOT NULL",
@@ -126,18 +125,6 @@ def load_duck(tables):
     con.close()
 
 
-def load_pg(tables):
-    import psycopg
-    with psycopg.connect(PG_DSN) as con, con.cursor() as cur:
-        for t, rows in tables.items():
-            cur.execute(f"DROP TABLE IF EXISTS {t}")
-            cur.execute(f"CREATE TABLE {t} ({DDL[t].replace('VARCHAR', 'TEXT')})")
-            with cur.copy(f"COPY {t} FROM STDIN") as cp:
-                for r in rows: cp.write_row(r)
-        for i in INDEXES: cur.execute(i)
-        cur.execute("ANALYZE")
-
-
 ORDER = {"cc": "id", "emp": "id", "req": "id", "assignment": "emp, source, effective",
          "role_limit_version": "role, valid_from", "vendor_status": "vendor, valid_from"}
 
@@ -150,23 +137,18 @@ def fingerprint(rows):
 
 
 def check():
-    import duckdb, psycopg
+    """Row count and fingerprint per table (a regenerated file must print the same)."""
+    import duckdb
     d = duckdb.connect(str(DUCK), read_only=True)
-    ok = True
-    with psycopg.connect(PG_DSN) as p, p.cursor() as cur:
-        for t, o in ORDER.items():
-            a = d.execute(f"SELECT * FROM {t} ORDER BY {o}").fetchall()
-            cur.execute(f"SELECT * FROM {t} ORDER BY {o}"); b = cur.fetchall()
-            fa, fb = fingerprint(a), fingerprint(b)
-            print(f"{t:20s} duckdb {len(a):7d} {fa}   postgres {len(b):7d} {fb}   {'ok' if (len(a), fa) == (len(b), fb) else 'DIFFER'}")
-            ok &= (len(a), fa) == (len(b), fb)
-    return ok
-
+    for t, o in ORDER.items():
+        a = d.execute(f"SELECT * FROM {t} ORDER BY {o}").fetchall()
+        print(f"{t:20s} {len(a):7d} {fingerprint(a)}")
+    return True
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(); ap.add_argument("--check", action="store_true"); a = ap.parse_args()
     if not a.check:
         t = build()
-        load_duck(t); load_pg(t)
+        load_duck(t)
         print({k: len(v) for k, v in t.items()})
     sys.exit(0 if check() else 1)

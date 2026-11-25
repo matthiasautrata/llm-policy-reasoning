@@ -1,6 +1,6 @@
 """Spike v3 isolation test for with_hypothesis (PLAN-v3a-fix F1.4), the same session for any CLI.
 
-  .venv/bin/python spikes/v3/shared/isolation.py --cli spikes/v3/v3a-prolog/cli [--backend duckdb] [--hypothesis snapshot]
+  .venv/bin/python spikes/v3/shared/isolation.py --cli spikes/v3/v3a-prolog/cli [--hypothesis snapshot]
 
 Two op lists run concurrently in one process (CLI script key "concurrent"; V3a: Prolog threads):
   A: with_hypothesis(withhold R313) [sleep DELAY, decide cost_centre_of e077 as of 2026-07-15]
@@ -29,11 +29,10 @@ def script(cfg, delay):
 def main():
     a = argparse.ArgumentParser()
     a.add_argument("--cli", required=True)
-    a.add_argument("--backend", default="duckdb")
     a.add_argument("--hypothesis", help="CLI hypothesis mode (V3a: snapshot|assert)")
     a.add_argument("--delay", type=int, default=1000)
     a = a.parse_args()
-    cfg = dict(CFG[a.backend])
+    cfg = dict(CFG)
     if a.hypothesis:
         cfg["hypothesis"] = a.hypothesis
     p = subprocess.run(shlex.split(a.cli), input=json.dumps(script(cfg, a.delay)), capture_output=True, text=True, cwd=ROOT)
@@ -49,7 +48,7 @@ def main():
         "B's decide ran during A's hypothesis": asleep["t0"] < bq["t_start"] and bq["t_end"] < asleep["t1"],
         "base unchanged afterwards": (after.get("status"), after.get("value")) == ("ANSWER", "cc0077"),
     }
-    print(f"isolation  cli={a.cli}  backend={a.backend}  hypothesis={a.hypothesis or 'default'}")
+    print(f"isolation  cli={a.cli}  hypothesis={a.hypothesis or 'default'}")
     print(f"  A: {aq.get('status')} {aq.get('value')}   B: {bq.get('status')} {bq.get('value')}"
           f" (decide {bq['t_start'] - asleep['t0']:.0f}..{bq['t_end'] - asleep['t0']:.0f} ms into A's"
           f" {asleep['t1'] - asleep['t0']:.0f} ms sleep)   after: {after.get('status')} {after.get('value')}")

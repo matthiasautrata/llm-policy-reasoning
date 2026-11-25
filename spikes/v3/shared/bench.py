@@ -1,6 +1,6 @@
 """Spike v3 performance (latency and SQL statements per op), the same session for any CLI.
 
-  .venv/bin/python spikes/v3/shared/bench.py --cli spikes/v3/v3a-prolog/cli [--backend duckdb] [--n 200]
+  .venv/bin/python spikes/v3/shared/bench.py --cli spikes/v3/v3a-prolog/cli [--n 200]
 
 decide: N `approved` decisions on seeded random requests of the 100k (each a full defeasible
 evaluation: approver chain, cap check over ancestors, vendor check, denial, incompatibility), then the
@@ -32,10 +32,9 @@ def run(cli, script):
 def main():
     a = argparse.ArgumentParser()
     a.add_argument("--cli", required=True)
-    a.add_argument("--backend", default="duckdb")
     a.add_argument("--n", type=int, default=200)
     a = a.parse_args()
-    cfg = CFG[a.backend]
+    cfg = CFG
     rng = random.Random(7)
     reqs = [f"r{rng.randrange(1, 100001):06d}" for _ in range(a.n)]
     _, _, Q = load()
@@ -48,7 +47,7 @@ def main():
     errs = [r for r in res if r.get("status") == "ERROR"]
     vals = [r.get("value") for r in res[:a.n]]
     report = {
-        "cli": a.cli, "backend": a.backend, "n": a.n, "errors": len(errs),
+        "cli": a.cli, "n": a.n, "errors": len(errs),
         "approved_true": sum(1 for v in vals if v is True),
         "decide_ms": {"p50": pct(ms, .5), "p95": pct(ms, .95), "max": max(ms), "mean": statistics.mean(ms)},
         "decide_ms_warm": {"p50": pct(ms[20:], .5), "p95": pct(ms[20:], .95)},

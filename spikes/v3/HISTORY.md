@@ -22,6 +22,7 @@ How spike v3 (System A: rules and claims as data, a defeasible engine, a bounded
 
 **Findings that still hold.**
 - The `fetch` boundary is the stable part: 11.17 SQL statements per decide, no table ever loaded, and a backend swap is a config change.
+- Backend independence: DuckDB and Postgres 18 gave the same answers and explanations, SQL text aside (check 2), in every later phase too. That settled it, so Postgres and check 2 were retired on 2026-11-25 (`PLAN-v3-preconditions.md` §1.2; the last Postgres outputs are at tag `spike-v3-housekeeping`).
 - The defeasible layer is small, about 150–200 lines, and is built, not native.
 - "Rules are data, interpreted at runtime" matters more than the platform.
 - Valid time and assertion provenance (`asserted_by`/`asserted_at`) are semantic attributes. Transaction time is only an audit axis.

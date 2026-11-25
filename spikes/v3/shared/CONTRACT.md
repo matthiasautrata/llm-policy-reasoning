@@ -7,9 +7,8 @@ running state, so runtime extension is tested without restart.
 ## Session script
 
 ```json
-{"config": {"backend": "duckdb" | "postgres",
+{"config": {"backend": "duckdb",
             "duckdb": "spikes/v3/shared/slice.duckdb",
-            "postgres": "dbname=spike_v3",
             "fetch_limit": 10000},
  "load": ["spikes/v3/shared/slice.edn", "spikes/v3/shared/extension.edn"],
  "ops": [ <op>, ... ]}

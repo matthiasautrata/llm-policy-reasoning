@@ -1,6 +1,6 @@
 ;; Spike v3 canonical slice: physical model, semantic layer, vocabulary, rules, claims.
 ;; Authored once; V3a reads it with an EDN DCG, reference.py and model_check.py with edn_format.
-;; Detail data is NOT here: it lives in DuckDB / Postgres and is reached only through
+;; Detail data is NOT here: it lives in DuckDB and is reached only through
 ;; fetch(concept, filters). Rules reference concepts, never SQL.
 ;;
 ;; Conventions
@@ -81,7 +81,7 @@
  ;; minus a total and sums over nothing.
  ;; A concept binds to tables and yields a SQL template. $name is a required parameter (pushed into
  ;; the template); every other filter is applied as WHERE t."col" = value around the template.
- ;; @iso(x) is a dialect macro: an ISO yyyy-mm-dd string from a DATE (DuckDB strftime, Postgres to_char).
+ ;; @iso(x) is a dialect macro: an ISO yyyy-mm-dd string from a DATE (DuckDB strftime).
  :concepts
  [{:id "entity:request" :name :request :kind :entity :tables ["table:req"]
    :doc "Purchase requests."

@@ -1,7 +1,7 @@
 """Re-entry guard probe (PLAN-v3-integrity §3.2): what an engine does with a negative cycle when the
 integrity gate is bypassed.
 
-  python spikes/v3/shared/cycles_probe.py --cli spikes/v3/v3a-prolog/cli [--timeout 30] [--out f.json] [--backend postgres]
+  python spikes/v3/shared/cycles_probe.py --cli spikes/v3/v3a-prolog/cli [--timeout 30] [--out f.json]
 
 For each loop fixture (Y2 even loop, Y3 odd loop under fixtures/integrity/) loads slice + extension +
 fixture with INTEGRITY_GATE=off, so the load is admitted, and asks the goal on the loop. A memo
@@ -25,12 +25,11 @@ def main():
     ap.add_argument("--cli", required=True)
     ap.add_argument("--timeout", type=float, default=30)
     ap.add_argument("--out")
-    ap.add_argument("--backend", default="duckdb")
     a = ap.parse_args()
     env = dict(os.environ, INTEGRITY_GATE="off")
     rows = []
     for name, fix, goal in PROBES:
-        script = {"config": CFG[a.backend], "load": [SLICE, EXT, f"{FIX}/{fix}"], "ops": [{"op": "decide", "goal": goal}]}
+        script = {"config": CFG, "load": [SLICE, EXT, f"{FIX}/{fix}"], "ops": [{"op": "decide", "goal": goal}]}
         t, r = time.time(), {}
         try:
             p = subprocess.run(shlex.split(a.cli), input=json.dumps(script), capture_output=True, text=True,

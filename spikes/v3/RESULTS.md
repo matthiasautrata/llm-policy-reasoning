@@ -2,15 +2,15 @@
 
 Current state only. `HISTORY.md` covers how the spike got here: five platforms, reversed findings, platform lessons. The tag `spike-v3-five-platforms` holds everything that was removed.
 
-Measured 2026-11-25 on Apple Silicon (macOS). Versions: SWI-Prolog 11.0.1, janus-swi 1.5.3, duckdb (Python) 2.0.1, psycopg 3.3.9, Postgres 18, LinkML 1.12.1. The raw outputs are in `v3a-prolog/results/`. From the repo root:
+Measured 2026-11-25 on Apple Silicon (macOS). Versions: SWI-Prolog 11.0.1, janus-swi 1.5.3, duckdb (Python) 2.0.1, LinkML 1.12.1. DuckDB is the only backend: Postgres 18 gave identical answers and was retired on 2026-11-25 (`HISTORY.md`, phase 1). The raw outputs are in `v3a-prolog/results/`. From the repo root:
 
 ```
 .venv/bin/python spikes/v3/shared/reference.py                                   # keys.json (oracle)
-.venv/bin/python spikes/v3/shared/accept.py    --cli spikes/v3/v3a-prolog/cli    # checks 1-8; add --mutation
-.venv/bin/python spikes/v3/shared/isolation.py --cli spikes/v3/v3a-prolog/cli --backend duckdb|postgres
-.venv/bin/python spikes/v3/shared/bench.py     --cli spikes/v3/v3a-prolog/cli --backend duckdb|postgres
+.venv/bin/python spikes/v3/shared/accept.py    --cli spikes/v3/v3a-prolog/cli    # checks 1, 3-8; add --mutation
+.venv/bin/python spikes/v3/shared/isolation.py --cli spikes/v3/v3a-prolog/cli
+.venv/bin/python spikes/v3/shared/bench.py     --cli spikes/v3/v3a-prolog/cli
 .venv/bin/python spikes/v3/shared/cycles_probe.py --cli spikes/v3/v3a-prolog/cli # re-entry guard, gate off
-.venv/bin/python spikes/v3/shared/hyp_latency.py  --cli spikes/v3/v3a-prolog/cli --backend duckdb|postgres
+.venv/bin/python spikes/v3/shared/hyp_latency.py  --cli spikes/v3/v3a-prolog/cli
 .venv/bin/python spikes/v3/v3a-prolog/linkml/build.py                            # LinkML model, negatives
 ```
 
@@ -18,7 +18,7 @@ Measured 2026-11-25 on Apple Silicon (macOS). Versions: SWI-Prolog 11.0.1, janus
 
 - **Shape.**
   - Rules and claims are data, authored once in EDN (`shared/slice.edn`, `extension.edn`, `cycles-acyclic.edn`) and interpreted at runtime by a top-down defeasible engine.
-  - Detail data stays in DuckDB or Postgres. The engine reaches it only through `fetch(concept, filters)`, whose concept → SQL bindings live in the slice. No table is ever loaded, and switching backends is a config change.
+  - Detail data stays in DuckDB. The engine reaches it only through `fetch(concept, filters)`, whose concept → SQL bindings live in the slice. No table is ever loaded.
 - **Contract** (`shared/CONTRACT.md`): a JSON-lines CLI session.
   - Ops: `decide`, `claims`, `why`, `why_not`, `add`, `with_hypothesis` and `resolve_term`.
   - Answers: `ANSWER`, `CONFLICT` with sides, `UNDERDETERMINED` or `OUT_OF_SCOPE`, each with a why tree and owners.
@@ -51,7 +51,7 @@ SWI-Prolog hosted from Python through janus. It has one evaluation mode: recursi
 | `ops.pl`: the contract ops, `contested_why`, hypotheses | 290 |
 | `why.pl`: why / why_not trees | 63 |
 | `edn.pl`: EDN reader (DCG) | 78 |
-| `sql.py`: the `fetch` boundary (duckdb / psycopg), per-thread cache | 107 |
+| `sql.py`: the `fetch` boundary (duckdb), per-thread cache | 97 |
 | `host.py` + `cli`: janus host, gate calls | 72 + 4 |
 | `linkml/`: `slice.yaml` schema, `edn2yaml.py`, `build.py` (docs, DDL comparison, negatives) | |
 
@@ -59,31 +59,31 @@ SWI-Prolog hosted from Python through janus. It has one evaluation mode: recursi
 
 | Criterion | V3a |
 |---|---|
-| Correctness | `accept.py` GREEN on checks 1–8 (`results/accept.txt`). `--mutation` fails check 1, as it must (`results/mutation.txt`). Keys are byte-identical to before the pruning. |
+| Correctness | `accept.py` GREEN on checks 1 and 3–8 (`results/accept.txt`; check 2, the backend swap, is retired). `--mutation` fails check 1, as it must (`results/mutation.txt`). |
 | Defeasible semantics | All built in `defeasible.pl`: team defeat, superiority, functional rivals, R314 incompatibility, and propagation with a `contested` why node. |
 | Explanations | Complete against the keys. `check_why.py` re-verifies every tree, including `contested` nodes (`via`, `rules`, roots). |
 | As-of / provenance | Valid time from claim attributes (`valid_from`/`valid_to`). Assertion provenance from `asserted_by`/`asserted_at`/`recorded_at`. No transaction-time axis. |
-| Adoption gate | `snapshot/1`: changes are invisible to other threads and always discarded. `isolation.py` PASS on DuckDB and Postgres (`results/isolation-*.txt`). |
+| Adoption gate | `snapshot/1`: changes are invisible to other threads and always discarded. `isolation.py` PASS (`results/isolation-duckdb.txt`). |
 | Integrity | Check 8 PASS: 9 fixtures plus the `add` and hypothesis cases, with the exact member sets above. Re-entry guard with the gate off: 2 of 2 loops named as `defeat-cycle` with their goal path, 0.8–2.2 ms (`results/guard-probe.*`). |
 | Model / validation | LinkML 1.12.1 with structured rule bodies; 81/81 literals round-trip to EDN. The 15 negatives are 15/15 rejected by some layer: linkml-validate 14/15, JSON Schema 14/15, shared shape check 4/15 (`linkml/negatives.md`, `results/negatives.txt`). |
-| SQL boundary | Prolog → Python (janus) → duckdb / psycopg. 11.17 statements per `approved` decision. The exhaustive set question (check 5) uses 551 bounded statements and at most 425 rows. |
+| SQL boundary | Prolog → Python (janus) → duckdb. 11.17 statements per `approved` decision. The exhaustive set question (check 5) uses 551 bounded statements and at most 425 rows. |
 | Footprint (information) | SWI-Prolog 11.0.1 (brew) plus `.venv`, 273 MB (LinkML dominates). |
 
 **Latency** (`bench.py`: 200 `approved` decisions on seeded random requests, then the questions; the per-op `ms` from the CLI's own clock; 49/200 approved, 0 errors):
 
-| | DuckDB | Postgres |
-|---|---|---|
-| decide p50 / p95 / max (ms) | 4.66 / 10.32 / 15.4 | 7.39 / 21.29 / 30.5 |
-| questions p50 / p95 (ms) | 0.79 / 12.2 | 0.80 / 45.4 |
-| load (ms), cold start (s) | 61, 0.13 | 76, 0.16 |
-| max RSS, loaded / bench (MB) | 63 / 132 | 49 / 84 |
+| | DuckDB |
+|---|---|
+| decide p50 / p95 / max (ms) | 4.57 / 10.12 / 15.6 |
+| questions p50 / p95 (ms) | 0.67 / 10.7 |
+| load (ms), cold start (s) | 58, 0.13 |
+| max RSS, loaded / bench (MB) | 63 / 135 |
 
 **Hypotheses** (`hyp_latency.py`, n = 30; p50 / p95 ms of the base `decide` and of the whole `with_hypothesis` op, which includes the gate):
 
-| | DuckDB base | DuckDB hypothesis | Postgres base | Postgres hypothesis |
-|---|---|---|---|---|
-| Q10 (withhold R313): ANSWER → CONFLICT | 0.14 / 0.17 | 0.16 / 0.22 | 0.13 / 0.14 | 0.17 / 0.21 |
-| Q38 (withhold RY23): CONFLICT → ANSWER | 0.61 / 0.81 | 0.37 / 0.46 | 0.34 / 0.55 | 0.29 / 0.34 |
+| | base | hypothesis |
+|---|---|---|
+| Q10 (withhold R313): ANSWER → CONFLICT | 0.13 / 0.14 | 0.16 / 0.18 |
+| Q38 (withhold RY23): CONFLICT → ANSWER | 0.58 / 0.79 | 0.35 / 0.39 |
 
 Bench runs drift by about ±10 % on p50, so differences smaller than that are noise.
 
@@ -126,4 +126,4 @@ Bench runs drift by about ±10 % on p50, so differences smaller than that are no
 
 ## Fallback
 
-If SWI-Prolog is refused at JPMC, the fallback is a separate Python engine written from `SEMANTICS.md` against `CONTRACT.md`. It must stay distinct from `reference.py`, which remains the oracle. It is documented only, not built. Everything else stays as it is: the gate, the oracle, `accept.py`, `check_why.py`, the fixtures and both backends. The engine is the only part that would be replaced.
+If SWI-Prolog is refused at JPMC, the fallback is a separate Python engine written from `SEMANTICS.md` against `CONTRACT.md`. It must stay distinct from `reference.py`, which remains the oracle. It is documented only, not built. Everything else stays as it is: the gate, the oracle, `accept.py`, `check_why.py`, the fixtures and the DuckDB backend. The engine is the only part that would be replaced.

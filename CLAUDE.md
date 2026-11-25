@@ -25,7 +25,7 @@ Applies to every session and every plan. A plan states only what is specific to 
 ## The v3 system (spikes/v3)
 
 - Platform: Python + Prolog. Engine: SWI-Prolog via janus (`v3a-prolog`). Oracle: `shared/reference.py`, independent of the engine; never make it the engine. Fallback if SWI is refused: a separate Python engine written from the spec.
-- Spec: `shared/SEMANTICS.md` (three-valued, ambiguity propagation: anything downstream of a contested conclusion is contested). Contract: `shared/CONTRACT.md`. Data rules: rules and claims are data loaded at runtime; detail data stays in DuckDB/Postgres and is reached only through `fetch`.
+- Spec: `shared/SEMANTICS.md` (three-valued, ambiguity propagation: anything downstream of a contested conclusion is contested). Contract: `shared/CONTRACT.md`. Data rules: rules and claims are data loaded at runtime; detail data stays in DuckDB and is reached only through `fetch` (Postgres retired 2026-11-25, after backend independence was shown).
 - Integrity checks run at load, `add` and `with_hypothesis`, in one shared Python gate (`shared/model_check.py`, `shared/integrity.py`). Cycles are rejected, never answered. The ledger of checks (IR-nnn) is kept by Matthias outside the repo; a new or changed check is proposed to him, and its id is cited in code and fixtures.
 - Keys (`shared/keys.json`) come only from `reference.py`. A changed key is either listed with its reason in the plan's results or it is a bug.
 
@@ -34,8 +34,8 @@ Applies to every session and every plan. A plan states only what is specific to 
 Run from the repo root with `.venv/bin/python`:
 
 - `spikes/v3/shared/reference.py`, then `git diff --stat spikes/v3/shared/keys.json` (no unexplained change)
-- `spikes/v3/shared/accept.py --cli spikes/v3/v3a-prolog/cli` (all checks), and again with `--mutation` (must fail check 1)
-- `spikes/v3/shared/isolation.py --cli spikes/v3/v3a-prolog/cli` on DuckDB and Postgres
+- `spikes/v3/shared/accept.py --cli spikes/v3/v3a-prolog/cli` (checks 1, 3–8; check 2 is retired), and again with `--mutation` (must fail check 1)
+- `spikes/v3/shared/isolation.py --cli spikes/v3/v3a-prolog/cli` (DuckDB)
 - the negatives (LinkML model) and the guard probe, as their scripts document
 
 v1 and v2 (outside `spikes/`): `make verify`; `make verify-v1` for the frozen v1 tree.

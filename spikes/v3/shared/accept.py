@@ -6,7 +6,7 @@
 The CLI reads a session script (CONTRACT.md) on stdin and prints {"results": [...]}. Checks:
   1 every question matches keys.json (extended state): status, value, sides / standing, defeater,
     qualifier / candidates; core ids within the explanation; every why tree re-verifies (check_why.py)
-  2 backend swap: Postgres gives the same answers and explanations (SQL text aside) with only the config changed
+  2 retired 2026-11-25 (backend swap; DuckDB only since PLAN-v3-preconditions §1.2, HISTORY phase 1)
   3 runtime extension: base state answers base keys; `add` extension.edn in the same process; answers
     then match extended keys and exactly keys["changed"] differ
   4 with_hypothesis withholding R313: Q10 is CONFLICT inside, ANSWER before and after, state unchanged
@@ -24,7 +24,7 @@ The CLI reads a session script (CONTRACT.md) on stdin and prints {"results": [..
     of the Y2 closing rule is rejected and leaves the state unchanged
   Before the checks, model_check.py (integrity) runs over slice + extension + cycles-acyclic.edn.
 """
-import argparse, copy, json, os, pathlib, shlex, subprocess, sys, time
+import argparse, copy, json, pathlib, shlex, subprocess, sys, time
 
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
@@ -35,8 +35,7 @@ from check_why import Checker, node_ids, goals_in  # noqa: E402
 SLICE, EXT, CYC = "spikes/v3/shared/slice.edn", "spikes/v3/shared/extension.edn", "spikes/v3/shared/cycles-acyclic.edn"
 FIX = "spikes/v3/shared/fixtures/integrity"
 FETCH_LIMIT = 10000
-CFG = {"duckdb": {"backend": "duckdb", "duckdb": "spikes/v3/shared/slice.duckdb", "fetch_limit": FETCH_LIMIT},
-       "postgres": {"backend": "postgres", "postgres": os.environ.get("SPIKE_V3_PG", "dbname=spike_v3"), "fetch_limit": FETCH_LIMIT}}
+CFG = {"backend": "duckdb", "duckdb": "spikes/v3/shared/slice.duckdb", "fetch_limit": FETCH_LIMIT}
 
 
 def edn(x):
@@ -86,7 +85,7 @@ def run(cli, script):
 
 class Env:
     """Active rule / claim sets and a SQL runner for the checker."""
-    def __init__(self, S, X, backend, extended=True, withhold=(), Y=()):
+    def __init__(self, S, X, extended=True, withhold=(), Y=()):
         rules = list(S["rules"]) + ([x for x in X if "head" in x or "pred" in x] if extended else []) \
             + [y for y in Y if "head" in y or "pred" in y]
         claims = list(S["claims"]) + ([x for x in X if "assertion" in x] if extended else []) + [y for y in Y if "assertion" in y]
@@ -96,21 +95,13 @@ class Env:
         for c in claims:
             if c["id"] in withhold: continue
             self.claims[c["id"]] = c
-        self.backend = backend
         self._con = None
 
     def runsql(self, sql, params):
         if self._con is None:
-            if self.backend == "duckdb":
-                import duckdb
-                self._con = duckdb.connect(str(ROOT / CFG["duckdb"]["duckdb"]), read_only=True)
-            else:
-                import psycopg
-                self._con = psycopg.connect(CFG["postgres"]["postgres"])
-        if self.backend == "duckdb":
-            cur = self._con.execute(sql, params)
-        else:
-            cur = self._con.cursor(); cur.execute(sql, params)
+            import duckdb
+            self._con = duckdb.connect(str(ROOT / CFG["duckdb"]), read_only=True)
+        cur = self._con.execute(sql, params)
         cols = [d[0] for d in cur.description]
         return [dict(zip(cols, r)) for r in cur.fetchall()]
 
@@ -186,7 +177,7 @@ def walk_nodes(nodes):
 
 
 def strip(x):
-    """Drop timing, SQL text and params (dialect-specific) for cross-backend comparison."""
+    """Drop timing, SQL text and params: what must be equal across sessions."""
     if isinstance(x, dict):
         return {k: strip(v) for k, v in x.items() if k not in ("ms", "sql", "params", "sql_log", "load_ms", "wall_s")}
     if isinstance(x, list):
@@ -218,7 +209,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--cli", required=True)
     ap.add_argument("--mutation", action="store_true", help="check 1 against mutated keys; must fail")
-    ap.add_argument("--only", default="12345678")
+    ap.add_argument("--only", default="1345678")
     ap.add_argument("--out", help="write the raw results here (JSON)")
     ap.add_argument("--timeout", type=float, default=120, help="checks 7, 8: seconds before a session counts as looping")
     a = ap.parse_args()
@@ -240,46 +231,36 @@ def main():
         print(f"check {n}: {'PASS' if not errs else 'FAIL'} {note}")
         for e in errs[:25]: print("   ", e)
 
-    def ask_all(backend, extended):
-        out = run(a.cli, {"config": CFG[backend], "load": [SLICE] + ([EXT] if extended else []), "ops": ops})
+    def ask_all(extended):
+        out = run(a.cli, {"config": CFG, "load": [SLICE] + ([EXT] if extended else []), "ops": ops})
         return out, [unwrap(q, r) for q, r in zip(Q, out["results"])]
 
     def keyed(state, res, env, label):
         errs = []
         for q, r in zip(Q, res):
-            env_q = Env(S, X, env.backend, extended=(state == "extended"),
+            env_q = Env(S, X, extended=(state == "extended"),
                         withhold=tuple((q.get("hypothesis") or {}).get("withhold") or ())) if q.get("hypothesis") else env
             if q.get("hypothesis"): env_q._con = env._con
             errs += [f"{label} {q['id']}: {e}" for e in check_question(q, K[state][q["id"]], r, env_q, today)]
         return errs
 
-    envd = Env(S, X, "duckdb")
-    if "1" in a.only or "5" in a.only or "6" in a.only or "2" in a.only:
-        outd, resd = ask_all("duckdb", True); raw["duckdb_extended"] = outd
+    envd = Env(S, X)
+    if "1" in a.only or "5" in a.only or "6" in a.only:
+        outd, resd = ask_all(True); raw["duckdb_extended"] = outd
     if "1" in a.only:
         verdict(1, keyed("extended", resd, envd, "duckdb"), f"({len(Q)} questions, {outd['wall_s']:.1f}s wall)")
         if a.mutation:
             print("mutation test:", "OK (check 1 failed as it must)" if not report[1]["pass"] else "BROKEN (mutated keys passed)")
             return 0 if not report[1]["pass"] else 1
-    if "2" in a.only:
-        outp, resp = run(a.cli, {"config": CFG["postgres"], "load": [SLICE, EXT], "ops": ops}), None
-        raw["postgres_extended"] = outp
-        resp = [unwrap(q, r) for q, r in zip(Q, outp["results"])]
-        envp = Env(S, X, "postgres")
-        errs = keyed("extended", resp, envp, "postgres")
-        for q, rd, rp in zip(Q, resd, resp):
-            if strip(rd) != strip(rp):
-                errs.append(f"{q['id']}: DuckDB and Postgres results differ beyond SQL text")
-        verdict(2, errs, f"({outp['wall_s']:.1f}s wall)")
     if "3" in a.only:
         ext_text = (ROOT / EXT).read_text()
-        out = run(a.cli, {"config": CFG["duckdb"], "load": [SLICE], "ops": ops + [{"op": "add", "edn": ext_text}] + ops})
+        out = run(a.cli, {"config": CFG, "load": [SLICE], "ops": ops + [{"op": "add", "edn": ext_text}] + ops})
         raw["runtime_extension"] = out
         n = len(Q)
         base = [unwrap(q, r) for q, r in zip(Q, out["results"][:n])]
         added = out["results"][n]
         ext = [unwrap(q, r) for q, r in zip(Q, out["results"][n + 1:])]
-        errs = keyed("base", base, Env(S, X, "duckdb", extended=False), "base")
+        errs = keyed("base", base, Env(S, X, extended=False), "base")
         errs += keyed("extended", ext, envd, "after add")
         if sorted(added.get("added") or []) != ["C6", "R307"]:
             errs.append(f"add returned {added.get('added')}")
@@ -290,7 +271,7 @@ def main():
     if "4" in a.only:
         q10 = next(q for q in Q if q["id"] == "Q10")
         o = op_for(q10)
-        out = run(a.cli, {"config": CFG["duckdb"], "load": [SLICE, EXT],
+        out = run(a.cli, {"config": CFG, "load": [SLICE, EXT],
                           "ops": [o, {"op": "with_hypothesis", "withhold": ["R313"], "ops": [o]}, o]})
         raw["hypothesis"] = out
         before, inside, after = out["results"][0], out["results"][1]["results"][0], out["results"][2]
@@ -320,7 +301,7 @@ def main():
     def session(load, ops):
         """Run one session; a crash or timeout becomes one error result per op."""
         try:
-            p = subprocess.run(shlex.split(a.cli), input=json.dumps({"config": CFG["duckdb"], "load": load, "ops": ops}),
+            p = subprocess.run(shlex.split(a.cli), input=json.dumps({"config": CFG, "load": load, "ops": ops}),
                                capture_output=True, text=True, cwd=ROOT, timeout=a.timeout)
             if p.returncode == 0:
                 return json.loads(p.stdout)
@@ -357,10 +338,10 @@ def main():
             errs.append(f"session failed: {str(out.get('error'))[:300]}")
         else:
             res = [unwrap(q, r) for q, r in zip(allq, out["results"])]
-            envc = Env(S, X, "duckdb", Y=Y)
+            envc = Env(S, X, Y=Y)
             for q, r in zip(allq, res):
                 key = K["acyclic"][q["id"]] if q.get("state") == "acyclic" else K["extended"][q["id"]]
-                envq = Env(S, X, "duckdb", Y=Y, withhold=tuple((q.get("hypothesis") or {}).get("withhold") or ())) if q.get("hypothesis") else envc
+                envq = Env(S, X, Y=Y, withhold=tuple((q.get("hypothesis") or {}).get("withhold") or ())) if q.get("hypothesis") else envc
                 errs += [f"acyclic {q['id']}: {e}" for e in check_question(q, key, r, envq, today)]
             n = len(allq)
             before, h2, h3, after = out["results"][n:n + 2], out["results"][n + 2], out["results"][n + 3], out["results"][n + 4:]

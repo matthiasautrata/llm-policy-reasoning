@@ -1,9 +1,8 @@
-"""V3a SQL boundary: concept bindings -> SQL, executed on DuckDB or Postgres.
+"""V3a SQL boundary: concept bindings -> SQL, executed on DuckDB (read-only).
 
 Prolog registers each concept of the slice (name, SQL template, params) at load time and calls
 fetch(concept, filters_json) through janus. Everything dialect-specific lives here:
-  - parameter style: DuckDB `?`, psycopg `%s`
-  - @iso(x) macro: DuckDB strftime(x, '%Y-%m-%d'), Postgres to_char(x, 'YYYY-MM-DD')
+  - @iso(x) macro: strftime(x, '%Y-%m-%d')
   - $name required parameters -> bound placeholders; other filters wrap the template as
     SELECT * FROM (<sql>) t WHERE t."col" = ? ... LIMIT fetch_limit + 1
 Rows come back as JSON (dates already ISO strings via @iso). A per-op cache avoids re-issuing the same
@@ -28,14 +27,10 @@ def configure(cfg_json, root):
     _cfg = json.loads(cfg_json)
     if _con is not None:
         _con.close()
-    if _cfg["backend"] == "duckdb":
-        import duckdb
-        _con = duckdb.connect(str(root) + "/" + _cfg["duckdb"], read_only=True)
-    elif _cfg["backend"] == "postgres":
-        import psycopg
-        _con = psycopg.connect(_cfg["postgres"], autocommit=True)
-    else:
-        raise ValueError(_cfg["backend"])
+    if _cfg.get("backend", "duckdb") != "duckdb":
+        raise ValueError(f"backend {_cfg['backend']}: DuckDB only")
+    import duckdb
+    _con = duckdb.connect(str(root) + "/" + _cfg["duckdb"], read_only=True)
     return True
 
 
@@ -45,9 +40,7 @@ def register(name, sql, params):
 
 
 def _dialect(sql):
-    if _cfg["backend"] == "duckdb":
-        return re.sub(r"@iso\(([^)]*)\)", r"strftime(\1, '%Y-%m-%d')", sql), "?"
-    return re.sub(r"@iso\(([^)]*)\)", r"to_char(\1, 'YYYY-MM-DD')", sql).replace("%", "%%"), "%s"
+    return re.sub(r"@iso\(([^)]*)\)", r"strftime(\1, '%Y-%m-%d')", sql), "?"
 
 
 def build(concept, filters):
@@ -83,10 +76,7 @@ def fetch(concept, filters_json):
         return st.cache[key]
     sql, params, limit = build(concept, filters)
     with _lock:
-        if _cfg["backend"] == "duckdb":
-            cur = _con.execute(sql, params)
-        else:
-            cur = _con.cursor(); cur.execute(sql, params)
+        cur = _con.execute(sql, params)
         cols = [d[0] for d in cur.description]
         raw = cur.fetchall()
     rows = [{c: _val(v) for c, v in zip(cols, r)} for r in raw]

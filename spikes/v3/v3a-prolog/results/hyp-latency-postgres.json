@@ -1,1 +1,0 @@
-{"cli": "spikes/v3/v3a-prolog/cli", "backend": "postgres", "n": 30, "Q10": {"base": {"p50": 0.13, "p95": 0.14}, "hypothesis": {"p50": 0.17, "p95": 0.21}, "answers": ["ANSWER", "CONFLICT"]}, "Q38": {"base": {"p50": 0.34, "p95": 0.55}, "hypothesis": {"p50": 0.29, "p95": 0.34}, "answers": ["CONFLICT", "ANSWER"]}}

@@ -51,4 +51,21 @@ RESULTS: current state only; add the aggregation form, the absence qualifier, th
   - README: the "under construction" line now points to the finished v2 paper, and the README introduces the v3 spike, `HISTORY.md` and `spikes/v3/`.
   - `requirements.txt` gains the spike's four packages with the versions it was developed on.
   - Not done: deleting the 24 untracked plain `results/*.jsonl` copies and the untracked `__pycache__` directories. I checked that each copy is byte-identical to its `.gz`, but the session's permission check refused the `rm`. They are untracked, so the repo is unaffected; the command is in PROGRESS.
+- **2026-11-25 §1.2 Postgres retired.**
+  - Removed: the Postgres paths in `accept.py` (check 2, `CFG["postgres"]`, `Env`'s psycopg branch), `sql.py` (connection, `%s` parameters, `to_char`), `gen.py` (`load_pg`, the cross-backend `--check`, which now prints the DuckDB counts and fingerprints), and the `--backend` options of `bench.py`, `isolation.py`, `hyp_latency.py` and `cycles_probe.py`. `CFG` is now a single DuckDB config.
+  - Check numbers stay as they were: check 2 is marked retired rather than renumbered, because RESULTS, HISTORY and the PLAN texts cite the checks by number. `--only` defaults to `1345678`.
+  - The config keeps `"backend": "duckdb"` (CONTRACT); `sql.py` rejects any other value.
+  - Kept: the `@iso()` macro in the slice SQL. It still separates the slice from the dialect, at no cost.
+  - Kept: `build.py`'s `gen-sqlddl --dialect postgresql`. That is LinkML's DDL output for the comparison with `gen.py`, not a backend, and LinkML has no DuckDB dialect.
+  - Deleted: `results/{bench,hyp-latency}-postgres.json` and `isolation-postgres.txt` (at tag `spike-v3-housekeeping`). HISTORY phase 1 records the backend independence.
+  - `brew services stop postgresql@18` was run. The command to remove it completely is in PROGRESS.
+- **2026-11-25 §1.3 `.venv`.**
+  - Uninstalled with `uv pip uninstall`: clingo 5.8.0, clingexplaid 1.5.1, clorm 1.6.3, xclingo 2.0b24, musclingo 0.1.2, clingraph 1.2.6, and their only dependents' dependencies cffi 2.1.1, pycparser 3.12 and bidict 0.24.1 (each checked with `pip show`: required by nothing else). I also uninstalled psycopg and psycopg-binary 3.3.9 (§1.2).
+  - Kept: graphviz (LinkML needs it); jinja2, jsonschema and networkx (dependencies of LinkML as well).
+  - `pip check` is clean, and no tracked Python file outside `.venv` imports any removed package.
+- **2026-11-25 §1 gate (DuckDB).**
+  - `keys.json` is byte-identical.
+  - `accept.py` is GREEN on checks 1 and 3–8, and `--mutation` fails check 1 (Q27, R312).
+  - `isolation.py` PASS; negatives 15/15; guard probe 2/2.
+  - bench: 0 errors, 11.17 SQL per decide, p50 4.57 ms.
 
