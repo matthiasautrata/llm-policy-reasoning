@@ -144,6 +144,8 @@ A vendor's status during a period, from and to the given dates inclusive.
 | R312 | defeasible | procurement | An automatically approved request is approved (a second sufficient condition). |
 | R313 | superiority | controller | Where hr and finance claims disagree on an employee's cost centre, finance prevails. |
 | R314 | incompatible | procurement | A denied request is never approved. Declared, not inferred: deriving both is a CONFLICT. |
+| R315 | defeasible | finance | An employee's home headroom is the headroom of the cost centre the employee is in. |
+| R316 | defeasible | procurement | A purchase order is issued for every approved request. |
 | R307 | defeater | procurement | Exception to the exception: the emergency waiver (R306) does not apply to a big capital request. Prevails over R306. |
 
 ## Claims

@@ -315,7 +315,18 @@
    :recorded_at #inst "2026-09-14"
    :doc "A denied request is never approved. Declared, not inferred: deriving both is a CONFLICT."
    :head [:approved ?r]
-   :body [[:denied ?r]]}]
+   :body [[:denied ?r]]}
+  ;; Downstream of the slice's root conflicts (PLAN-v3-preconditions §2.3)
+  {:id :R315 :kind :defeasible :owner :finance :class :material_inference
+   :recorded_at #inst "2026-09-14"
+   :doc "An employee's home headroom is the headroom of the cost centre the employee is in."
+   :head [:home_headroom ?e ?h]
+   :body [[:cost_centre_of ?e ?c] [:headroom ?c ?h]]}
+  {:id :R316 :kind :defeasible :owner :procurement :class :material_inference
+   :recorded_at #inst "2026-09-14"
+   :doc "A purchase order is issued for every approved request."
+   :head [:po_issued ?r]
+   :body [[:approved ?r]]}]
 
  ;; ------------------------------------------------------------------ claims (Toulmin)
  ;; A claim is a defeasible fact about an asset, in force from valid_from to valid_to (inclusive; nil open).

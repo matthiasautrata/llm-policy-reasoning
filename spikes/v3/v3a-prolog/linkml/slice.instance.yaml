@@ -1220,6 +1220,53 @@ rules:
     args:
     - type: Var
       name: ?r
+- id: R315
+  kind: defeasible
+  owner: finance
+  rule_class: material_inference
+  recorded_at: '2026-09-14'
+  doc: An employee's home headroom is the headroom of the cost centre the employee is in.
+  head:
+    type: Derived
+    pred: home_headroom
+    args:
+    - type: Var
+      name: ?e
+    - type: Var
+      name: ?h
+  body:
+  - type: Derived
+    pred: cost_centre_of
+    args:
+    - type: Var
+      name: ?e
+    - type: Var
+      name: ?c
+  - type: Derived
+    pred: headroom
+    args:
+    - type: Var
+      name: ?c
+    - type: Var
+      name: ?h
+- id: R316
+  kind: defeasible
+  owner: procurement
+  rule_class: material_inference
+  recorded_at: '2026-09-14'
+  doc: A purchase order is issued for every approved request.
+  head:
+    type: Derived
+    pred: po_issued
+    args:
+    - type: Var
+      name: ?r
+  body:
+  - type: Derived
+    pred: approved
+    args:
+    - type: Var
+      name: ?r
 - id: R307
   kind: defeater
   owner: procurement

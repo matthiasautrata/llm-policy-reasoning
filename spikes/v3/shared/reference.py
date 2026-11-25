@@ -274,6 +274,8 @@ def absent(R, g, v, closed):
         return True                                    # and a live R312 gives true or CONFLICT: false is none
     if p == "denied":                                  # R309 is the only supporter; nothing attacks it
         return True
+    if p == "po_issued":                               # R316 is the only supporter; false means approved is refuted
+        return True
     if p == "vendor_cleared":                          # none: neither R305 nor R306 live; else defeated by R307
         _, _, dft = R.vendor_cleared(g[1])
         return dft is None or dft in closed
@@ -324,6 +326,24 @@ def answer1(R, q):
         st, v, sides, core = R.cost_centre_of(g[1], d, r313)
         core = sorted(set(core + (["R313"] if r313 and st == "ANSWER" and d < "2026-08-01" else [])))
         return dict(status=st, value=v, sides=sides, core=core)
+    if p == "home_headroom":                           # R315: open goal, one instance per claimed cost centre
+        r313 = "R313" not in ((q.get("hypothesis") or {}).get("withhold") or [])
+        st, v, sides, core = R.cost_centre_of(g[1], d, r313)
+        if st == "ANSWER": return A([R.headroom(v)], ["R315", "R105"])
+        cont = {}
+        for c in sorted({plain(x["assertion"])[2] for x in R.claims.values()
+                         if plain(x["assertion"])[:2] == ["cost_centre_of", g[1]] and R.in_force(x, d)}):
+            L = ["cost_centre_of", g[1], c]
+            assert R.literal(L, d, r313)[0] == "contested"
+            cont[json.dumps(["home_headroom", g[1], R.headroom(c)])] = dict(
+                via=[L], rules=["R315"], roots=[dict(goal=L, sides=sides)])
+        return dict(status=st, value=None, sides=sides, core=sorted(set(core) | {"R315"}), contested=cont)
+    if p == "po_issued":                               # R316: downstream of approved
+        st, v, sides = R.approved(g[1])
+        if st == "ANSWER": return A(v, ["R316", "R310", "R308", "R304"] if v else ["R316"])
+        return dict(status=st, value=None, sides=sides, core=sorted({"R316"} | {i for sd in sides for i in sd}),
+                    contested={json.dumps(["po_issued", g[1]]): dict(
+                        via=[["approved", g[1]]], rules=["R316"], roots=[dict(goal=["approved", g[1]], sides=sides)])})
     if p == "breach_in": return A(R.breach_in(g[1]), ["R110", "R106"])
     if p == "denied": return A(R.denied(g[1]), ["R309"])
     if p in ("approved_total", "approved_count"):

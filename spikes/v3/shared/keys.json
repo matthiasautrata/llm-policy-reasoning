@@ -967,6 +967,164 @@
    "sides": null,
    "status": "ANSWER",
    "value": false
+  },
+  "Q48": {
+   "contested": {
+    "[\"home_headroom\", \"e077\", 34000]": {
+     "roots": [
+      {
+       "goal": [
+        "cost_centre_of",
+        "e077",
+        "cc0077"
+       ],
+       "sides": [
+        [
+         "C3"
+        ],
+        [
+         "C4"
+        ]
+       ]
+      }
+     ],
+     "rules": [
+      "R315"
+     ],
+     "via": [
+      [
+       "cost_centre_of",
+       "e077",
+       "cc0077"
+      ]
+     ]
+    },
+    "[\"home_headroom\", \"e077\", 387000]": {
+     "roots": [
+      {
+       "goal": [
+        "cost_centre_of",
+        "e077",
+        "cc0078"
+       ],
+       "sides": [
+        [
+         "C3"
+        ],
+        [
+         "C4"
+        ]
+       ]
+      }
+     ],
+     "rules": [
+      "R315"
+     ],
+     "via": [
+      [
+       "cost_centre_of",
+       "e077",
+       "cc0078"
+      ]
+     ]
+    }
+   },
+   "core": [
+    "C3",
+    "C4",
+    "R315"
+   ],
+   "qualifier": null,
+   "sides": [
+    [
+     "C3"
+    ],
+    [
+     "C4"
+    ]
+   ],
+   "status": "CONFLICT",
+   "value": null
+  },
+  "Q49": {
+   "core": [
+    "R315",
+    "R105"
+   ],
+   "qualifier": null,
+   "sides": null,
+   "status": "ANSWER",
+   "value": [
+    34000
+   ]
+  },
+  "Q50": {
+   "contested": {
+    "[\"po_issued\", \"r000001\"]": {
+     "roots": [
+      {
+       "goal": [
+        "approved",
+        "r000001"
+       ],
+       "sides": [
+        [
+         "R312"
+        ],
+        [
+         "R314"
+        ]
+       ]
+      }
+     ],
+     "rules": [
+      "R316"
+     ],
+     "via": [
+      [
+       "approved",
+       "r000001"
+      ]
+     ]
+    }
+   },
+   "core": [
+    "R312",
+    "R314",
+    "R316"
+   ],
+   "qualifier": null,
+   "sides": [
+    [
+     "R312"
+    ],
+    [
+     "R314"
+    ]
+   ],
+   "status": "CONFLICT",
+   "value": null
+  },
+  "Q51": {
+   "core": [
+    "R316",
+    "R310",
+    "R308",
+    "R304"
+   ],
+   "qualifier": "total over known facts in declared scope",
+   "sides": null,
+   "status": "ANSWER",
+   "value": true
+  },
+  "Q52": {
+   "core": [
+    "R316"
+   ],
+   "qualifier": "total over known facts in declared scope",
+   "sides": null,
+   "status": "ANSWER",
+   "value": false
   }
  },
  "changed": [
@@ -1650,6 +1808,164 @@
   "Q47": {
    "core": [
     "R309"
+   ],
+   "qualifier": "total over known facts in declared scope",
+   "sides": null,
+   "status": "ANSWER",
+   "value": false
+  },
+  "Q48": {
+   "contested": {
+    "[\"home_headroom\", \"e077\", 34000]": {
+     "roots": [
+      {
+       "goal": [
+        "cost_centre_of",
+        "e077",
+        "cc0077"
+       ],
+       "sides": [
+        [
+         "C3"
+        ],
+        [
+         "C4"
+        ]
+       ]
+      }
+     ],
+     "rules": [
+      "R315"
+     ],
+     "via": [
+      [
+       "cost_centre_of",
+       "e077",
+       "cc0077"
+      ]
+     ]
+    },
+    "[\"home_headroom\", \"e077\", 387000]": {
+     "roots": [
+      {
+       "goal": [
+        "cost_centre_of",
+        "e077",
+        "cc0078"
+       ],
+       "sides": [
+        [
+         "C3"
+        ],
+        [
+         "C4"
+        ]
+       ]
+      }
+     ],
+     "rules": [
+      "R315"
+     ],
+     "via": [
+      [
+       "cost_centre_of",
+       "e077",
+       "cc0078"
+      ]
+     ]
+    }
+   },
+   "core": [
+    "C3",
+    "C4",
+    "R315"
+   ],
+   "qualifier": null,
+   "sides": [
+    [
+     "C3"
+    ],
+    [
+     "C4"
+    ]
+   ],
+   "status": "CONFLICT",
+   "value": null
+  },
+  "Q49": {
+   "core": [
+    "R315",
+    "R105"
+   ],
+   "qualifier": null,
+   "sides": null,
+   "status": "ANSWER",
+   "value": [
+    34000
+   ]
+  },
+  "Q50": {
+   "contested": {
+    "[\"po_issued\", \"r000001\"]": {
+     "roots": [
+      {
+       "goal": [
+        "approved",
+        "r000001"
+       ],
+       "sides": [
+        [
+         "R312"
+        ],
+        [
+         "R314"
+        ]
+       ]
+      }
+     ],
+     "rules": [
+      "R316"
+     ],
+     "via": [
+      [
+       "approved",
+       "r000001"
+      ]
+     ]
+    }
+   },
+   "core": [
+    "R312",
+    "R314",
+    "R316"
+   ],
+   "qualifier": null,
+   "sides": [
+    [
+     "R312"
+    ],
+    [
+     "R314"
+    ]
+   ],
+   "status": "CONFLICT",
+   "value": null
+  },
+  "Q51": {
+   "core": [
+    "R316",
+    "R310",
+    "R308",
+    "R304"
+   ],
+   "qualifier": "total over known facts in declared scope",
+   "sides": null,
+   "status": "ANSWER",
+   "value": true
+  },
+  "Q52": {
+   "core": [
+    "R316"
    ],
    "qualifier": "total over known facts in declared scope",
    "sides": null,

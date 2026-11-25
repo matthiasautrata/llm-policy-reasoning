@@ -46,6 +46,16 @@
   :text "§2.1 (b): approved total of the cc0105 subtree (r000001's approval is contested, R312 vs R314)"}
  {:id :Q47 :kind :decide :goal [:denied "r000005"]
   :text "§2.2: is r000005 denied? (no: R309 is not live, so the answer rests on absence: qualified)"}
+ {:id :Q48 :kind :decide :goal [:home_headroom "e077" ?h] :as_of "2026-07-15" :hypothesis {:withhold [:R313]}
+  :text "§2.3: e077's home headroom on 15 July without R313 (downstream of the C3/C4 cost-centre conflict)"}
+ {:id :Q49 :kind :decide :goal [:home_headroom "e077" ?h] :as_of "2026-07-15"
+  :text "§2.3: e077's home headroom on 15 July (R313 resolves C3/C4 for finance: cc0077)"}
+ {:id :Q50 :kind :decide :goal [:po_issued "r000001"]
+  :text "§2.3: is a purchase order issued for r000001 (downstream of R312 against R314)?"}
+ {:id :Q51 :kind :decide :goal [:po_issued "r000005"]
+  :text "§2.3 control: is a purchase order issued for r000005 (approved by R310, no conflict)?"}
+ {:id :Q52 :kind :decide :goal [:po_issued "r000006"]
+  :text "§2.3 control: is a purchase order issued for r000006 (not approved: R316 not live, qualified)?"}
  {:id :Q30 :state :acyclic :kind :decide :goal [:blacklisted "fern"] :text "Y1: is fern blacklisted (risk says yes, compliance says no)?"}
  {:id :Q32 :state :acyclic :kind :decide :goal [:preferred "acme"] :text "Y2 control: is acme (never suspended) preferred?"}
  {:id :Q34 :state :acyclic :kind :decide :goal [:watchlisted "cog"] :text "Y4: is cog watchlisted (risk prevails over compliance)?"}
