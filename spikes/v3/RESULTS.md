@@ -140,7 +140,7 @@ Q07ext stays `null`: it is `false`, defeated by R307, which is not `:closed_over
 
 V3a matched every key without an engine change. Q48–Q52 are in checks 1 and 3.
 
-## Memory attribution (`PLAN-v3-memory.md` §1)
+## Memory attribution (HISTORY phase 8)
 
 The baseline that motivated the fixes below, measured before them. One session per centre, `[:approved_total C ?v]`, 8 GB stack. A cell is one `term_size/2` word (8 bytes). SQL growth is the RSS added while DuckDB ran statements.
 
@@ -168,7 +168,7 @@ The baseline that motivated the fixes below, measured before them. One session p
   - GC: 1.6 %.
 - **Bench, 153 → 656 MB:** Q44 (cc0058) runs a 70-copy `reporting_chain` batch (+297 MB), and Q46 (cc0105) runs a 92-copy batch (+394 MB). That accounts for the rise.
 
-## Memory after the fixes (`PLAN-v3-memory.md` §4)
+## Memory after the fixes (HISTORY phase 8)
 
 With `:batch_sql`, the rule index and the status-only memo (proofs rebuilt on demand, aggregate nodes sampled; `CONTRACT.md`, Why trees). One in-process session per centre, `[:approved_total C ?v]`, default 1 GB stack. Memo bytes are `term_size/2` cells × 8.
 

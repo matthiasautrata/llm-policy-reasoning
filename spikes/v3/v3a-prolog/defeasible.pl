@@ -132,7 +132,7 @@ with_children(P0, Extra, P) :- get_dict(children, P0, Cs0), append(Cs0, Extra, C
 %!  evaluate(+L, +D, -R)  status/3, with the proof of every supporter and attacker in R rebuilt (hydrate/4).
 evaluate(L, D, R) :- status(L, D, R0), hydrate(L, D, R0, R).
 
-%!  status(+L, +D, -R)  the memoised result of eval3/3: eterms carry - for their proof (PLAN-v3-memory §2).
+%!  status(+L, +D, -R)  the memoised result of eval3/3: eterms carry - for their proof (HISTORY phase 8).
 status(L, D, R) :- state_token(S), memo_get(S, D, L, R0), !, R = R0.
 status(L, D, R) :- round(Rd), state_token(S), memo_get(S, D, missed(Rd, L), R0), !, miss, R = R0.
 status(L, D, R) :-
@@ -162,7 +162,7 @@ guard_path(P) :- ( nb_current(v3a_guard, P0), P0 \== [] -> P = P0 ; P = [] ).
 cycle_goals(Seg, Path) :-          % Seg: the guard stack (innermost first) down to the first entry of the goal
     reverse(Seg, Outer), maplist([_-G, G]>>true, Outer, Path0), Path0 = [G0|_], append(Path0, [G0], Path).
 
-%   Proofs mode (PLAN-v3-memory §2): evaluation runs with proofs off, so body literals yield - for their
+%   Proofs mode (HISTORY phase 8): evaluation runs with proofs off, so body literals yield - for their
 %   nodes and the memo holds no proof dicts. A why tree is rebuilt on demand, in proofs mode, from the ids
 %   and ground instances in the memo: hydrate/4 re-runs the eterm's first body solution (best_sol/7 is
 %   deterministic, so the rebuilt solution is the one evaluation found).

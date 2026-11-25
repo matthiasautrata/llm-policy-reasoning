@@ -156,6 +156,24 @@ How spike v3 (System A: rules and claims as data, a defeasible engine, a bounded
 - "Completeness covers by predicate name only" (§2.2): replaced by derived coverage (ae7d906).
 - Q26/Q27 retired: they duplicated Q01/Q09.
 
+### 8 Memory and aggregate cost (2026-11-25; 11b425e..2f60623, tag `spike-v3-memory`)
+
+**Question.** Why does the root aggregate (`[:approved_total "cc0000" ?v]`, 90 028 members) take 207 s and peak at 12.7 GB, and what is the strategy for large aggregates? `PLAN-v3-memory.md` (at the tag) holds every Decision.
+
+**Decisions and why.**
+- Attribution by scratch probes, not engine code. The three memo hypotheses held (proof trees stored per entry, copied back per lookup, built for every member), but the largest cost was DuckDB running `flush()`'s UNION ALL batches of the recursive `reporting_chain` CTE.
+- SQL remedy (Matthias): `:batch_sql`, a set form of a concept's SQL for its one required parameter. L2 statement +2089 → +3 MB.
+- Rules indexed by head predicate (`rule_at/2`): root 207 → 139 s.
+- Fix A: the memo holds statuses only; why trees are rebuilt on demand by re-running the deterministic `best_sol/7` (`hydrate/4`). The aggregate node gained `count` and shows a sample of `agg_sample` (default 20) members; contested members are reported by the `contested` node. Keys: `agg_count` added to Q44 and Q45, nothing else changed.
+
+**Findings kept.**
+- Root after the fixes: 110 s and 4.6 GB in SWI's default 1 GB stack; memo 54 MB (was 1.8 GB), about 58 bytes per entry; bench peak 175 MB.
+- About 1.2 ms per pending member from L2 up; the evaluator is about 94 % of the root's time (SQL 7.3 of 132 s). About 3 GB of the root's peak is unattributed.
+
+**Findings reversed.**
+- "The memo is the cost": reversed by attribution (DuckDB batches first, then the memo, both fixed).
+- The §5 proposal (compile aggregate bodies to SQL as an execution path) was not adopted: Matthias scoped the system to questions about the data, and the root became a documented residual (`PLAN-v3-sqlform.md`).
+
 ## Platform lessons (platforms dropped, lessons kept)
 
 - **V3b, Clojure · Datahike · Malli.**

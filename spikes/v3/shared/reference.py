@@ -409,7 +409,7 @@ def answer1(R, q):
     if p in ("approved_total", "approved_count"):
         rid = {"approved_total": "R120", "approved_count": "R121"}[p]
         st, v, sides, c, n = R.approved_agg(g[1], "sum" if p == "approved_total" else "count")
-        if st == "ANSWER": return dict(A(v, [rid]), agg_count=n)   # the aggregate node's count (PLAN-v3-memory §2)
+        if st == "ANSWER": return dict(A(v, [rid]), agg_count=n)   # the aggregate node's count (HISTORY phase 8)
         return dict(status=st, value=None, sides=sides, core=sorted({rid} | {i for sd in sides for i in sd}),
                     contested={json.dumps([p, g[1], v]): dict(via=c["via"], rules=[rid], roots=c["roots"])})
     terms = {x["id"] for x in R.S["terms"]}
