@@ -37,9 +37,11 @@ the op) and `"sql_log"`: the SQL statements the op issued, each `{"concept", "sq
 predicate (slice `:functional`) or the sorted list of all values otherwise. `sides`: for CONFLICT, the
 ids of the applicable rules/claims on each side, as a sorted list of sorted lists.
 
-`qualifier` (decide, IR-005): `"total over known facts in declared scope"` when the status is `ANSWER`,
-the value is not `false`, `null` or `[]`, and the why tree uses a rule marked `:closed_over :known_facts`
-(the answer rests on NAF over the known facts); otherwise `null`. An `ANSWER` whose value is `[]` (no
+`qualifier` (decide, IR-005): `"total over known facts in declared scope"` when the status is `ANSWER`
+and the answer rests on absence (`SEMANTICS.md`, Qualifier): a positive value whose why tree uses a rule
+marked `:closed_over :known_facts`; a ground `false` with no live supporter, or defeated by an attacker whose
+proof uses such a rule; an open `null` or `[]`; in each negative case unless an in-force `[:complete "P"]`
+claim covers the goal's predicate. Otherwise `null`. Every decide key holds the qualifier. An `ANSWER` whose value is `[]` (no
 binding) has an empty `why`.
 
 Claim standing: `holds`, `holds_with_qualifier` (qualifier lists the defeated *supporting* sub-claims),

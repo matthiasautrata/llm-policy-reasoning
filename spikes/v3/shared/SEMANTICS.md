@@ -71,6 +71,16 @@ The body literal `[:agg Op ?x [L1 .. Ln] ?out]` aggregates over the solutions of
 
 `UNDERDETERMINED` and `OUT_OF_SCOPE` are unchanged.
 
+## Qualifier: answers that rest on absence (IR-005)
+
+`decide` qualifies an `ANSWER` with `"total over known facts in declared scope"` when the answer rests on absence, that is, on failing to find a fact rather than on a fact found:
+
+- **A positive answer** (not `false`, `null` or `[]`) is qualified when its why tree uses a rule marked `:closed_over :known_facts`: a `:not` that succeeded, an aggregate, or a measure fetch without a completeness claim. This is the rule as before. A rule that names `:completeness [ids]` does not qualify the answer; the claim covers it.
+- **A ground `false`** is qualified when no supporter of the goal was live (value `none`): nothing was found that would support it. A `false` by defeat rests on the winning attacker's proof, and is qualified only when that proof uses a `:closed_over` rule.
+- **An open `null` or `[]`** is always qualified: the answer is that no binding is known.
+
+The exception: an in-force claim `[:complete "P"]`, where P is the goal's predicate, covers a negative answer, which is then not qualified. (No slice question reaches the exception: C10 names `booked_total`, and an unknown cost centre's booked total is 0, not absent.) `CONFLICT` and the other statuses carry no qualifier.
+
 ## Why tree for a downstream CONFLICT
 
 The why tree has one node per contested ground instance of the goal:
