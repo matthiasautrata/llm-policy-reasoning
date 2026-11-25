@@ -2,7 +2,7 @@
 
   .venv/bin/python spikes/v3/shared/isolation.py --cli spikes/v3/v3a-prolog/cli [--backend duckdb] [--hypothesis snapshot]
 
-Two op lists run concurrently in one process (CLI script key "concurrent"; V3a: Prolog threads, V3b: futures):
+Two op lists run concurrently in one process (CLI script key "concurrent"; V3a: Prolog threads):
   A: with_hypothesis(withhold R313) [sleep DELAY, decide cost_centre_of e077 as of 2026-07-15]
   B: sleep DELAY/4, decide cost_centre_of e077 as of 2026-07-15        (on the base state)
 then "after": the same decide on the main thread.
@@ -30,7 +30,7 @@ def main():
     a = argparse.ArgumentParser()
     a.add_argument("--cli", required=True)
     a.add_argument("--backend", default="duckdb")
-    a.add_argument("--hypothesis", help="CLI hypothesis mode (V3a: snapshot|assert; V3b: branch|with)")
+    a.add_argument("--hypothesis", help="CLI hypothesis mode (V3a: snapshot|assert)")
     a.add_argument("--delay", type=int, default=1000)
     a = a.parse_args()
     cfg = dict(CFG[a.backend])

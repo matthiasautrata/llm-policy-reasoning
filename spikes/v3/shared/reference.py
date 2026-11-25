@@ -1,4 +1,4 @@
-"""Independent reference for spike v3: the rules' :doc texts and PLAN §3.2 re-implemented by hand in
+"""Independent reference for spike v3: the rules' :doc texts and the slice semantics re-implemented by hand in
 plain Python over the detail data, without any rule interpreter, the concept bindings, or the spikes.
 
   python spikes/v3/shared/reference.py               # -> shared/keys.json
@@ -14,10 +14,8 @@ Key shape per question:
   claim         {standing, defeater, qualifier, core}
   resolve_term  {status, candidates}
   fetch         {value, row_count, core}             (Q24, Q25: the integer-cast regressions, pending exposure and booked total of the root)
-Dispute questions (:state :acyclic, keys["acyclic"]) use the class Cyc: the hand-grounded theory of
-cycles-acyclic.edn read as the metaprogram of SEMANTICS-cycles.md and solved by an alternating fixpoint
-(on an acyclic theory the well-founded model is total: ambiguity blocking). Y5d (RY55, [:not ..]) and
-Y5e (RY56, a measure over cost_centre_of) are answered outside Cyc. Questions with :check_qualifier add
+Dispute questions (:state :acyclic, keys["acyclic"]) use the class Prop: the hand-grounded theory of
+cycles-acyclic.edn under ambiguity propagation (SEMANTICS.md). Questions with :check_qualifier add
 qualifier (decide: "total over known facts in declared scope" when the proof uses a :closed_over rule).
 `core` lists the rule / claim ids an explanation must contain.
 """
@@ -171,7 +169,7 @@ class Ref:
         return l1[0] == l2[0] == "cost_centre_of" and l1[1] == l2[1] and l1[2] != l2[2]
 
     def literal(self, lit, d, r313=True):
-        """Team defeat with ambiguity blocking over in-force claims. -> (status, supporters, blockers)
+        """Team defeat over in-force claims (no rule bodies, so blocking and propagation coincide). -> (status, supporters, blockers)
         status: proven | rebutted (a blocker is superior to every supporter) | contested | none"""
         live = [i for i, c in self.claims.items() if self.in_force(c, d)]
         S = [i for i in live if plain(self.claims[i]["assertion"]) == lit]
@@ -288,163 +286,9 @@ def answer1(R, q):
     return dict(status="OUT_OF_SCOPE", value=None, sides=None, core=[])
 
 
-# ---------------------------------------------------------------------------- defeat cycles
+# ---------------------------------------------------------------------------- disputes (cycles-acyclic.edn)
 def neg(L):
     return L[1] if L[0] == "neg" else ["neg", L]
-
-
-class Cyc:
-    """Cycle theory of cycles.edn, grounded by hand over the register's vendors; semantics per
-    SEMANTICS-cycles.md. A ground rule: (id, kind, head, body literals, facts_hold). Bodies list only
-    derived literals; fetches, builtins and as_of are decided here in Python (facts_hold)."""
-
-    def __init__(self, R, d, withhold=()):
-        self.R, self.d = R, d
-        present = {y["id"] for y in R.cyc_recs}
-        V = sorted({v for v, *_ in R.vstat})
-        ok = lambda v: any(x == v and s == "approved" and f <= d <= t for x, s, f, t in R.vstat)
-        sus = lambda v: any(x == v and s == "suspended" for x, s, *_ in R.vstat)
-        rules = []
-        for v in V:
-            rules += [("RY21", "defeasible", ["preferred", v], [], ok(v)),
-                      ("RY22", "defeasible", ["under_review", v], [], sus(v)),
-                      ("RY23", "defeater", ["neg", ["preferred", v]], [["under_review", v]], True),
-                      ("RY24", "defeater", ["neg", ["under_review", v]], [["preferred", v]], True),
-                      ("RY31", "defeasible", ["exempt_from_audit", v], [["trusted", v]], True),
-                      ("RY32", "defeater", ["neg", ["trusted", v]], [["exempt_from_audit", v]], True),
-                      ("RY51", "defeasible", ["flagged", v], [["blacklisted", v]], True),
-                      ("RY52", "defeasible", ["approved_supplier", v], [["preferred", v]], True),
-                      ("RY53", "defeasible", ["cleared_for_tender", v], [["onboarded", v]], True),
-                      ("RY54", "defeater", ["neg", ["cleared_for_tender", v]], [["blacklisted", v]], True)]
-        self.claims = {c["id"]: c for c in R.cyc_claims}
-        for c in R.cyc_claims:
-            rules.append((c["id"], "claim", plain(c["assertion"]), [], R.in_force(c, d)))
-        self.rules = [r for r in rules if r[4] and r[0] not in withhold and r[0] in present]
-        self.auth = {} if "RY4" in withhold else {"watchlisted": ["risk", "compliance"]}   # RY4
-        self.solve()
-
-    def key(self, L):
-        return json.dumps(L)
-
-    def sup(self, t, s):
-        """t > s: authority (RY4) or later asserted_at by the same asserter, between claims only."""
-        if t[1] != "claim" or s[1] != "claim": return False
-        A, B = self.claims[t[0]], self.claims[s[0]]
-        pred = t[2][1][0] if t[2][0] == "neg" else t[2][0]
-        o = self.auth.get(pred)
-        a, b = kw(A["asserted_by"]), kw(B["asserted_by"])
-        if o and a in o and b in o and a != b:
-            return o.index(a) < o.index(b)
-        return a == b and iso(A["asserted_at"]) > iso(B["asserted_at"])
-
-    def supporters(self, L):
-        return [r for r in self.rules if r[2] == L and r[1] != "defeater"]
-
-    def attackers(self, L):
-        return [r for r in self.rules if r[2] == neg(L)]
-
-    def solve(self):
-        """Ground normal program (head, pos, neg) and its well-founded model by alternating fixpoint."""
-        lits = {self.key(r[2]): r[2] for r in self.rules}
-        for r in self.rules:
-            for b in r[3]: lits[self.key(b)] = b
-        for L in list(lits.values()): lits[self.key(neg(L))] = neg(L)
-        P = []
-        for k, L in lits.items():
-            for r in self.supporters(L):
-                P.append((("def", k), [("def", self.key(b)) for b in r[3]], [("ovr", k)]))
-            for s in self.attackers(L):
-                P.append((("ovr", k), [("def", self.key(b)) for b in s[3]], [("beat", s[0], k)]))
-                for t in self.supporters(L):
-                    if self.sup(t, s):
-                        P.append((("beat", s[0], k), [("def", self.key(b)) for b in t[3]], []))
-        def gamma(J):
-            M, changed = set(), True
-            while changed:
-                changed = False
-                for h, pos, ng in P:
-                    if h not in M and all(p in M for p in pos) and not any(n in J for n in ng):
-                        M.add(h); changed = True
-            return M
-        T = set()
-        while True:
-            T2 = gamma(gamma(T))
-            if T2 == T: break
-            T = T2
-        self.T, self.U, self.lits = T, gamma(T), lits
-
-    def val(self, L):
-        a = ("def", self.key(L))
-        return "true" if a in self.T else "undefined" if a in self.U else "false"
-
-    def live(self, r):
-        return all(self.val(b) != "false" for b in r[3])
-
-    def applicable(self, r):
-        return all(self.val(b) == "true" for b in r[3])
-
-    def unbeaten(self, s, L):
-        return ("beat", s[0], self.key(L)) not in self.T
-
-    def sides(self, L):
-        S = sorted({r[0] for r in self.supporters(L) if self.live(r)})
-        A = sorted({s[0] for s in self.attackers(L) if self.live(s) and self.unbeaten(s, L)})
-        if S and A:
-            return sorted([S, A])
-        for r in sorted(self.supporters(L), key=lambda r: r[0]):
-            if self.live(r):
-                for b in r[3]:
-                    if self.val(b) == "undefined":
-                        return self.sides(b)
-        return None
-
-    def component(self, L):
-        seen, st = [], [L]
-        while st:
-            x = st.pop()
-            if x in seen: continue
-            seen.append(x)
-            for r in self.supporters(x) + self.attackers(x):
-                if self.live(r):
-                    st += [b for b in r[3] if self.val(b) == "undefined"]
-        mem = sorted({r[0] for x in seen for r in self.supporters(x) + self.attackers(x) if self.live(r)})
-        return dict(literals=sorted(seen, key=json.dumps), members=mem)
-
-    def answer(self, L):
-        v = self.val(L)
-        if v == "true":
-            win = sorted({r[0] for r in self.supporters(L) if self.applicable(r)})
-            beaten = [s for s in self.attackers(L) if self.live(s)]
-            src = sorted({"RY4" for s in beaten if s[1] == "claim" and kw(self.claims[s[0]]["asserted_by"]) in self.auth.get(L[0], [])})
-            return dict(status="ANSWER", value=True, sides=None, core=sorted(win + src))
-        if v == "undefined":
-            sd = self.sides(L)
-            return dict(status="CONFLICT", value=None, sides=sd, core=sorted({i for s in sd for i in s}),
-                        undefined=self.component(L))
-        S = sorted({r[0] for r in self.supporters(L) if self.applicable(r)})
-        A = sorted({s[0] for s in self.attackers(L) if self.live(s) and self.unbeaten(s, L)})
-        if S and A:
-            return dict(status="CONFLICT", value=None, sides=sorted([S, A]), core=sorted(S + A))
-        return dict(status="ANSWER", value=False, sides=None, core=sorted({r[0] for r in self.supporters(L)}))
-
-
-def answer_acyclic_blocking(R, q):
-    """PLAN-v3-cycles semantics (ambiguity blocking, WFS; SEMANTICS-cycles.md), kept for the retired
-    engine modes (V3a wfs, V3e doubled): reference.py --semantics blocking."""
-    w = tuple((q.get("hypothesis") or {}).get("withhold") or ())
-    d, g = q.get("as_of") or R.today, q["goal"]
-    if g[0] == "screening_clear":                      # RY55: [:not [:blacklisted ?v]], closed over known facts
-        v = Cyc(R, d, w).val(["blacklisted", g[1]]) != "true"
-        return dict(status="ANSWER", value=v, sides=None, core=["RY55"], qualifier=CLOSED if v else None)
-    if g[0] == "home_budget":                          # RY56: booked total of the (claimed) cost centre
-        st, c, _, core = R.cost_centre_of(g[1], d, "R313" not in w)
-        if st != "ANSWER":
-            return dict(status="ANSWER", value=[], sides=None, core=[])
-        return dict(status="ANSWER", value=[R.booked_total(c)], sides=None, core=["RY56"])
-    k = Cyc(R, d, w).answer(g)
-    if q.get("check_qualifier"):
-        k["qualifier"] = None
-    return k
 
 
 # ---------------------------------------------------------------------------- ambiguity propagation
@@ -638,7 +482,7 @@ def load(cycles=False):
     return S, X, Q, Y, [q for q in QA if q.get("state") == "acyclic"]
 
 
-def keys(mutate=False, semantics="propagation"):
+def keys(mutate=False):
     S, X, Q, Y, QC = load(cycles=True)
     out = {}
     for state, ext in (("base", []), ("extended", X)):
@@ -647,16 +491,15 @@ def keys(mutate=False, semantics="propagation"):
     out["changed"] = sorted(i for i in out["base"] if out["base"][i] != out["extended"][i])
     R = Ref(S, X, mutate)
     R.cyc_claims, R.cyc_recs = [y for y in Y if "assertion" in y], Y
-    f = answer_acyclic if semantics == "propagation" else answer_acyclic_blocking
-    out["acyclic"] = {q["id"]: f(R, q) for q in QC}
+    out["acyclic"] = {q["id"]: answer_acyclic(R, q) for q in QC}
     return out
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(); ap.add_argument("--mutate", action="store_true")
-    ap.add_argument("--semantics", choices=["propagation", "blocking"], default="propagation"); a = ap.parse_args()
-    k = keys(a.mutate, a.semantics)
-    if a.mutate or a.semantics != "propagation":
+    a = ap.parse_args()
+    k = keys(a.mutate)
+    if a.mutate:
         json.dump(k, sys.stdout, indent=1, sort_keys=True)
     else:
         (HERE / "keys.json").write_text(json.dumps(k, indent=1, sort_keys=True) + "\n")

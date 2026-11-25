@@ -1,4 +1,4 @@
-;; IR-001a: Y3 from cycles.edn, the odd loop: claim CY3 defeats itself through exempt_from_audit.
+;; IR-001a: Y3 of the cycles phase (cycles.edn, tag spike-v3-five-platforms), the odd loop: claim CY3 defeats itself through exempt_from_audit.
 ;; Must be rejected with defeat-cycle [RY31 RY32].
 [{:id :CY3 :about "vendor:edge" :assertion [:trusted "edge"]
   :asserted_by :procurement :asserted_at #inst "2026-04-01" :valid_from #inst "2026-04-01" :valid_to nil

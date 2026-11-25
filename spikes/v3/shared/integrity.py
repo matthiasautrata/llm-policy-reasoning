@@ -1,5 +1,5 @@
 """Integrity gate (PLAN-v3-integrity §2): model_check.py's checks over a rule base as an engine holds it.
-One implementation for every engine. V3a and V3e import gate(); V3b, V3c and V3d run the CLI:
+One implementation, independent of the engine. V3a imports gate(); the CLI serves any other host:
 
   echo '{"load": [paths], "added": [edn texts], "withhold": [ids]}' | python spikes/v3/shared/integrity.py
   -> {"ok": bool, "violations": [{"violation", "members", "message"}], "ms": number}
@@ -52,7 +52,7 @@ def gate(load, added=(), withhold=()):
         return []
     try:
         S, rules, claims = rule_base(load, added, withhold)
-        return MC.check(S, rules, claims, [], "reject", MC.declared_modes())["violations"]
+        return MC.check(S, rules, claims, [], MC.declared_modes())["violations"]
     except Exception as e:                    # an unreadable rule base is rejected, not crashed on
         return [MC.V("malformed-record", [], f"{type(e).__name__}: {e}")]
 

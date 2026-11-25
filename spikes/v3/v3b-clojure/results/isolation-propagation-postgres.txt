@@ -1,7 +1,0 @@
-isolation  cli=spikes/v3/v3b-clojure/cli  backend=postgres  hypothesis=default
-  A: CONFLICT None   B: ANSWER cc0077 (decide 98..121 ms into A's 1005 ms sleep)   after: ANSWER cc0077
-  PASS  A sees CONFLICT
-  PASS  B sees base answer cc0077
-  PASS  B's decide ran during A's hypothesis
-  PASS  base unchanged afterwards
-PASS

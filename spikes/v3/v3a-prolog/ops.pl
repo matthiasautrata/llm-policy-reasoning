@@ -1,7 +1,7 @@
 /*  V3a System A surface (CONTRACT.md): run_op(+OpJSON, -ResultJSON).
     decide, why_not, claims, resolve_term, describe, fetch, add, with_hypothesis.
 */
-:- module(ops, [run_op/2, load_files_json/1, set_hyp_mode/1, run_concurrent/2, memo_test/1, table_test/1]).
+:- module(ops, [run_op/2, load_files_json/1, set_hyp_mode/1, run_concurrent/2, memo_test/1]).
 :- use_module(edn).
 :- use_module(defeasible).
 :- use_module(why).
@@ -69,10 +69,8 @@ decide_ground(G, D, R) :-
     ->  ids_of(Sups, A), ids_of(Un, B), sort([A, B], Sides),
         maplist([s(_, _, P), P]>>true, Sups, W1), maplist([a(_, _, _, P), P]>>true, Un, W2), append(W1, W2, Why),
         answer("CONFLICT", null, Sides, Why, R)
-    ;   E = contested(_, _)                            % memo: downstream of a root conflict
+    ;   E = contested(_, _)                            % downstream of a root conflict
     ->  contested_why(G, D, Sides, Node), answer("CONFLICT", null, Sides, [Node], R)
-    ;   E = undefined(Sides, UNode)                    % wfs mode: undefined by a negative cycle
-    ->  answer("CONFLICT", null, Sides, [UNode], R)
     ;   explain_not(G, D, N), answer("ANSWER", false, null, [N], R) ).
 
 % R314-style declared incompatibility: the goal is proven and the incompatible body is provable
@@ -99,10 +97,10 @@ winner_is(Id, N) :- get_dict(winner, N, Id).
 
 decide_open(G, D, R) :-
     term_variables(G, Vs),
-    findall(G, candidate_instance(G, D), Gs0), sort(Gs0, Gs),
+    findall(G, candidate3(G, D), Gs0), sort(Gs0, Gs),
     findall(G-E, ( member(G, Gs), evaluate(G, D, E) ), GEs),
     include([_-E]>>(E = proven(_, _)), GEs, Won),
-    include([_-E]>>( eval_mode(memo), value3(E, contested) ), GEs, Cont),
+    include([_-E]>>value3(E, contested), GEs, Cont),
     pred_of(G, P),
     (   Cont \== []                                    % propagation: any contested instance contests the goal
     ->  findall(Sd-W, ( member(Gi-Ei, Cont), inst_conflict(Gi, D, Ei, Sd, W) ), SWs),
@@ -121,17 +119,10 @@ decide_open(G, D, R) :-
         pairs_keys_values(VWs, Vals0, Whys), sort(Vals0, Vals), append(Whys, Why),
         answer("ANSWER", Vals, null, Why, R) ).
 
-candidate_instance(G, D) :- eval_mode(memo), !, candidate3(G, D).
-candidate_instance(G, D) :-
-    (   rule(Id, K, G, B, _), memberchk(K, [strict, defeasible]), active(Id), body(B, D, _)
-    ;   claim(Id, G, _, _, F, T, _, _, _, _), active(Id), in_force(F, T, D) ),
-    ground(G).
-
 sups_of(proven(S, _), S).
 sups_of(defeated(_, S, _), S).
 sups_of(blocked(S, _), S).
 sups_of(none(_), []).
-sups_of(undefined(_, _), []).
 
 value_of([V], V) :- !.
 value_of(Vs, Vs).
@@ -151,7 +142,6 @@ why_ids(Why, Ids) :- findall(Id, ( sub_node(Why, N), is_dict(N), get_dict(id, N,
 sub_node(X, X).
 sub_node(X, N) :- is_dict(X), get_dict(K, X, C), memberchk(K, [children, failed, roots]), sub_node(C, N).
 sub_node(X, _{id:Id}) :- is_dict(X), get_dict(type, X, contested), get_dict(rules, X, Ms), member(Id, Ms).
-sub_node(X, _{id:Id}) :- is_dict(X), get_dict(type, X, undefined), get_dict(members, X, Ms), member(Id, Ms).
 sub_node(L, N) :- is_list(L), member(X, L), sub_node(X, N).
 
 why_not(G, D, R) :-
@@ -187,7 +177,6 @@ own_standing(defeated(a(AId, _, _, _), _, _), _{standing:"rebutted", defeater:AI
 own_standing(blocked(S, U), _{standing:"contested", defeater:null, qualifier:[], sides:Sides}) :-
     ids_of(S, A), ids_of(U, B), sort([A, B], Sides).
 own_standing(none(_), _{standing:"holds", defeater:null, qualifier:[], sides:null}).
-own_standing(undefined(Sides, _), _{standing:"contested", defeater:null, qualifier:[], sides:Sides}).
 
 sub_standing(Subs, St) :-
     (   member(S, Subs), get_dict(role, S, required), failing(S), get_dict(standing, S, "contested")
@@ -260,17 +249,12 @@ do_op("with_hypothesis", Op, _{results:Rs, added:Ids, withheld:W}) :- !,
 
 hypothesis(snapshot, S, W, Recs, Ops, Ids, Rs) :-
     snapshot(with_state(S, ( forall(member(I, W), assertz(withheld(I))), add_records(Recs, hyp, Ids),
-                             maplist([O, R]>>op_result(O, R), Ops, Rs) ))),
-    drop_state_tables(S).
+                             maplist([O, R]>>op_result(O, R), Ops, Rs) ))).
 hypothesis(assert, S, W, Recs, Ops, Ids, Rs) :-
     setup_call_cleanup(
         ( forall(member(I, W), assertz(withheld(I))), add_records(Recs, hyp, Ids) ),
         with_state(S, maplist([O, R]>>op_result(O, R), Ops, Rs)),
-        ( forall(member(I, W), retract(withheld(I))), retract_source(hyp) )), drop_state_tables(S).
-
-%   Tables computed under a hypothesis's token are dead once it exits (the token is never reused).
-drop_state_tables(S) :- abolish_table_subgoals(defeasible:wdef(S, _, _)),
-    abolish_table_subgoals(defeasible:wovr(S, _, _)), abolish_table_subgoals(defeasible:wbeat(S, _, _, _)).
+        ( forall(member(I, W), retract(withheld(I))), retract_source(hyp) )).
 
 %   Test-only op: sleep, reporting wall-clock start/end (epoch ms) so the isolation test can check overlap.
 do_op("sleep", Op, _{t0:T0, t1:T1}) :- !,
@@ -303,23 +287,4 @@ memo_test(Out) :-
     aggregate_all(count, memo(hyp(_), _, _, _), NHyp),
     Out = _{base_before:B1.status-B1.value, base_memo_entries:NBase, hypothesis:H.status, control_same_token:Leak.status,
             base_after:B2.status-B2.value, hyp_entries_left:NHyp}.
-%!  table_test(-Out)  wfs mode, table policy session: tables computed in the base must not answer inside a
-%   hypothesis, and tables of either must not answer for another as_of. Control: the same hypothesis run under
-%   the `base` token picks up the base table (the leak the state argument prevents).
-table_test(Out) :-
-    set_table_policy(session), clear_tables,
-    G = _{op:"decide", goal:"[:preferred \"dyne\"]"},
-    Old = G.put(as_of, "2026-01-15"),
-    do_op("decide", G, B1), do_op("decide", Old, O1),
-    aggregate_all(count, ( current_table(defeasible:V, _), subsumes_term(wdef(base, _, _), V) ), NBase),
-    snapshot(with_state(hyp(t), ( assertz(withheld('RY23')), do_op("decide", G, H), do_op("decide", Old, HO) ))),
-    drop_state_tables(hyp(t)),
-    snapshot(( assertz(withheld('RY23')), retractall(defeasible:memo(_, _, _, _)),  % control: token stays base;
-               do_op("decide", G, Leak) )),                                       % memo emptied, so only tables answer
-    do_op("decide", G, B2), do_op("decide", Old, O2),
-    aggregate_all(count, ( current_table(defeasible:V, _), subsumes_term(wdef(hyp(_), _, _), V) ), NHyp),
-    set_table_policy(op),
-    Out = _{base_before:B1.status-B1.value, old_before:O1.status-O1.value, base_tables:NBase,
-            hypothesis:H.status-H.value, hypothesis_old:HO.status-HO.value, control_same_token:Leak.status-Leak.value,
-            base_after:B2.status-B2.value, old_after:O2.status-O2.value, hyp_tables_left:NHyp}.
 do_op(Name, _, _) :- throw(error(unknown_op(Name), _)).

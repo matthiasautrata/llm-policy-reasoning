@@ -1,5 +1,5 @@
 ;; Acyclic dispute fixtures (PLAN-v3-integrity §3.1), loaded on top of slice.edn + extension.edn in the
-;; normal run (accept.py check 7). Built from cycles.edn: Y1 and Y4 unchanged, the Y2 control without the
+;; normal run (accept.py check 7). Built from cycles.edn (tag spike-v3-five-platforms): Y1 and Y4 unchanged, the Y2 control without the
 ;; loop-closing defeater RY24, and the Y5 variants on Y1's dispute (fern blacklisted, contested).
 ;; The cyclic parts (Y2 even loop, Y3 odd loop) are load-rejection fixtures in fixtures/integrity/.
 ;; Questions :state :acyclic in questions.edn, keys under keys.json "acyclic". No predicate here occurs

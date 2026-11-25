@@ -1,53 +1,24 @@
 # Spike v3 progress (branch spike/v3)
 
-Updated as work proceeds; newest first.
+Newest first. `HISTORY.md` holds the earlier phases. `RESULTS.md` describes the current state.
 
 ## Status
 
-- [x] PLAN-v3-integrity (2026-11-25, three phases committed locally, not pushed: f98651d, ef6ec40, a6cb024, plus the RESULTS commit). Results:
-  - Phase 1: flat claims, `recorded_at`, additivity on every measure, `BIGINT` (Q25); 15 negatives, rejected 15/15 by every spike.
-  - Phase 2: one shared integrity gate (`model_check.py` via `integrity.py`, IR-001a–IR-006) at load, `add` and `with_hypothesis` in all five spikes. Check 8 PASS everywhere (9 fixtures plus the hypothesis tests). `cycles.edn` split into `cycles-acyclic.edn` and `fixtures/integrity/`. The re-entry guard turns the memo crashes into a named `defeat-cycle` in under 50 ms (guarded 2 of 2 in V3a memo, V3b, V3c, V3d).
-  - Phase 3: ambiguity propagation (`SEMANTICS.md`) in `reference.py` and all five spikes, one session each, all GREEN 1–8 with mutation, isolation, negatives and bench. Q01–Q27 byte-identical; Q35, Q37, Q40, Q41 become CONFLICT (`results/key-diff-propagation.md`). No measurable latency cost. Blocking retired behind flags (V3a `wfs`, V3e `doubled`).
-  - RESULTS.md has a new section, "Integrity at load time and ambiguity propagation": the IR table, guard results, key diff, effort, latency, the rule-class report, lesson 1 again (no engine is native for propagation; all built it), and the A3 revisit (semantics no longer separates the platforms).
-- [x] PLAN-v3-cycles (2026-11-25, committed locally, not pushed). Results:
-  - Shared: `cycles.edn` (Y1–Y6, Q30–Q39), `SEMANTICS-cycles.md` (WFS with ambiguity blocking; confirmed vs assumed literature), `reference.py` `Cyc` keys, the A1 `pending_exposure` fix (existing keys byte-identical, new Q24 reaches the root), and `model_check.py` (cycle report plus bound variables, with the engine flag `cycles: reject | report`). Check 7 is in `accept.py`, and `cycles_probe.py` and `hyp_latency.py` are new.
-  - V3a WFS: tabling with `tnot`, tables keyed by state token and as_of. GREEN 1–7, 10/10 on both backends, isolation PASS. It costs about 0.5 ms p50 on DuckDB over memo. Memo mode crashes on 5/10 (stack limit).
-  - V3e Clingo 5.8.0: a doubled encoding (cautious and brave = WFS), a magic-set demand rewrite with `@fetch` at grounding, and one Control per op. GREEN 1–7, 10/10 on both backends, isolation PASS, 12/12 negatives. Decide p50 is 14 ms (DuckDB) and 12 ms (Postgres), mostly grounding. The trees are built in the host: xclingo 2.0b24 is broken, and clingexplaid's MUS names the odd loop.
-  - V3b, V3c and V3d ran unchanged: 5/10 each, with StackOverflowError (V3b) or timeouts (V3c, V3d) on the five questions that enter a real cycle. Check 7 PASS by reject. Porting WFS is estimated at about one session each.
-  - RESULTS.md has a new section, "Defeat cycles: V3a with WFS, V3e Clingo". Lesson 1 is split: Datalog is still not native, but WFS and ASP carry defeat cycles natively. The revisit follows the A3 order.
-- [x] PLAN-v3cd V3d, Flix 0.80.0 (2026-11-24, committed locally, not pushed). Results:
-  - GREEN 1–6, mutation fails as required; isolation PASS and bench on DuckDB and Postgres; 12/12 negatives.
-  - It runs an own evaluator. Probes for runtime rules as Flix Datalog: 16/19 slice rules reach the solver via the `Fixpoint3` AST, but that path has no negative-cycle check, is bottom-up only, and needs a demand domain. The reified meta-program is about 45× slower. Codegen would cost 9.6 s per rule change.
-  - The lattice works for standing, not for defeat. 9/10 planted type defects are caught (V3c: 4/10). 8 threads give 3.4× throughput.
-  - RESULTS.md has a new section, "V3c and V3d": the §7 table in four columns, answers to §1.2 and §2.2, architecture additions, and the four-platform revisit.
-- [x] PLAN-v3cd V3c, Elixir 1.20.5 / OTP 29.1.2 (2026-11-24, committed locally). Results:
-  - GREEN 1–6, mutation, isolation and bench on both backends; 12/12 negatives.
-  - It runs an own evaluator, because ex_datalog rejects the defeasible meta-program.
-  - Probes: supervision, 1 vs 8 processes, hot reload, types.
-- [x] PLAN-v3a-fix (2026-11-24, committed locally, not pushed): F1 V3a hypotheses via `snapshot/1` with a state-keyed memo, and `shared/isolation.py` (V3a snapshot PASS, old assert mode FAIL, V3b branch and with PASS, DuckDB and Postgres); F2 LinkML rule bodies structured, 12/12 negatives, class rule now enforced (two LinkML pitfalls found); F3 both spikes still GREEN 1–6 with mutation failing as required, benches rerun. RESULTS.md has a new section "After the V3a fixes": neither deciding fact of the original Recommendation still holds
-- [x] Shared world: `shared/gen.py` (1969 cc, 20k emp, 100k req; DuckDB and Postgres 18 identical, `--check`)
-- [x] `shared/slice.edn`, `extension.edn`, `questions.edn` (Q01–Q23), `reference.py` → `keys.json` (extension changes Q07, Q14)
-- [x] `shared/CONTRACT.md`: CLI session script, ops, why-tree shape
-- [x] `shared/check_why.py`, `shared/accept.py` (mutation test: check 1 fails on mutated keys, as it must)
-- [x] V3a engine GREEN on checks 1–6 (2026-11-24, session 1). Bugs on the way: forall/2 not binding fetch outputs; dict `.key` inside yall lambdas expands too early; evaluate/3 called with a bound result skipped classify's cut and "proved" goals with no supporter
-- [x] V3a LinkML model (`v3a-prolog/linkml/`, one command: `.venv/bin/python spikes/v3/v3a-prolog/linkml/build.py`): schema `slice.yaml` and the converted slice validate; the 53 EDN rule/claim strings parse; docs via gen-doc (`docs/schema/`) plus instance docs `docs/slice.md` (G-arm material); DDL via gen-sqlddl compared with gen.py in `ddl_compare.md` (no keys in the slice model → 29/31 columns differ; with keys added only the composite PKs differ, they come out as UNIQUE; no indexes). The concept "sql or derived_by" rule is not enforced by linkml-validate
-- [x] V3b engine GREEN on checks 1–6 on the first full run (2026-11-24, session 2); mutation test fails as required. Defects on the way were in glue, not semantics: Malli recursive schemas (need `[:ref]`, and `[:schema [:ref]]` inside seqex), data.json pushback overflow on stdin, environ printing a JAVA_HOME warning on stdout
-- [x] V3b model (`clojure -M:model`): slice + extension validate natively (rule bodies included); 12/12 negative tests rejected, including the concept sql-or-derived rule LinkML did not enforce; `docs/slice.md` identical to V3a's below the header; `docs/why-node.schema.json` from Malli; all 350 why roots of a check-1 run conform
-- [x] V3b probes (`clojure -M:probe`): who-said-it attributes vs tx-meta, as-of on tx vs valid time, C1 history via `d/as-of`, hypothesis branch vs `d/with`
-- [x] `shared/bench.py`: decide p50/p95, cold start, max RSS for any CLI
-- [x] RESULTS.md: "What we learned about the architecture", §7 table, LOC, performance (DuckDB + Postgres), recommendation (V3b's architecture shape; engine either). Readability left to you
+- [x] Pruning to Python + Prolog (2026-11-25, `PLAN-v3-housekeeping.md`):
+  - tagged `spike-v3-five-platforms`, then deleted V3b–V3e, V3a's WFS mode, the blocking semantics, `cycles.edn`, `SEMANTICS-cycles.md` and the executed plans (each removal is listed in the plan's Decisions);
+  - wrote `HISTORY.md`;
+  - rewrote RESULTS to the current state.
+  - Gate: keys byte-identical; V3a GREEN 1–8; `--mutation` fails check 1; isolation PASS on DuckDB and Postgres; negatives 15/15; bench on both backends; guard probe 2/2 (`v3a-prolog/results/`).
+- [ ] Repo-wide inventory (`INVENTORY.md` at the repo root, a proposal). Matthias decides before anything outside `spikes/` is removed.
 
 ## Questions for Matthias
 
-(Decisions taken without you are logged in PLAN.md → Decisions; these are the ones worth a look.)
-
-1. Tooling: Postgres 18 via `brew services` (socket /tmp:5432, db `spike_v3`); clojure + babashka via brew; Python deps via uv into `.venv`. OK to keep the brew service running?
-2. RESULTS recommends V3b's *shape* (rules as data + schema into bodies + immutable state, hypotheses as values), not its engine. Does that framing match what you wanted from an exploration, or do you want a stack-level pick?
-3. Optional search (Scriptum/Lucene, HNSW) was skipped: plain Datalog matching passes check 6. Worth a follow-up?
-4. ~~V3b's `d/with` mode is untested by `accept.py`~~: now covered by `shared/isolation.py --hypothesis with`.
-5. With both deciding facts gone, RESULTS ends in "carry forward the shape; the stack is open". Is a tie-break wanted (for example, trying F1.6, state-as-value in Prolog), or is the trade-off list enough?
-6. ~~V3d found that the slice's `pending_exposure` SQL (`CAST(SUM(...) AS INTEGER)`) overflows when it is evaluated for the root centre. No question asks that, so the top-down engines never hit it. Should the shared slice be fixed (`BIGINT`)?~~ Answered 2026-11-25: yes, in the concept → SQL binding, with a root regression question (PLAN-v3-cycles A1).
-7. ~~RESULTS architecture point 3: rules as data lose the compiler's stratification and range-restriction checks, and no model checks them. Should a moded safety check and a stratification check go into the model validators as a follow-up?~~ Answered 2026-11-25: yes, once in shared Python, with a per-engine `cycles: reject | report` flag (PLAN-v3-cycles A2).
-8. ~~The four-platform revisit ends with "the stack is open; pick by secondary property": resilience and concurrency (V3c), static guarantees (V3d), audit time (V3b), footprint (V3a). Is that the framing you want, or is a next spike wanted to combine two, such as the shape in Flix with typed rows per concept?~~ Answered 2026-11-25: not yet. Revisit after the cycles results, ordered semantics → guarantees → operation → footprint, phrased as "what each platform makes natural" (PLAN-v3-cycles A3).
-9. ~~V3b–V3d answer only acyclic rule bases (the model check rejects the rest). Should the alternating fixpoint be ported to them (about one session each, with the reference and Q30–Q39 as spec), or is "reject" an acceptable capability for the T arm?~~ Answered 2026-11-25: "reject" is the capability. Cycles are rejected at load (IR-001a), with the re-entry guard as backstop; no port (PLAN-v3-integrity).
-10. Rule classes and deontic rules (PLAN-v3-integrity §5; RESULTS, "Rule classes"). The `:class` labels record a rule's inferential role, not whether it grants a permission. R311 (`auto_approved`, "without further checks") is a policy permission. R312 (`auto_approved` → `approved`) is an inferential entitlement. R301 was "may approve" (`entitlement`) in `rules/rules.yaml` and became the `material_inference` `has_approver` in the slice. R310 concludes the deontic status `approved` under `material_inference`. Should deontic rules enter as their own kind (a separate `:modality` permission / obligation / prohibition beside `:class`, or a separate record type issued by an authority), and should R301 go back to a permission?
+1. Tooling: Postgres 18 via `brew services` (socket /tmp:5432, db `spike_v3`). OK to keep the brew service running? The `.venv` still holds clingo and the other packages of the dropped V3e; remove them?
+2. ~~Framing of the recommendation (shape vs stack)~~: answered 2026-11-25 by the platform decision, Python + Prolog (`HISTORY.md`, Decision).
+3. ~~Optional search (Scriptum/Lucene, HNSW) for `resolve_term`~~: folded into the platform decision 2026-11-25. Not part of v3; listed under RESULTS "Not done".
+5. ~~Tie-break between the stacks~~: answered 2026-11-25 by the platform decision.
+10. Rule classes and deontic rules (RESULTS, residual 5). The `:class` labels record a rule's inferential role, not whether it grants a permission.
+    - R311 (`auto_approved`, "without further checks") is a policy permission. R312 (`auto_approved` → `approved`) is an inferential entitlement.
+    - R301 was "may approve" (`entitlement`) in `rules/rules.yaml` and became the `material_inference` `has_approver` in the slice.
+    - Should deontic rules enter as their own kind, either a `:modality` (permission / obligation / prohibition) beside `:class` or a separate record type issued by an authority? Should R301 go back to a permission?
+    - **Open, deferred** with the vocabulary work.

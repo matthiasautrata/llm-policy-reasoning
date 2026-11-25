@@ -1,4 +1,4 @@
-;; IR-001a (PLAN-v3-integrity §3.1): Y2 from cycles.edn, the even loop preferred <-> under_review through
+;; IR-001a (PLAN-v3-integrity §3.1): Y2 of the cycles phase (cycles.edn, tag spike-v3-five-platforms), the even loop preferred <-> under_review through
 ;; the defeaters RY23 and RY24. Loaded on top of slice + extension: must be rejected with defeat-cycle [RY23 RY24].
 [{:id :RY21 :kind :defeasible :owner :procurement :class :material_inference
   :recorded_at #inst "2026-09-15"

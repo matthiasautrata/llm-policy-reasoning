@@ -1,8 +1,6 @@
 # Semantics: ambiguity propagation over an acyclic rule base (PLAN-v3-integrity §4.1)
 
-This replaces the Y5 decision of `SEMANTICS-cycles.md`, which was ambiguity blocking. Everything downstream of a contested conclusion is now contested. `reference.py` (`Prop`, `answer_acyclic`) implements this independently of every spike.
-
-Under the old semantics, available behind `reference.py --semantics blocking`, the retired engine modes (V3a `wfs`, V3e doubled encoding) keep their old keys.
+Everything downstream of a contested conclusion is contested. `reference.py` (`Prop`, `answer_acyclic`) implements this independently of the engine (V3a). An earlier phase used ambiguity blocking; `HISTORY.md` says what changed and why.
 
 ## Precondition
 
@@ -97,7 +95,7 @@ The definitions were read in Maher, *Relative Expressiveness of Defeasible Logic
   - **−σq**: every rule r for q either has a −σ body literal, or meets some s for ~q with a +δ body and s > r.
 - Team defeat is the ∀s / ∃t shape. The starred variants δ*, σ* drop it.
 - The inclusion chain +Δ ⊆ +δ* ⊆ +δ ⊆ +∂ ⊆ +σ ⊆ +σ* is stated in Maher 2021 and attributed to Billington, Antoniou, Governatori and Maher, *An inclusion theorem for defeasible logics*, ACM TOCL 12(1), 2010.
-- From SEMANTICS-cycles.md (Maier, arXiv 1106.1957): ambiguity propagation is what the WFS of the direct translation already gives. Ambiguity blocking needed the metaprogram.
+- Maier, arXiv 1106.1957 (read in the cycles phase, see `HISTORY.md`): ambiguity propagation is what the WFS of the direct translation already gives. Ambiguity blocking needs a metaprogram.
 
 ### Assumed (not verified against the sources)
 
@@ -113,6 +111,7 @@ The definitions were read in Maher, *Relative Expressiveness of Defeasible Logic
 ## Literature
 
 - Maher, M. J. *Relative Expressiveness of Defeasible Logics II*. arXiv:2102.10532. Appendix B was read.
+- Maier, F. *Well-founded semantics for defeasible logic*. arXiv:1106.1957. Read.
 - Billington, D., Antoniou, G., Governatori, G., Maher, M. J. *An inclusion theorem for defeasible logics*. ACM TOCL 12(1), 2010. Cited via Maher 2021; not read.
 - Antoniou, G., Billington, D., Governatori, G., Maher, M. J. *A flexible framework for defeasible logics*. AAAI 2000. Not read.
 - Governatori, Maher, Antoniou, Billington. *Argumentation semantics for defeasible logic*. J. Logic Computat. 14(5), 2004. Not read; this is where the abstract places argumentation semantics for both the propagating and the blocking variant.

@@ -1,1 +1,0 @@
-{"cli": "spikes/v3/v3e-clingo/cli", "backend": "postgres", "n": 30, "Q10": {"base": {"p50": 6.74, "p95": 7.45}, "hypothesis": {"p50": 6.65, "p95": 6.81}, "answers": ["ANSWER", "CONFLICT"]}, "Q38": {"base": {"p50": 7.56, "p95": 8.02}, "hypothesis": {"p50": 7.08, "p95": 7.42}, "answers": ["CONFLICT", "ANSWER"]}}

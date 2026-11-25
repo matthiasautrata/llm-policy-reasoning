@@ -1,6 +1,6 @@
-# System A contract (both spikes)
+# System A contract
 
-PLAN §4 made concrete. Each spike ships a CLI that reads one **session script** (JSON) on stdin and
+The engine (V3a, `v3a-prolog/cli`) ships a CLI that reads one **session script** (JSON) on stdin and
 writes one JSON object to stdout. A session is one process: `add` and `with_hypothesis` act on the
 running state, so runtime extension is tested without restart.
 
@@ -54,7 +54,7 @@ asset that no active claim links to; withholding a parent therefore lists its me
 
 ## Integrity gate and errors (PLAN-v3-integrity §2–§3)
 
-Every engine runs the shared gate `shared/integrity.py` (stdin `{"load": [paths], "added": [EDN texts],
+The engine runs the shared gate `shared/integrity.py` (stdin `{"load": [paths], "added": [EDN texts],
 "withhold": [ids]}` → `{"ok", "violations", "ms"}`) on the rule base an op would produce, **before** its
 own schema validation and before the store sees anything: at load, on every `add`, on every
 `with_hypothesis` (its `add` and `withhold` on top of the running state). A violation is
@@ -65,10 +65,10 @@ own schema validation and before the store sees anything: at load, on every `add
   the state is unchanged and later ops run as if it had not been sent.
 - `INTEGRITY_GATE=off` in the environment admits everything (used only by `cycles_probe.py`).
 
-Re-entry guard (memo evaluators: V3a memo, V3b, V3c, V3d): meeting a goal already on the evaluation
+Re-entry guard: meeting a goal already on the evaluation
 path is a dependency cycle the gate did not stop. The op ends with `{"status": "ERROR", "error": {"op",
 "violations": [{"violation": "defeat-cycle", "members": [goal EDN, outermost first, ending with the
-repeated goal], "path": [goals], "message"}]}}`. V3a wfs and V3e evaluate cycles natively and need no guard.
+repeated goal], "path": [goals], "message"}]}}`.
 
 ## Why trees
 

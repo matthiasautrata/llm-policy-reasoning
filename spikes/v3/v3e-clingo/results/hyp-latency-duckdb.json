@@ -1,1 +1,0 @@
-{"cli": "spikes/v3/v3e-clingo/cli", "backend": "duckdb", "n": 30, "Q10": {"base": {"p50": 6.66, "p95": 7.32}, "hypothesis": {"p50": 6.6, "p95": 6.86}, "answers": ["ANSWER", "CONFLICT"]}, "Q38": {"base": {"p50": 8.42, "p95": 9.32}, "hypothesis": {"p50": 7.78, "p95": 10.4}, "answers": ["CONFLICT", "ANSWER"]}}

@@ -1,3 +1,0 @@
-1 slice.edn: valid | extension.edn: valid
-2 negative tests: 15/15 rejected
-3 docs/slice.md, 168 lines; docs/why-node.schema.json

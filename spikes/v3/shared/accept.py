@@ -1,4 +1,4 @@
-"""Spike v3 acceptance test (PLAN §6), identical for both spikes.
+"""Spike v3 acceptance test (contract checks 1-8).
 
   python spikes/v3/shared/accept.py --cli "spikes/v3/v3a-prolog/cli"
   python spikes/v3/shared/accept.py --cli "..." --mutation     # keys from reference.py --mutate must FAIL check 1
@@ -22,7 +22,7 @@ The CLI reads a session script (CONTRACT.md) on stdin and prints {"results": [..
   8 integrity fixtures (fixtures/integrity/manifest.edn): each is loaded on top of slice + extension
     (or a derived slice); the load must be rejected with the named violation and members. Also: `add`
     of the Y2 closing rule is rejected and leaves the state unchanged
-  Before the checks, model_check.py (integrity, cycles: reject) runs over slice + extension.
+  Before the checks, model_check.py (integrity) runs over slice + extension + cycles-acyclic.edn.
 """
 import argparse, copy, json, os, pathlib, shlex, subprocess, sys, time
 
@@ -220,31 +220,18 @@ def main():
     ap.add_argument("--mutation", action="store_true", help="check 1 against mutated keys; must fail")
     ap.add_argument("--only", default="12345678")
     ap.add_argument("--out", help="write the raw results here (JSON)")
-    ap.add_argument("--mode", help="engine mode for capabilities.json (e.g. v3a: wfs | memo)")
     ap.add_argument("--timeout", type=float, default=120, help="checks 7, 8: seconds before a session counts as looping")
-    ap.add_argument("--semantics", choices=["propagation", "blocking"], default="propagation",
-                    help="check 7 keys: propagation (keys.json) | blocking (reference.py --semantics blocking; "
-                         "retired engine modes V3a wfs, V3e doubled encoding)")
     a = ap.parse_args()
     S, X, Q, Y, QC = load(cycles=True)
     K = ref_keys(mutate=True) if a.mutation else json.loads((HERE / "keys.json").read_text())
-    if a.semantics == "blocking":
-        K["acyclic"] = ref_keys(semantics="blocking")["acyclic"]
     today = S["today"]
     ops = [op_for(q) for q in Q]
     report, raw, green = {}, {}, True
 
     import model_check as MC
-    if a.mode:   # passed to the engine's CLI process (V3a host.py reads ENGINE_MODE)
-        os.environ["ENGINE_MODE"] = a.mode
-    engine = pathlib.Path(shlex.split(a.cli)[0]).parent.name
-    try:
-        flag = MC.engine_flag(engine, a.mode)
-    except FileNotFoundError:
-        flag = "reject"
     S0, r0, c0, q0 = MC.rule_base(cycles=True)
-    mc = MC.check(S0, r0, c0, q0, "reject", MC.declared_modes())
-    print(f"model check (slice + extension + acyclic, {engine} capability cycles: {flag}):", "OK" if mc["ok"] else mc["errors"])
+    mc = MC.check(S0, r0, c0, q0, MC.declared_modes())
+    print("model check (slice + extension + acyclic):", "OK" if mc["ok"] else mc["errors"])
 
     def verdict(n, errs, note=""):
         nonlocal green

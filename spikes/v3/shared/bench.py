@@ -1,4 +1,4 @@
-"""Spike v3 performance (PLAN §7 "Performance"), the same session for any CLI.
+"""Spike v3 performance (latency and SQL statements per op), the same session for any CLI.
 
   .venv/bin/python spikes/v3/shared/bench.py --cli spikes/v3/v3a-prolog/cli [--backend duckdb] [--n 200]
 

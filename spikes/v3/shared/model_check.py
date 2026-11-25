@@ -1,6 +1,6 @@
 """Shared model check over the rule base (PLAN-v3-cycles §1.4, amendment A2). Engine-independent.
 
-  python spikes/v3/shared/model_check.py [--cycles] [--engine v3a-prolog] [--mode wfs]
+  python spikes/v3/shared/model_check.py [--cycles] [--fixture f.edn] [--json]
 
 1 Cycle report: the predicate dependency graph, with signed edges
     body literal -> head                    +
@@ -22,11 +22,10 @@
   The check then compares the inferred modes with the declarations in modes.edn, checks every call site
   in the rules and every question goal, and checks that each functional predicate has a mode within its
   key positions.
-3 Strictness comes from the engine: capabilities.json in the spike directory {"cycles": "reject" | "report"}
-  (with --mode, {"modes": {mode: flag}}). With "reject", a rule base that has a negative cycle fails.
-  Moded errors fail on every engine.
+3 A rule base with a negative cycle fails (IR-001a): cycles are rejected, never answered. So do moded errors.
+  The command line prints the cycle report as a diagnostic, then the verdict.
 
-Library: check(S, rules, claims, questions, cycles_flag) -> dict(cycles=[...], modes={...}, errors=[...], ok=bool)
+Library: check(S, rules, claims, questions) -> dict(cycles=[...], modes={...}, errors=[...], ok=bool)
 """
 import argparse, itertools, json, pathlib, sys
 
@@ -355,13 +354,12 @@ def kw(x):
     return x[1:] if isinstance(x, str) and x.startswith(":") else x
 
 
-def integrity_violations(S, rules, claims, cycles_flag="reject"):
+def integrity_violations(S, rules, claims):
     """IR-001a .. IR-005 over the active rule base (IR-006 is the moded check in check())."""
     out = []
     cyc = negative_cycles(rules, claims, S.get("functional") or {})
-    if cycles_flag == "reject":
-        for c in cyc:
-            out.append(V("defeat-cycle", c["rules"], f"negative dependency cycle over {c['predicates']}: {c['negative_edges']}"))
+    for c in cyc:
+        out.append(V("defeat-cycle", c["rules"], f"negative dependency cycle over {c['predicates']}: {c['negative_edges']}"))
     out += superiority_cycles(rules, claims)
     for p, arts in definition_artifacts(S, rules).items():
         if len(arts) > 1:
@@ -401,9 +399,9 @@ def integrity_violations(S, rules, claims, cycles_flag="reject"):
     return out
 
 
-def check(S, rules, claims, questions, cycles_flag="reject", declared=None):
+def check(S, rules, claims, questions, declared=None):
     """-> dict(cycles, modes, violations: [{violation, members, message}], errors: [messages], ok)."""
-    viol = integrity_violations(S, rules, claims, cycles_flag)
+    viol = integrity_violations(S, rules, claims)
     cyc = negative_cycles(rules, claims, S.get("functional") or {})
     unbound = []
     M = Modes(S, rules, claims)
@@ -441,11 +439,6 @@ def declared_modes():
     return {p: (v if isinstance(v, list) else [v]) for p, v in d.items()}
 
 
-def engine_flag(engine, mode=None):
-    cap = json.loads((HERE.parent / engine / "capabilities.json").read_text())
-    return cap["modes"][mode]["cycles"] if mode else cap["cycles"]
-
-
 def rule_base(cycles=True, extra=()):
     """slice + extension (+ cycles-acyclic.edn with cycles) + the records of each extra EDN file."""
     S, X, Q, Y, QC = load(cycles=True)
@@ -461,16 +454,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--cycles", action="store_true", help="include cycles-acyclic.edn")
     ap.add_argument("--fixture", action="append", default=[], help="add the records of this EDN file (e.g. fixtures/integrity/y2-even-loop.edn)")
-    ap.add_argument("--engine", help="spike directory with capabilities.json")
-    ap.add_argument("--mode", help="engine mode (capabilities.json modes)")
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args()
-    flag = engine_flag(a.engine, a.mode) if a.engine else "report"
     S, rules, claims, Q = rule_base(a.cycles, a.fixture)
-    res = check(S, rules, claims, Q, flag, declared_modes())
+    res = check(S, rules, claims, Q, declared_modes())
     if a.json:
         print(json.dumps(res, indent=1)); return 0 if res["ok"] else 1
-    print(f"rule base: slice + extension{' + cycles-acyclic' if a.cycles else ''}{''.join(' + ' + f for f in a.fixture)}; engine {a.engine or '-'} {a.mode or ''} cycles: {flag}")
+    print(f"rule base: slice + extension{' + cycles-acyclic' if a.cycles else ''}{''.join(' + ' + f for f in a.fixture)}")
     print(f"negative cycles: {len(res['cycles'])}")
     for c in res["cycles"]:
         print("  ", c["predicates"], "rules", c["rules"]); [print("     ", e) for e in c["negative_edges"]]

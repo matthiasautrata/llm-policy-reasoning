@@ -1,7 +1,7 @@
-"""Hypothesis latency through the CLI contract, for any engine (PLAN-v3-cycles §3 "measure hypothesis latency").
-  python spikes/v3/shared/hyp_latency.py --cli spikes/v3/v3e-clingo/cli [--backend duckdb] [--n 30]
+"""Hypothesis latency through the CLI contract.
+  python spikes/v3/shared/hyp_latency.py --cli spikes/v3/v3a-prolog/cli [--backend duckdb] [--n 30]
 For Q10 (withhold R313) and Q38 (withhold RY23): p50/p95 of the base decide's `ms` and of the whole
-with_hypothesis op's `ms` (n each, one session, slice + extension + cycles)."""
+with_hypothesis op's `ms` (n each, one session, slice + extension + cycles-acyclic.edn)."""
 import argparse, json, shlex, statistics, subprocess, sys, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from accept import CFG, SLICE, EXT, CYC, ROOT  # noqa: E402

@@ -1,4 +1,0 @@
-#!/usr/bin/env bash
-# V3d CLI (CONTRACT.md): session JSON on stdin -> results JSON on stdout. Run from the repo root.
-# Build first: (cd spikes/v3/v3d-flix && ./fx build-fatjar)
-exec java -Xss512m --enable-native-access=ALL-UNNAMED -jar "$(dirname "$0")/artifact/v3d-flix.jar"

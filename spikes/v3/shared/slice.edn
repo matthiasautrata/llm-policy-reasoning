@@ -1,5 +1,5 @@
 ;; Spike v3 canonical slice: physical model, semantic layer, vocabulary, rules, claims.
-;; Authored once; input to both spikes (V3a reads it with an EDN DCG, V3b natively).
+;; Authored once; V3a reads it with an EDN DCG, reference.py and model_check.py with edn_format.
 ;; Detail data is NOT here: it lives in DuckDB / Postgres and is reached only through
 ;; fetch(concept, filters). Rules reference concepts, never SQL.
 ;;

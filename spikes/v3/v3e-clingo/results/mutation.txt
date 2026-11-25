@@ -1,6 +1,0 @@
-    duckdb Q08: sides: got [['R312'], ['R314']], want None
-    duckdb Q08: core ids missing from why: ['R310']
-    duckdb Q09: value: got True, want False
-    duckdb Q09: core ids missing from why: ['R312']
-    duckdb Q17: value: got ['r000659', 'r000917', 'r001173', 'r001405', 'r001972', 'r002063', 'r002791', 'r003029', 'r004103', 'r004254', 'r004332', 'r004511', 'r004586', 'r004600', 'r004855', 'r004962', 'r005335', 'r005867', ', want ['r000508', 'r000659', 'r000917', 'r001173', 'r001405', 'r001711', 'r001972', 'r002063', 'r002354', 'r002791', 'r003029', 'r004024', 'r004103', 'r004254', 'r004332', 'r004511', 'r004586', 'r004600', '
-mutation test: OK (check 1 failed as it must)

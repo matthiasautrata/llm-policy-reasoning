@@ -1,13 +1,13 @@
 """Re-entry guard probe (PLAN-v3-integrity §3.2): what an engine does with a negative cycle when the
 integrity gate is bypassed.
 
-  python spikes/v3/shared/cycles_probe.py --cli spikes/v3/v3b-clojure/cli [--timeout 30] [--out f.json] [--backend postgres]
+  python spikes/v3/shared/cycles_probe.py --cli spikes/v3/v3a-prolog/cli [--timeout 30] [--out f.json] [--backend postgres]
 
 For each loop fixture (Y2 even loop, Y3 odd loop under fixtures/integrity/) loads slice + extension +
 fixture with INTEGRITY_GATE=off, so the load is admitted, and asks the goal on the loop. A memo
 evaluator must end in a named `defeat-cycle` error (the re-entry guard: the result's error names the
-goal path) in under 1 s (the op's own ms; wall time includes process start); the PLAN-v3-cycles outcome was a stack overflow or a timeout. Engines that
-answer cycles natively (V3a wfs, V3e) print their answer instead.
+goal path) in under 1 s (the op's own ms; wall time includes process start). Without the guard the outcome
+was a stack overflow or a timeout.
 Prints one line per probe: outcome (guard | answer | crash | timeout), seconds, detail.
 """
 import argparse, json, os, pathlib, shlex, subprocess, sys, time

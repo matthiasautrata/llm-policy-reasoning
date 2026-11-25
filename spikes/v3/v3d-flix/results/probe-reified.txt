@@ -1,1 +1,0 @@
-reified anc: 9497 facts in 8599.808167 ms (rules as data, fixed meta-program, facts keyed by predicate)
