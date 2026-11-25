@@ -112,7 +112,8 @@
   {:id "hier:reporting_chain" :name :reporting_chain :kind :hierarchy :tables ["table:emp"]
    :doc "An employee's manager, the manager's manager, and so on; not the employee."
    :params [:emp] :columns [:emp :approver :role :depth]
-   :sql "WITH RECURSIVE ch(approver, depth) AS (SELECT manager, 1 FROM emp WHERE id = $emp AND manager IS NOT NULL UNION ALL SELECT e.manager, ch.depth + 1 FROM emp e JOIN ch ON e.id = ch.approver WHERE e.manager IS NOT NULL) SELECT CAST($emp AS VARCHAR) AS emp, ch.approver, emp.role, ch.depth FROM ch JOIN emp ON emp.id = ch.approver"}
+   :sql "WITH RECURSIVE ch(approver, depth) AS (SELECT manager, 1 FROM emp WHERE id = $emp AND manager IS NOT NULL UNION ALL SELECT e.manager, ch.depth + 1 FROM emp e JOIN ch ON e.id = ch.approver WHERE e.manager IS NOT NULL) SELECT CAST($emp AS VARCHAR) AS emp, ch.approver, emp.role, ch.depth FROM ch JOIN emp ON emp.id = ch.approver"
+   :batch_sql "WITH RECURSIVE ch(emp, approver, depth) AS (SELECT id, manager, 1 FROM emp WHERE id IN ($emp) AND manager IS NOT NULL UNION ALL SELECT ch.emp, e.manager, ch.depth + 1 FROM emp e JOIN ch ON e.id = ch.approver WHERE e.manager IS NOT NULL) SELECT CAST(ch.emp AS VARCHAR) AS emp, ch.approver, emp.role, ch.depth FROM ch JOIN emp ON emp.id = ch.approver"}
   {:id "entity:request_in_subtree" :name :request_in_subtree :kind :entity :tables ["table:req" "table:emp" "table:cc"]
    :doc "Requests whose requester's cost centre lies in the subtree of a root."
    :params [:root] :columns [:root :id :requester :cc :amount :status]

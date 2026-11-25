@@ -44,7 +44,7 @@ classes:
       A semantic-layer entry (measure, dimension, entity or hierarchy) bound to tables. Its SQL template
       uses $name for required parameters and @iso(x) for an ISO date string; other filters are applied
       around the template. A derived concept has no SQL and names the rule that computes it.
-    slots: [id, concept_name, kind, doc, tables, params, columns_out, sql, derived_by, additivity, unsafe_dims]
+    slots: [id, concept_name, kind, doc, tables, params, columns_out, sql, batch_sql, derived_by, additivity, unsafe_dims]
     slot_usage:
       kind: {range: ConceptKind, required: true}
       tables: {range: string, required: true, inlined: false, description: Ids of the tables the concept binds to.}
@@ -56,6 +56,8 @@ classes:
         postconditions: {slot_conditions: {additivity: {required: true}}}
       - preconditions: {slot_conditions: {additivity: {equals_string: semi-additive}}}
         postconditions: {slot_conditions: {unsafe_dims: {required: true}}}
+      - preconditions: {slot_conditions: {batch_sql: {required: true}}}
+        postconditions: {slot_conditions: {sql: {required: true}, params: {required: true}}}
     # A class-level any_of, not a `rules` entry: gen-json-schema turns a rule without preconditions into a bare
     # JSON Schema `then` (no `if`), which validators ignore (PLAN-v3a-fix Decisions, F2.3).
     any_of: &sql_or_derived
@@ -254,6 +256,7 @@ slots:
   params: {multivalued: true}
   columns_out: {multivalued: true, description: Output columns of the concept's rows.}
   sql: {}
+  batch_sql: {description: "The set form of sql for its one required parameter $p, written IN ($p), with $p among the output columns (CONTRACT.md, Aggregates)."}
   derived_by: {range: string, pattern: "^R[0-9]+$"}
   label: {required: true}
   synonyms: {multivalued: true}

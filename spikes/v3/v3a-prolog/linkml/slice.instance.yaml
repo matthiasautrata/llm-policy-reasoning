@@ -250,6 +250,9 @@ concepts:
   sql: WITH RECURSIVE ch(approver, depth) AS (SELECT manager, 1 FROM emp WHERE id = $emp AND manager IS NOT NULL UNION ALL
     SELECT e.manager, ch.depth + 1 FROM emp e JOIN ch ON e.id = ch.approver WHERE e.manager IS NOT NULL) SELECT CAST($emp
     AS VARCHAR) AS emp, ch.approver, emp.role, ch.depth FROM ch JOIN emp ON emp.id = ch.approver
+  batch_sql: WITH RECURSIVE ch(emp, approver, depth) AS (SELECT id, manager, 1 FROM emp WHERE id IN ($emp) AND manager IS
+    NOT NULL UNION ALL SELECT ch.emp, e.manager, ch.depth + 1 FROM emp e JOIN ch ON e.id = ch.approver WHERE e.manager IS
+    NOT NULL) SELECT CAST(ch.emp AS VARCHAR) AS emp, ch.approver, emp.role, ch.depth FROM ch JOIN emp ON emp.id = ch.approver
   concept_name: reporting_chain
   columns_out:
   - emp

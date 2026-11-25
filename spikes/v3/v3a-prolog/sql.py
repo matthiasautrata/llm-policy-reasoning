@@ -9,7 +9,8 @@ Rows come back as JSON (dates already ISO strings via @iso). A per-op cache avoi
 statement inside one op. Inside an aggregate (CONTRACT.md, Aggregates) Prolog calls need(): a cached,
 untruncated entry is returned, otherwise the (concept, filters) is recorded and "" returned; flush() then
 fetches every recorded need set-at-a-time: one statement per concept and filter shape (an IN list when one
-column filter varies, else a UNION ALL of the single-key statements tagged __b), paged with
+column filter varies; the concept's :batch_sql when its one required parameter varies; else a UNION ALL of the
+single-key statements tagged __b), paged with
 ORDER BY ALL LIMIT fetch_limit OFFSET k, chunked at CHUNK keys. Each key's cache entry carries its
 single-key statement without LIMIT, which check_why re-runs. The per-op log is what the CLI reports as
 sql_log. Cache, needs and log are per thread (threading.local; each Prolog thread that py_calls gets its
@@ -43,8 +44,13 @@ def configure(cfg_json, root):
     return True
 
 
-def register(name, sql, params):
-    _concepts[name] = (sql, list(params))
+def register(name, sql, params, batch=None):
+    """batch: the set form (:batch_sql), the same rows for a set of values of its one required parameter,
+    written `IN ($p)`, with $p among its output columns."""
+    params = list(params)
+    if batch is not None and (len(params) != 1 or f"IN (${params[0]})" not in batch):
+        raise ValueError(f"concept {name}: :batch_sql needs one required parameter, written IN (${params[0] if params else '?'})")
+    _concepts[name] = (sql, params, batch)
     return True
 
 
@@ -54,7 +60,7 @@ def _dialect(sql):
 
 def single(concept, filters):
     """The single-key statement and params, without LIMIT."""
-    tmpl, req = _concepts[concept]
+    tmpl, req, _ = _concepts[concept]
     sql, ph = _dialect(tmpl)
     params = []
     def sub(m):
@@ -147,7 +153,7 @@ def flush():
     for (concept, _), f in needs.items():
         groups.setdefault((concept, tuple(sorted(f))), []).append(f)
     for (concept, cols), fs in groups.items():
-        req = _concepts[concept][1]
+        _, req, batch = _concepts[concept]
         vary = [c for c in cols if len({json.dumps(f[c]) for f in fs}) > 1]
         for i in range(0, len(fs), CHUNK):
             chunk = fs[i:i + CHUNK]
@@ -157,6 +163,20 @@ def flush():
                 sql, params = single(concept, base)
                 sql = f'SELECT * FROM ({sql}) b WHERE b."{c}" IN ({", ".join("?" * len(chunk))})'
                 rows = _paged(concept, sql, params + [f[c] for f in chunk])
+                split = {}
+                for r in rows:
+                    split.setdefault(json.dumps(r[c]), []).append(r)
+                per = [split.get(json.dumps(f[c]), []) for f in chunk]
+            elif len(chunk) > 1 and vary == req and batch is not None:
+                c = req[0]
+                sql, params = _dialect(batch)[0], []
+                sql = sql.replace(f"${c}", ", ".join("?" * len(chunk)))
+                params = [f[c] for f in chunk]
+                rest = [(k, v) for k, v in chunk[0].items() if k != c]
+                if rest:
+                    sql = f"SELECT * FROM ({sql}) t WHERE " + " AND ".join(f't."{k}" = ?' for k, _ in rest)
+                    params += [v for _, v in rest]
+                rows = _paged(concept, sql, params)
                 split = {}
                 for r in rows:
                     split.setdefault(json.dumps(r[c]), []).append(r)

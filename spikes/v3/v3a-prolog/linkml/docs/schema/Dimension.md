@@ -38,6 +38,8 @@ URI: [slice:Dimension](https://example.org/llm-policy-reasoning/spike-v3/slice/D
     
 
         
+      Dimension : batch_sql
+        
       Dimension : columns_out
         
       Dimension : concept_name
@@ -91,6 +93,7 @@ URI: [slice:Dimension](https://example.org/llm-policy-reasoning/spike-v3/slice/D
 | [params](params.md) | * <br/> [String](String.md) |  | [Concept](Concept.md) |
 | [columns_out](columns_out.md) | * <br/> [String](String.md) | Output columns of the concept's rows | [Concept](Concept.md) |
 | [sql](sql.md) | 0..1 <br/> [String](String.md) |  | [Concept](Concept.md) |
+| [batch_sql](batch_sql.md) | 0..1 <br/> [String](String.md) | The set form of sql for its one required parameter $p, written IN ($p), with ... | [Concept](Concept.md) |
 | [derived_by](derived_by.md) | 0..1 <br/> [String](String.md) |  | [Concept](Concept.md) |
 | [additivity](additivity.md) | 0..1 <br/> [Additivity](Additivity.md) |  | [Concept](Concept.md) |
 | [unsafe_dims](unsafe_dims.md) | * <br/> [String](String.md) | Dimensions a semi-additive measure must not be summed over | [Concept](Concept.md) |
@@ -266,6 +269,16 @@ attributes:
     multivalued: true
   sql:
     name: sql
+    from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
+    rank: 1000
+    owner: Dimension
+    domain_of:
+    - Concept
+    range: string
+  batch_sql:
+    name: batch_sql
+    description: The set form of sql for its one required parameter $p, written IN
+      ($p), with $p among the output columns (CONTRACT.md, Aggregates).
     from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
     rank: 1000
     owner: Dimension
