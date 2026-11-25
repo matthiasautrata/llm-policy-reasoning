@@ -112,7 +112,7 @@ Bench runs drift by about ±10 % on p50, so differences smaller than that are no
 
 - The statement count is now O(concepts × rounds × pages), not O(members): 693 at the root against about 260 000 projected one at a time. No statement returns more than `fetch_limit` rows (check 5 holds).
 - Latency is still linear in the members (about 2.3 ms per pending member at the root). The cost has moved from SQL into the evaluator: at cc0002, rule lookup by id (`live_sup`/`live_att` scanning `rule/5`) is 17 % of the profile and `py_call` 9 %.
-- The root (90 028 pending) needs more than SWI's default 1 GB stack and peaks at 12.1 GB RSS, with about 925 000 memo entries; it runs with `stack_limit` 8 GB in the CLI config. Its response is 13.8 MB, of which the why tree is 0.4 MB. The bench session's peak RSS rose from 153 to 656 MB; the cause is not yet attributed.
+- The root (90 028 pending) needs more than SWI's default 1 GB stack and peaks at 12.1 GB RSS, with about 925 000 memo entries; it runs with `stack_limit` 8 GB in the CLI config. Its response is 13.8 MB, of which the why tree is 0.4 MB. The bench session's peak RSS rose from 153 to 656 MB (attributed below).
 
 **IR-007 `unsafe-aggregation`** (`SEMANTICS.md`, Aggregates). The gate rejects a `:sum` of a `:semi-additive` measure across one of the measure's parameters. That covers both a direct fetch of the measure and a predicate that carries it, as R104 carries `booked_total`. Every parameter counts as unsafe, because the slice maps no parameter to a dimension. No slice rule is rejected. The fixture RA1 sums `booked_total` over a chain of ancestors.
 
@@ -139,6 +139,34 @@ Q07ext stays `null`: it is `false`, defeated by R307, which is not `:closed_over
 - R316 `po_issued` (from `approved`): Q50 (r000001) gives CONFLICT `[[R312],[R314]]`; the controls Q51 (r000005, true) and Q52 (r000006, false) are qualified.
 
 V3a matched every key without an engine change. Q48–Q52 are in checks 1 and 3.
+
+## Memory attribution (`PLAN-v3-memory.md` §1)
+
+One session per centre, `[:approved_total C ?v]`, 8 GB stack. A cell is one `term_size/2` word (8 bytes). SQL growth is the RSS added while DuckDB ran statements.
+
+| | cc0018 (L2) | cc0002 (L1) | cc0000 (root) |
+|---|---|---|---|
+| members (pending) | 2 224 | 11 213 | 90 028 |
+| memo entries | 22 962 | 115 348 | 924 846 |
+| memo stored terms | 43 MB | 222 MB | 1 768 MB |
+| of which the aggregate entry | 3.8 MB | 21 MB | 164 MB |
+| largest groups (proven) | has_approver 9.6 MB, cap_breach 6.6 MB | has_approver 48 MB, cap_breach 32 MB | has_approver 388 MB, cap_breach 256 MB, governing_limit 215 MB |
+| global stack in use (allocated) | 47 MB (67) | 172 MB (537) | 1 641 MB (2 148) |
+| GC: runs, reclaimed, time | 58, 0.5 GB, 0.09 s | 79, 2.7 GB, 0.5 s | 88, 21.1 GB, 3.3 s |
+| fetch cache: Prolog `fetched/4`, Python | 5 MB, 3 MB | 26 MB, 15 MB | 210 MB, 120 MB |
+| SQL growth | 2.1 GB | 4.0 GB | 5.2 GB |
+| peak RSS | 2.4 GB | 5.7 GB | 12.7 GB |
+
+- **The largest single cost is DuckDB, not the memo.** `reporting_chain` has a required parameter (`$emp`), so `flush()` batches it as a UNION ALL of single-key recursive CTEs, and each copy costs about 4 MB to plan and run. One 500-copy statement adds 2.1 GB at L2; the root's five largest add 2.0, 0.8, 0.5, 0.4 and 0.3 GB. In isolation (500 employees, 2 201 rows), the UNION ALL adds 2 112 MB in chunks of 500, 805 MB in chunks of 100 and 255 MB in chunks of 25. A recursive CTE that carries the key through the recursion (`WHERE id IN (…)`) adds 10 MB for the same rows. The single-key form does not carry `$emp` through its recursion, so `flush()` cannot derive the set form from it.
+- **Hypothesis 1 is confirmed, but the memo is not the main cost.** Proven entries hold the cells: a `none` entry is 2 cells and a proven `has_approver` is about 540. The memo is about 1.8 GB of the root's 12.7 GB.
+- **Hypothesis 2 is confirmed.** At cc0002, `copy_term`, `memo/5` and `variant_hash` take about 10 % of the time. The root's global stack holds 1.6 GB in use, and GC reclaims 21 GB over the run.
+- **Hypothesis 3 is confirmed, and bounded.** The aggregate entry is 164 MB at the root, while the response's why tree is 0.4 MB.
+- **Time** at cc0002 (pre-index profile):
+  - rule lookup (`rule/5`): 17 %;
+  - fetch (`fetch_rows`, inclusive): 17 %, of which SQL is 2.4 of 24.9 s;
+  - memo copy: about 10 %;
+  - GC: 1.6 %.
+- **Bench, 153 → 656 MB:** Q44 (cc0058) runs a 70-copy `reporting_chain` batch (+297 MB), and Q46 (cc0105) runs a 92-copy batch (+394 MB). That accounts for the rise.
 
 ## Built vs native
 

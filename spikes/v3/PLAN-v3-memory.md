@@ -54,3 +54,6 @@ Name the deciding numbers. Do not build 2 or 3 in this plan.
 ## Decisions
 
 (Executor: append dated entries — what was decided, why.)
+
+- 2026-11-25, §1: measured with scratch probes (memo grouped by key kind, predicate and status with `term_size/2`; `statistics/2`; RSS per SQL statement), not with code added to the engine. The root's memo figures come from a run with the §3 index in place: indexing does not change memo contents, but it does change the timing (139 s against 207 s).
+- 2026-11-25, §1: hypotheses 1–3 hold, but the largest memory cost is DuckDB executing `flush()`'s UNION ALL batches of the recursive `reporting_chain` CTE (about 4 MB per copy). The memo is about 1.8 GB of the root's 12.7 GB. Fix A alone cannot meet the §5 bar. The choice of SQL remedy is put to Matthias before §2 (RESULTS, Memory attribution).
