@@ -6,7 +6,7 @@ Newest first. `HISTORY.md` holds the earlier phases. `RESULTS.md` describes the 
 
 - [x] Pruning to Python + Prolog (2026-11-25; HISTORY phase 6, tag `spike-v3-housekeeping`).
 - [x] Inventory executed, Postgres retired, benchmark preconditions, PROGRESS 11–15 (2026-11-25; HISTORY phase 7, tag `spike-v3-preconditions`).
-- [ ] Memory and aggregate cost (`PLAN-v3-memory.md`).
+- [ ] Memory and aggregate cost (`PLAN-v3-memory.md`): §1–§4 done; root 207 s / 12.7 GB → 110 s / 4.6 GB in the default stack. §5 proposal awaits Matthias (questions 16, 17).
 
 ## Questions for Matthias
 
@@ -25,4 +25,5 @@ Newest first. `HISTORY.md` holds the earlier phases. `RESULTS.md` describes the 
 13. ~~Duplicate questions Q26/Q27~~: answered 2026-11-25. Removed: Q01 and Q09 key the same goals and qualifiers, so neither adds a branch.
 14. ~~`cap_breach` and C10~~: answered 2026-11-25. Completeness is derived: a predicate is covered only if every predicate and concept it reads, attackers included, is covered. C10 does not cover `cap_breach`. Q53–Q55 probe it (`SEMANTICS.md`, Qualifier).
 15. ~~Aggregate push-down~~: answered 2026-11-25. It is built (set-at-a-time rounds, batched and paged fetches) and measured at the root (RESULTS, "Fetch volume").
-
+16. **Strategy for large aggregates** (RESULTS, "Strategy for large aggregates"). The bar of about 10 s and 1 GB at the root is not met: 110 s and 4.6 GB. Proposed: option 2, aggregate bodies compiled to SQL, first target `approved_total`, preceded by a scratch probe query that confirms the estimate. Options 1 (stop) and 3 (bottom-up in Prolog, estimated 30–55 s) are the alternatives. Which one?
+17. **Integrity candidate for `:batch_sql`.** Statically, a concept's set form must have the same output columns as its single-key `:sql`, plus its parameter. Today a set form that disagrees is caught only at check 1, for the keys a why tree reports. Should this be a new IR? If so, which id?
