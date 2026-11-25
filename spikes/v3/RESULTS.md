@@ -470,3 +470,135 @@ This is not a choice. Choosing happens later, for v3's T arm.
 **4. Footprint (information only).** V3e: clingo 5.8.0 from a pip wheel in the shared `.venv` (273 MB in total, up from 250), plus V3a's `sql.py`; RSS about 60 MB. V3a's footprint is unchanged by tabling.
 
 **What changed from the earlier recommendation.** That one compared platforms on secondary properties, assuming the core was equal. It is not: on cycles, V3a WFS and V3e answer, and V3b–V3d need a rule base without cycles or a ported fixpoint. Readability of the notations remains Matthias's call.
+
+## Integrity at load time and ambiguity propagation
+
+Added 2026-11-25 after `PLAN-v3-integrity.md` (phases f98651d, ef6ec40, a6cb024). The sections above are left as written. Deviations and versions are in that plan's Decisions; the semantics is `shared/SEMANTICS.md`; raw outputs are in each spike's `results/` and in `results/key-diff-propagation.md`.
+
+**A note on "Defeat cycles".** That section answered a question that has since been reversed: cycles are now **rejected at load** (IR-001a), not answered. Its WFS-vs-memo table and its native-vs-built comparison describe a capability the accept run no longer asks for, and its "Y5 decided: blocking" is replaced by propagation (below). What remains valid from it:
+- the memo crash analysis (no in-progress mark, so a cycle re-enters `evaluate` without bound). It is now the reason for the re-entry guard;
+- the cycle detection in `model_check.py`, now the IR-001a gate in every engine;
+- the unsat-core observation (clingexplaid's MUS names the odd loop), still a cheap second detector;
+- the plain-vs-doubled finding for ASP, which matters again because V3e's default is now plain (see the guard results).
+
+### Integrity checks (check 8)
+
+One implementation, `shared/model_check.py`, reached through `shared/integrity.py` by every engine: imported by V3a and V3e, a subprocess for V3b, V3c and V3d. It runs at load, on `add`, and inside `with_hypothesis` against the hypothetical rule base. Fixtures are in `shared/fixtures/integrity/` (`manifest.edn`).
+
+| Id | Fixture | Violation, members | V3a | V3b | V3c | V3d | V3e |
+|---|---|---|---|---|---|---|---|
+| IR-001a | `y2-even-loop.edn` | `defeat-cycle` RY23 RY24 (exact) | ✓ | ✓ | ✓ | ✓ | ✓ |
+| IR-001a | `y3-odd-loop.edn` | `defeat-cycle` RY31 RY32 (exact) | ✓ | ✓ | ✓ | ✓ | ✓ |
+| IR-001b | `ir001b-explicit.edn` | `superiority-cycle` RS1 RS2 (exact) | ✓ | ✓ | ✓ | ✓ | ✓ |
+| IR-001b | `ir001b-authority.edn` | `superiority-cycle` ⊇ R313 RS3 | ✓ | ✓ | ✓ | ✓ | ✓ |
+| IR-002 | `ir002-duplicate-definition.edn` | `duplicate-definition` R104 RD1 measure:booked_total (exact) | ✓ | ✓ | ✓ | ✓ | ✓ |
+| IR-003 | `ir003-ordering-key.edn` | `rebuttal-without-preference` RP1 (exact) | ✓ | ✓ | ✓ | ✓ | ✓ |
+| IR-004 | derived: slice without `:additivity` on `measure:booked_total` | `missing-additivity` measure:booked_total (exact) | ✓ | ✓ | ✓ | ✓ | ✓ |
+| IR-005 | `ir005-no-completeness.edn` | `negative-without-completeness` RN1 (exact) | ✓ | ✓ | ✓ | ✓ | ✓ |
+| IR-006 | `ir006-unbound-call.edn` | `unbound-call` ⊇ RU1 | ✓ | ✓ | ✓ | ✓ | ✓ |
+| | hypothesis tests (former Q38/Q39): adding RY24, adding the Y3 file | `defeat-cycle`, exact; base unchanged after | ✓ | ✓ | ✓ | ✓ | ✓ |
+| | **check 8 / accept** | | PASS, GREEN 1–8 | PASS, GREEN 1–8 | PASS, GREEN 1–8 | PASS, GREEN 1–8 | PASS, GREEN 1–8 |
+
+The rejection is byte-identical across engines because the gate runs before each engine's own schema validation. Of the seven checks, only IR-001a and IR-006 existed before. IR-003 holds by construction in the slice, so its check is a guard against a second ordering mechanism (an ordering key) being added. IR-005 checks that a completeness claim exists, not that its scope matches the query; the slice has no scope language. A check costs about 13 ms, or about 60 ms per call with Python start-up for the subprocess engines.
+
+### Re-entry guard (`cycles_probe.py`, gate bypassed, DuckDB)
+
+| Engine | Y2 even loop | Y3 odd loop | Result |
+|---|---|---|---|
+| V3a memo | `defeat-cycle`, goal path preferred → under_review → preferred, 2.3 ms | `defeat-cycle`, trusted → exempt_from_audit → trusted, 0.7 ms | guarded 2 of 2 |
+| V3b | same path, 48 ms | same path, 17 ms | guarded 2 of 2 |
+| V3c | 6.3 ms | 2.0 ms | guarded 2 of 2 |
+| V3d | 34 ms | 18 ms | guarded 2 of 2 |
+| V3a wfs (retired) | CONFLICT [[RY21],[RY23]] | CONFLICT [[CY3],[RY32]] | answers natively, no guard needed |
+| V3e doubled (retired) | CONFLICT [[RY21],[RY23]] | CONFLICT [[CY3],[RY32]] | answers natively, no guard needed |
+| V3e plain (default) | CONFLICT, sides null | CONFLICT, sides null | guarded 0 of 2: one model, answers without naming the loop |
+
+Every probe ends in under 1 s, where before the memo engines crashed or timed out at 60 s. The guard's members are goals, not rule ids: at run time the evaluator sees goals. V3e plain is the one gap. Its single-model check does not fire on these loops, so with the gate off it gives a CONFLICT with no sides. With the gate on, which is the deployed setting, loops never reach it.
+
+### Propagation
+
+**Key diff** (`results/key-diff-propagation.md`). Q01–Q27 are byte-identical: no slice question derives anything from a contested literal. Four acyclic questions change, each explained by its root conflict:
+- Q35 (Y5a), Q37 (Y5c) and Q40 (Y5d) go from ANSWER to CONFLICT with sides [[CY1a],[CY1b]] (Y1's dispute). Q37 is the question that separates the semantics: under blocking the defeater RY54 was discarded, under propagation it is live and unbeaten.
+- Q41 (Y5e) goes from ANSWER [] to CONFLICT [[C3],[C4]]: the measure is fetched over the contested `cost_centre_of` with R313 withheld.
+- Q30, Q32, Q34, Q42 and Q43 are unchanged.
+
+Refutation moved to DL's team form (−σ) with no key change. Downstream CONFLICTs carry a `contested` why node `{goal, via, rules, roots}`, which `check_why.py` re-verifies against the reference.
+
+**Effort.** One session per engine, every engine GREEN 1–8 at the end of its session, with mutation, isolation (DuckDB and Postgres) and negatives 15/15. Lines added / removed (`git diff --numstat`):
+
+| | Files | + / − |
+|---|---|---|
+| shared | `reference.py`, `check_why.py`, `accept.py` | +249 / −13 |
+| V3a | `defeasible.pl`, `ops.pl`, `host.py` | +171 / −20 |
+| V3b | `engine.clj`, `ops.clj` | +142 / −18 |
+| V3c | `engine.ex`, `ops.ex`, `why.ex` | +209 / −19 |
+| V3d | `Engine.flix`, `Ops.flix` | +188 / −43 |
+| V3e | `asp.py`, `host.py`, `probes.py` | +187 / −11 |
+
+The shape of the change was the same everywhere: a three-valued twin of `lit` / `body` / `apply_rule`, a team-defeat `classify`, and a breadth-first walk (`contested_why`) for the why node. V3e put the three values into the program as status atoms (`PROP_META`) and kept the tree-building in the host.
+
+**Latency**, `bench.py` decide_ms p50 / p95, before (ef6ec40, blocking) → after (propagation):
+
+| Engine | DuckDB before | DuckDB after | Postgres before | Postgres after |
+|---|---|---|---|---|
+| V3a (memo) | 4.34 / 9.38 | 4.58 / 10.18 | 7.72 / 21.94 | 8.59 / 23.37 |
+| V3b | 6.19 / 13.37 | 6.11 / 13.97 | ≈4.70 (p50) | ≈5.42 (p50) |
+| V3c | 5.97 / 13.21 | 5.78 / 13.41 | 11.63 / 31.32 | 12.81 / 31.81 |
+| V3d | 6.89 / 14.64 | 6.89 / 15.06 | 4.86 / 12.96 | 5.10 / 14.25 |
+| V3e (plain after, doubled before) | 15.59 / 17.13 | 15.96 / 18.77 | 14.01 / 16.29 | 13.72 / 16.13 |
+
+SQL statements per decide are unchanged (V3a–V3d 11.17, V3e 21.86): propagation adds no fetches. The differences (−4 % to +10 % on p50) are the size of the drift between bench runs, so no systematic cost is visible. The slice has almost no contested literals to follow, so this says little about a rule base full of disputes.
+
+### Rule classes (§5, report only)
+
+The slice's `:class` vocabulary, per class, over `slice.edn`, `extension.edn`, `cycles-acyclic.edn` and the integrity fixtures:
+
+| Class | Rules |
+|---|---|
+| `definition` | R104 `booked_total`, R105 `headroom`, R110 `breach_in`, R112 `big_capital` (finance); R201 `role_limit`, R202 `limit_on`, R203 `governing_limit`, R204 `vendor_status_for` (procurement). All strict |
+| `material_inference` | R106 `cap_breach`, R301 `has_approver`, R304 `cap_ok`, R305 `vendor_cleared`, R308 `eligible`, R309 `denied` (compliance), R310 `approved`; cycles-acyclic RY21, RY22, RY51, RY53, RY55, RY56 |
+| `exception` | R306 (`vendor_cleared` for an emergency despite a suspended vendor); R307 (extension, a defeater on `neg vendor_cleared` for big capital); RY23, RY54 (defeaters) |
+| `entitlement` | R311 `auto_approved`, R312 `approved` ← `auto_approved`; fixture RY31 `exempt_from_audit` ← `trusted` (Y3 file) |
+| `incompatibility` | R314 (a denied request is never approved) |
+| `superiority` | R313 (controller: finance over hr on `cost_centre_of`); RY4 |
+
+**The entitlement rules:**
+- **R311 is a policy permission.** Its doc says the request is "approved automatically, without further checks": an authority grants a status to a class of requests. It is a permission in the "may approve" sense, issued by procurement, and has nothing inferential about it.
+- **R312 is an entitlement in the inferential sense.** "An automatically approved request is approved" licenses a defeasible step from one status to another. It commits to nothing new. It is defeasible because R314 can block it.
+- **RY31 is a policy permission**, in the form of an exemption: "a trusted vendor is exempt from audit". It appears only in the rejected Y3 fixture.
+
+**What the labels do not track:**
+- **The original R301 was a permission.** `rules/rules.yaml` has `approver/2` as `class: entitlement` with "Someone **may approve** a request if …", and `worlds/S-s1/L3*/formal.pl` agrees. In the slice it became `has_approver`, a `material_inference`, so the permission was rewritten as a fact about the reporting chain.
+- **Deontic status is spread over three classes.** R310 concludes `approved`, a deontic status, under `material_inference`, R312 concludes it under `entitlement`, and R314 forbids it under `incompatibility`. The class records the rule's inferential role, not whether its conclusion is a permission, obligation or prohibition.
+- **The two vocabularies have drifted.** `rules.yaml` uses definitional | temporal | fitness | material_inference | defeasible | incompatibility | entitlement, and the slice uses six of its own. The inferentialist classes are used consistently within the slice; the deontic reading has no home in either.
+
+The question this raises is in PROGRESS.
+
+### Lesson 1, revisited again
+
+With the rule base acyclic by IR-001a, propagation is stratified and three-valued. **No engine has it natively; every engine built it.**
+- **The memo engines (V3a memo, V3b, V3c, V3d)** needed a three-valued twin of `lit` / `body` / `classify`, about 140–210 lines each, plus the guard as a backstop. Their native layer, plain recursion with a memo, carries two values.
+- **V3e plain** encodes the three values as explicit status atoms (`PROP_META`: live, beaten, pro, ref, con) in one stratified two-valued model. The solver computes them, but the encoding is ours: the answer-set semantics gives two values, and "contested" is a derived atom, not a truth value.
+- **V3a WFS was native only for blocking.** Its third value, undefined, arises only from loops. On an acyclic base the well-founded model is total, so it cannot carry a dispute downstream; it gave the blocking answers on Y5 (Q35 false, Q37 true) and was retired, not ported. ASP's doubled encoding is in the same position.
+
+So the split in "Defeat cycles" lesson 1 changes again:
+1. **The semantics no longer needs non-stratified negation.** IR-001a removed the case that only WFS and stable-model engines could answer. What remains is a stratified three-valued evaluation that any of the five platforms computes with about one session of work.
+2. **The answer layer is still built everywhere**: statuses, sides, why trees, now with a `contested` node.
+3. **Demand remains the one native difference**: top-down engines fetch only what a goal reaches; V3e keeps its magic-set rewrite and its roughly 2× SQL per decide.
+
+### What each platform makes natural, again (A3 order)
+
+This is not a choice. **Semantics may no longer separate the platforms**: with cycles rejected at load and propagation built the same way in all five, every engine computes the same keys from the same spec.
+
+**1. Semantics.**
+- *V3a:* memo mode is now the default, and WFS tabling is retired. What SWI made natural, answering cycles, is not asked for. Top-down demand is still free.
+- *V3b, V3c, V3d:* the gap from "Defeat cycles" is closed by IR-001a and the guard, not by porting WFS. Each now gives the same answers as V3a.
+- *V3e:* plain encoding, a single model with status atoms. It is natural for "compute every status at once", and it needs the host for trees and the demand rewrite for bounded fetch. Its one weak spot is gate-off behaviour on loops (CONFLICT with no sides).
+
+**2. Guarantees.** Integrity is now one shared gate, so static checks no longer separate the platforms either. The engine-native layers still add something: Malli (V3b), the V3c validator and V3d's closed maps reject all 15 negatives by themselves, and Flix's compiler checks the evaluator code, not the runtime rules. Isolation is unchanged (by value in V3b–V3d, a Control per op in V3e, snapshot discipline in V3a). Explanations are built and complete on all five, now with the `contested` node.
+
+**3. Operation.** Unchanged: V3c for supervision and throughput, V3b for transaction time, V3e for lock-free per-op Controls. The gate adds a subprocess call (about 60 ms) to load, `add` and `with_hypothesis` in V3b–V3d but not to `decide`; V3a and V3e import it in-process. An in-process port of the gate would be needed if rule changes became frequent.
+
+**4. Footprint (information only).** Unchanged by this addendum. The shared gate is Python, so every engine now depends on the `.venv`.
+
+**What changed.** The cycles addendum found a semantic difference between the platforms; this addendum removes it by policy (reject cycles) and by spec (propagation from `reference.py`). The choice for v3's T arm therefore rests on guarantees, operation and readability, as before "Defeat cycles", with one new item: whether the integrity gate should stay shared Python or become native to the chosen platform.
