@@ -1,4 +1,4 @@
-1 instances: 1536 lines
+1 instances: 1533 lines
 2 schema: No issues found | instances: No issues found
 3 structured literals: 90, round trip to EDN (edn.pl parses, value equal): 90 ok 
 3b negative tests: linkml-validate 14/15, jsonschema 14/15, shared check 4/15, some layer 15/15 rejected (negatives.md)

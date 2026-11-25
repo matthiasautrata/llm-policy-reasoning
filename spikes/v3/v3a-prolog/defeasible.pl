@@ -61,8 +61,8 @@ load_slice(M) :-
     mget(functional, M, map(Fs)), forall(member(P-N, Fs), assertz(functional(P, N))),
     mget(concepts, M, Cs),
     forall(member(C, Cs), ( mget(name, C, N), assertz(concept(N, C)),
-                            (   mget(sql, C, Sql) -> mget(params, C, Ps, []), mget(batch_sql, C, BSql, @(none)),
-                                py_call(sql:register(N, Sql, Ps, BSql), _)
+                            (   mget(sql, C, Sql) -> mget(params, C, Ps, []), mget(columns, C, Cols, []),
+                                py_call(sql:register(N, Sql, Ps, Cols), _)
                             ;   true ) )),
     mget(terms, M, Ts), forall(member(T, Ts), ( mget(id, T, Id), assertz(term(Id, T)) )),
     mget(assets, M, As, []), forall(member(A, As), ( mget(id, A, Id), assertz(asset(Id, A)) )),

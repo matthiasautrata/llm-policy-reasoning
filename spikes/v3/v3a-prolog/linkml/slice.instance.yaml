@@ -220,8 +220,8 @@ concepts:
   doc: A cost centre and every ancestor up to the root (the centres a request is charged against).
   params:
   - cc
-  sql: WITH RECURSIVE up(id, parent, depth) AS (SELECT id, parent, 0 FROM cc WHERE id = $cc UNION ALL SELECT c.id, c.parent,
-    u.depth + 1 FROM cc c JOIN up u ON c.id = u.parent) SELECT CAST($cc AS VARCHAR) AS cc, id AS anc, depth FROM up
+  sql: WITH RECURSIVE up(cc, id, parent, depth) AS (SELECT id, id, parent, 0 FROM cc WHERE id IN ($cc) UNION ALL SELECT u.cc,
+    c.id, c.parent, u.depth + 1 FROM cc c JOIN up u ON c.id = u.parent) SELECT cc, id AS anc, depth FROM up
   concept_name: ancestors_or_self
   columns_out:
   - cc
@@ -234,8 +234,8 @@ concepts:
   doc: A cost centre and all its descendants.
   params:
   - root
-  sql: WITH RECURSIVE sub(id) AS (SELECT id FROM cc WHERE id = $root UNION ALL SELECT c.id FROM cc c JOIN sub s ON c.parent
-    = s.id) SELECT CAST($root AS VARCHAR) AS root, id FROM sub
+  sql: WITH RECURSIVE sub(root, id) AS (SELECT id, id FROM cc WHERE id IN ($root) UNION ALL SELECT s.root, c.id FROM cc c
+    JOIN sub s ON c.parent = s.id) SELECT root, id FROM sub
   concept_name: subtree
   columns_out:
   - root
@@ -247,12 +247,9 @@ concepts:
   doc: An employee's manager, the manager's manager, and so on; not the employee.
   params:
   - emp
-  sql: WITH RECURSIVE ch(approver, depth) AS (SELECT manager, 1 FROM emp WHERE id = $emp AND manager IS NOT NULL UNION ALL
-    SELECT e.manager, ch.depth + 1 FROM emp e JOIN ch ON e.id = ch.approver WHERE e.manager IS NOT NULL) SELECT CAST($emp
-    AS VARCHAR) AS emp, ch.approver, emp.role, ch.depth FROM ch JOIN emp ON emp.id = ch.approver
-  batch_sql: WITH RECURSIVE ch(emp, approver, depth) AS (SELECT id, manager, 1 FROM emp WHERE id IN ($emp) AND manager IS
-    NOT NULL UNION ALL SELECT ch.emp, e.manager, ch.depth + 1 FROM emp e JOIN ch ON e.id = ch.approver WHERE e.manager IS
-    NOT NULL) SELECT CAST(ch.emp AS VARCHAR) AS emp, ch.approver, emp.role, ch.depth FROM ch JOIN emp ON emp.id = ch.approver
+  sql: WITH RECURSIVE ch(emp, approver, depth) AS (SELECT id, manager, 1 FROM emp WHERE id IN ($emp) AND manager IS NOT NULL
+    UNION ALL SELECT ch.emp, e.manager, ch.depth + 1 FROM emp e JOIN ch ON e.id = ch.approver WHERE e.manager IS NOT NULL)
+    SELECT ch.emp, ch.approver, emp.role, ch.depth FROM ch JOIN emp ON emp.id = ch.approver
   concept_name: reporting_chain
   columns_out:
   - emp
@@ -268,8 +265,8 @@ concepts:
   doc: Requests whose requester's cost centre lies in the subtree of a root.
   params:
   - root
-  sql: WITH RECURSIVE sub(id) AS (SELECT id FROM cc WHERE id = $root UNION ALL SELECT c.id FROM cc c JOIN sub s ON c.parent
-    = s.id) SELECT CAST($root AS VARCHAR) AS root, r.id, r.requester, e.cc, r.amount, r.status FROM req r JOIN emp e ON e.id
+  sql: WITH RECURSIVE sub(root, id) AS (SELECT id, id FROM cc WHERE id IN ($root) UNION ALL SELECT s.root, c.id FROM cc c
+    JOIN sub s ON c.parent = s.id) SELECT sub.root, r.id, r.requester, e.cc, r.amount, r.status FROM req r JOIN emp e ON e.id
     = r.requester JOIN sub ON sub.id = e.cc
   concept_name: request_in_subtree
   columns_out:
@@ -325,9 +322,9 @@ concepts:
   doc: Sum of the spend booked directly on every cost centre in the subtree of a centre (zero where nothing is booked).
   params:
   - cc
-  sql: WITH RECURSIVE sub(id) AS (SELECT id FROM cc WHERE id = $cc UNION ALL SELECT c.id FROM cc c JOIN sub s ON c.parent
-    = s.id) SELECT CAST($cc AS VARCHAR) AS cc, CAST(COALESCE(SUM(cc.booked), 0) AS BIGINT) AS value FROM cc JOIN sub ON cc.id
-    = sub.id
+  sql: WITH RECURSIVE sub(root, id) AS (SELECT id, id FROM cc WHERE id IN ($cc) UNION ALL SELECT s.root, c.id FROM cc c JOIN
+    sub s ON c.parent = s.id) SELECT sub.root AS cc, CAST(COALESCE(SUM(cc.booked), 0) AS BIGINT) AS value FROM sub JOIN cc
+    ON cc.id = sub.id GROUP BY sub.root
   concept_name: booked_total
   columns_out:
   - cc
@@ -344,9 +341,9 @@ concepts:
   doc: Sum of the amounts of pending requests whose requester's cost centre lies in the subtree of a centre.
   params:
   - cc
-  sql: WITH RECURSIVE sub(id) AS (SELECT id FROM cc WHERE id = $cc UNION ALL SELECT c.id FROM cc c JOIN sub s ON c.parent
-    = s.id) SELECT CAST($cc AS VARCHAR) AS cc, CAST(COALESCE(SUM(r.amount), 0) AS BIGINT) AS value FROM req r JOIN emp e ON
-    e.id = r.requester JOIN sub ON sub.id = e.cc WHERE r.status = 'pending'
+  sql: WITH RECURSIVE sub(root, id) AS (SELECT id, id FROM cc WHERE id IN ($cc) UNION ALL SELECT s.root, c.id FROM cc c JOIN
+    sub s ON c.parent = s.id) SELECT sub.root AS cc, CAST(COALESCE(SUM(r.amount), 0) AS BIGINT) AS value FROM sub LEFT JOIN
+    emp e ON e.cc = sub.id LEFT JOIN req r ON r.requester = e.id AND r.status = 'pending' GROUP BY sub.root
   concept_name: pending_exposure
   columns_out:
   - cc

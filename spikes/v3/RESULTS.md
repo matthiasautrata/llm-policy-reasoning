@@ -112,7 +112,7 @@ Bench runs drift by about ±10 % on p50, so differences smaller than that are no
 
 - The statement count is now O(concepts × rounds × pages), not O(members): 693 at the root against about 260 000 projected one at a time. No statement returns more than `fetch_limit` rows (check 5 holds).
 - Latency is still linear in the members, now about 1.2 ms per pending member (Memory after the fixes). The cost has moved from SQL into the evaluator. Rules are indexed by head predicate (`rule_at/2`), because rule lookup was 17 % of the cc0002 profile.
-- The root (90 028 pending) now runs in SWI's default 1 GB stack: 110 s and 4.6 GB peak RSS (Memory after the fixes). Its response is 13.8 MB, of which the why tree is 0.4 MB.
+- The root (90 028 pending) runs in SWI's default 1 GB stack: 108 s and 2.8 GB peak RSS (Memory after the fixes). It is a documented residual, not a blocker (Strategy for large aggregates: decision). Its response is 13.8 MB, of which the why tree is 0.4 MB.
 
 **IR-007 `unsafe-aggregation`** (`SEMANTICS.md`, Aggregates). The gate rejects a `:sum` of a `:semi-additive` measure across one of the measure's parameters. That covers both a direct fetch of the measure and a predicate that carries it, as R104 carries `booked_total`. Every parameter counts as unsafe, because the slice maps no parameter to a dimension. No slice rule is rejected. The fixture RA1 sums `booked_total` over a chain of ancestors.
 
@@ -157,7 +157,7 @@ The baseline that motivated the fixes below, measured before them. One session p
 | SQL growth | 2.1 GB | 4.0 GB | 5.2 GB |
 | peak RSS | 2.4 GB | 5.7 GB | 12.7 GB |
 
-- **The largest single cost is DuckDB, not the memo.** `reporting_chain` has a required parameter (`$emp`), so `flush()` batches it as a UNION ALL of single-key recursive CTEs, and each copy costs about 4 MB to plan and run. One 500-copy statement adds 2.1 GB at L2; the root's five largest add 2.0, 0.8, 0.5, 0.4 and 0.3 GB. In isolation (500 employees, 2 201 rows), the UNION ALL adds 2 112 MB in chunks of 500, 805 MB in chunks of 100 and 255 MB in chunks of 25. A recursive CTE that carries the key through the recursion (`WHERE id IN (…)`) adds 10 MB for the same rows. The single-key form does not carry `$emp` through its recursion, so `flush()` cannot derive the set form from it. The set form is therefore declared as data: `reporting_chain` carries a `:batch_sql` (`CONTRACT.md`, Aggregates). With it, the L2 statement adds 3 MB, cc0018 peaks at 0.49 GB and the bench at 241 MB, with the same statements and keys. The root still peaks at 12.1 GB, so its peak is not the SQL growth.
+- **The largest single cost is DuckDB, not the memo.** `reporting_chain` has a required parameter (`$emp`), so `flush()` batches it as a UNION ALL of single-key recursive CTEs, and each copy costs about 4 MB to plan and run. One 500-copy statement adds 2.1 GB at L2; the root's five largest add 2.0, 0.8, 0.5, 0.4 and 0.3 GB. In isolation (500 employees, 2 201 rows), the UNION ALL adds 2 112 MB in chunks of 500, 805 MB in chunks of 100 and 255 MB in chunks of 25. A recursive CTE that carries the key through the recursion (`WHERE id IN (…)`) adds 10 MB for the same rows. The single-key form does not carry `$emp` through its recursion, so `flush()` cannot derive the set form from it. Each concept therefore has one SQL form that carries the key, `IN ($p)`, with a single key as a set of one (`CONTRACT.md`, Aggregates). With it, the L2 statement adds 3 MB, with the same statements and keys. The root still peaked at 12.1 GB, so its peak was not only the SQL growth.
 - **Hypothesis 1 is confirmed, but the memo is not the main cost.** Proven entries hold the cells: a `none` entry is 2 cells and a proven `has_approver` is about 540. The memo is about 1.8 GB of the root's 12.7 GB.
 - **Hypothesis 2 is confirmed.** At cc0002, `copy_term`, `memo/5` and `variant_hash` take about 10 % of the time. The root's global stack holds 1.6 GB in use, and GC reclaims 21 GB over the run.
 - **Hypothesis 3 is confirmed, and bounded.** The aggregate entry is 164 MB at the root, while the response's why tree is 0.4 MB.
@@ -170,44 +170,32 @@ The baseline that motivated the fixes below, measured before them. One session p
 
 ## Memory after the fixes (HISTORY phase 8)
 
-With `:batch_sql`, the rule index and the status-only memo (proofs rebuilt on demand, aggregate nodes sampled; `CONTRACT.md`, Why trees). One in-process session per centre, `[:approved_total C ?v]`, default 1 GB stack. Memo bytes are `term_size/2` cells × 8.
+With one SQL form per concept, the rule index and the status-only memo (proofs rebuilt on demand, aggregate nodes sampled; `CONTRACT.md`, Why trees). One in-process session per centre, `[:approved_total C ?v]`, default 1 GB stack. Memo bytes are `term_size/2` cells × 8.
 
 | Centre (level) | Result | statements | ms | peak RSS | memo entries | bytes / entry | GC |
 |---|---|---|---|---|---|---|---|
-| cc0290 (L4) | ANSWER | 12 | 80 | 103 MB | 590 | 60 | 2 ms |
-| cc0681 (L4) | CONFLICT | 12 | 96 | 104 MB | 722 | 64 | 2 ms |
-| cc0058 (L3) | ANSWER | 12 | 417 | 135 MB | 3 566 | 59 | 7 ms |
-| cc0105 (L3) | CONFLICT | 12 | 514 | 134 MB | 4 619 | 58 | 9 ms |
-| cc0018 (L2) | CONFLICT | 24 | 2 634 | 283 MB | 22 962 | 58 | 48 ms |
-| cc0002 (L1) | CONFLICT | 95 | 13 179 | 1 033 MB | 115 348 | 58 | 259 ms |
-| cc0000 (root) | CONFLICT | 693 | 109 768 | 4 634 MB | 924 846 | 58 | 2.2 s |
+| cc0290 (L4) | ANSWER | 12 | 84 | 96 MB | 590 | 60 | 2 ms |
+| cc0681 (L4) | CONFLICT | 12 | 97 | 97 MB | 722 | 64 | 2 ms |
+| cc0058 (L3) | ANSWER | 12 | 420 | 109 MB | 3 566 | 59 | 8 ms |
+| cc0105 (L3) | CONFLICT | 12 | 521 | 111 MB | 4 619 | 58 | 10 ms |
+| cc0018 (L2) | CONFLICT | 24 | 2 669 | 173 MB | 22 962 | 58 | 49 ms |
+| cc0002 (L1) | CONFLICT | 95 | 13 184 | 419 MB | 115 348 | 58 | 275 ms |
+| cc0000 (root) | CONFLICT | 693 | 107 566 | 2 781 MB | 924 846 | 58 | 2.1 s |
 
 - **Memo:** about 58 bytes per entry, against about 1 900 before (root: 54 MB against 1 768 MB). The entry count is unchanged: the memo still holds a status for every literal the members reach, about 10 per member.
-- **Root:** 12.7 GB → 4.6 GB, 139 → 110 s; the global stack in use 1 641 → 249 MB; GC reclaims 13.9 GB in 2.2 s (was 21.1 GB, 3.3 s). The 8 GB `stack_limit` is no longer needed. Accounted at the peak: memo 54 MB, global stack 249 MB, fetch caches 330 MB (Prolog 210, Python 120), DuckDB 672 MB. The remaining 3 GB or so is not attributed by these probes; the likely candidates are the transient findall copies of the 90 028 solutions per round and allocator retention after GC.
+- **Root:** 12.7 GB → 2.8 GB, 139 → 108 s; GC reclaims 14.0 GB in 2.1 s (was 21.1 GB, 3.3 s). The 8 GB `stack_limit` is no longer needed. The set form for every parametrised concept, not only `reporting_chain`, took the root from 4.6 to 2.8 GB, L1 from 1 033 to 419 MB and L2 from 283 to 173 MB: `subtree`, `ancestors_or_self` and `request_in_subtree` had still been batched as UNION ALLs of recursive CTEs. Through the CLI the root takes 116 s and 2.7 GB. Accounted at the peak: memo 54 MB, fetch caches 330 MB (Prolog 210, Python 120); DuckDB's share was not re-measured, and the rest is not attributed by these probes.
 - **Time is linear in the members:** about 1.2 ms per pending member at every level from L2 up (1.18 at cc0018, 1.18 at cc0002, 1.22 at the root).
-- **Bench:** session peak 241 → 175 MB (was 153 before aggregates), p50 and p95 unchanged within noise; hypothesis latency unchanged (Q10 and Q38).
+- **Bench:** session peak 175 → 162 MB with one SQL form (241 MB with `reporting_chain`'s set form alone, 153 before aggregates); p50 and p95 unchanged within noise; hypothesis latency unchanged (Q10 and Q38).
 
-## Strategy for large aggregates: proposal (`PLAN-v3-memory.md` §5, for Matthias to decide)
+## Strategy for large aggregates: decision (Matthias, 2026-11-25)
 
-The bar, for information: the root under about 10 s and under 1 GB.
+**Scope.** The system answers questions *about* the data: structure, meaning, classifications, relationships, claims, warrants, and how to query it (SQL help). It is not the execution path for big-data queries; users keep Genie, Cortex and plain SQL for that.
 
-**Where §4 leaves it.** The root takes 110 s and 4.6 GB: 11× over on time and 4.6× over on memory. L1 (11 213 members, 13 s, 1.0 GB) is already just over the bar. Option 1, stop, does not meet it.
+- Large aggregates at the root are therefore a documented residual, not a blocker: 108 s and 2.8 GB for 90 028 members (Memory after the fixes), against the "good enough" bar of about 10 s and 1 GB. L1 (11 213 members) takes 13 s and 0.4 GB.
+- What the numbers say: about 1.2 ms per pending member at every level from L2 up, and the evaluator is about 94 % of the time (SQL 7.3 of 132 s at the root). Only taking the per-member evaluator out of the loop would meet the bar.
+- No probe query is run and no SQL generator is built as an execution path. Compiling rules to SQL may return later as an *answer* ("here is the SQL that implements the rule, and the rules it rests on"), to be decided in the benchmark design.
 
-**The deciding numbers.**
-- *Per-member cost:* 1.2 ms. The bar needs 0.11 ms, about 11× less, at 90 028 members.
-- *Where the time goes:* SQL is about 6 % at the root (7.3 of 132 s over 693 statements, measured before §2; 2.4 of 24.9 s at cc0002). About 94 % is the evaluator: about 10 memoised literals per member, each classified for supporters, attackers and superiority.
-- *Memory:* the memo is no longer the cost (54 MB). What remains scales with members times literals: the fetch caches, the per-round solution lists and the GC churn (13.9 GB reclaimed).
-
-**Options.**
-- **2. Compile aggregate bodies to SQL (hybrid).** This is the option the numbers point to: it is the only one that takes the per-member evaluator out of the loop.
-  - The body of `approved_total` is the approval chain R304–R316 over a subtree. As one generated statement, it is a few joins and anti-joins over 10⁵ requests. Its parts are `reporting_chain` (whose set form already runs 1 000 employees in 0.15 s), limits, the vendor status and a status column for the three values.
-  - Estimate: well under 10 s and under 1 GB at the root. DuckDB already reads everything the root needs in 7.3 s of SQL across 693 paged statements, and one set-based statement would not materialise the members in Prolog.
-  - What it costs: a generator from the rules to SQL for the stratified fragment these bodies use (negation, team defeat, superiority as anti-joins, `as_of` and withheld ids as parameters). Dialects would come through SQLGlot. Explanations would come from supporter and attacker id columns that Prolog rehydrates, as `hydrate/4` already does from ids. The compiled path must reproduce `reference.py`'s keys under the same gate, so every slice body under an aggregate needs the full semantics, including the contested value.
-  - Effort: the largest of the three. The risk is in claims (R313 authority, later-same-asserter) and in propagating contested values in SQL.
-- **3. Bottom-up in Prolog.** Compute the body predicate for all members once per op and state, then aggregate. It removes the top-down overhead (guard, memo lookups, per-literal `findall`), but each member still needs its own defeasible classification.
-  - Estimate: 2–4× from avoiding repeated lookups, which leaves the root at roughly 30–55 s. It does not reach the bar unless the classification itself becomes set-at-a-time, and at that point it is option 2 written in Prolog.
-
-**Recommendation.** Option 2, first target `approved_total`. Before building the generator, first measure one hand-written probe query (scratch only, not in the repo, never an engine path) against the root's member set. That probe confirms the "well under 10 s" estimate, and the estimate is the number this choice rests on.
+## Built vs native
 
 - **Native in SWI-Prolog:**
   - unification and backtracking for rule bodies;
@@ -235,7 +223,7 @@ The bar, for information: the root under about 10 s and under 1 GB.
 ## Known residuals
 
 1. **IR-005 checks existence, not scope.** It requires a completeness claim (`:closed_over :known_facts`) for a rule that rests on negation as failure, but it does not check that the claim's scope covers the query. The slice has no scope language.
-2. **Aggregate latency and memory at the root.** After the memory fixes, 110 s and 4.6 GB for 90 028 members, in the default stack; time is linear at about 1.2 ms per member (Memory after the fixes). The remedy is for Matthias to choose (Strategy for large aggregates).
+2. **Aggregate latency and memory at the root**, out of scope by decision (Strategy for large aggregates: decision): 108 s and 2.8 GB for 90 028 members, in the default stack; time is linear at about 1.2 ms per member (Memory after the fixes).
 3. **A builtin after a contested binding hides the contest** if it refutes the solution (`SEMANTICS.md`, Known limitation). No slice body has one.
 4. **Propagation's cost on a dispute-heavy base is unmeasured.** The slice now has five questions downstream of two root conflicts (C3/C4, R312/R314), not a dispute-heavy base.
 5. **Rule classes are not deontic** (PROGRESS question 10). `:class` records a rule's inferential role, not whether it grants a permission, obligation or prohibition.

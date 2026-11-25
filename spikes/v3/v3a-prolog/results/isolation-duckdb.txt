@@ -1,5 +1,5 @@
 isolation  cli=spikes/v3/v3a-prolog/cli  hypothesis=default
-  A: CONFLICT None   B: ANSWER cc0077 (decide 255..257 ms into A's 1005 ms sleep)   after: ANSWER cc0077
+  A: CONFLICT None   B: ANSWER cc0077 (decide 255..256 ms into A's 1005 ms sleep)   after: ANSWER cc0077
   PASS  A sees CONFLICT
   PASS  B sees base answer cc0077
   PASS  B's decide ran during A's hypothesis

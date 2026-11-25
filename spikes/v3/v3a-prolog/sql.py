@@ -3,14 +3,15 @@
 Prolog registers each concept of the slice (name, SQL template, params) at load time and calls
 fetch(concept, filters_json) through janus. Everything dialect-specific lives here:
   - @iso(x) macro: strftime(x, '%Y-%m-%d')
-  - $name required parameters -> bound placeholders; other filters wrap the template as
+  - $name required parameters, each written IN ($name) with name among the output columns: one SQL form per
+    concept, taking a set of values; a single key is a set of one (IN (?)). Other filters wrap the template as
     SELECT * FROM (<sql>) t WHERE t."col" = ? ... LIMIT fetch_limit + 1
 Rows come back as JSON (dates already ISO strings via @iso). A per-op cache avoids re-issuing the same
 statement inside one op. Inside an aggregate (CONTRACT.md, Aggregates) Prolog calls need(): a cached,
 untruncated entry is returned, otherwise the (concept, filters) is recorded and "" returned; flush() then
 fetches every recorded need set-at-a-time: one statement per concept and filter shape (an IN list when one
-column filter varies; the concept's :batch_sql when its one required parameter varies; else a UNION ALL of the
-single-key statements tagged __b), paged with
+filter varies, the concept's own form with the set of values when a required parameter varies; else a UNION ALL
+of the single-key statements tagged __b), paged with
 ORDER BY ALL LIMIT fetch_limit OFFSET k, chunked at CHUNK keys. Each key's cache entry carries its
 single-key statement without LIMIT, which check_why re-runs. The per-op log is what the CLI reports as
 sql_log. Cache, needs and log are per thread (threading.local; each Prolog thread that py_calls gets its
@@ -44,13 +45,16 @@ def configure(cfg_json, root):
     return True
 
 
-def register(name, sql, params, batch=None):
-    """batch: the set form (:batch_sql), the same rows for a set of values of its one required parameter,
-    written `IN ($p)`, with $p among its output columns."""
-    params = list(params)
-    if batch is not None and (len(params) != 1 or f"IN (${params[0]})" not in batch):
-        raise ValueError(f"concept {name}: :batch_sql needs one required parameter, written IN (${params[0] if params else '?'})")
-    _concepts[name] = (sql, params, batch)
+def register(name, sql, params, columns):
+    """Every $p in sql is a required parameter written IN ($p), and p is among the output columns, so the one
+    statement serves a set of values and its rows split by p."""
+    params, columns = list(params), list(columns)
+    used = re.findall(r"\$([a-z_]+)", sql)
+    for p in set(used) | set(params):
+        if p not in params or p not in columns or used.count(p) != 1 or f"IN (${p})" not in sql:
+            raise ValueError(f"concept {name}: required parameter {p} must be declared, an output column, "
+                             f"and appear once, written IN (${p})")
+    _concepts[name] = (sql, params)
     return True
 
 
@@ -58,12 +62,16 @@ def _dialect(sql):
     return re.sub(r"@iso\(([^)]*)\)", r"strftime(\1, '%Y-%m-%d')", sql), "?"
 
 
-def single(concept, filters):
-    """The single-key statement and params, without LIMIT."""
-    tmpl, req, _ = _concepts[concept]
+def single(concept, filters, many=None):
+    """The statement and params, without LIMIT: for one key, or with many = (p, values) for a set of values of
+    the required parameter p (the other filters fixed)."""
+    tmpl, req = _concepts[concept]
     sql, ph = _dialect(tmpl)
     params = []
     def sub(m):
+        if many and m.group(1) == many[0]:
+            params.extend(many[1])
+            return ", ".join(ph * len(many[1]))
         params.append(filters[m.group(1)])
         return ph
     missing = [p for p in req if p not in filters]
@@ -153,34 +161,22 @@ def flush():
     for (concept, _), f in needs.items():
         groups.setdefault((concept, tuple(sorted(f))), []).append(f)
     for (concept, cols), fs in groups.items():
-        _, req, batch = _concepts[concept]
+        _, req = _concepts[concept]
         vary = [c for c in cols if len({json.dumps(f[c]) for f in fs}) > 1]
         for i in range(0, len(fs), CHUNK):
             chunk = fs[i:i + CHUNK]
-            if len(chunk) > 1 and len(vary) == 1 and vary[0] not in req:
-                c = vary[0]
-                base = {k: v for k, v in chunk[0].items() if k != c}
-                sql, params = single(concept, base)
-                sql = f'SELECT * FROM ({sql}) b WHERE b."{c}" IN ({", ".join("?" * len(chunk))})'
-                rows = _paged(concept, sql, params + [f[c] for f in chunk])
+            if len(chunk) > 1 and len(vary) == 1:
+                c = vary[0]; vals = [f[c] for f in chunk]
+                if c in req:     # the concept's own form, for the set of values
+                    sql, params = single(concept, chunk[0], (c, vals))
+                else:            # one column filter varies: an IN list around the template
+                    sql, params = single(concept, {k: v for k, v in chunk[0].items() if k != c})
+                    sql = f'SELECT * FROM ({sql}) b WHERE b."{c}" IN ({", ".join("?" * len(chunk))})'
+                    params += vals
                 split = {}
-                for r in rows:
+                for r in _paged(concept, sql, params):
                     split.setdefault(json.dumps(r[c]), []).append(r)
-                per = [split.get(json.dumps(f[c]), []) for f in chunk]
-            elif len(chunk) > 1 and vary == req and batch is not None:
-                c = req[0]
-                sql, params = _dialect(batch)[0], []
-                sql = sql.replace(f"${c}", ", ".join("?" * len(chunk)))
-                params = [f[c] for f in chunk]
-                rest = [(k, v) for k, v in chunk[0].items() if k != c]
-                if rest:
-                    sql = f"SELECT * FROM ({sql}) t WHERE " + " AND ".join(f't."{k}" = ?' for k, _ in rest)
-                    params += [v for _, v in rest]
-                rows = _paged(concept, sql, params)
-                split = {}
-                for r in rows:
-                    split.setdefault(json.dumps(r[c]), []).append(r)
-                per = [split.get(json.dumps(f[c]), []) for f in chunk]
+                per = [split.get(json.dumps(v), []) for v in vals]
             else:
                 parts, params = [], []
                 for b, f in enumerate(chunk):

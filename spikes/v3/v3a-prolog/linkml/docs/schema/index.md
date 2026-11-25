@@ -58,7 +58,6 @@ Name: slice
 | [assertion](assertion.md) | A literal, e |
 | [assets](assets.md) |  |
 | [backing](backing.md) |  |
-| [batch_sql](batch_sql.md) | The set form of sql for its one required parameter $p, written IN ($p), with ... |
 | [body](body.md) | Literals, evaluated left to right |
 | [claims](claims.md) |  |
 | [closed_over](closed_over.md) | IR-005: the rule's :not / measure fetch reads only the known facts; decide qu... |

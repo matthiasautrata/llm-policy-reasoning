@@ -1,5 +1,5 @@
 model check (slice + extension + acyclic): OK
-check 1: PASS (37 questions, 1.7s wall)
+check 1: PASS (37 questions, 1.6s wall)
 check 3: PASS (changed ['Q07', 'Q14'])
 check 4: PASS (inside CONFLICT [['C3'], ['C4']], after cc0077)
 check 5: PASS (551 statements, 1006 rows, max 425)
