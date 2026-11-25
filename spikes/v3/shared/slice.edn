@@ -127,7 +127,7 @@
   {:id "measure:pending_exposure" :name :pending_exposure :kind :measure :tables ["table:req" "table:emp" "table:cc"]
    :doc "Sum of the amounts of pending requests whose requester's cost centre lies in the subtree of a centre."
    :params [:cc] :columns [:cc :value]
-   :sql "WITH RECURSIVE sub(id) AS (SELECT id FROM cc WHERE id = $cc UNION ALL SELECT c.id FROM cc c JOIN sub s ON c.parent = s.id) SELECT CAST($cc AS VARCHAR) AS cc, CAST(COALESCE(SUM(r.amount), 0) AS INTEGER) AS value FROM req r JOIN emp e ON e.id = r.requester JOIN sub ON sub.id = e.cc WHERE r.status = 'pending'"}
+   :sql "WITH RECURSIVE sub(id) AS (SELECT id FROM cc WHERE id = $cc UNION ALL SELECT c.id FROM cc c JOIN sub s ON c.parent = s.id) SELECT CAST($cc AS VARCHAR) AS cc, CAST(COALESCE(SUM(r.amount), 0) AS BIGINT) AS value FROM req r JOIN emp e ON e.id = r.requester JOIN sub ON sub.id = e.cc WHERE r.status = 'pending'"}
   {:id "measure:headroom" :name :headroom :kind :measure :tables ["table:cc"]
    :doc "Cap minus booked total. Computed by rule R105 over measure:booked_total; no SQL of its own."
    :derived-by :R105}]

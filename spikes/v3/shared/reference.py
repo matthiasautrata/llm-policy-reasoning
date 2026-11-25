@@ -13,6 +13,10 @@ Key shape per question:
   why_not       {status, value, failed, core}         failed: literals that must be shown as failed
   claim         {standing, defeater, qualifier, core}
   resolve_term  {status, candidates}
+  fetch         {value, row_count, core}             (Q24, the A1 regression: pending exposure of the root)
+Cycle questions (:state :cycles, keys["cycles"]) use the class Cyc: a hand-grounded cycle theory
+(cycles.edn) read as the metaprogram of SEMANTICS-cycles.md and solved by an alternating fixpoint
+(well-founded model). Undefined goals add  undefined {literals, members}  to the key.
 `core` lists the rule / claim ids an explanation must contain.
 """
 import argparse, datetime, json, pathlib, re, sys
@@ -223,6 +227,11 @@ def answer(R, q):
     """The key for question q (plain dict) in reference R."""
     k, g, d = q["kind"], q.get("goal"), q.get("as_of") or R.today
     A = lambda v, core: dict(status="ANSWER", value=v, sides=None, core=core)
+    if k == "fetch":
+        assert q["concept"] == "pending_exposure"
+        sub = set(R.subtree(q["filters"]["cc"]))
+        v = sum(x["amount"] for x in R.req.values() if x["status"] == "pending" and R.emp[x["requester"]]["cc"] in sub)
+        return dict(value=v, row_count=1, core=[])
     if k == "resolve_term":
         return R.resolve_term(q["text"])
     if k == "claim":
@@ -263,20 +272,173 @@ def answer(R, q):
     return dict(status="OUT_OF_SCOPE", value=None, sides=None, core=[])
 
 
-def load():
+# ---------------------------------------------------------------------------- defeat cycles
+def neg(L):
+    return L[1] if L[0] == "neg" else ["neg", L]
+
+
+class Cyc:
+    """Cycle theory of cycles.edn, grounded by hand over the register's vendors; semantics per
+    SEMANTICS-cycles.md. A ground rule: (id, kind, head, body literals, facts_hold). Bodies list only
+    derived literals; fetches, builtins and as_of are decided here in Python (facts_hold)."""
+
+    def __init__(self, R, d, withhold=()):
+        self.R, self.d = R, d
+        V = sorted({v for v, *_ in R.vstat})
+        ok = lambda v: any(x == v and s == "approved" and f <= d <= t for x, s, f, t in R.vstat)
+        sus = lambda v: any(x == v and s == "suspended" for x, s, *_ in R.vstat)
+        rules = []
+        for v in V:
+            rules += [("RY21", "defeasible", ["preferred", v], [], ok(v)),
+                      ("RY22", "defeasible", ["under_review", v], [], sus(v)),
+                      ("RY23", "defeater", ["neg", ["preferred", v]], [["under_review", v]], True),
+                      ("RY24", "defeater", ["neg", ["under_review", v]], [["preferred", v]], True),
+                      ("RY31", "defeasible", ["exempt_from_audit", v], [["trusted", v]], True),
+                      ("RY32", "defeater", ["neg", ["trusted", v]], [["exempt_from_audit", v]], True),
+                      ("RY51", "defeasible", ["flagged", v], [["blacklisted", v]], True),
+                      ("RY52", "defeasible", ["approved_supplier", v], [["preferred", v]], True),
+                      ("RY53", "defeasible", ["cleared_for_tender", v], [["onboarded", v]], True),
+                      ("RY54", "defeater", ["neg", ["cleared_for_tender", v]], [["blacklisted", v]], True)]
+        self.claims = {c["id"]: c for c in R.cyc_claims}
+        for c in R.cyc_claims:
+            rules.append((c["id"], "claim", plain(c["assertion"]), [], R.in_force(c, d)))
+        self.rules = [r for r in rules if r[4] and r[0] not in withhold]
+        self.auth = {} if "RY4" in withhold else {"watchlisted": ["risk", "compliance"]}   # RY4
+        self.solve()
+
+    def key(self, L):
+        return json.dumps(L)
+
+    def sup(self, t, s):
+        """t > s: authority (RY4) or later asserted_at by the same asserter, between claims only."""
+        if t[1] != "claim" or s[1] != "claim": return False
+        A, B = self.claims[t[0]], self.claims[s[0]]
+        pred = t[2][1][0] if t[2][0] == "neg" else t[2][0]
+        o = self.auth.get(pred)
+        a, b = kw(A["asserted_by"]), kw(B["asserted_by"])
+        if o and a in o and b in o and a != b:
+            return o.index(a) < o.index(b)
+        return a == b and iso(A["asserted_at"]) > iso(B["asserted_at"])
+
+    def supporters(self, L):
+        return [r for r in self.rules if r[2] == L and r[1] != "defeater"]
+
+    def attackers(self, L):
+        return [r for r in self.rules if r[2] == neg(L)]
+
+    def solve(self):
+        """Ground normal program (head, pos, neg) and its well-founded model by alternating fixpoint."""
+        lits = {self.key(r[2]): r[2] for r in self.rules}
+        for r in self.rules:
+            for b in r[3]: lits[self.key(b)] = b
+        for L in list(lits.values()): lits[self.key(neg(L))] = neg(L)
+        P = []
+        for k, L in lits.items():
+            for r in self.supporters(L):
+                P.append((("def", k), [("def", self.key(b)) for b in r[3]], [("ovr", k)]))
+            for s in self.attackers(L):
+                P.append((("ovr", k), [("def", self.key(b)) for b in s[3]], [("beat", s[0], k)]))
+                for t in self.supporters(L):
+                    if self.sup(t, s):
+                        P.append((("beat", s[0], k), [("def", self.key(b)) for b in t[3]], []))
+        def gamma(J):
+            M, changed = set(), True
+            while changed:
+                changed = False
+                for h, pos, ng in P:
+                    if h not in M and all(p in M for p in pos) and not any(n in J for n in ng):
+                        M.add(h); changed = True
+            return M
+        T = set()
+        while True:
+            T2 = gamma(gamma(T))
+            if T2 == T: break
+            T = T2
+        self.T, self.U, self.lits = T, gamma(T), lits
+
+    def val(self, L):
+        a = ("def", self.key(L))
+        return "true" if a in self.T else "undefined" if a in self.U else "false"
+
+    def live(self, r):
+        return all(self.val(b) != "false" for b in r[3])
+
+    def applicable(self, r):
+        return all(self.val(b) == "true" for b in r[3])
+
+    def unbeaten(self, s, L):
+        return ("beat", s[0], self.key(L)) not in self.T
+
+    def sides(self, L):
+        S = sorted({r[0] for r in self.supporters(L) if self.live(r)})
+        A = sorted({s[0] for s in self.attackers(L) if self.live(s) and self.unbeaten(s, L)})
+        if S and A:
+            return sorted([S, A])
+        for r in sorted(self.supporters(L), key=lambda r: r[0]):
+            if self.live(r):
+                for b in r[3]:
+                    if self.val(b) == "undefined":
+                        return self.sides(b)
+        return None
+
+    def component(self, L):
+        seen, st = [], [L]
+        while st:
+            x = st.pop()
+            if x in seen: continue
+            seen.append(x)
+            for r in self.supporters(x) + self.attackers(x):
+                if self.live(r):
+                    st += [b for b in r[3] if self.val(b) == "undefined"]
+        mem = sorted({r[0] for x in seen for r in self.supporters(x) + self.attackers(x) if self.live(r)})
+        return dict(literals=sorted(seen, key=json.dumps), members=mem)
+
+    def answer(self, L):
+        v = self.val(L)
+        if v == "true":
+            win = sorted({r[0] for r in self.supporters(L) if self.applicable(r)})
+            beaten = [s for s in self.attackers(L) if self.live(s)]
+            src = sorted({"RY4" for s in beaten if s[1] == "claim" and kw(self.claims[s[0]]["asserted_by"]) in self.auth.get(L[0], [])})
+            return dict(status="ANSWER", value=True, sides=None, core=sorted(win + src))
+        if v == "undefined":
+            sd = self.sides(L)
+            return dict(status="CONFLICT", value=None, sides=sd, core=sorted({i for s in sd for i in s}),
+                        undefined=self.component(L))
+        S = sorted({r[0] for r in self.supporters(L) if self.applicable(r)})
+        A = sorted({s[0] for s in self.attackers(L) if self.live(s) and self.unbeaten(s, L)})
+        if S and A:
+            return dict(status="CONFLICT", value=None, sides=sorted([S, A]), core=sorted(S + A))
+        return dict(status="ANSWER", value=False, sides=None, core=sorted({r[0] for r in self.supporters(L)}))
+
+
+def answer_cycles(R, q):
+    w = tuple((q.get("hypothesis") or {}).get("withhold") or ())
+    return Cyc(R, q.get("as_of") or R.today, w).answer(q["goal"])
+
+
+def load(cycles=False):
+    """-> slice, extension, questions (base / extended list; with cycles=True also the cycle records
+    and the :state :cycles questions)."""
     S = plain(E.loads((HERE / "slice.edn").read_text()))
     X = plain(list(E.loads((HERE / "extension.edn").read_text())))
-    Q = plain(list(E.loads((HERE / "questions.edn").read_text())))
-    return S, X, Q
+    QA = plain(list(E.loads((HERE / "questions.edn").read_text())))
+    Q = [q for q in QA if q.get("state") != "cycles"]
+    if not cycles:
+        return S, X, Q
+    Y = plain(list(E.loads((HERE / "cycles.edn").read_text())))
+    return S, X, Q, Y, [q for q in QA if q.get("state") == "cycles"]
 
 
 def keys(mutate=False):
-    S, X, Q = load()
+    S, X, Q, Y, QC = load(cycles=True)
     out = {}
     for state, ext in (("base", []), ("extended", X)):
         R = Ref(S, ext, mutate)
         out[state] = {q["id"]: answer(R, q) for q in Q}
     out["changed"] = sorted(i for i in out["base"] if out["base"][i] != out["extended"][i])
+    R = Ref(S, X, mutate)
+    R.cyc_claims = [y for y in Y if "assertion" in y]
+    out["cycles"] = {q["id"]: answer_cycles(R, q) for q in QC}
     return out
 
 
@@ -290,3 +452,5 @@ if __name__ == "__main__":
         for i, v in k["extended"].items():
             print(i, {x: (y if not isinstance(y, list) or len(y) < 8 else f"[{len(y)} items]") for x, y in v.items()})
         print("changed by the extension:", k["changed"])
+        for i, v in k["cycles"].items():
+            print(i, v)

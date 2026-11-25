@@ -1,0 +1,17 @@
+;; Calling modes per derived predicate (model_check.py, PLAN-v3-cycles §1.4): + the caller must bind the
+;; position, - may be free. Several modes = any one of them suffices. model_check.py infers modes from the
+;; rule bodies (left-to-right binding) and rejects any difference from these declarations, any call site
+;; that binds less, and any question goal that binds less. Claims-only predicates (fit_for_use,
+;; cost_centre_of, blacklisted, ...) are facts and need no declaration.
+{;; slice.edn
+ :booked_total "+-" :headroom "+-" :cap_breach "+" :breach_in "+-" :big_capital "+"
+ :role_limit "+-"
+ :limit_on "++-"          ; R202: role and date bound; the date is compared, not enumerated
+ :governing_limit "++-" :vendor_status_for "+-"
+ :has_approver "+"
+ :cap_ok "+"              ; R304: [:not [:cap_breach ?r]] needs ?r bound
+ :vendor_cleared "+" :eligible "+" :denied "+" :approved "+" :auto_approved "+"
+ ;; cycles.edn
+ :preferred "+" :under_review "+" :approved_supplier "+"
+ :trusted "-" :exempt_from_audit "-"   ; CY3 is a claim: enumerable
+ :flagged "-" :cleared_for_tender "-"}

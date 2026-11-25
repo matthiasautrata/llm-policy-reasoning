@@ -1,6 +1,8 @@
 ;; Spike v3 questions. Keys: keys.json (reference.py), per state "base" (slice.edn) and "extended"
 ;; (slice.edn + extension.edn). :kind is the System A call: :decide, :why_not, :claim (claims/2 standing
-;; of one claim), :resolve_term. :hypothesis asks the question inside with_hypothesis.
+;; of one claim), :resolve_term, :fetch (one concept lookup). :hypothesis asks the question inside with_hypothesis.
+;; :state :cycles marks the defeat-cycle questions (PLAN-v3-cycles): asked with cycles.edn loaded on top, keyed
+;; under keys.json "cycles", and left out of the base / extended question list.
 [{:id :Q01 :kind :decide :goal [:booked_total "cc0009" ?v] :text "What is the booked total of cost centre cc0009?"}
  {:id :Q02 :kind :decide :goal [:headroom "cc0009" ?v] :text "What headroom does cc0009 have?"}
  {:id :Q03 :kind :decide :goal [:role_limit "manager" ?l] :as_of "2026-07-15" :text "What was a manager's approval limit on 15 July?"}
@@ -24,4 +26,17 @@
  {:id :Q20 :kind :decide :goal [:travel_budget "cc0009" ?v] :text "What is the travel budget of cc0009?"}
  {:id :Q21 :kind :resolve_term :text "booked total"}
  {:id :Q22 :kind :resolve_term :text "travel budget"}
- {:id :Q23 :kind :resolve_term :text "department"}]
+ {:id :Q23 :kind :resolve_term :text "department"}
+ {:id :Q24 :kind :fetch :concept :pending_exposure :filters {:cc "cc0000"}
+  :text "What is the pending exposure of the root cost centre? (A1 regression: the sum exceeds INT32)"}
+ {:id :Q30 :state :cycles :kind :decide :goal [:blacklisted "fern"] :text "Y1: is fern blacklisted (risk says yes, compliance says no)?"}
+ {:id :Q31 :state :cycles :kind :decide :goal [:preferred "dyne"] :text "Y2: is dyne (approved now, suspended earlier) preferred?"}
+ {:id :Q32 :state :cycles :kind :decide :goal [:preferred "acme"] :text "Y2 control: is acme (never suspended) preferred?"}
+ {:id :Q33 :state :cycles :kind :decide :goal [:trusted "edge"] :text "Y3: is edge trusted (odd loop)?"}
+ {:id :Q34 :state :cycles :kind :decide :goal [:watchlisted "cog"] :text "Y4: is cog watchlisted (risk prevails over compliance)?"}
+ {:id :Q35 :state :cycles :kind :decide :goal [:flagged "fern"] :text "Y5a: is fern flagged (downstream of the blocked Y1)?"}
+ {:id :Q36 :state :cycles :kind :decide :goal [:approved_supplier "dyne"] :text "Y5b: is dyne an approved supplier (downstream of the undefined Y2)?"}
+ {:id :Q37 :state :cycles :kind :decide :goal [:cleared_for_tender "fern"] :text "Y5c: is fern cleared for tender (the attacker's body is the blocked Y1)?"}
+ {:id :Q38 :state :cycles :kind :decide :goal [:preferred "dyne"] :hypothesis {:withhold [:RY23]}
+  :text "Y6: is dyne preferred without defeater RY23?"}
+ {:id :Q39 :state :cycles :kind :decide :goal [:preferred "dyne"] :text "Y6 after: is dyne preferred (base unchanged after the hypothesis)?"}]

@@ -1,0 +1,29 @@
+{
+ "cli": "spikes/v3/v3a-prolog/cli",
+ "backend": "postgres",
+ "n": 200,
+ "errors": 0,
+ "approved_true": 49,
+ "decide_ms": {
+  "p50": 10.302066802978516,
+  "p95": 27.339935302734375,
+  "max": 34.7139835357666,
+  "mean": 13.325200080871582
+ },
+ "decide_ms_warm": {
+  "p50": 10.441064834594727,
+  "p95": 27.339935302734375
+ },
+ "questions_ms": {
+  "p50": 0.9090900421142578,
+  "p95": 40.0090217590332
+ },
+ "sql_per_decide": 11.17,
+ "load_ms": 86.40408515930176,
+ "cold_start_s": 0.14,
+ "session_wall_s": 4.57,
+ "max_rss_mb": {
+  "load_only": 47,
+  "bench": 81
+ }
+}

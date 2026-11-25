@@ -13,6 +13,11 @@ The CLI reads a session script (CONTRACT.md) on stdin and prints {"results": [..
   5 Q17 answered through fetch, bounded: every statement <= fetch_limit rows, total rows far below a
     full load, SQL logged
   6 resolve_term probes match
+  7 defeat cycles (--only 7; PLAN-v3-cycles): load slice + extension + cycles.edn. The engine's flag
+    (capabilities.json, via model_check.py) decides: "report" -> every question must still match its
+    extended key (cycles.edn changes nothing else), and Q30-Q39 must match keys["cycles"], undefined
+    nodes re-verified; "reject" -> the shared model check must reject the rule base (and that is the pass)
+  Before the checks, model_check.py runs over the loaded rule base (moded safety on every engine).
 """
 import argparse, copy, json, os, pathlib, shlex, subprocess, sys, time
 
@@ -22,7 +27,7 @@ sys.path.insert(0, str(HERE))
 from reference import load, keys as ref_keys  # noqa: E402  (slice reader + key generator, not an evaluator)
 from check_why import Checker, node_ids, goals_in  # noqa: E402
 
-SLICE, EXT = "spikes/v3/shared/slice.edn", "spikes/v3/shared/extension.edn"
+SLICE, EXT, CYC = "spikes/v3/shared/slice.edn", "spikes/v3/shared/extension.edn", "spikes/v3/shared/cycles.edn"
 FETCH_LIMIT = 10000
 CFG = {"duckdb": {"backend": "duckdb", "duckdb": "spikes/v3/shared/slice.duckdb", "fetch_limit": FETCH_LIMIT},
        "postgres": {"backend": "postgres", "postgres": os.environ.get("SPIKE_V3_PG", "dbname=spike_v3"), "fetch_limit": FETCH_LIMIT}}
@@ -40,6 +45,8 @@ def edn(x):
 
 def op_for(q):
     k = q["kind"]
+    if k == "fetch":
+        return {"op": "fetch", "concept": q["concept"], "filters": q["filters"]}
     if k == "resolve_term":
         return {"op": "resolve_term", "text": q["text"]}
     if k == "claim":
@@ -73,9 +80,10 @@ def run(cli, script):
 
 class Env:
     """Active rule / claim sets and a SQL runner for the checker."""
-    def __init__(self, S, X, backend, extended=True, withhold=()):
-        rules = list(S["rules"]) + ([x for x in X if "head" in x or "pred" in x] if extended else [])
-        claims = list(S["claims"]) + ([x for x in X if "assertion" in x] if extended else [])
+    def __init__(self, S, X, backend, extended=True, withhold=(), Y=()):
+        rules = list(S["rules"]) + ([x for x in X if "head" in x or "pred" in x] if extended else []) \
+            + [y for y in Y if "head" in y or "pred" in y]
+        claims = list(S["claims"]) + ([x for x in X if "assertion" in x] if extended else []) + [y for y in Y if "assertion" in y]
         self.S = S
         self.rules = {r["id"]: r for r in rules if r["id"] not in withhold}
         self.claims = {}
@@ -105,6 +113,9 @@ class Env:
 
 def answer_fields(q, r):
     k = q["kind"]
+    if k == "fetch":
+        rows = r.get("rows") or []
+        return {"value": rows[0].get("value") if rows else None, "row_count": r.get("row_count")}
     if k == "resolve_term":
         return {"status": r.get("status"), "candidates": sorted(c["term"] for c in r.get("candidates") or [])}
     if k == "claim":
@@ -140,7 +151,9 @@ def check_question(q, key, r, env, as_of_default):
         if miss: errs.append(f"core ids missing from why: {sorted(miss)}")
         if key["status"] in ("ANSWER", "CONFLICT") and not r.get("why"):
             errs.append("no why tree")
-        errs += Checker(env.S, env.rules, env.claims, as_of, env.runsql).check(r.get("why"))
+        errs += Checker(env.S, env.rules, env.claims, as_of, env.runsql, key.get("undefined"), q.get("goal")).check(r.get("why"))
+        if key.get("undefined") and not any(n.get("type") == "undefined" for n in walk_nodes(r.get("why"))):
+            errs.append("undefined goal without an undefined node")
     elif q["kind"] == "why_not":
         t = r.get("why_not")
         miss = set(key.get("core") or []) - node_ids(t)
@@ -153,6 +166,12 @@ def check_question(q, key, r, env, as_of_default):
         miss = set(key.get("core") or []) - claim_ids(r)
         if miss: errs.append(f"core ids missing from claim result: {sorted(miss)}")
     return errs
+
+
+def walk_nodes(nodes):
+    for n in nodes or []:
+        yield n
+        yield from walk_nodes(n.get("children"))
 
 
 def strip(x):
@@ -168,14 +187,28 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--cli", required=True)
     ap.add_argument("--mutation", action="store_true", help="check 1 against mutated keys; must fail")
-    ap.add_argument("--only", default="123456")
+    ap.add_argument("--only", default="1234567")
     ap.add_argument("--out", help="write the raw results here (JSON)")
+    ap.add_argument("--mode", help="engine mode for capabilities.json (e.g. v3a: wfs | memo)")
+    ap.add_argument("--timeout", type=float, default=120, help="check 7: seconds before a session counts as looping")
     a = ap.parse_args()
-    S, X, Q = load()
+    S, X, Q, Y, QC = load(cycles=True)
     K = ref_keys(mutate=True) if a.mutation else json.loads((HERE / "keys.json").read_text())
     today = S["today"]
     ops = [op_for(q) for q in Q]
     report, raw, green = {}, {}, True
+
+    import model_check as MC
+    if a.mode:   # passed to the engine's CLI process (V3a host.py reads ENGINE_MODE)
+        os.environ["ENGINE_MODE"] = a.mode
+    engine = pathlib.Path(shlex.split(a.cli)[0]).parent.name
+    try:
+        flag = MC.engine_flag(engine, a.mode)
+    except FileNotFoundError:
+        flag = "reject"
+    S0, r0, c0, q0 = MC.rule_base(cycles=False)
+    mc = MC.check(S0, r0, c0, q0, flag, MC.declared_modes())
+    print(f"model check (slice + extension, {engine} cycles: {flag}):", "OK" if mc["ok"] else mc["errors"])
 
     def verdict(n, errs, note=""):
         nonlocal green
@@ -261,6 +294,33 @@ def main():
             if q["kind"] == "resolve_term":
                 errs += [f"{q['id']}: {e}" for e in check_question(q, K["extended"][q["id"]], r, envd, today)]
         verdict(6, errs)
+    if "7" in a.only:
+        S1, r1, c1, q1 = MC.rule_base(cycles=True)
+        mc7 = MC.check(S1, r1, c1, q1, flag, MC.declared_modes())
+        cyc = [c["predicates"] for c in mc7["cycles"]]
+        if flag == "reject":
+            errs = [] if not mc7["ok"] and mc7["cycles"] else ["model check did not reject the cyclic rule base"]
+            verdict(7, errs, f"(cycles: reject; model check rejects {cyc}; see cycles_probe.py for the engine's own behaviour)")
+        else:
+            errs = list(mc7["errors"])
+            allq = Q + QC
+            t0 = time.time()
+            try:
+                p = subprocess.run(shlex.split(a.cli), input=json.dumps({"config": CFG["duckdb"], "load": [SLICE, EXT, CYC],
+                                   "ops": [op_for(q) for q in allq]}), capture_output=True, text=True, cwd=ROOT, timeout=a.timeout)
+                out = json.loads(p.stdout) if p.returncode == 0 else {"results": [{"error": p.stderr[-500:]}] * len(allq)}
+            except subprocess.TimeoutExpired:
+                out = {"results": [{"error": f"timeout {a.timeout}s"}] * len(allq)}
+            raw["cycles"] = out
+            res = [unwrap(q, r) for q, r in zip(allq, out["results"])]
+            envc = Env(S, X, "duckdb", Y=Y)
+            for q, r in zip(allq, res):
+                key = K["cycles"][q["id"]] if q.get("state") == "cycles" else K["extended"][q["id"]]
+                envq = Env(S, X, "duckdb", Y=Y, withhold=tuple((q.get("hypothesis") or {}).get("withhold") or ())) if q.get("hypothesis") else envc
+                errs += [f"cycles {q['id']}: {e}" for e in check_question(q, key, r, envq, today)]
+            got = {q["id"]: answer_fields(q, r) for q, r in zip(QC, res[len(Q):])}
+            verdict(7, errs, f"(cycles: report; negative cycles {cyc}; {time.time() - t0:.1f}s) "
+                             + " ".join(f"{i}={g.get('status')}" for i, g in got.items()))
     print("GREEN" if green else "NOT GREEN", f"(checks {a.only})")
     if a.out:
         pathlib.Path(a.out).write_text(json.dumps({"report": report, "raw": raw}, indent=1, default=str))

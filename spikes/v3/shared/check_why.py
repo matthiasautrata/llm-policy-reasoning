@@ -13,6 +13,10 @@ backend connection, it re-checks every node:
   superior    re-derived from the slice: explicit :superior-to, authority (R313), later asserted_at,
               strict over non-strict
   absent      structural (children, if any, verified as why-not material)
+  undefined   (defeat cycles) goal, literals, members: the goal and its literals must be undefined in the
+              reference's well-founded model (`undefined` = the key's {literals, members}); the node for
+              the question's goal must list exactly the reference's component, nested ones a subset;
+              members must be active ids
 
 Usage as a library: Checker(slice_plain, active_rules, active_claims, as_of, runsql).check(nodes)
 returns a list of error strings (empty = verified).
@@ -97,6 +101,8 @@ def node_ids(nodes, out=None):
             out.add(n["id"])
         if t == "defeated_by" and n.get("target"):
             out.add(n["target"])
+        if t == "undefined":
+            out |= set(n.get("members") or [])
         if t == "superior":
             out |= {n["winner"], n["loser"]}
             if n.get("source", "").startswith("authority:"):
@@ -119,9 +125,11 @@ def goals_in(nodes, out=None):
 
 
 class Checker:
-    def __init__(self, slice_, rules, claims, as_of, runsql):
-        """slice_: plain slice; rules: {id: rule}; claims: {id: claim incl. sub-claims}; runsql(sql, params) -> [dict]"""
+    def __init__(self, slice_, rules, claims, as_of, runsql, undefined=None, goal=None):
+        """slice_: plain slice; rules: {id: rule}; claims: {id: claim incl. sub-claims}; runsql(sql, params) -> [dict];
+        undefined: the reference's undefined component {literals, members} for the question goal (cycles)"""
         self.S, self.rules, self.claims, self.as_of, self.runsql = slice_, rules, claims, as_of, runsql
+        self.undef, self.goal = undefined, goal
         self.errors, self._sql = [], {}
 
     def err(self, path, msg):
@@ -157,8 +165,30 @@ class Checker:
             self.fetch(n, path, None, None)
         elif t == "fact":
             pass
+        elif t == "undefined":
+            self.undefined(n, path)
         else:
             self.err(path, f"unknown node type {t}")
+
+    def undefined(self, n, path):
+        if not self.undef:
+            return self.err(path, f"undefined node for {n.get('goal')}, but the reference has no undefined component")
+        key = lambda xs: sorted(map(repr, xs or []))
+        ref_l, ref_m = key(self.undef["literals"]), sorted(self.undef["members"])
+        lits, mem = key(n.get("literals")), sorted(n.get("members") or [])
+        if repr(n.get("goal")) not in ref_l:
+            self.err(path, f"goal {n.get('goal')} is not undefined in the reference")
+        if n.get("goal") == self.goal:
+            if lits != ref_l: self.err(path, f"undefined literals {n.get('literals')} != reference {self.undef['literals']}")
+            if mem != ref_m: self.err(path, f"undefined members {mem} != reference {ref_m}")
+        else:
+            if not set(lits) <= set(ref_l): self.err(path, f"undefined literals {n.get('literals')} outside the reference component")
+            if not set(mem) <= set(ref_m): self.err(path, f"undefined members {mem} outside the reference component")
+        for m in mem:
+            if m not in self.rules and m not in self.claims:
+                self.err(path, f"member {m} not active")
+        for j, k in enumerate(n.get("children") or []):
+            self.node(k, f"{path}[{j}]")
 
     def rule(self, n, path):
         rid, goal = n.get("id"), n.get("goal")
@@ -223,7 +253,7 @@ class Checker:
                 self.err(path, f"fact goal {k['goal']} != {subst(lit, s2)}")
             return s2
         # derived literal
-        if k.get("type") not in ("rule", "claim"):
+        if k.get("type") not in ("rule", "claim", "undefined"):
             self.err(path, f"expected a proof of {subst(lit, s)}, got {k.get('type')}")
             return None
         s2 = unify(lit, k.get("goal"), s)

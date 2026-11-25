@@ -1,0 +1,29 @@
+{
+ "cli": "spikes/v3/v3a-prolog/cli",
+ "backend": "duckdb",
+ "n": 200,
+ "errors": 0,
+ "approved_true": 49,
+ "decide_ms": {
+  "p50": 4.362821578979492,
+  "p95": 9.23299789428711,
+  "max": 14.988899230957031,
+  "mean": 5.626013278961182
+ },
+ "decide_ms_warm": {
+  "p50": 4.292964935302734,
+  "p95": 9.207010269165039
+ },
+ "questions_ms": {
+  "p50": 0.4429817199707031,
+  "p95": 9.329080581665039
+ },
+ "sql_per_decide": 11.17,
+ "load_ms": 66.4517879486084,
+ "cold_start_s": 0.13,
+ "session_wall_s": 2.68,
+ "max_rss_mb": {
+  "load_only": 60,
+  "bench": 127
+ }
+}

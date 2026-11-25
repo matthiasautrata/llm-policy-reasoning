@@ -1,0 +1,75 @@
+;; Defeat cycles (PLAN-v3-cycles §1.1), loaded on top of slice.edn + extension.edn.
+;; Semantics: SEMANTICS-cycles.md. Questions Q30-Q39 (:state :cycles in questions.edn), keys under
+;; keys.json "cycles". None of these predicates occurs in slice.edn or extension.edn, so loading this
+;; file must leave every existing answer unchanged (accept.py check 7 asserts that).
+[
+ ;; Y1: two claims rebut each other directly; equal authority, no superiority -> CONFLICT (blocked).
+ {:id :CY1a :about "vendor:fern" :assertion [:blacklisted "fern"]
+  :asserted_by :risk :asserted_at #inst "2026-09-01" :valid_from #inst "2026-09-01" :valid_to nil
+  :backing "Risk watch W-41: adverse media" :qualifier "presumably"}
+ {:id :CY1b :about "vendor:fern" :assertion [:neg [:blacklisted "fern"]]
+  :asserted_by :compliance :asserted_at #inst "2026-09-02" :valid_from #inst "2026-09-02" :valid_to nil
+  :backing "Compliance review CR-9: media report unfounded" :qualifier "presumably"}
+
+ ;; Y2: team defeat over derived conclusions (an even negative cycle through two defeaters).
+ {:id :RY21 :kind :defeasible :owner :procurement :class :material_inference
+  :doc "A vendor approved in the register on the evaluation date is preferred."
+  :head [:preferred ?v]
+  :body [[:as_of ?d] [:fetch :vendor_status {:vendor ?v :status "approved"} {:valid_from ?f :valid_to ?t}] [:<= ?f ?d] [:<= ?d ?t]]}
+ {:id :RY22 :kind :defeasible :owner :compliance :class :material_inference
+  :doc "A vendor with a suspension on record in the register is under review."
+  :head [:under_review ?v]
+  :body [[:fetch :vendor_status {:vendor ?v :status "suspended"} {}]]}
+ {:id :RY23 :kind :defeater :owner :compliance :class :exception
+  :doc "A vendor under review is not preferred."
+  :head [:neg [:preferred ?v]]
+  :body [[:under_review ?v]]}
+ {:id :RY24 :kind :defeater :owner :procurement :class :exception
+  :doc "A preferred vendor is not under review."
+  :head [:neg [:under_review ?v]]
+  :body [[:preferred ?v]]}
+
+ ;; Y3: odd loop: a claim defeats itself through one intermediate conclusion.
+ {:id :CY3 :about "vendor:edge" :assertion [:trusted "edge"]
+  :asserted_by :procurement :asserted_at #inst "2026-04-01" :valid_from #inst "2026-04-01" :valid_to nil
+  :backing "Vendor scorecard VS-3" :qualifier "presumably"}
+ {:id :RY31 :kind :defeasible :owner :compliance :class :entitlement
+  :doc "A trusted vendor is exempt from audit."
+  :head [:exempt_from_audit ?v]
+  :body [[:trusted ?v]]}
+ {:id :RY32 :kind :defeater :owner :compliance :class :exception
+  :doc "A vendor exempt from audit cannot be trusted (nobody checks it)."
+  :head [:neg [:trusted ?v]]
+  :body [[:exempt_from_audit ?v]]}
+
+ ;; Y4: Y1's shape, broken by an authority superiority rule -> ANSWER for the superior side.
+ {:id :CY4a :about "vendor:cog" :assertion [:watchlisted "cog"]
+  :asserted_by :risk :asserted_at #inst "2026-09-01" :valid_from #inst "2026-09-01" :valid_to nil
+  :backing "Risk watch W-42" :qualifier "presumably"}
+ {:id :CY4b :about "vendor:cog" :assertion [:neg [:watchlisted "cog"]]
+  :asserted_by :compliance :asserted_at #inst "2026-09-02" :valid_from #inst "2026-09-02" :valid_to nil
+  :backing "Compliance review CR-10" :qualifier "presumably"}
+ {:id :RY4 :kind :superiority :owner :controller :class :superiority
+  :doc "Where risk and compliance disagree on a watchlist entry, risk prevails."
+  :pred :watchlisted :order [:risk :compliance]}
+
+ ;; Y5: downstream of an ambiguous (Y1, blocked) and of an undefined (Y2) conclusion.
+ {:id :RY51 :kind :defeasible :owner :procurement :class :material_inference
+  :doc "A blacklisted vendor is flagged."
+  :head [:flagged ?v]
+  :body [[:blacklisted ?v]]}
+ {:id :RY52 :kind :defeasible :owner :procurement :class :material_inference
+  :doc "A preferred vendor is an approved supplier."
+  :head [:approved_supplier ?v]
+  :body [[:preferred ?v]]}
+ {:id :CY5 :about "vendor:fern" :assertion [:onboarded "fern"]
+  :asserted_by :procurement :asserted_at #inst "2026-02-01" :valid_from #inst "2026-02-01" :valid_to nil
+  :backing "Vendor onboarding file VO-30" :qualifier "certainly"}
+ {:id :RY53 :kind :defeasible :owner :procurement :class :material_inference
+  :doc "An onboarded vendor is cleared for tender."
+  :head [:cleared_for_tender ?v]
+  :body [[:onboarded ?v]]}
+ {:id :RY54 :kind :defeater :owner :risk :class :exception
+  :doc "A blacklisted vendor is not cleared for tender."
+  :head [:neg [:cleared_for_tender ?v]]
+  :body [[:blacklisted ?v]]}]

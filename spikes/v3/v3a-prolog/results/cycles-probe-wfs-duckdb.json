@@ -1,0 +1,222 @@
+[
+ {
+  "id": "Q30",
+  "outcome": "match",
+  "got": {
+   "status": "CONFLICT",
+   "value": null,
+   "sides": [
+    [
+     "CY1a"
+    ],
+    [
+     "CY1b"
+    ]
+   ]
+  },
+  "want": {
+   "status": "CONFLICT",
+   "value": null,
+   "sides": [
+    [
+     "CY1a"
+    ],
+    [
+     "CY1b"
+    ]
+   ]
+  },
+  "s": 0.1
+ },
+ {
+  "id": "Q31",
+  "outcome": "match",
+  "got": {
+   "status": "CONFLICT",
+   "value": null,
+   "sides": [
+    [
+     "RY21"
+    ],
+    [
+     "RY23"
+    ]
+   ]
+  },
+  "want": {
+   "status": "CONFLICT",
+   "value": null,
+   "sides": [
+    [
+     "RY21"
+    ],
+    [
+     "RY23"
+    ]
+   ]
+  },
+  "s": 0.1
+ },
+ {
+  "id": "Q32",
+  "outcome": "match",
+  "got": {
+   "status": "ANSWER",
+   "value": true,
+   "sides": null
+  },
+  "want": {
+   "status": "ANSWER",
+   "value": true,
+   "sides": null
+  },
+  "s": 0.1
+ },
+ {
+  "id": "Q33",
+  "outcome": "match",
+  "got": {
+   "status": "CONFLICT",
+   "value": null,
+   "sides": [
+    [
+     "CY3"
+    ],
+    [
+     "RY32"
+    ]
+   ]
+  },
+  "want": {
+   "status": "CONFLICT",
+   "value": null,
+   "sides": [
+    [
+     "CY3"
+    ],
+    [
+     "RY32"
+    ]
+   ]
+  },
+  "s": 0.1
+ },
+ {
+  "id": "Q34",
+  "outcome": "match",
+  "got": {
+   "status": "ANSWER",
+   "value": true,
+   "sides": null
+  },
+  "want": {
+   "status": "ANSWER",
+   "value": true,
+   "sides": null
+  },
+  "s": 0.1
+ },
+ {
+  "id": "Q35",
+  "outcome": "match",
+  "got": {
+   "status": "ANSWER",
+   "value": false,
+   "sides": null
+  },
+  "want": {
+   "status": "ANSWER",
+   "value": false,
+   "sides": null
+  },
+  "s": 0.1
+ },
+ {
+  "id": "Q36",
+  "outcome": "match",
+  "got": {
+   "status": "CONFLICT",
+   "value": null,
+   "sides": [
+    [
+     "RY21"
+    ],
+    [
+     "RY23"
+    ]
+   ]
+  },
+  "want": {
+   "status": "CONFLICT",
+   "value": null,
+   "sides": [
+    [
+     "RY21"
+    ],
+    [
+     "RY23"
+    ]
+   ]
+  },
+  "s": 0.1
+ },
+ {
+  "id": "Q37",
+  "outcome": "match",
+  "got": {
+   "status": "ANSWER",
+   "value": true,
+   "sides": null
+  },
+  "want": {
+   "status": "ANSWER",
+   "value": true,
+   "sides": null
+  },
+  "s": 0.1
+ },
+ {
+  "id": "Q38",
+  "outcome": "match",
+  "got": {
+   "status": "ANSWER",
+   "value": true,
+   "sides": null
+  },
+  "want": {
+   "status": "ANSWER",
+   "value": true,
+   "sides": null
+  },
+  "s": 0.1
+ },
+ {
+  "id": "Q39",
+  "outcome": "match",
+  "got": {
+   "status": "CONFLICT",
+   "value": null,
+   "sides": [
+    [
+     "RY21"
+    ],
+    [
+     "RY23"
+    ]
+   ]
+  },
+  "want": {
+   "status": "CONFLICT",
+   "value": null,
+   "sides": [
+    [
+     "RY21"
+    ],
+    [
+     "RY23"
+    ]
+   ]
+  },
+  "s": 0.1
+ }
+]
