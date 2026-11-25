@@ -150,6 +150,22 @@ class Ref:
             return "CONFLICT", None, sorted([sorted(sup), ["R314"]])
         return "ANSWER", bool(sup), None
 
+    # ---- R120 / R121: aggregate over the pending requests of a subtree whose approval is proven
+    def approved_agg(self, x, op):
+        """-> (status, value, sides, contested): members = approved proven; any contested member contests
+        the aggregate (sides = the members' root sides); the contested instance binds the proven part."""
+        sub = set(self.subtree(x))
+        reqs = sorted(r for r, q in self.req.items() if q["status"] == "pending" and self.emp[q["requester"]]["cc"] in sub)
+        val = lambda rs: sum(self.req[r]["amount"] for r in rs) if op == "sum" else len(rs)
+        res = {r: self.approved(r) for r in reqs}
+        mem = [r for r in reqs if res[r][0] == "ANSWER" and res[r][1]]
+        cont = [r for r in reqs if res[r][0] == "CONFLICT"]
+        if not cont:
+            return "ANSWER", val(mem), None, None
+        sides = sorted({json.dumps(sd) for r in cont for sd in res[r][2]})
+        return "CONFLICT", val(mem), [json.loads(sd) for sd in sides], {
+            "via": [["approved", r] for r in cont], "roots": [dict(goal=["approved", r], sides=res[r][2]) for r in cont]}
+
     # ---- claims: defeasible facts with superiority (explicit, R313 authority, later same asserter)
     def in_force(self, c, d):
         return iso(c["valid_from"]) <= d and (c.get("valid_to") is None or d <= iso(c["valid_to"]))
@@ -232,7 +248,8 @@ def answer(R, q):
     """The key for question q (plain dict) in reference R."""
     k = answer1(R, q)
     if q.get("check_qualifier"):
-        k["qualifier"] = CLOSED if k["status"] == "ANSWER" and set(k["core"]) & {"R304", "R310"} and k["value"] else None
+        closed = {kw(r["id"]) for r in R.S["rules"] if kw(r.get("closed_over")) == "known_facts"}
+        k["qualifier"] = CLOSED if k["status"] == "ANSWER" and set(k["core"]) & closed and k["value"] not in (False, None, []) else None
     return k
 
 
@@ -281,6 +298,12 @@ def answer1(R, q):
         core = sorted(set(core + (["R313"] if r313 and st == "ANSWER" and d < "2026-08-01" else [])))
         return dict(status=st, value=v, sides=sides, core=core)
     if p == "breach_in": return A(R.breach_in(g[1]), ["R110", "R106"])
+    if p in ("approved_total", "approved_count"):
+        rid = {"approved_total": "R120", "approved_count": "R121"}[p]
+        st, v, sides, c = R.approved_agg(g[1], "sum" if p == "approved_total" else "count")
+        if st == "ANSWER": return A(v, [rid])
+        return dict(status=st, value=None, sides=sides, core=sorted({rid} | {i for sd in sides for i in sd}),
+                    contested={json.dumps([p, g[1], v]): dict(via=c["via"], rules=[rid], roots=c["roots"])})
     terms = {x["id"] for x in R.S["terms"]}
     if f"term:{p}" in terms: return dict(status="UNDERDETERMINED", value=None, sides=None, core=[])
     return dict(status="OUT_OF_SCOPE", value=None, sides=None, core=[])

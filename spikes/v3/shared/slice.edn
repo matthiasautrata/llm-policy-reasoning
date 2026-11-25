@@ -14,6 +14,8 @@
 ;;                [:< a b] [:<= a b] [:> a b] [:>= a b] [:= a b]   comparison (numbers, ISO dates)
 ;;                [:is ?x [:+ a b]] / [:- a b]        arithmetic
 ;;                [:as_of ?d]                        the evaluation date (decide's as_of, default :today)
+;;                [:agg :sum ?x [lit ...] ?out]      aggregate over the proven solutions of the conjunction
+;;                [:agg :count ?x [lit ...] ?out]    (SEMANTICS.md, Aggregates); ?out unbound
 ;;   head       a literal; [:neg literal] for the complement (defeaters)
 ;;   kinds      :strict  :defeasible  :defeater  :superiority  :incompatible
 ;;   scope      a rule with [:not ..] or a fetch of a :measure names :completeness [claim ids] (claims
@@ -191,7 +193,7 @@
  ;; Functional predicates: the first n arguments are the key, the last is the value. Two conclusions
  ;; with the same key and different values compete (as p and ~p do).
  :functional {:booked_total 1 :headroom 1 :role_limit 1 :limit_on 2 :governing_limit 2
-              :vendor_status_for 1 :cost_centre_of 1 :pending_exposure 1}
+              :vendor_status_for 1 :cost_centre_of 1 :pending_exposure 1 :approved_total 1 :approved_count 1}
 
  ;; ------------------------------------------------------------------ rules
  :rules
@@ -220,6 +222,16 @@
    :doc "The breaching requests in a subtree are the pending requests raised from it that breach a cap."
    :head [:breach_in ?x ?r]
    :body [[:fetch :request_in_subtree {:root ?x :status "pending"} {:id ?r}] [:cap_breach ?r]]}
+  {:id :R120 :kind :strict :owner :finance :class :definition
+   :recorded_at #inst "2026-09-14" :closed_over :known_facts
+   :doc "Approved total of a subtree: the sum of the amounts of its pending requests whose approval is proven."
+   :head [:approved_total ?x ?v]
+   :body [[:agg :sum ?a [[:fetch :request_in_subtree {:root ?x :status "pending"} {:id ?r :amount ?a}] [:approved ?r]] ?v]]}
+  {:id :R121 :kind :strict :owner :finance :class :definition
+   :recorded_at #inst "2026-09-14" :closed_over :known_facts
+   :doc "Approved count of a subtree: the number of its pending requests whose approval is proven."
+   :head [:approved_count ?x ?n]
+   :body [[:agg :count ?r [[:fetch :request_in_subtree {:root ?x :status "pending"} {:id ?r}] [:approved ?r]] ?n]]}
   {:id :R112 :kind :strict :owner :finance :class :definition
    :recorded_at #inst "2026-09-14"
    :doc "A big capital request is a capital request over 50,000."

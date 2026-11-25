@@ -869,6 +869,70 @@
    "sides": null,
    "status": "ANSWER",
    "value": true
+  },
+  "Q44": {
+   "core": [
+    "R120"
+   ],
+   "qualifier": "total over known facts in declared scope",
+   "sides": null,
+   "status": "ANSWER",
+   "value": 1512000
+  },
+  "Q45": {
+   "core": [
+    "R121"
+   ],
+   "qualifier": "total over known facts in declared scope",
+   "sides": null,
+   "status": "ANSWER",
+   "value": 9
+  },
+  "Q46": {
+   "contested": {
+    "[\"approved_total\", \"cc0105\", 1526000]": {
+     "roots": [
+      {
+       "goal": [
+        "approved",
+        "r000001"
+       ],
+       "sides": [
+        [
+         "R312"
+        ],
+        [
+         "R314"
+        ]
+       ]
+      }
+     ],
+     "rules": [
+      "R120"
+     ],
+     "via": [
+      [
+       "approved",
+       "r000001"
+      ]
+     ]
+    }
+   },
+   "core": [
+    "R120",
+    "R312",
+    "R314"
+   ],
+   "sides": [
+    [
+     "R312"
+    ],
+    [
+     "R314"
+    ]
+   ],
+   "status": "CONFLICT",
+   "value": null
   }
  },
  "changed": [
@@ -1467,6 +1531,70 @@
    "sides": null,
    "status": "ANSWER",
    "value": true
+  },
+  "Q44": {
+   "core": [
+    "R120"
+   ],
+   "qualifier": "total over known facts in declared scope",
+   "sides": null,
+   "status": "ANSWER",
+   "value": 1512000
+  },
+  "Q45": {
+   "core": [
+    "R121"
+   ],
+   "qualifier": "total over known facts in declared scope",
+   "sides": null,
+   "status": "ANSWER",
+   "value": 9
+  },
+  "Q46": {
+   "contested": {
+    "[\"approved_total\", \"cc0105\", 1526000]": {
+     "roots": [
+      {
+       "goal": [
+        "approved",
+        "r000001"
+       ],
+       "sides": [
+        [
+         "R312"
+        ],
+        [
+         "R314"
+        ]
+       ]
+      }
+     ],
+     "rules": [
+      "R120"
+     ],
+     "via": [
+      [
+       "approved",
+       "r000001"
+      ]
+     ]
+    }
+   },
+   "core": [
+    "R120",
+    "R312",
+    "R314"
+   ],
+   "sides": [
+    [
+     "R312"
+    ],
+    [
+     "R314"
+    ]
+   ],
+   "status": "CONFLICT",
+   "value": null
   }
  }
 }

@@ -11,6 +11,7 @@
  :has_approver "+"
  :cap_ok "+"              ; R304: [:not [:cap_breach ?r]] needs ?r bound
  :vendor_cleared "+" :eligible "+" :denied "+" :approved "+" :auto_approved "+"
+ :approved_total "+-" :approved_count "+-"   ; R120 / R121: [:agg ..] over the subtree
  ;; the dispute and loop fixtures (cycles-acyclic.edn, fixtures/integrity)
  :preferred "+" :under_review "+" :approved_supplier "+"
  :trusted "-" :exempt_from_audit "-"   ; CY3 is a claim: enumerable

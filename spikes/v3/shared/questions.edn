@@ -38,6 +38,12 @@
   :text "IR-005 completeness branch: booked total of cc0009 (R104 names completeness claim C10; no qualifier)"}
  {:id :Q27 :kind :decide :goal [:approved "r000005"] :check_qualifier true
   :text "IR-005 closed-over branch: is r000005 approved (R310, R304 closed over known facts: qualified)?"}
+ {:id :Q44 :kind :decide :goal [:approved_total "cc0058" ?v] :check_qualifier true
+  :text "§2.1 (a): approved total of the cc0058 subtree (every member's approval proven or refuted)"}
+ {:id :Q45 :kind :decide :goal [:approved_count "cc0290" ?n] :check_qualifier true
+  :text "§2.1 (a): how many pending requests of leaf cc0290 are approved?"}
+ {:id :Q46 :kind :decide :goal [:approved_total "cc0105" ?v]
+  :text "§2.1 (b): approved total of the cc0105 subtree (r000001's approval is contested, R312 vs R314)"}
  {:id :Q30 :state :acyclic :kind :decide :goal [:blacklisted "fern"] :text "Y1: is fern blacklisted (risk says yes, compliance says no)?"}
  {:id :Q32 :state :acyclic :kind :decide :goal [:preferred "acme"] :text "Y2 control: is acme (never suspended) preferred?"}
  {:id :Q34 :state :acyclic :kind :decide :goal [:watchlisted "cog"] :text "Y4: is cog watchlisted (risk prevails over compliance)?"}
