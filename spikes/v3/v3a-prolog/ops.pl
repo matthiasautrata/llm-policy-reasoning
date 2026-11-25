@@ -69,7 +69,21 @@ decide_ground(G, D, R) :-
         answer("CONFLICT", null, Sides, Why, R)
     ;   E = contested(_, _)                            % downstream of a root conflict
     ->  contested_why(G, D, Sides, Node), answer("CONFLICT", null, Sides, [Node], R)
-    ;   explain_not(G, D, N), answer("ANSWER", false, null, [N], R) ).
+    ;   explain_not(G, D, N), absence(G, D, E, Abs), answer("ANSWER", false, null, [N], Abs, R) ).
+
+%!  absence(+G, +D, +E, -Abs)  SEMANTICS.md, Qualifier: a refuted ground G rests on absence when no supporter
+%   was live, or when the winning attacker's proof uses a :closed_over rule; an open G with no binding
+%   always (E = open). Not when an in-force [:complete "P"] claim covers G's predicate.
+absence(G, D, _, false) :- pred_of(G, P), covered(P, D), !.
+absence(_, _, none(_), true) :- !.
+absence(_, _, open, true) :- !.
+absence(_, _, defeated(a(_, _, _, Pf), _, _), true) :- why_ids([Pf], Ids), uses_closed(Ids), !.
+absence(_, _, _, false).
+
+covered(P, D) :-
+    claim(Id, [complete, S], _, _, F, T, _, _, _, _), active(Id), in_force(F, T, D), atom_string(P, S), !.
+
+uses_closed(Ids) :- member(Id, Ids), rule(Id, _, _, _, M), mget(closed_over, M, known_facts), !.
 
 %!  contested_why(+G, +D, -Sides, -Node)  PLAN-v3-integrity §4: the contested node of a downstream G
 contested_why(G, D, Sides, _{type:contested, goal:G, via:Via, rules:Rules, roots:RNs}) :-
@@ -106,12 +120,13 @@ decide_open(G, D, R) :-
         ->  findall(Ids, ( member(_-E, GEs), sups_of(E, Ss), Ss \== [], ids_of(Ss, Ids) ), Sides0), sort(Sides0, Sides),
             findall(Pf, ( member(_-E, GEs), sups_of(E, Ss), member(s(_, _, Pf), Ss) ), Why),
             answer("CONFLICT", null, Sides, Why, R)
-        ;   Won = [] -> explain_not(G, D, N), answer("ANSWER", null, null, [N], R)
+        ;   Won = [] -> explain_not(G, D, N), absence(G, D, open, Abs), answer("ANSWER", null, null, [N], Abs, R)
         ;   findall(V, ( member(G-_, Won), value_of(Vs, V) ), Vals),
             answer("CONFLICT", null, null, [], R0), R = R0.put(value, Vals) )
     ;   findall(V-Why1, ( member(G-proven(S, SN), Won), value_of(Vs, V), team_proofs(S, SN, Why1) ), VWs),
         pairs_keys_values(VWs, Vals0, Whys), sort(Vals0, Vals), append(Whys, Why),
-        answer("ANSWER", Vals, null, Why, R) ).
+        ( Vals == [] -> absence(G, D, open, Abs) ; Abs = false ),
+        answer("ANSWER", Vals, null, Why, Abs, R) ).
 
 sups_of(proven(S, _), S).
 sups_of(defeated(_, S, _), S).
@@ -121,16 +136,18 @@ sups_of(none(_), []).
 value_of([V], V) :- !.
 value_of(Vs, Vs).
 
-answer(St, V, Sides, Why, _{status:St, value:V, sides:Sides, why:Why, owners:Os, qualifier:Q}) :-
+answer(St, V, Sides, Why, R) :- answer(St, V, Sides, Why, false, R).
+answer(St, V, Sides, Why, Abs, _{status:St, value:V, sides:Sides, why:Why, owners:Os, qualifier:Q}) :-
     why_ids(Why, Ids), findall(O, ( member(Id, Ids), rule(Id, _, _, _, M), mget(owner, M, O) ), Os0), sort(Os0, Os),
-    qualifier(St, V, Ids, Q).
+    qualifier(St, V, Ids, Abs, Q).
 
-%   IR-005: an answer proven through a rule marked :closed_over :known_facts is total only over the known
-%   facts (its :not / measure reads every fact there is, with no completeness claim behind it).
-qualifier("ANSWER", V, Ids, "total over known facts in declared scope") :-
-    V \== false, V \== null, V \== [],
-    member(Id, Ids), rule(Id, _, _, _, M), mget(closed_over, M, known_facts), !.
-qualifier(_, _, _, null).
+%   IR-005 (SEMANTICS.md, Qualifier): a positive answer proven through a rule marked :closed_over
+%   :known_facts is total only over the known facts (its :not / aggregate / measure reads every fact there
+%   is, with no completeness claim behind it); a negative answer when it rests on absence (absence/4).
+qualifier("ANSWER", V, Ids, Abs, Q) :-
+    (   memberchk(V, [false, null, []]) -> Abs == true ; uses_closed(Ids) ), !,
+    Q = "total over known facts in declared scope".
+qualifier(_, _, _, _, null).
 
 why_ids(Why, Ids) :- findall(Id, ( sub_node(Why, N), is_dict(N), get_dict(id, N, Id) ), Ids0), sort(Ids0, Ids).
 sub_node(X, X).
