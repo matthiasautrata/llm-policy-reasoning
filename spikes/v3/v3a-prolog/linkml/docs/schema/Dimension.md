@@ -80,6 +80,18 @@ URI: [slice:Dimension](https://example.org/llm-policy-reasoning/spike-v3/slice/D
 | [sql](sql.md) | 0..1 <br/> [String](String.md) |  | [Concept](Concept.md) |
 | [derived_by](derived_by.md) | 0..1 <br/> [String](String.md) |  | [Concept](Concept.md) |
 
+<details>
+<summary>Expressions & Logic</summary>
+#### Any Of
+
+The class must satisfy at least one of:
+- AnonymousClassExpression({'slot_conditions': {'sql': SlotDefinition({'name': 'sql', 'required': True})}})
+- AnonymousClassExpression({
+  'slot_conditions': {'derived_by': SlotDefinition({'name': 'derived_by', 'required': True})}
+})
+
+</details>
+
 
 
 
@@ -132,6 +144,15 @@ name: Dimension
 description: A concept whose kind is dimension.
 from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
 is_a: Concept
+any_of:
+- slot_conditions:
+    sql:
+      name: sql
+      required: true
+- slot_conditions:
+    derived_by:
+      name: derived_by
+      required: true
 
 ```
 </details>
@@ -245,6 +266,15 @@ attributes:
     - Concept
     range: string
     pattern: ^R[0-9]+$
+any_of:
+- slot_conditions:
+    sql:
+      name: sql
+      required: true
+- slot_conditions:
+    derived_by:
+      name: derived_by
+      required: true
 
 ```
 </details></div>

@@ -6,7 +6,7 @@ search:
 # Slot: head 
 
 
-_EDN literal, e.g. [:headroom ?c ?h]._
+_A literal, e.g. [:headroom ?c ?h]._
 
 
 
@@ -38,7 +38,7 @@ URI: [slice:head](https://example.org/llm-policy-reasoning/spike-v3/slice/head)
 
 | Property | Value |
 | --- | --- |
-| Range | [String](String.md) |
+| Range | [Literal](Literal.md) |
 | Domain Of | [Rule](Rule.md) |
 
 
@@ -79,12 +79,13 @@ URI: [slice:head](https://example.org/llm-policy-reasoning/spike-v3/slice/head)
 <details>
 ```yaml
 name: head
-description: EDN literal, e.g. [:headroom ?c ?h].
+description: A literal, e.g. [:headroom ?c ?h].
 from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
 rank: 1000
 domain_of:
 - Rule
-range: string
+range: Literal
+inlined: true
 
 ```
 </details></div>

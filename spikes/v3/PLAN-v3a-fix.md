@@ -88,3 +88,43 @@ Fix both, re-measure the affected criteria, and update `RESULTS.md`. The goal is
 - So isolation costs nothing measurable in V3a. Compare V3b `d/with` 2.7 ms and branch 103 ms.
 
 **2026-11-24 · F1.6 skipped.** Passing the state as a value through the evaluator would mean threading a state argument through `defeasible.pl` and `why.pl` in place of the dynamic predicates. Not attempted, to leave the timebox for F2. A rough estimate, not a measurement: most of the 209 + 63 lines would change, because every `rule/5` and `claim/10` lookup becomes a lookup in an assoc or dict.
+
+**2026-11-24 · F2.1 structured rule bodies in LinkML (1.12.1; `uv pip install --dry-run -U linkml` shows no newer release).**
+- Literals and terms are classes:
+  - abstract `Literal` with `Derived`, `Fetch`, `Not`, `Neg`, `Comparison`, `Is` and `AsOf`;
+  - abstract `RuleTerm` with `Var`, `Str`, `Int`, `Bool` and `Expr`.
+- Each class carries a `type` slot with `designates_type`, and all of them are closed.
+- Both mechanisms were prototyped (`designates_type` on an abstract parent, and slot-level `any_of` ranges with `linkml:Any`). Both validate polymorphic literals. `designates_type` was chosen because the instance names its class explicitly and gen-doc renders the hierarchy.
+- Variables are `Var{name}` with the pattern `^\?[A-Za-z_][A-Za-z0-9_]*$`.
+- Arity is fixed by named slots: `Comparison{op, left, right}`, `Is{var, expr}`, `Expr{op, left, right}`. A converter puts surplus positions into an `extra` slot, which the closed class rejects.
+- Fetch filters and outputs are `Filter{column key, term}` and `Output{column key, var}` lists, multivalued and `inlined: true`. The compact `{column: value}` dict form is accepted.
+- `inlined_as_dict` is not a metamodel slot; linkml 1.12.1 raises a TypeError.
+- Renamed: the rule-language term class is `RuleTerm`, because `Term` is the vocabulary class.
+
+**2026-11-24 · F2.2 converter.**
+- `edn2yaml.py` emits the structure (158 lines, was 61) and never repairs input: a non-map filter stays a list, and a keyword where a term belongs becomes `Keyword{name}`, which the schema does not define.
+- `to_edn()` renders the structure back to EDN text. `build.py` step 3 checks all 80 heads, body literals and assertions: `edn.pl` must parse the rendered text, and it must equal the authored EDN value. 80/80 pass.
+- `edn.pl` stays V3a's rule reader. The engine still loads `slice.edn`, not the YAML.
+
+**2026-11-24 · F2.3 why "a concept has sql or derived_by" was not enforced.** There were two causes, both found by reading the generated JSON Schema.
+1. The rule had no preconditions. gen-json-schema turns a `rules` entry without `preconditions` into a bare `then` with no `if`, and JSON Schema ignores `then` without `if`. linkml-validate validates through that same JSON Schema, so it agreed. A rule with any precondition generates `if`/`then` and works. Fix: a class-level `any_of` of `slot_conditions: {sql: {required: true}}` / `{derived_by: …}`, which generates `anyOf` with `required`.
+2. Even then, negative 1 still passed. The `concepts` range includes the `is_a` descendants `Measure` and `Dimension`, so the generated schema reads `anyOf [Concept, Measure, Dimension]`. Class-level `any_of` is **not inherited** through `is_a`: the mutated concept validated as a Measure. Fix: repeat the condition on both subclasses (a YAML anchor in `slice.yaml`).
+- What enforces it now: the generated JSON Schema's `anyOf`/`required`. Both linkml-validate and `jsonschema` used directly apply it.
+
+**2026-11-24 · F2.4 negatives: 12/12 rejected** by linkml-validate and by `jsonschema` on the generated schema (`--include-range-class-descendants`). These are the same 12 mutations as `model.clj`, applied to the same EDN, then converted. The table is in `v3a-prolog/linkml/negatives.md`. Message quality next to Malli's `me/humanize`:
+- **Enum, pattern, date and closed-class cases (2, 7, 8, 9, 10, 11): both are good.** LinkML names the JSON path and lists the allowed values. Malli names the path through nested vectors with `nil` placeholders (negative 10 has 20 `nil`s before the error).
+- **Inside a polymorphic literal (3, 4, 5): linkml-validate is more specific than Malli.** It reports the deepest failing keyword: `'cc' does not match '^\?…' in /rules/0/head/args/0/name`, `'*' is not one of ['+', '-'] in …/expr/op`. `jsonschema`'s own first message collapses to "… is not valid under any of the given schemas". Malli lists every `:orn` alternative ("should be :fetch", "should be :not", …) before the real cause.
+- **Arity and wrong-kind cases (6, 12): both are vague.** LinkML says "not valid under any of the given schemas" and prints the object. Malli says "input remaining", or again lists all alternatives.
+- **Class rule (1): Malli wins.** It carries the custom message "a concept has :sql or :derived-by". LinkML only prints the concept and says it is not valid under any schema; `slot_conditions` has no message slot.
+
+**2026-11-24 · F2.5/F2.6 docs, DDL and sizes.**
+- gen-doc and the DDL compare rerun unchanged: A 29 and B 7 mismatches out of 31 columns.
+- `docs/slice.md` (161 lines) equals V3b's except for the generator line. The instance docs render assertions with `to_edn`.
+- Sizes:
+
+  | File | Before (lines) | After (lines) |
+  |---|---|---|
+  | `slice.yaml` (schema) | 199 | 292 |
+  | `slice.instance.yaml` | 760 | 1331 (vs `slice.edn` 318) |
+  | `edn2yaml.py` | 61 | 158 |
+  | `build.py` | 203 | 278 |

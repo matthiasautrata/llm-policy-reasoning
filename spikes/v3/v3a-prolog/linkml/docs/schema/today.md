@@ -33,7 +33,7 @@ URI: [slice:today](https://example.org/llm-policy-reasoning/spike-v3/slice/today
 
 | Property | Value |
 | --- | --- |
-| Range | [Date](Date.md) |
+| Range | [date](date.md) |
 | Domain Of | [Slice](Slice.md) |
 ### Cardinality and Requirements
 

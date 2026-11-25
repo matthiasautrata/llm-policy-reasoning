@@ -22,6 +22,7 @@ URI: [slice:pred](https://example.org/llm-policy-reasoning/spike-v3/slice/pred)
 | --- | --- | --- |
 | [FunctionalPredicate](FunctionalPredicate.md) | A predicate whose first key_arity arguments are a key and whose last argument... |  no  |
 | [Rule](Rule.md) | A rule envelope |  no  |
+| [Derived](Derived.md) | [:pred arg  |  no  |
 
 
 
@@ -35,7 +36,7 @@ URI: [slice:pred](https://example.org/llm-policy-reasoning/spike-v3/slice/pred)
 | Property | Value |
 | --- | --- |
 | Range | [String](String.md) |
-| Domain Of | [FunctionalPredicate](FunctionalPredicate.md), [Rule](Rule.md) |
+| Domain Of | [FunctionalPredicate](FunctionalPredicate.md), [Rule](Rule.md), [Derived](Derived.md) |
 
 
 
@@ -80,6 +81,7 @@ rank: 1000
 domain_of:
 - FunctionalPredicate
 - Rule
+- Derived
 range: string
 
 ```

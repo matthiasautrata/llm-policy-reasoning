@@ -26,11 +26,29 @@ URI: [slice:Rule](https://example.org/llm-policy-reasoning/spike-v3/slice/Rule)
     click Rule href "../Rule/"
       Rule : body
         
+          
+    
+        
+        
+        Rule --> "*" Literal : body
+        click Literal href "../Literal/"
+    
+
+        
       Rule : conservative
         
       Rule : doc
         
       Rule : head
+        
+          
+    
+        
+        
+        Rule --> "0..1" Literal : head
+        click Literal href "../Literal/"
+    
+
         
       Rule : id
         
@@ -103,8 +121,8 @@ URI: [slice:Rule](https://example.org/llm-policy-reasoning/spike-v3/slice/Rule)
 | [conservative](conservative.md) | 0..1 <br/> [Boolean](Boolean.md) |  | direct |
 | [layer](layer.md) | 0..1 <br/> [String](String.md) |  | direct |
 | [doc](doc.md) | 0..1 <br/> [String](String.md) |  | direct |
-| [head](head.md) | 0..1 <br/> [String](String.md) | EDN literal, e | direct |
-| [body](body.md) | 0..1 <br/> [String](String.md) | EDN vector of literals (see the slice | direct |
+| [head](head.md) | 0..1 <br/> [Literal](Literal.md) | A literal, e | direct |
+| [body](body.md) | * <br/> [Literal](Literal.md) | Literals, evaluated left to right | direct |
 | [superior_to](superior_to.md) | * <br/> [String](String.md) |  | direct |
 | [pred](pred.md) | 0..1 <br/> [String](String.md) |  | direct |
 | [order](order.md) | * <br/> [Owner](Owner.md) | Asserter authority, strongest first | direct |
@@ -344,23 +362,26 @@ attributes:
     range: string
   head:
     name: head
-    description: EDN literal, e.g. [:headroom ?c ?h].
+    description: A literal, e.g. [:headroom ?c ?h].
     from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
     rank: 1000
     owner: Rule
     domain_of:
     - Rule
-    range: string
+    range: Literal
+    inlined: true
   body:
     name: body
-    description: EDN vector of literals (see the slice.edn header for the literal
-      forms).
+    description: Literals, evaluated left to right.
     from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
     rank: 1000
     owner: Rule
     domain_of:
     - Rule
-    range: string
+    range: Literal
+    multivalued: true
+    inlined: true
+    inlined_as_list: true
   superior_to:
     name: superior_to
     from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
@@ -379,6 +400,7 @@ attributes:
     domain_of:
     - FunctionalPredicate
     - Rule
+    - Derived
     range: string
   order:
     name: order

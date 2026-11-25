@@ -147,7 +147,7 @@ URI: [slice:Slice](https://example.org/llm-policy-reasoning/spike-v3/slice/Slice
 | Name | Cardinality and Range | Description | Inheritance |
 | ---  | --- | --- | --- |
 | [version](version.md) | 0..1 <br/> [Integer](Integer.md) |  | direct |
-| [today](today.md) | 1 <br/> [Date](Date.md) |  | direct |
+| [today](today.md) | 1 <br/> [date](date.md) |  | direct |
 | [assets](assets.md) | * <br/> [Asset](Asset.md) |  | direct |
 | [tables](tables.md) | * <br/> [Table](Table.md) |  | direct |
 | [concepts](concepts.md) | * <br/> [Concept](Concept.md) |  | direct |

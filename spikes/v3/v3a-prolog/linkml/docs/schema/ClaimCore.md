@@ -46,6 +46,15 @@ URI: [slice:ClaimCore](https://example.org/llm-policy-reasoning/spike-v3/slice/C
         
       ClaimCore : assertion
         
+          
+    
+        
+        
+        ClaimCore --> "1" Literal : assertion
+        click Literal href "../Literal/"
+    
+
+        
       ClaimCore : backing
         
       ClaimCore : id
@@ -85,11 +94,11 @@ URI: [slice:ClaimCore](https://example.org/llm-policy-reasoning/spike-v3/slice/C
 | Name | Cardinality and Range | Description | Inheritance |
 | ---  | --- | --- | --- |
 | [id](id.md) | 1 <br/> [String](String.md) |  | direct |
-| [assertion](assertion.md) | 1 <br/> [String](String.md) | EDN literal, e | direct |
+| [assertion](assertion.md) | 1 <br/> [Literal](Literal.md) | A literal, e | direct |
 | [asserted_by](asserted_by.md) | 1 <br/> [Owner](Owner.md) |  | direct |
-| [asserted_at](asserted_at.md) | 1 <br/> [Date](Date.md) |  | direct |
-| [valid_from](valid_from.md) | 1 <br/> [Date](Date.md) |  | direct |
-| [valid_to](valid_to.md) | 0..1 <br/> [Date](Date.md) |  | direct |
+| [asserted_at](asserted_at.md) | 1 <br/> [date](date.md) |  | direct |
+| [valid_from](valid_from.md) | 1 <br/> [date](date.md) |  | direct |
+| [valid_to](valid_to.md) | 0..1 <br/> [date](date.md) |  | direct |
 | [warrant](warrant.md) | 0..1 <br/> [String](String.md) |  | direct |
 | [backing](backing.md) | 0..1 <br/> [String](String.md) |  | direct |
 | [qualifier](qualifier.md) | 0..1 <br/> [Modal](Modal.md) |  | direct |
@@ -226,14 +235,15 @@ attributes:
     pattern: ^C[0-9]+(\.[0-9]+)?$
   assertion:
     name: assertion
-    description: EDN literal, e.g. [:cost_centre_of "e077" "cc0078"].
+    description: A literal, e.g. [:cost_centre_of "e077" "cc0078"].
     from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
     rank: 1000
     owner: ClaimCore
     domain_of:
     - ClaimCore
-    range: string
+    range: Literal
     required: true
+    inlined: true
   asserted_by:
     name: asserted_by
     from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice

@@ -42,6 +42,15 @@ URI: [slice:SubClaim](https://example.org/llm-policy-reasoning/spike-v3/slice/Su
         
       SubClaim : assertion
         
+          
+    
+        
+        
+        SubClaim --> "1" Literal : assertion
+        click Literal href "../Literal/"
+    
+
+        
       SubClaim : backing
         
       SubClaim : id
@@ -92,11 +101,11 @@ URI: [slice:SubClaim](https://example.org/llm-policy-reasoning/spike-v3/slice/Su
 | ---  | --- | --- | --- |
 | [role](role.md) | 1 <br/> [SubClaimRole](SubClaimRole.md) |  | direct |
 | [id](id.md) | 1 <br/> [String](String.md) |  | [ClaimCore](ClaimCore.md) |
-| [assertion](assertion.md) | 1 <br/> [String](String.md) | EDN literal, e | [ClaimCore](ClaimCore.md) |
+| [assertion](assertion.md) | 1 <br/> [Literal](Literal.md) | A literal, e | [ClaimCore](ClaimCore.md) |
 | [asserted_by](asserted_by.md) | 1 <br/> [Owner](Owner.md) |  | [ClaimCore](ClaimCore.md) |
-| [asserted_at](asserted_at.md) | 1 <br/> [Date](Date.md) |  | [ClaimCore](ClaimCore.md) |
-| [valid_from](valid_from.md) | 1 <br/> [Date](Date.md) |  | [ClaimCore](ClaimCore.md) |
-| [valid_to](valid_to.md) | 0..1 <br/> [Date](Date.md) |  | [ClaimCore](ClaimCore.md) |
+| [asserted_at](asserted_at.md) | 1 <br/> [date](date.md) |  | [ClaimCore](ClaimCore.md) |
+| [valid_from](valid_from.md) | 1 <br/> [date](date.md) |  | [ClaimCore](ClaimCore.md) |
+| [valid_to](valid_to.md) | 0..1 <br/> [date](date.md) |  | [ClaimCore](ClaimCore.md) |
 | [warrant](warrant.md) | 0..1 <br/> [String](String.md) |  | [ClaimCore](ClaimCore.md) |
 | [backing](backing.md) | 0..1 <br/> [String](String.md) |  | [ClaimCore](ClaimCore.md) |
 | [qualifier](qualifier.md) | 0..1 <br/> [Modal](Modal.md) |  | [ClaimCore](ClaimCore.md) |
@@ -217,14 +226,15 @@ attributes:
     pattern: ^C[0-9]+(\.[0-9]+)?$
   assertion:
     name: assertion
-    description: EDN literal, e.g. [:cost_centre_of "e077" "cc0078"].
+    description: A literal, e.g. [:cost_centre_of "e077" "cc0078"].
     from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
     rank: 1000
     owner: SubClaim
     domain_of:
     - ClaimCore
-    range: string
+    range: Literal
     required: true
+    inlined: true
   asserted_by:
     name: asserted_by
     from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice

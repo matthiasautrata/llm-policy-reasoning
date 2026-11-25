@@ -128,6 +128,7 @@ attributes:
     domain_of:
     - FunctionalPredicate
     - Rule
+    - Derived
     range: string
   key_arity:
     name: key_arity

@@ -35,7 +35,7 @@ URI: [slice:valid_to](https://example.org/llm-policy-reasoning/spike-v3/slice/va
 
 | Property | Value |
 | --- | --- |
-| Range | [Date](Date.md) |
+| Range | [date](date.md) |
 | Domain Of | [ClaimCore](ClaimCore.md) |
 
 

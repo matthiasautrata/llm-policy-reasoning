@@ -168,6 +168,7 @@ attributes:
     domain_of:
     - Table
     - Column
+    - Var
     range: string
   doc:
     name: doc

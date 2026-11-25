@@ -22,6 +22,7 @@ URI: [slice:name](https://example.org/llm-policy-reasoning/spike-v3/slice/name)
 | --- | --- | --- |
 | [Table](Table.md) | A physical table of the detail data |  no  |
 | [Column](Column.md) | A column of a physical table |  no  |
+| [Var](Var.md) |  |  no  |
 
 
 
@@ -35,7 +36,7 @@ URI: [slice:name](https://example.org/llm-policy-reasoning/spike-v3/slice/name)
 | Property | Value |
 | --- | --- |
 | Range | [String](String.md) |
-| Domain Of | [Table](Table.md), [Column](Column.md) |
+| Domain Of | [Table](Table.md), [Column](Column.md), [Var](Var.md) |
 
 
 
@@ -80,6 +81,7 @@ rank: 1000
 domain_of:
 - Table
 - Column
+- Var
 range: string
 
 ```

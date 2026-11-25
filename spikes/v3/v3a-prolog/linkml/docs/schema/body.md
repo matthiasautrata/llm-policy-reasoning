@@ -6,7 +6,7 @@ search:
 # Slot: body 
 
 
-_EDN vector of literals (see the slice.edn header for the literal forms)._
+_Literals, evaluated left to right._
 
 
 
@@ -38,8 +38,15 @@ URI: [slice:body](https://example.org/llm-policy-reasoning/spike-v3/slice/body)
 
 | Property | Value |
 | --- | --- |
-| Range | [String](String.md) |
+| Range | [Literal](Literal.md) |
 | Domain Of | [Rule](Rule.md) |
+### Cardinality and Requirements
+
+| Property | Value |
+| --- | --- |
+| Multivalued | Yes |
+
+
 
 
 
@@ -79,12 +86,15 @@ URI: [slice:body](https://example.org/llm-policy-reasoning/spike-v3/slice/body)
 <details>
 ```yaml
 name: body
-description: EDN vector of literals (see the slice.edn header for the literal forms).
+description: Literals, evaluated left to right.
 from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
 rank: 1000
 domain_of:
 - Rule
-range: string
+range: Literal
+multivalued: true
+inlined: true
+inlined_as_list: true
 
 ```
 </details></div>

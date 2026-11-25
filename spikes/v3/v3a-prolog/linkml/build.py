@@ -5,7 +5,11 @@
 Steps
   1 edn2yaml: shared/slice.edn + extension.edn -> slice.instance.yaml
   2 linkml-validate the schema against the metamodel, the instances against the schema
-  3 rule heads/bodies/assertions are EDN strings LinkML cannot see into: parse each with the V3a EDN reader
+  3 rule heads/bodies/assertions are structured in the instance (validated in step 2). Round trip: each one
+    rendered back to EDN (edn2yaml.to_edn) must parse with edn.pl, the reader V3a loads rules with, and equal
+    the original EDN value
+  3b negative tests: V3b's 12 malformed slices (model.clj `negatives`), each converted and validated with
+    linkml-validate's API and with the generated JSON Schema through `jsonschema` directly; pass iff 12/12 rejected
   4 gen-doc: schema docs -> docs/schema/; instance docs (the G arm's material) -> docs/slice.md
   5 physical model -> physical.yaml (one class per table) -> gen-sqlddl (postgresql) -> physical.sql;
     compare columns and types with shared/gen.py's DDL -> ddl_compare.md
@@ -28,16 +32,75 @@ def sh(*args, **kw):
     return p.stdout
 
 
-def edn_check(doc):
-    """Every EDN string must parse with edn.pl (the reader V3a loads rules with)."""
+def literals(doc, src=None):
+    """(id, field, structured literal, original EDN value) for every head, body literal and assertion."""
+    K = edn2yaml.E.Keyword
+    orig = {}
+    if src:
+        S, X = src
+        for r in S[K("rules")] + [x for x in X if K("kind") in x]:
+            orig[(r[K("id")].name, "head")] = r.get(K("head"))
+            for i, l in enumerate(r.get(K("body")) or []): orig[(r[K("id")].name, f"body.{i}")] = l
+        for c in S[K("claims")] + [x for x in X if K("assertion") in x]:
+            for x in [c] + (c.get(K("subclaims")) or []): orig[(x[K("id")].name, "assertion")] = x[K("assertion")]
+    out = []
+    for r in doc["rules"]:
+        if "head" in r: out.append((r["id"], "head", r["head"]))
+        out += [(r["id"], f"body.{i}", l) for i, l in enumerate(r.get("body") or [])]
+    for c in doc["claims"]:
+        out += [(x["id"], "assertion", x["assertion"]) for x in [c] + (c.get("subclaims") or [])]
+    return [(i, f, l, orig.get((i, f))) for i, f, l in out]
+
+
+def edn_check(doc, src):
+    """Structured literal -> EDN text: must parse with edn.pl and equal the authored EDN value."""
     import janus_swi as janus
     janus.consult(str(HERE.parent / "edn.pl"))
-    texts = [(r["id"], k, r[k]) for r in doc["rules"] for k in ("head", "body") if k in r]
-    for c in doc["claims"]:
-        texts.append((c["id"], "assertion", c["assertion"]))
-        texts += [(s["id"], "assertion", s["assertion"]) for s in c.get("subclaims") or []]
-    bad = [t for t in texts if not janus.query_once("catch(edn:edn_parse(S, _), _, fail)", {"S": t[2]})["truth"]]
-    return len(texts), bad
+    lits = literals(doc, src)
+    bad = []
+    for i, f, l, o in lits:
+        t = edn2yaml.to_edn(l)
+        if not janus.query_once("catch(edn:edn_parse(S, _), _, fail)", {"S": t})["truth"] or edn2yaml.thaw(edn2yaml.E.loads(t)) != o:
+            bad.append((i, f, t))
+    return len(lits), bad
+
+
+def negatives(S, X):
+    """V3b's 12 negative tests (v3b-clojure/src/v3b/model.clj `negatives`), applied to the same EDN."""
+    import copy
+    K, Sym = edn2yaml.E.Keyword, edn2yaml.E.Symbol
+    def mut(f):
+        s = copy.deepcopy(S); f(s); return s
+    def rules(s): return s[K("rules")]
+    def claims(s): return s[K("claims")]
+    cases = [
+        ("concept with neither :sql nor :derived-by",
+         lambda s: [s[K("concepts")][0].pop(k, None) for k in (K("sql"), K("derived-by"))]),
+        ("unknown owner on a rule", lambda s: rules(s)[0].__setitem__(K("owner"), K("marketing"))),
+        ("rule variable without ?", lambda s: rules(s)[0][K("head")].__setitem__(1, Sym("cc"))),
+        ("fetch filters not a map", lambda s: rules(s)[0][K("body")][0].__setitem__(2, ["cc", Sym("?c")])),
+        ("unknown arithmetic op in :is", lambda s: rules(s)[1][K("body")].append([K("is"), Sym("?x"), [K("*"), 2, 3]])),
+        ("comparison with three arguments", lambda s: rules(s)[1][K("body")].append([K("<"), Sym("?x"), 1, 2])),
+        ("bad date in a claim", lambda s: claims(s)[0].__setitem__(K("asserted_at"), "2026-3-1")),
+        ("unknown key on a claim (closed map)", lambda s: claims(s)[0].__setitem__(K("confidence"), 0.9)),
+        ("sub-claim role not required/supporting", lambda s: claims(s)[0][K("subclaims")][0].__setitem__(K("role"), K("optional"))),
+        ("superiority order with unknown owner",
+         lambda s: rules(s).append({K("id"): K("R999"), K("kind"): K("superiority"), K("owner"): K("controller"),
+                                    K("class"): K("superiority"), K("doc"): "x", K("pred"): K("p"), K("order"): [K("hr"), K("sales")]})),
+        ("rule kind unknown", lambda s: rules(s)[0].__setitem__(K("kind"), K("presumption"))),
+        ("negated literal wrapping a non-literal", lambda s: rules(s)[0].__setitem__(K("head"), [K("neg"), "x"])),
+    ]
+    import json, jsonschema
+    from linkml.validator import validate
+    js = json.loads(sh(BIN / "gen-json-schema", "--include-range-class-descendants", "slice.yaml"))
+    jv = jsonschema.Draft7Validator(js, format_checker=jsonschema.Draft7Validator.FORMAT_CHECKER)
+    out = []
+    for label, f in cases:
+        doc = json.loads(json.dumps(edn2yaml.convert(mut(f), X)))
+        lm = [r.message for r in validate(doc, str(HERE / "slice.yaml"), "Slice").results]
+        jm = [e.message for e in jv.iter_errors(doc)]
+        out.append((label, lm, jm))
+    return out
 
 
 SQLTYPE = {"id": "string", "enum": "string", "int": "integer", "bool": "boolean", "date": "date"}
@@ -151,24 +214,36 @@ def instance_docs(doc):
     L += ["", "## Claims", ""]
     for c in doc["claims"]:
         to = c.get("valid_to") or "open"
-        L += [f"- **{c['id']}** about `{c['about']}`: `{c['assertion']}` — {c['asserted_by']}, {c['asserted_at']}, "
+        L += [f"- **{c['id']}** about `{c['about']}`: `{edn2yaml.to_edn(c['assertion'])}` — {c['asserted_by']}, {c['asserted_at']}, "
               f"in force {c['valid_from']}–{to}; {c.get('qualifier', '')}; backing: {c.get('backing', '')}"]
         for s in c.get("subclaims") or []:
-            L += [f"  - {s['id']} ({s['role']}): `{s['assertion']}` — {s['asserted_by']}, {s['asserted_at']}, "
+            L += [f"  - {s['id']} ({s['role']}): `{edn2yaml.to_edn(s['assertion'])}` — {s['asserted_by']}, {s['asserted_at']}, "
                   f"in force {s['valid_from']}–{s.get('valid_to') or 'open'}"]
     return "\n".join(L) + "\n"
 
 
 def main():
-    doc = edn2yaml.convert()
+    S, X = edn2yaml.read(edn2yaml.SHARED / "slice.edn"), edn2yaml.read(edn2yaml.SHARED / "extension.edn")
+    doc = edn2yaml.convert(S, X)
     inst = HERE / "slice.instance.yaml"
-    inst.write_text("# generated by edn2yaml.py from shared/slice.edn + shared/extension.edn; do not edit\n"
-                    + yaml.safe_dump(doc, sort_keys=False, allow_unicode=True, width=120))
+    inst.write_text("# generated by edn2yaml.py from shared/slice.edn + shared/extension.edn; do not edit\n" + edn2yaml.dump(doc))
     print("1 instances:", sum(1 for _ in inst.open()), "lines")
     print("2 schema:", sh(BIN / "linkml-validate", "slice.yaml").strip(),
           "| instances:", sh(BIN / "linkml-validate", "-s", "slice.yaml", "-C", "Slice", inst.name).strip())
-    n, bad = edn_check(doc)
-    print(f"3 EDN strings: {n} parsed, {len(bad)} bad", bad or "")
+    n, bad = edn_check(doc, (S, X))
+    print(f"3 structured literals: {n}, round trip to EDN (edn.pl parses, value equal): {n - len(bad)} ok", bad or "")
+    neg = negatives(S, X)
+    L = ["# Negative tests: LinkML vs Malli", "",
+         "Generated by `build.py` (step 3b). V3b's 12 malformed slices (`model.clj` `negatives`), converted by "
+         "`edn2yaml.py` and validated by linkml-validate's API and by the generated JSON Schema (`gen-json-schema "
+         "--include-range-class-descendants`) through `jsonschema` directly. First message of each shown.", "",
+         "| # | mutation | linkml-validate | jsonschema |", "|---|---|---|---|"]
+    for i, (label, lm, jm) in enumerate(neg, 1):
+        cell = lambda ms: (f"rejected ({len(ms)}): " + md_escape(ms[0][:160])) if ms else "**not rejected**"
+        L.append(f"| {i} | {label} | {cell(lm)} | {cell(jm)} |")
+    (HERE / "negatives.md").write_text("\n".join(L) + "\n")
+    print(f"3b negative tests: linkml-validate {sum(1 for _, lm, _ in neg if lm)}/{len(neg)} rejected, "
+          f"jsonschema {sum(1 for *_, jm in neg if jm)}/{len(neg)} rejected (negatives.md)")
     sh(BIN / "gen-doc", "slice.yaml", "-d", "docs/schema")
     (HERE / "docs").mkdir(exist_ok=True)
     (HERE / "docs" / "slice.md").write_text(instance_docs(doc))

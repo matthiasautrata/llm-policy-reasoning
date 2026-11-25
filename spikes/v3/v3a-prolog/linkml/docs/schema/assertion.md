@@ -6,7 +6,7 @@ search:
 # Slot: assertion 
 
 
-_EDN literal, e.g. [:cost_centre_of "e077" "cc0078"]._
+_A literal, e.g. [:cost_centre_of "e077" "cc0078"]._
 
 
 
@@ -40,7 +40,7 @@ URI: [slice:assertion](https://example.org/llm-policy-reasoning/spike-v3/slice/a
 
 | Property | Value |
 | --- | --- |
-| Range | [String](String.md) |
+| Range | [Literal](Literal.md) |
 | Domain Of | [ClaimCore](ClaimCore.md) |
 
 
@@ -81,12 +81,13 @@ URI: [slice:assertion](https://example.org/llm-policy-reasoning/spike-v3/slice/a
 <details>
 ```yaml
 name: assertion
-description: EDN literal, e.g. [:cost_centre_of "e077" "cc0078"].
+description: A literal, e.g. [:cost_centre_of "e077" "cc0078"].
 from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
 rank: 1000
 domain_of:
 - ClaimCore
-range: string
+range: Literal
+inlined: true
 
 ```
 </details></div>

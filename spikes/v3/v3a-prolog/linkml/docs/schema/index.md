@@ -1,6 +1,6 @@
 # Spike v3 System A slice
 
-Physical model, semantic layer, vocabulary, rules and Toulmin claims of the spike v3 procurement slice. Detail data is not part of the model: it stays relational and is reached through fetch(concept, filters). Rule heads and bodies are EDN strings (the rule language is EDN data; LinkML holds the envelope).
+Physical model, semantic layer, vocabulary, rules and Toulmin claims of the spike v3 procurement slice. Detail data is not part of the model: it stays relational and is reached through fetch(concept, filters). Rule heads, bodies and claim assertions are structured (Literal and RuleTerm classes below), so the schema validates the rule language, not just the envelope.
 
 URI: https://example.org/llm-policy-reasoning/spike-v3/slice
 
@@ -21,8 +21,24 @@ Name: slice
 | [Concept](Concept.md) | A semantic-layer entry (measure, dimension, entity or hierarchy) bound to tab... |
 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Dimension](Dimension.md) | A concept whose kind is dimension |
 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Measure](Measure.md) | A concept whose kind is measure (an aggregate over the detail data) |
+| [Filter](Filter.md) | One entry of a fetch filter map (compact form `column: term`) |
 | [FunctionalPredicate](FunctionalPredicate.md) | A predicate whose first key_arity arguments are a key and whose last argument... |
+| [Literal](Literal.md) | A literal of a rule head or body, or a claim assertion |
+| &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[AsOf](AsOf.md) | [:as_of ?d]: the evaluation date |
+| &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Comparison](Comparison.md) | [:< a b] and friends: numbers or ISO dates |
+| &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Derived](Derived.md) | [:pred arg  |
+| &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Fetch](Fetch.md) | [:fetch :concept {col term} {col ?var}]: a concept lookup; bound terms filter... |
+| &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Is](Is.md) | [:is ?x [:+ a b]]: arithmetic |
+| &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Neg](Neg.md) | [:neg literal]: the complement (defeater heads, negative claims) |
+| &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Not](Not.md) | [:not literal]: the literal is not defeasibly provable |
+| [Output](Output.md) | One entry of a fetch output map (compact form `column: ?var`) |
 | [Rule](Rule.md) | A rule envelope |
+| [RuleTerm](RuleTerm.md) | An argument of a literal (named RuleTerm because Term is the vocabulary class... |
+| &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Bool](Bool.md) |  |
+| &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Expr](Expr.md) | [:+ a b] or [:- a b]; exactly two operands |
+| &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Int](Int.md) |  |
+| &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Str](Str.md) |  |
+| &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Var](Var.md) |  |
 | [Slice](Slice.md) | The whole slice, as authored in shared/slice |
 | [Table](Table.md) | A physical table of the detail data |
 | [Taxonomy](Taxonomy.md) | A two-level grouping over a code list |
@@ -36,15 +52,17 @@ Name: slice
 | Slot | Description |
 | --- | --- |
 | [about](about.md) |  |
+| [args](args.md) |  |
 | [asserted_at](asserted_at.md) |  |
 | [asserted_by](asserted_by.md) |  |
-| [assertion](assertion.md) | EDN literal, e |
+| [assertion](assertion.md) | A literal, e |
 | [assets](assets.md) |  |
 | [backing](backing.md) |  |
-| [body](body.md) | EDN vector of literals (see the slice |
+| [body](body.md) | Literals, evaluated left to right |
 | [claims](claims.md) |  |
 | [code_list](code_list.md) |  |
 | [code_lists](code_lists.md) |  |
+| [column](column.md) |  |
 | [column_type](column_type.md) |  |
 | [columns](columns.md) |  |
 | [columns_out](columns_out.md) | Output columns of the concept's rows |
@@ -52,25 +70,33 @@ Name: slice
 | [concept_name](concept_name.md) | The concept's name as rules reference it in fetch literals |
 | [concepts](concepts.md) |  |
 | [conservative](conservative.md) |  |
+| [date](date.md) |  |
 | [definition](definition.md) |  |
 | [derived_by](derived_by.md) |  |
 | [doc](doc.md) |  |
+| [expr](expr.md) |  |
+| [filters](filters.md) |  |
 | [functional](functional.md) |  |
 | [group](group.md) |  |
 | [groups](groups.md) |  |
-| [head](head.md) | EDN literal, e |
+| [head](head.md) | A literal, e |
 | [id](id.md) |  |
 | [key_arity](key_arity.md) |  |
 | [kind](kind.md) |  |
 | [label](label.md) |  |
 | [layer](layer.md) |  |
+| [left](left.md) |  |
+| [literal](literal.md) |  |
 | [members](members.md) |  |
 | [name](name.md) |  |
+| [op](op.md) |  |
 | [order](order.md) | Asserter authority, strongest first |
+| [outputs](outputs.md) |  |
 | [owner](owner.md) |  |
 | [params](params.md) |  |
 | [pred](pred.md) |  |
 | [qualifier](qualifier.md) |  |
+| [right](right.md) |  |
 | [role](role.md) |  |
 | [rule_class](rule_class.md) |  |
 | [rules](rules.md) |  |
@@ -81,11 +107,15 @@ Name: slice
 | [synonyms](synonyms.md) |  |
 | [tables](tables.md) |  |
 | [taxonomies](taxonomies.md) |  |
+| [term](term.md) |  |
 | [terms](terms.md) |  |
 | [today](today.md) |  |
+| [type](type.md) |  |
 | [valid_from](valid_from.md) |  |
 | [valid_to](valid_to.md) |  |
+| [value](value.md) |  |
 | [values](values.md) |  |
+| [var](var.md) |  |
 | [version](version.md) |  |
 | [warrant](warrant.md) |  |
 
@@ -94,8 +124,10 @@ Name: slice
 
 | Enumeration | Description |
 | --- | --- |
+| [ArithmeticOp](ArithmeticOp.md) |  |
 | [AssetKind](AssetKind.md) |  |
 | [ColumnType](ColumnType.md) |  |
+| [ComparisonOp](ComparisonOp.md) |  |
 | [ConceptKind](ConceptKind.md) |  |
 | [Modal](Modal.md) |  |
 | [Owner](Owner.md) |  |

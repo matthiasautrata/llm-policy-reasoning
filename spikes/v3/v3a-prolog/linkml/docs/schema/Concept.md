@@ -21,6 +21,7 @@ URI: [slice:concept](https://example.org/llm-policy-reasoning/spike-v3/slice/con
 | Name | Description | Modifies Slot |
 | --- | --- | --- |
 | [Term](Term.md) | A vocabulary term with a contrastive definition (X, as opposed to Y, differin... |  no  |
+| [Fetch](Fetch.md) | [:fetch :concept {col term} {col ?var}]: a concept lookup; bound terms filter... |  no  |
 
 
 
@@ -34,7 +35,7 @@ URI: [slice:concept](https://example.org/llm-policy-reasoning/spike-v3/slice/con
 | Property | Value |
 | --- | --- |
 | Range | [String](String.md) |
-| Domain Of | [Term](Term.md) |
+| Domain Of | [Term](Term.md), [Fetch](Fetch.md) |
 ### Value Constraints
 
 | Property | Value |
@@ -85,6 +86,7 @@ from_schema: https://example.org/llm-policy-reasoning/spike-v3/slice
 rank: 1000
 domain_of:
 - Term
+- Fetch
 range: string
 pattern: ^(measure|dim|entity|hier):[a-z_]+$
 

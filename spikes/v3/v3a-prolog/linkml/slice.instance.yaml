@@ -496,131 +496,586 @@ rules:
   owner: finance
   rule_class: definition
   doc: The booked total of a cost centre rolls up over its subtree.
-  head: '[:booked_total ?c ?v]'
-  body: '[[:fetch :booked_total {:cc ?c} {:value ?v}]]'
+  head:
+    type: Derived
+    pred: booked_total
+    args:
+    - type: Var
+      name: ?c
+    - type: Var
+      name: ?v
+  body:
+  - type: Fetch
+    concept: booked_total
+    filters:
+      cc:
+        type: Var
+        name: ?c
+    outputs:
+      value: ?v
 - id: R105
   kind: strict
   owner: finance
   rule_class: definition
   doc: The headroom of a cost centre is its cap minus its booked total.
-  head: '[:headroom ?c ?h]'
-  body: '[[:booked_total ?c ?b] [:fetch :cost_centre {:id ?c} {:cap ?k}] [:is ?h [:- ?k ?b]]]'
+  head:
+    type: Derived
+    pred: headroom
+    args:
+    - type: Var
+      name: ?c
+    - type: Var
+      name: ?h
+  body:
+  - type: Derived
+    pred: booked_total
+    args:
+    - type: Var
+      name: ?c
+    - type: Var
+      name: ?b
+  - type: Fetch
+    concept: cost_centre
+    filters:
+      id:
+        type: Var
+        name: ?c
+    outputs:
+      cap: ?k
+  - type: Is
+    var:
+      type: Var
+      name: ?h
+    expr:
+      type: Expr
+      op: '-'
+      left:
+        type: Var
+        name: ?k
+      right:
+        type: Var
+        name: ?b
 - id: R106
   kind: defeasible
   owner: finance
   rule_class: material_inference
   doc: A request breaches a cap if its amount plus the booked total of some centre it is charged against (its requester's
     centre or an ancestor) exceeds that centre's cap.
-  head: '[:cap_breach ?r]'
-  body: '[[:fetch :request {:id ?r} {:requester ?e :amount ?a}] [:fetch :employee {:id ?e} {:cc ?c0}] [:fetch :ancestors_or_self
-    {:cc ?c0} {:anc ?c}] [:booked_total ?c ?b] [:fetch :cost_centre {:id ?c} {:cap ?k}] [:> [:+ ?b ?a] ?k]]'
+  head:
+    type: Derived
+    pred: cap_breach
+    args:
+    - type: Var
+      name: ?r
+  body:
+  - type: Fetch
+    concept: request
+    filters:
+      id:
+        type: Var
+        name: ?r
+    outputs:
+      requester: ?e
+      amount: ?a
+  - type: Fetch
+    concept: employee
+    filters:
+      id:
+        type: Var
+        name: ?e
+    outputs:
+      cc: ?c0
+  - type: Fetch
+    concept: ancestors_or_self
+    filters:
+      cc:
+        type: Var
+        name: ?c0
+    outputs:
+      anc: ?c
+  - type: Derived
+    pred: booked_total
+    args:
+    - type: Var
+      name: ?c
+    - type: Var
+      name: ?b
+  - type: Fetch
+    concept: cost_centre
+    filters:
+      id:
+        type: Var
+        name: ?c
+    outputs:
+      cap: ?k
+  - type: Comparison
+    op: '>'
+    left:
+      type: Expr
+      op: +
+      left:
+        type: Var
+        name: ?b
+      right:
+        type: Var
+        name: ?a
+    right:
+      type: Var
+      name: ?k
 - id: R110
   kind: strict
   owner: finance
   rule_class: definition
   doc: The breaching requests in a subtree are the pending requests raised from it that breach a cap.
-  head: '[:breach_in ?x ?r]'
-  body: '[[:fetch :request_in_subtree {:root ?x :status "pending"} {:id ?r}] [:cap_breach ?r]]'
+  head:
+    type: Derived
+    pred: breach_in
+    args:
+    - type: Var
+      name: ?x
+    - type: Var
+      name: ?r
+  body:
+  - type: Fetch
+    concept: request_in_subtree
+    filters:
+      root:
+        type: Var
+        name: ?x
+      status:
+        type: Str
+        value: pending
+    outputs:
+      id: ?r
+  - type: Derived
+    pred: cap_breach
+    args:
+    - type: Var
+      name: ?r
 - id: R112
   kind: strict
   owner: finance
   rule_class: definition
   doc: A big capital request is a capital request over 50,000.
-  head: '[:big_capital ?r]'
-  body: '[[:fetch :request {:id ?r :category "capital"} {:amount ?a}] [:> ?a 50000]]'
+  head:
+    type: Derived
+    pred: big_capital
+    args:
+    - type: Var
+      name: ?r
+  body:
+  - type: Fetch
+    concept: request
+    filters:
+      id:
+        type: Var
+        name: ?r
+      category:
+        type: Str
+        value: capital
+    outputs:
+      amount: ?a
+  - type: Comparison
+    op: '>'
+    left:
+      type: Var
+      name: ?a
+    right:
+      type: Int
+      value: 50000
 - id: R201
   kind: strict
   owner: procurement
   rule_class: definition
   doc: A role's approval limit, asked without a date, is the limit on the evaluation date.
-  head: '[:role_limit ?role ?l]'
-  body: '[[:as_of ?d] [:limit_on ?role ?d ?l]]'
+  head:
+    type: Derived
+    pred: role_limit
+    args:
+    - type: Var
+      name: ?role
+    - type: Var
+      name: ?l
+  body:
+  - type: AsOf
+    date:
+      type: Var
+      name: ?d
+  - type: Derived
+    pred: limit_on
+    args:
+    - type: Var
+      name: ?role
+    - type: Var
+      name: ?d
+    - type: Var
+      name: ?l
 - id: R202
   kind: strict
   owner: procurement
   rule_class: definition
   doc: A role's approval limit on a date is that of the version valid on the date.
-  head: '[:limit_on ?role ?d ?l]'
-  body: '[[:fetch :role_limit_version {:role ?role} {:limit ?l :valid_from ?f :valid_to ?t}] [:<= ?f ?d] [:<= ?d ?t]]'
+  head:
+    type: Derived
+    pred: limit_on
+    args:
+    - type: Var
+      name: ?role
+    - type: Var
+      name: ?d
+    - type: Var
+      name: ?l
+  body:
+  - type: Fetch
+    concept: role_limit_version
+    filters:
+      role:
+        type: Var
+        name: ?role
+    outputs:
+      limit: ?l
+      valid_from: ?f
+      valid_to: ?t
+  - type: Comparison
+    op: <=
+    left:
+      type: Var
+      name: ?f
+    right:
+      type: Var
+      name: ?d
+  - type: Comparison
+    op: <=
+    left:
+      type: Var
+      name: ?d
+    right:
+      type: Var
+      name: ?t
 - id: R203
   kind: strict
   owner: procurement
   rule_class: definition
   doc: The approval limit that governs a request is the one valid on the date the request was raised, not today's.
-  head: '[:governing_limit ?r ?role ?l]'
-  body: '[[:fetch :request {:id ?r} {:date ?d}] [:limit_on ?role ?d ?l]]'
+  head:
+    type: Derived
+    pred: governing_limit
+    args:
+    - type: Var
+      name: ?r
+    - type: Var
+      name: ?role
+    - type: Var
+      name: ?l
+  body:
+  - type: Fetch
+    concept: request
+    filters:
+      id:
+        type: Var
+        name: ?r
+    outputs:
+      date: ?d
+  - type: Derived
+    pred: limit_on
+    args:
+    - type: Var
+      name: ?role
+    - type: Var
+      name: ?d
+    - type: Var
+      name: ?l
 - id: R204
   kind: strict
   owner: procurement
   rule_class: definition
   doc: A request's vendor status is the vendor's status on the request date.
-  head: '[:vendor_status_for ?r ?s]'
-  body: '[[:fetch :request {:id ?r} {:vendor ?v :date ?d}] [:fetch :vendor_status {:vendor ?v} {:status ?s :valid_from ?f
-    :valid_to ?t}] [:<= ?f ?d] [:<= ?d ?t]]'
+  head:
+    type: Derived
+    pred: vendor_status_for
+    args:
+    - type: Var
+      name: ?r
+    - type: Var
+      name: ?s
+  body:
+  - type: Fetch
+    concept: request
+    filters:
+      id:
+        type: Var
+        name: ?r
+    outputs:
+      vendor: ?v
+      date: ?d
+  - type: Fetch
+    concept: vendor_status
+    filters:
+      vendor:
+        type: Var
+        name: ?v
+    outputs:
+      status: ?s
+      valid_from: ?f
+      valid_to: ?t
+  - type: Comparison
+    op: <=
+    left:
+      type: Var
+      name: ?f
+    right:
+      type: Var
+      name: ?d
+  - type: Comparison
+    op: <=
+    left:
+      type: Var
+      name: ?d
+    right:
+      type: Var
+      name: ?t
 - id: R301
   kind: defeasible
   owner: procurement
   rule_class: material_inference
   doc: A request has an approver if someone in the requester's reporting chain has a governing limit of at least the amount.
-  head: '[:has_approver ?r]'
-  body: '[[:fetch :request {:id ?r} {:requester ?e :amount ?a}] [:fetch :reporting_chain {:emp ?e} {:role ?role}] [:governing_limit
-    ?r ?role ?l] [:>= ?l ?a]]'
+  head:
+    type: Derived
+    pred: has_approver
+    args:
+    - type: Var
+      name: ?r
+  body:
+  - type: Fetch
+    concept: request
+    filters:
+      id:
+        type: Var
+        name: ?r
+    outputs:
+      requester: ?e
+      amount: ?a
+  - type: Fetch
+    concept: reporting_chain
+    filters:
+      emp:
+        type: Var
+        name: ?e
+    outputs:
+      role: ?role
+  - type: Derived
+    pred: governing_limit
+    args:
+    - type: Var
+      name: ?r
+    - type: Var
+      name: ?role
+    - type: Var
+      name: ?l
+  - type: Comparison
+    op: '>='
+    left:
+      type: Var
+      name: ?l
+    right:
+      type: Var
+      name: ?a
 - id: R304
   kind: defeasible
   owner: finance
   rule_class: material_inference
   doc: A request passes the cap check if it breaches no cap.
-  head: '[:cap_ok ?r]'
-  body: '[[:not [:cap_breach ?r]]]'
+  head:
+    type: Derived
+    pred: cap_ok
+    args:
+    - type: Var
+      name: ?r
+  body:
+  - type: Not
+    literal:
+      type: Derived
+      pred: cap_breach
+      args:
+      - type: Var
+        name: ?r
 - id: R305
   kind: defeasible
   owner: procurement
   rule_class: material_inference
   doc: A request passes the vendor check if its vendor is approved on the request date.
-  head: '[:vendor_cleared ?r]'
-  body: '[[:vendor_status_for ?r "approved"]]'
+  head:
+    type: Derived
+    pred: vendor_cleared
+    args:
+    - type: Var
+      name: ?r
+  body:
+  - type: Derived
+    pred: vendor_status_for
+    args:
+    - type: Var
+      name: ?r
+    - type: Str
+      value: approved
 - id: R306
   kind: defeasible
   owner: procurement
   rule_class: exception
   doc: 'Exception: an emergency request passes the vendor check even though its vendor is suspended.'
-  head: '[:vendor_cleared ?r]'
-  body: '[[:fetch :request {:id ?r :emergency true} {}] [:vendor_status_for ?r "suspended"]]'
+  head:
+    type: Derived
+    pred: vendor_cleared
+    args:
+    - type: Var
+      name: ?r
+  body:
+  - type: Fetch
+    concept: request
+    filters:
+      id:
+        type: Var
+        name: ?r
+      emergency:
+        type: Bool
+        value: true
+    outputs: {}
+  - type: Derived
+    pred: vendor_status_for
+    args:
+    - type: Var
+      name: ?r
+    - type: Str
+      value: suspended
 - id: R308
   kind: defeasible
   owner: procurement
   rule_class: material_inference
   doc: A request is eligible if it has an approver, passes the cap check and passes the vendor check.
-  head: '[:eligible ?r]'
-  body: '[[:has_approver ?r] [:cap_ok ?r] [:vendor_cleared ?r]]'
+  head:
+    type: Derived
+    pred: eligible
+    args:
+    - type: Var
+      name: ?r
+  body:
+  - type: Derived
+    pred: has_approver
+    args:
+    - type: Var
+      name: ?r
+  - type: Derived
+    pred: cap_ok
+    args:
+    - type: Var
+      name: ?r
+  - type: Derived
+    pred: vendor_cleared
+    args:
+    - type: Var
+      name: ?r
 - id: R309
   kind: defeasible
   owner: compliance
   rule_class: material_inference
   doc: A request is denied if its requester has a recorded policy violation.
-  head: '[:denied ?r]'
-  body: '[[:fetch :request {:id ?r} {:requester ?e}] [:fetch :employee {:id ?e :violation true} {}]]'
+  head:
+    type: Derived
+    pred: denied
+    args:
+    - type: Var
+      name: ?r
+  body:
+  - type: Fetch
+    concept: request
+    filters:
+      id:
+        type: Var
+        name: ?r
+    outputs:
+      requester: ?e
+  - type: Fetch
+    concept: employee
+    filters:
+      id:
+        type: Var
+        name: ?e
+      violation:
+        type: Bool
+        value: true
+    outputs: {}
 - id: R310
   kind: defeasible
   owner: procurement
   rule_class: material_inference
   doc: A request is approved if it is eligible and not denied.
-  head: '[:approved ?r]'
-  body: '[[:eligible ?r] [:not [:denied ?r]]]'
+  head:
+    type: Derived
+    pred: approved
+    args:
+    - type: Var
+      name: ?r
+  body:
+  - type: Derived
+    pred: eligible
+    args:
+    - type: Var
+      name: ?r
+  - type: Not
+    literal:
+      type: Derived
+      pred: denied
+      args:
+      - type: Var
+        name: ?r
 - id: R311
   kind: defeasible
   owner: procurement
   rule_class: entitlement
   doc: A software request under 10,000 is approved automatically, without further checks.
-  head: '[:auto_approved ?r]'
-  body: '[[:fetch :request {:id ?r :category "software"} {:amount ?a}] [:< ?a 10000]]'
+  head:
+    type: Derived
+    pred: auto_approved
+    args:
+    - type: Var
+      name: ?r
+  body:
+  - type: Fetch
+    concept: request
+    filters:
+      id:
+        type: Var
+        name: ?r
+      category:
+        type: Str
+        value: software
+    outputs:
+      amount: ?a
+  - type: Comparison
+    op: <
+    left:
+      type: Var
+      name: ?a
+    right:
+      type: Int
+      value: 10000
 - id: R312
   kind: defeasible
   owner: procurement
   rule_class: entitlement
   doc: An automatically approved request is approved (a second sufficient condition).
-  head: '[:approved ?r]'
-  body: '[[:auto_approved ?r]]'
+  head:
+    type: Derived
+    pred: approved
+    args:
+    - type: Var
+      name: ?r
+  body:
+  - type: Derived
+    pred: auto_approved
+    args:
+    - type: Var
+      name: ?r
 - id: R313
   kind: superiority
   owner: controller
@@ -635,21 +1090,65 @@ rules:
   owner: procurement
   rule_class: incompatibility
   doc: 'A denied request is never approved. Declared, not inferred: deriving both is a CONFLICT.'
-  head: '[:approved ?r]'
-  body: '[[:denied ?r]]'
+  head:
+    type: Derived
+    pred: approved
+    args:
+    - type: Var
+      name: ?r
+  body:
+  - type: Derived
+    pred: denied
+    args:
+    - type: Var
+      name: ?r
 - id: R307
   kind: defeater
   owner: procurement
   rule_class: exception
   doc: 'Exception to the exception: the emergency waiver (R306) does not apply to a big capital request.'
-  head: '[:neg [:vendor_cleared ?r]]'
-  body: '[[:fetch :request {:id ?r :emergency true} {}] [:vendor_status_for ?r "suspended"] [:big_capital ?r]]'
+  head:
+    type: Neg
+    literal:
+      type: Derived
+      pred: vendor_cleared
+      args:
+      - type: Var
+        name: ?r
+  body:
+  - type: Fetch
+    concept: request
+    filters:
+      id:
+        type: Var
+        name: ?r
+      emergency:
+        type: Bool
+        value: true
+    outputs: {}
+  - type: Derived
+    pred: vendor_status_for
+    args:
+    - type: Var
+      name: ?r
+    - type: Str
+      value: suspended
+  - type: Derived
+    pred: big_capital
+    args:
+    - type: Var
+      name: ?r
   superior_to:
   - R306
 claims:
 - id: C1
   about: vendor:bolt
-  assertion: '[:fit_for_use "bolt"]'
+  assertion:
+    type: Derived
+    pred: fit_for_use
+    args:
+    - type: Str
+      value: bolt
   asserted_by: procurement
   asserted_at: '2026-03-01'
   valid_from: '2026-01-01'
@@ -659,7 +1158,12 @@ claims:
   subclaims:
   - id: C1.1
     role: required
-    assertion: '[:due_diligence_passed "bolt"]'
+    assertion:
+      type: Derived
+      pred: due_diligence_passed
+      args:
+      - type: Str
+        value: bolt
     asserted_by: compliance
     asserted_at: '2026-02-15'
     valid_from: '2026-01-01'
@@ -667,7 +1171,14 @@ claims:
     qualifier: certainly
   - id: C1.2
     role: required
-    assertion: '[:neg [:sanctioned "bolt"]]'
+    assertion:
+      type: Neg
+      literal:
+        type: Derived
+        pred: sanctioned
+        args:
+        - type: Str
+          value: bolt
     asserted_by: risk
     asserted_at: '2026-02-20'
     valid_from: '2026-01-01'
@@ -676,7 +1187,12 @@ claims:
     qualifier: certainly
   - id: C1.3
     role: supporting
-    assertion: '[:price_within_benchmark "bolt"]'
+    assertion:
+      type: Derived
+      pred: price_within_benchmark
+      args:
+      - type: Str
+        value: bolt
     asserted_by: finance
     asserted_at: '2026-02-25'
     valid_from: '2026-01-01'
@@ -684,7 +1200,12 @@ claims:
     qualifier: presumably
 - id: C2
   about: vendor:cog
-  assertion: '[:fit_for_use "cog"]'
+  assertion:
+    type: Derived
+    pred: fit_for_use
+    args:
+    - type: Str
+      value: cog
   asserted_by: procurement
   asserted_at: '2026-03-01'
   valid_from: '2026-01-01'
@@ -694,7 +1215,12 @@ claims:
   subclaims:
   - id: C2.1
     role: required
-    assertion: '[:due_diligence_passed "cog"]'
+    assertion:
+      type: Derived
+      pred: due_diligence_passed
+      args:
+      - type: Str
+        value: cog
     asserted_by: compliance
     asserted_at: '2026-02-15'
     valid_from: '2026-01-01'
@@ -702,7 +1228,14 @@ claims:
     qualifier: certainly
   - id: C2.2
     role: required
-    assertion: '[:neg [:sanctioned "cog"]]'
+    assertion:
+      type: Neg
+      literal:
+        type: Derived
+        pred: sanctioned
+        args:
+        - type: Str
+          value: cog
     asserted_by: risk
     asserted_at: '2026-02-20'
     valid_from: '2026-01-01'
@@ -711,7 +1244,12 @@ claims:
     qualifier: certainly
   - id: C2.3
     role: supporting
-    assertion: '[:price_within_benchmark "cog"]'
+    assertion:
+      type: Derived
+      pred: price_within_benchmark
+      args:
+      - type: Str
+        value: cog
     asserted_by: finance
     asserted_at: '2026-02-25'
     valid_from: '2026-01-01'
@@ -719,7 +1257,14 @@ claims:
     qualifier: presumably
 - id: C7
   about: vendor:cog
-  assertion: '[:neg [:price_within_benchmark "cog"]]'
+  assertion:
+    type: Neg
+    literal:
+      type: Derived
+      pred: price_within_benchmark
+      args:
+      - type: Str
+        value: cog
   asserted_by: finance
   asserted_at: '2026-05-10'
   valid_from: '2026-05-10'
@@ -727,7 +1272,14 @@ claims:
   qualifier: certainly
 - id: C3
   about: emp:e077
-  assertion: '[:cost_centre_of "e077" "cc0078"]'
+  assertion:
+    type: Derived
+    pred: cost_centre_of
+    args:
+    - type: Str
+      value: e077
+    - type: Str
+      value: cc0078
   asserted_by: hr
   asserted_at: '2026-07-01'
   valid_from: '2026-07-01'
@@ -735,7 +1287,14 @@ claims:
   qualifier: certainly
 - id: C4
   about: emp:e077
-  assertion: '[:cost_centre_of "e077" "cc0077"]'
+  assertion:
+    type: Derived
+    pred: cost_centre_of
+    args:
+    - type: Str
+      value: e077
+    - type: Str
+      value: cc0077
   asserted_by: finance
   asserted_at: '2026-01-02'
   valid_from: '2026-01-01'
@@ -743,7 +1302,14 @@ claims:
   qualifier: certainly
 - id: C5
   about: emp:e077
-  assertion: '[:cost_centre_of "e077" "cc0078"]'
+  assertion:
+    type: Derived
+    pred: cost_centre_of
+    args:
+    - type: Str
+      value: e077
+    - type: Str
+      value: cc0078
   asserted_by: finance
   asserted_at: '2026-08-05'
   valid_from: '2026-08-01'
@@ -751,7 +1317,12 @@ claims:
   qualifier: certainly
 - id: C6
   about: vendor:bolt
-  assertion: '[:sanctioned "bolt"]'
+  assertion:
+    type: Derived
+    pred: sanctioned
+    args:
+    - type: Str
+      value: bolt
   asserted_by: risk
   asserted_at: '2026-06-03'
   valid_from: '2026-06-01'

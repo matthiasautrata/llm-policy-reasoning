@@ -4,7 +4,8 @@ title: Spike v3 System A slice
 description: >-
   Physical model, semantic layer, vocabulary, rules and Toulmin claims of the spike v3 procurement slice.
   Detail data is not part of the model: it stays relational and is reached through fetch(concept, filters).
-  Rule heads and bodies are EDN strings (the rule language is EDN data; LinkML holds the envelope).
+  Rule heads, bodies and claim assertions are structured (Literal and RuleTerm classes below), so the schema
+  validates the rule language, not just the envelope.
 license: MIT
 prefixes:
   linkml: https://w3id.org/linkml/
@@ -47,19 +48,22 @@ classes:
     slot_usage:
       kind: {range: ConceptKind, required: true}
       tables: {range: string, required: true, inlined: false, description: Ids of the tables the concept binds to.}
-    rules:
-      - description: a concept has SQL or is derived by a rule
-        postconditions:
-          any_of:
-            - slot_conditions: {sql: {required: true}}
-            - slot_conditions: {derived_by: {required: true}}
+    # A class-level any_of, not a `rules` entry: gen-json-schema turns a rule without preconditions into a bare
+    # JSON Schema `then` (no `if`), which validators ignore (PLAN-v3a-fix Decisions, F2.3).
+    any_of: &sql_or_derived
+      - slot_conditions: {sql: {required: true}}
+      - slot_conditions: {derived_by: {required: true}}
 
   Measure:
     is_a: Concept
     description: A concept whose kind is measure (an aggregate over the detail data).
+    # class-level any_of is not inherited through is_a (gen-json-schema emits it on Concept only, and the
+    # concepts range admits descendants), so it is repeated here and on Dimension.
+    any_of: *sql_or_derived
   Dimension:
     is_a: Concept
     description: A concept whose kind is dimension.
+    any_of: *sql_or_derived
 
   Term:
     description: A vocabulary term with a contrastive definition (X, as opposed to Y, differing in Z).
@@ -129,6 +133,96 @@ classes:
     slot_usage:
       role: {required: true}
 
+  # ---------------------------------------------------------------- the rule language (slice.edn header)
+  # Each literal and term is an object whose `type` names its class (designates_type). Classes are closed, so
+  # a form with too many positions (edn2yaml puts them in `extra`) or a wrong part is rejected.
+
+  Literal:
+    abstract: true
+    description: A literal of a rule head or body, or a claim assertion.
+    attributes:
+      type: {designates_type: true, range: string, required: true}
+  Derived:
+    is_a: Literal
+    description: "[:pred arg ...]: another rule's head, or a claim."
+    attributes:
+      pred: {required: true, pattern: "^[a-z_]+$"}
+      args: {range: RuleTerm, multivalued: true, inlined_as_list: true}
+  Fetch:
+    is_a: Literal
+    description: "[:fetch :concept {col term} {col ?var}]: a concept lookup; bound terms filter, variables bind."
+    attributes:
+      concept: {required: true, pattern: "^[a-z_]+$"}
+      filters: {range: Filter, multivalued: true, inlined: true, required: true}
+      outputs: {range: Output, multivalued: true, inlined: true, required: true}
+  Filter:
+    description: "One entry of a fetch filter map (compact form `column: term`)."
+    attributes:
+      column: {key: true}
+      term: {range: RuleTerm, required: true, inlined: true}
+  Output:
+    description: "One entry of a fetch output map (compact form `column: ?var`)."
+    attributes:
+      column: {key: true}
+      var: {required: true, pattern: "^\\?[A-Za-z_][A-Za-z0-9_]*$"}
+  Not:
+    is_a: Literal
+    description: "[:not literal]: the literal is not defeasibly provable."
+    attributes:
+      literal: {range: Literal, required: true, inlined: true}
+  Neg:
+    is_a: Literal
+    description: "[:neg literal]: the complement (defeater heads, negative claims)."
+    attributes:
+      literal: {range: Literal, required: true, inlined: true}
+  Comparison:
+    is_a: Literal
+    description: "[:< a b] and friends: numbers or ISO dates."
+    attributes:
+      op: {range: ComparisonOp, required: true}
+      left: {range: RuleTerm, required: true, inlined: true}
+      right: {range: RuleTerm, required: true, inlined: true}
+  Is:
+    is_a: Literal
+    description: "[:is ?x [:+ a b]]: arithmetic."
+    attributes:
+      var: {range: Var, required: true, inlined: true}
+      expr: {range: Expr, required: true, inlined: true}
+  AsOf:
+    is_a: Literal
+    description: "[:as_of ?d]: the evaluation date."
+    attributes:
+      date: {range: RuleTerm, required: true, inlined: true}
+
+  RuleTerm:
+    abstract: true
+    description: An argument of a literal (named RuleTerm because Term is the vocabulary class).
+    attributes:
+      type: {designates_type: true, range: string, required: true}
+  Var:
+    is_a: RuleTerm
+    attributes:
+      name: {required: true, pattern: "^\\?[A-Za-z_][A-Za-z0-9_]*$", description: "Variables start with ?."}
+  Str:
+    is_a: RuleTerm
+    attributes:
+      value: {required: true}
+  Int:
+    is_a: RuleTerm
+    attributes:
+      value: {range: integer, required: true}
+  Bool:
+    is_a: RuleTerm
+    attributes:
+      value: {range: boolean, required: true}
+  Expr:
+    is_a: RuleTerm
+    description: "[:+ a b] or [:- a b]; exactly two operands."
+    attributes:
+      op: {range: ArithmeticOp, required: true}
+      left: {range: RuleTerm, required: true, inlined: true}
+      right: {range: RuleTerm, required: true, inlined: true}
+
 slots:
   id: {identifier: true, required: true}
   version: {range: integer}
@@ -169,14 +263,11 @@ slots:
   rule_class: {range: RuleClass}
   conservative: {range: boolean}
   layer: {}
-  head:
-    description: "EDN literal, e.g. [:headroom ?c ?h]."
-  body:
-    description: "EDN vector of literals (see the slice.edn header for the literal forms)."
+  head: {range: Literal, inlined: true, description: "A literal, e.g. [:headroom ?c ?h]."}
+  body: {range: Literal, multivalued: true, inlined_as_list: true, description: "Literals, evaluated left to right."}
   superior_to: {multivalued: true, range: string, pattern: "^R[0-9]+$"}
   order: {multivalued: true, range: Owner, description: "Asserter authority, strongest first."}
-  assertion:
-    description: "EDN literal, e.g. [:cost_centre_of \"e077\" \"cc0078\"]."
+  assertion: {range: Literal, inlined: true, description: "A literal, e.g. [:cost_centre_of \"e077\" \"cc0078\"]."}
   asserted_by: {range: Owner}
   asserted_at: {range: date}
   valid_from: {range: date}
@@ -197,3 +288,5 @@ enums:
   Owner: {permissible_values: {finance: {}, hr: {}, procurement: {}, compliance: {}, risk: {}, controller: {}}}
   Modal: {permissible_values: {certainly: {}, presumably: {}}}
   SubClaimRole: {permissible_values: {required: {}, supporting: {}}}
+  ComparisonOp: {permissible_values: {"<": {}, "<=": {}, ">": {}, ">=": {}, "=": {}}}
+  ArithmeticOp: {permissible_values: {"+": {}, "-": {}}}
