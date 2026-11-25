@@ -62,14 +62,14 @@ scope(P, St) :- format(string(T), "term:~w", [P]), ( term(T, _) -> St = "UNDERDE
 decide_ground(G, D, R) :-
     evaluate(G, D, E),
     (   E = proven(Sups, SupN)
-    ->  team_proofs(Sups, SupN, Why), answer("ANSWER", true, null, Why, R)
+    ->  team_proofs(Sups, SupN, Why), answer("ANSWER", true, null, Why, D, R)
     ;   E = blocked(Sups, Un)
     ->  ids_of(Sups, A), ids_of(Un, B), sort([A, B], Sides),
         maplist([s(_, _, P), P]>>true, Sups, W1), maplist([a(_, _, _, P), P]>>true, Un, W2), append(W1, W2, Why),
-        answer("CONFLICT", null, Sides, Why, R)
+        answer("CONFLICT", null, Sides, Why, D, R)
     ;   E = contested(_, _)                            % downstream of a root conflict
-    ->  contested_why(G, D, Sides, Node), answer("CONFLICT", null, Sides, [Node], R)
-    ;   explain_not(G, D, N), absence(G, D, E, Abs), answer("ANSWER", false, null, [N], Abs, R) ).
+    ->  contested_why(G, D, Sides, Node), answer("CONFLICT", null, Sides, [Node], D, R)
+    ;   explain_not(G, D, N), absence(G, D, E, Abs), answer("ANSWER", false, null, [N], Abs, D, R) ).
 
 %!  absence(+G, +D, +E, -Abs)  SEMANTICS.md, Qualifier: a refuted ground G rests on absence when no supporter
 %   was live, or when the winning attacker's proof uses a :closed_over rule; an open G with no binding
@@ -77,13 +77,37 @@ decide_ground(G, D, R) :-
 absence(G, D, _, false) :- pred_of(G, P), covered(P, D), !.
 absence(_, _, none(_), true) :- !.
 absence(_, _, open, true) :- !.
-absence(_, _, defeated(a(_, _, _, Pf), _, _), true) :- why_ids([Pf], Ids), uses_closed(Ids), !.
+absence(_, D, defeated(a(_, _, _, Pf), _, _), true) :- why_ids([Pf], Ids), uses_uncovered_closed(Ids, D), !.
 absence(_, _, _, false).
 
-covered(P, D) :-
-    claim(Id, [complete, S], _, _, F, T, _, _, _, _), active(Id), in_force(F, T, D), atom_string(P, S), !.
+%!  covered(+N, +D)  SEMANTICS.md, Qualifier (IR-005, amended 2026-11-25): N (a predicate or a fetch
+%   concept) is covered when an in-force [:complete "N"] claim names it, or when N is a predicate no active
+%   claim asserts, some active rule concludes or attacks it, and every such rule's body is covered. A
+%   predicate met again on the path counts as covered.
+covered(N, D) :- covered(N, D, []).
+covered(N, D, _) :- complete(N, D), !.
+covered(P, _, Path) :- memberchk(P, Path), !.
+covered(P, D, Path) :-
+    \+ ( claim(Id, A, _, _, _, _, _, _, _, _), active(Id), pred_of(A, P) ),
+    findall(B, ( rule(Id, K, H, B, _), K \== superiority, active(Id), H \== none, pred_of(H, P) ), Bs),
+    Bs \== [],
+    forall(member(B, Bs), body_covered(B, D, [P|Path])).
 
-uses_closed(Ids) :- member(Id, Ids), rule(Id, _, _, _, M), mget(closed_over, M, known_facts), !.
+complete(N, D) :-
+    claim(Id, [complete, S], _, _, F, T, _, _, _, _), active(Id), in_force(F, T, D), atom_string(N, S), !.
+
+body_covered(B, D, Path) :- forall(member(L, B), lit_covered(L, D, Path)).
+lit_covered([fetch, C|_], D, _) :- !, complete(C, D).
+lit_covered([not, L], D, Path) :- !, lit_covered(L, D, Path).
+lit_covered([agg, _, _, B, _], D, Path) :- !, body_covered(B, D, Path).
+lit_covered(L, D, Path) :- derived_lit(L), !, pred_of(L, P), covered(P, D, Path).
+lit_covered(_, _, _).
+
+%   A rule is covered when its body is.
+rule_covered(Id, D) :- rule(Id, _, _, B, _), body_covered(B, D, []).
+
+uses_uncovered_closed(Ids, D) :-
+    member(Id, Ids), rule(Id, _, _, _, M), mget(closed_over, M, known_facts), \+ rule_covered(Id, D), !.
 
 %!  contested_why(+G, +D, -Sides, -Node)  PLAN-v3-integrity §4: the contested node of a downstream G
 contested_why(G, D, Sides, _{type:contested, goal:G, via:Via, rules:Rules, roots:RNs}) :-
@@ -113,20 +137,20 @@ decide_open(G, D, R) :-
     (   Cont \== []                                    % propagation: any contested instance contests the goal
     ->  findall(Sd-W, ( member(Gi-Ei, Cont), inst_conflict(Gi, D, Ei, Sd, W) ), SWs),
         pairs_keys_values(SWs, Sds, Ws), append(Sds, S0), sort(S0, Sides), append(Ws, Why),
-        answer("CONFLICT", null, Sides, Why, R)
+        answer("CONFLICT", null, Sides, Why, D, R)
     ;   functional(P, _)
-    ->  (   Won = [G1-proven(S, SN)] -> G = G1, value_of(Vs, V), team_proofs(S, SN, Why), answer("ANSWER", V, null, Why, R)
+    ->  (   Won = [G1-proven(S, SN)] -> G = G1, value_of(Vs, V), team_proofs(S, SN, Why), answer("ANSWER", V, null, Why, D, R)
         ;   Won = [], GEs \== []
         ->  findall(Ids, ( member(_-E, GEs), sups_of(E, Ss), Ss \== [], ids_of(Ss, Ids) ), Sides0), sort(Sides0, Sides),
             findall(Pf, ( member(_-E, GEs), sups_of(E, Ss), member(s(_, _, Pf), Ss) ), Why),
-            answer("CONFLICT", null, Sides, Why, R)
-        ;   Won = [] -> explain_not(G, D, N), absence(G, D, open, Abs), answer("ANSWER", null, null, [N], Abs, R)
+            answer("CONFLICT", null, Sides, Why, D, R)
+        ;   Won = [] -> explain_not(G, D, N), absence(G, D, open, Abs), answer("ANSWER", null, null, [N], Abs, D, R)
         ;   findall(V, ( member(G-_, Won), value_of(Vs, V) ), Vals),
-            answer("CONFLICT", null, null, [], R0), R = R0.put(value, Vals) )
+            answer("CONFLICT", null, null, [], D, R0), R = R0.put(value, Vals) )
     ;   findall(V-Why1, ( member(G-proven(S, SN), Won), value_of(Vs, V), team_proofs(S, SN, Why1) ), VWs),
         pairs_keys_values(VWs, Vals0, Whys), sort(Vals0, Vals), append(Whys, Why),
         ( Vals == [] -> absence(G, D, open, Abs) ; Abs = false ),
-        answer("ANSWER", Vals, null, Why, Abs, R) ).
+        answer("ANSWER", Vals, null, Why, Abs, D, R) ).
 
 sups_of(proven(S, _), S).
 sups_of(defeated(_, S, _), S).
@@ -136,18 +160,18 @@ sups_of(none(_), []).
 value_of([V], V) :- !.
 value_of(Vs, Vs).
 
-answer(St, V, Sides, Why, R) :- answer(St, V, Sides, Why, false, R).
-answer(St, V, Sides, Why, Abs, _{status:St, value:V, sides:Sides, why:Why, owners:Os, qualifier:Q}) :-
+answer(St, V, Sides, Why, D, R) :- answer(St, V, Sides, Why, false, D, R).
+answer(St, V, Sides, Why, Abs, D, _{status:St, value:V, sides:Sides, why:Why, owners:Os, qualifier:Q}) :-
     why_ids(Why, Ids), findall(O, ( member(Id, Ids), rule(Id, _, _, _, M), mget(owner, M, O) ), Os0), sort(Os0, Os),
-    qualifier(St, V, Ids, Abs, Q).
+    qualifier(St, V, Ids, Abs, D, Q).
 
 %   IR-005 (SEMANTICS.md, Qualifier): a positive answer proven through a rule marked :closed_over
 %   :known_facts is total only over the known facts (its :not / aggregate / measure reads every fact there
 %   is, with no completeness claim behind it); a negative answer when it rests on absence (absence/4).
-qualifier("ANSWER", V, Ids, Abs, Q) :-
-    (   memberchk(V, [false, null, []]) -> Abs == true ; uses_closed(Ids) ), !,
+qualifier("ANSWER", V, Ids, Abs, D, Q) :-
+    (   memberchk(V, [false, null, []]) -> Abs == true ; uses_uncovered_closed(Ids, D) ), !,
     Q = "total over known facts in declared scope".
-qualifier(_, _, _, _, null).
+qualifier(_, _, _, _, _, null).
 
 why_ids(Why, Ids) :- findall(Id, ( sub_node(Why, N), is_dict(N), get_dict(id, N, Id) ), Ids0), sort(Ids0, Ids).
 sub_node(X, X).
