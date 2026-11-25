@@ -128,3 +128,9 @@ Fix both, re-measure the affected criteria, and update `RESULTS.md`. The goal is
   | `slice.instance.yaml` | 760 | 1331 (vs `slice.edn` 318) |
   | `edn2yaml.py` | 61 | 158 |
   | `build.py` | 203 | 278 |
+
+**2026-11-24 · F3 re-run.**
+- `accept.py` has no backend switch, because check 2 already reruns everything on Postgres. "Both backends" therefore means one `accept.py` run per spike, plus `isolation.py --backend duckdb|postgres` in every hypothesis mode.
+- All runs are green. The only failures are V3a's `assert` mode, the intended control, which fails on both backends.
+- V3a's Postgres decide p50 dropped from 12.6 to 8.5 ms. The pre-fix commit `8828f1b`, benchmarked today from a temporary worktree, gives 8.6 ms, so the old figure was variation, not F1. RESULTS reports both.
+- V3b's `with` mode is now exercised by `isolation.py`, which answers PROGRESS question 4.
