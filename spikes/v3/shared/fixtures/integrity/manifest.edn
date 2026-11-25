@@ -9,4 +9,5 @@
  {:ir "IR-003" :file "ir003-ordering-key.edn" :violation "rebuttal-without-preference" :members ["RP1"] :exact true}
  {:ir "IR-004" :derive {:drop-additivity "measure:booked_total"} :violation "missing-additivity" :members ["measure:booked_total"] :exact true}
  {:ir "IR-005" :file "ir005-no-completeness.edn" :violation "negative-without-completeness" :members ["RN1"] :exact true}
- {:ir "IR-006" :file "ir006-unbound-call.edn" :violation "unbound-call" :members ["RU1"]}]
+ {:ir "IR-006" :file "ir006-unbound-call.edn" :violation "unbound-call" :members ["RU1"]}
+ {:ir "IR-007" :file "ir007-unsafe-aggregation.edn" :violation "unsafe-aggregation" :members ["RA1" "measure:booked_total"] :exact true}]

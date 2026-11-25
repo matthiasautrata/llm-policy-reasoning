@@ -21,4 +21,5 @@
  :screening_clear "+"     ; RY55: [:not [:blacklisted ?v]] needs ?v bound
  :home_budget "--"        ; RY56: cost_centre_of is claims-only (enumerable)
  ;; fixtures/integrity (declared so each fixture fails on its own violation only)
- :board_signoff "+"}
+ :board_signoff "+"
+ :chain_booked "+-"}      ; IR-007 fixture RA1

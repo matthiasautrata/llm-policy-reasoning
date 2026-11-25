@@ -5,7 +5,8 @@
 ;; keyed under keys.json "acyclic", and left out of the base / extended question list. Q30-Q39 of PLAN-v3-cycles:
 ;; Q30 Q32 Q34 Q35 Q37 kept (same goal, same key); Q31 Q33 (the loops) retired to fixtures/integrity (load
 ;; rejection, accept check 8); Q36 (downstream of the Y2 loop) retired; Q38 Q39 (Y6) became accept check 7's
-;; hypothesis tests. Every decide key holds the qualifier (IR-005; SEMANTICS.md, Qualifier).
+;; hypothesis tests. Every decide key holds the qualifier (IR-005; SEMANTICS.md, Qualifier). Q26 Q27 (the IR-005
+;; branches) retired 2026-11-25: Q01 and Q09 key the same goals with the same qualifiers (PROGRESS 13).
 [{:id :Q01 :kind :decide :goal [:booked_total "cc0009" ?v] :text "What is the booked total of cost centre cc0009?"}
  {:id :Q02 :kind :decide :goal [:headroom "cc0009" ?v] :text "What headroom does cc0009 have?"}
  {:id :Q03 :kind :decide :goal [:role_limit "manager" ?l] :as_of "2026-07-15" :text "What was a manager's approval limit on 15 July?"}
@@ -34,10 +35,6 @@
   :text "What is the pending exposure of the root cost centre? (A1 regression: the sum exceeds INT32)"}
  {:id :Q25 :kind :fetch :concept :booked_total :filters {:cc "cc0000"}
   :text "What is the booked total of the root cost centre? (integer-cast regression: the SUM is cast to BIGINT)"}
- {:id :Q26 :kind :decide :goal [:booked_total "cc0009" ?v]
-  :text "IR-005 completeness branch: booked total of cc0009 (R104 names completeness claim C10; no qualifier)"}
- {:id :Q27 :kind :decide :goal [:approved "r000005"]
-  :text "IR-005 closed-over branch: is r000005 approved (R310, R304 closed over known facts: qualified)?"}
  {:id :Q44 :kind :decide :goal [:approved_total "cc0058" ?v]
   :text "§2.1 (a): approved total of the cc0058 subtree (every member's approval proven or refuted)"}
  {:id :Q45 :kind :decide :goal [:approved_count "cc0290" ?n]
@@ -56,6 +53,19 @@
   :text "§2.3 control: is a purchase order issued for r000005 (approved by R310, no conflict)?"}
  {:id :Q52 :kind :decide :goal [:po_issued "r000006"]
   :text "§2.3 control: is a purchase order issued for r000006 (not approved: R316 not live, qualified)?"}
+ {:id :Q53 :kind :decide :goal [:cap_breach "r000005"]
+  :text "PROGRESS 14: does r000005 breach a cap? (no; cap_breach reads request, employee, ancestors_or_self, cost_centre: uncovered, qualified)"}
+ {:id :Q54 :kind :decide :goal [:cap_breach "r000005"]
+  :hypothesis {:add "[{:id :CQ1 :about \"entity:request\" :assertion [:complete \"request\"] :asserted_by :procurement :asserted_at #inst \"2026-11-25\" :valid_from #inst \"2026-01-01\" :valid_to #inst \"2026-12-31\" :recorded_at #inst \"2026-11-25\" :backing \"probe: §14 derived coverage\" :qualifier \"certainly\"}
+         {:id :CQ2 :about \"entity:employee\" :assertion [:complete \"employee\"] :asserted_by :hr :asserted_at #inst \"2026-11-25\" :valid_from #inst \"2026-01-01\" :valid_to #inst \"2026-12-31\" :recorded_at #inst \"2026-11-25\" :backing \"probe: §14 derived coverage\" :qualifier \"certainly\"}
+         {:id :CQ3 :about \"hier:ancestors_or_self\" :assertion [:complete \"ancestors_or_self\"] :asserted_by :finance :asserted_at #inst \"2026-11-25\" :valid_from #inst \"2026-01-01\" :valid_to #inst \"2026-12-31\" :recorded_at #inst \"2026-11-25\" :backing \"probe: §14 derived coverage\" :qualifier \"certainly\"}
+         {:id :CQ4 :about \"dim:cost_centre\" :assertion [:complete \"cost_centre\"] :asserted_by :finance :asserted_at #inst \"2026-11-25\" :valid_from #inst \"2026-01-01\" :valid_to #inst \"2026-12-31\" :recorded_at #inst \"2026-11-25\" :backing \"probe: §14 derived coverage\" :qualifier \"certainly\"}]"}
+  :text "PROGRESS 14: the same with every concept R106 reads declared complete (cap_breach covered: not qualified)"}
+ {:id :Q55 :kind :decide :goal [:cap_breach "r000005"]
+  :hypothesis {:add "[{:id :CQ1 :about \"entity:request\" :assertion [:complete \"request\"] :asserted_by :procurement :asserted_at #inst \"2026-11-25\" :valid_from #inst \"2026-01-01\" :valid_to #inst \"2026-12-31\" :recorded_at #inst \"2026-11-25\" :backing \"probe: §14 derived coverage\" :qualifier \"certainly\"}
+         {:id :CQ2 :about \"entity:employee\" :assertion [:complete \"employee\"] :asserted_by :hr :asserted_at #inst \"2026-11-25\" :valid_from #inst \"2026-01-01\" :valid_to #inst \"2026-12-31\" :recorded_at #inst \"2026-11-25\" :backing \"probe: §14 derived coverage\" :qualifier \"certainly\"}
+         {:id :CQ3 :about \"hier:ancestors_or_self\" :assertion [:complete \"ancestors_or_self\"] :asserted_by :finance :asserted_at #inst \"2026-11-25\" :valid_from #inst \"2026-01-01\" :valid_to #inst \"2026-12-31\" :recorded_at #inst \"2026-11-25\" :backing \"probe: §14 derived coverage\" :qualifier \"certainly\"}]"}
+  :text "PROGRESS 14: the same without cost_centre declared complete (cap_breach uncovered: qualified)"}
  {:id :Q30 :state :acyclic :kind :decide :goal [:blacklisted "fern"] :text "Y1: is fern blacklisted (risk says yes, compliance says no)?"}
  {:id :Q32 :state :acyclic :kind :decide :goal [:preferred "acme"] :text "Y2 control: is acme (never suspended) preferred?"}
  {:id :Q34 :state :acyclic :kind :decide :goal [:watchlisted "cog"] :text "Y4: is cog watchlisted (risk prevails over compliance)?"}

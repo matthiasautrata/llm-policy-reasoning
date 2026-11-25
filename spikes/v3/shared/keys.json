@@ -872,28 +872,6 @@
    "row_count": 1,
    "value": 153646000
   },
-  "Q26": {
-   "core": [
-    "R104"
-   ],
-   "qualifier": null,
-   "sides": null,
-   "status": "ANSWER",
-   "value": 3715000
-  },
-  "Q27": {
-   "core": [
-    "R310",
-    "R308",
-    "R301",
-    "R304",
-    "R305"
-   ],
-   "qualifier": "total over known facts in declared scope",
-   "sides": null,
-   "status": "ANSWER",
-   "value": true
-  },
   "Q44": {
    "core": [
     "R120"
@@ -1120,6 +1098,33 @@
   "Q52": {
    "core": [
     "R316"
+   ],
+   "qualifier": "total over known facts in declared scope",
+   "sides": null,
+   "status": "ANSWER",
+   "value": false
+  },
+  "Q53": {
+   "core": [
+    "R106"
+   ],
+   "qualifier": "total over known facts in declared scope",
+   "sides": null,
+   "status": "ANSWER",
+   "value": false
+  },
+  "Q54": {
+   "core": [
+    "R106"
+   ],
+   "qualifier": null,
+   "sides": null,
+   "status": "ANSWER",
+   "value": false
+  },
+  "Q55": {
+   "core": [
+    "R106"
    ],
    "qualifier": "total over known facts in declared scope",
    "sides": null,
@@ -1718,28 +1723,6 @@
    "row_count": 1,
    "value": 153646000
   },
-  "Q26": {
-   "core": [
-    "R104"
-   ],
-   "qualifier": null,
-   "sides": null,
-   "status": "ANSWER",
-   "value": 3715000
-  },
-  "Q27": {
-   "core": [
-    "R310",
-    "R308",
-    "R301",
-    "R304",
-    "R305"
-   ],
-   "qualifier": "total over known facts in declared scope",
-   "sides": null,
-   "status": "ANSWER",
-   "value": true
-  },
   "Q44": {
    "core": [
     "R120"
@@ -1966,6 +1949,33 @@
   "Q52": {
    "core": [
     "R316"
+   ],
+   "qualifier": "total over known facts in declared scope",
+   "sides": null,
+   "status": "ANSWER",
+   "value": false
+  },
+  "Q53": {
+   "core": [
+    "R106"
+   ],
+   "qualifier": "total over known facts in declared scope",
+   "sides": null,
+   "status": "ANSWER",
+   "value": false
+  },
+  "Q54": {
+   "core": [
+    "R106"
+   ],
+   "qualifier": null,
+   "sides": null,
+   "status": "ANSWER",
+   "value": false
+  },
+  "Q55": {
+   "core": [
+    "R106"
    ],
    "qualifier": "total over known facts in declared scope",
    "sides": null,

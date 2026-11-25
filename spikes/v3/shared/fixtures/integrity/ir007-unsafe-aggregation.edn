@@ -1,0 +1,7 @@
+;; IR-007: a :sum of the semi-additive booked_total (through R104) across the cost centres of a chain:
+;; unsafe-aggregation [RA1 measure:booked_total]. Each ancestor's booked total already includes its subtree.
+[{:id :RA1 :kind :strict :owner :finance :class :definition :closed_over :known_facts
+  :recorded_at #inst "2026-11-25"
+  :doc "The chain booking of a cost centre is the sum of the booked totals of it and its ancestors."
+  :head [:chain_booked ?c0 ?v]
+  :body [[:agg :sum ?b [[:fetch :ancestors_or_self {:cc ?c0} {:anc ?c}] [:booked_total ?c ?b]] ?v]]}]

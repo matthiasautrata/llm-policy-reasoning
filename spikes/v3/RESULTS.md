@@ -28,7 +28,7 @@ Measured 2026-11-25 on Apple Silicon (macOS). Versions: SWI-Prolog 11.0.1, janus
   - `[:agg :sum|:count ?x [body] ?out]` aggregates over the solutions of a derived conjunction (below).
   - Every `decide` ANSWER carries a `qualifier`: `"total over known facts in declared scope"` when the answer rests on absence, else null (below).
 - **Oracle.** `shared/reference.py` re-implements the semantics independently of the engine and writes `keys.json`. `check_why.py` re-derives every why tree, re-running node SQL. The mutation test (check 1 must fail on mutated keys) guards the checker itself.
-- **Integrity gate** (`shared/model_check.py` through `shared/integrity.py`, IR-001a … IR-006).
+- **Integrity gate** (`shared/model_check.py` through `shared/integrity.py`, IR-001a … IR-007).
   - One shared Python implementation, imported by V3a and run at load, before every `add`, and inside `with_hypothesis` against the hypothetical rule base. A violation rejects the change and leaves the state as it was.
   - Cycles are rejected, never answered. A re-entry guard in the evaluator backs this up when the gate is off.
   - One check of slice + extension + acyclic takes about 12.6 ms.
@@ -42,6 +42,7 @@ Measured 2026-11-25 on Apple Silicon (macOS). Versions: SWI-Prolog 11.0.1, janus
 | IR-004 | `missing-additivity` on a measure | derived: slice without `:additivity` |
 | IR-005 | `negative-without-completeness` | `ir005-no-completeness.edn` |
 | IR-006 | `unbound-call` (moded safety, `modes.edn`) | `ir006-unbound-call.edn` |
+| IR-007 | `unsafe-aggregation` (a `:sum` of a `:semi-additive` measure across a parameter bound inside the aggregate) | `ir007-unsafe-aggregation.edn` (RA1) |
 
 ## The engine: V3a (`v3a-prolog/`)
 
@@ -112,14 +113,25 @@ Cost is linear, about 2.9 statements and 3 ms per pending member. Every statemen
 
 *Push-down (proposed, not implemented):* evaluate the body set-at-a-time. Fetch the members once, then prove `approved` for all of them with one batched fetch per concept (an `IN` list or a join on the member query), so the statement count is O(number of concepts) rather than O(members). Strict conditions expressible in SQL (category, amount thresholds) go into the subtree query itself.
 
-**Integrity candidate (proposed for the ledger, no id).** Aggregating a `:semi-additive` measure across one of its `:unsafe_dims` is rejected. No slice rule does this today, so nothing changes.
+**IR-007 `unsafe-aggregation`** (`SEMANTICS.md`, Aggregates). The gate rejects a `:sum` of a `:semi-additive` measure across one of the measure's parameters. That covers both a direct fetch of the measure and a predicate that carries it, as R104 carries `booked_total`. Every parameter counts as unsafe, because the slice maps no parameter to a dimension. No slice rule is rejected. The fixture RA1 sums `booked_total` over a chain of ancestors.
 
 **Absence qualifier** (`SEMANTICS.md`, Qualifier). The qualifier is set when:
 - a positive answer's why tree uses a `:closed_over` rule (as before);
 - a ground `false` had no live supporter, or was defeated by an attacker whose proof uses a `:closed_over` rule;
 - an open answer is `null` or `[]`.
 
-An in-force `[:complete "P"]` claim on the goal's predicate removes it from a negative answer. Every `decide` key now holds the qualifier. Keys that changed: Q09 (now CLOSED, by R310/R304); Q18 (false with no live supporter); Q47 is new (`denied r000005` false, R309 not live); Q52 is new (`po_issued r000006` false). Q07ext (false, defeated by R307, which is not `:closed_over`) stays null. No question reaches the completeness exception; it was checked with a probe claim only.
+Coverage is derived (IR-005 amended 2026-11-25). A name is covered when an in-force `[:complete "N"]` claim names it, or when it is a predicate that no claim feeds and every rule that concludes or attacks it reads only covered names. Only uncovered rules and predicates qualify an answer. In the slice only `booked_total` is covered (C10), so no base key changes. Q53–Q55 ask whether r000005 breaches a cap (`false`, with no live supporter):
+- Q53, base: CLOSED;
+- Q54, with `request`, `employee`, `ancestors_or_self` and `cost_centre` declared complete inside `with_hypothesis`: `null`, because `cap_breach` is now covered;
+- Q55, the same without `cost_centre`: CLOSED.
+
+Every `decide` key holds the qualifier. Keys changed when the qualifier was introduced:
+- Q09, now CLOSED, by R310 and R304;
+- Q18, `false` with no live supporter;
+- Q47, new (`denied r000005` `false`, R309 not live);
+- Q52, new (`po_issued r000006` `false`).
+
+Q07ext stays `null`: it is `false`, defeated by R307, which is not `:closed_over`. Q26 and Q27 were removed on 2026-11-25 because they duplicated Q01 and Q09 (PROGRESS 13). Removing them and adding Q53–Q55 changed no other key.
 
 **Downstream of real conflicts.** Two rules derive from contested literals:
 - R315 `home_headroom` (`cost_centre_of` then `headroom`): Q48 withholds R313 on 15 July and gives CONFLICT `[[C3],[C4]]`, with one contested instance per claimed cost centre; Q49 is the same without the hypothesis, an ANSWER `[34000]` because R313 lets finance's C4 win;

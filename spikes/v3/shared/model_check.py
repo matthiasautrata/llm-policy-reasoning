@@ -376,7 +376,7 @@ def kw(x):
 
 
 def integrity_violations(S, rules, claims):
-    """IR-001a .. IR-005 over the active rule base (IR-006 is the moded check in check())."""
+    """IR-001a .. IR-005 and IR-007 over the active rule base (IR-006 is the moded check in check())."""
     out = []
     cyc = negative_cycles(rules, claims, S.get("functional") or {})
     for c in cyc:
@@ -418,8 +418,60 @@ def integrity_violations(S, rules, claims):
             continue
         out.append(V("negative-without-completeness", [r["id"]],
                      f"{r['id']} uses {uses} without :completeness [claim ids] or :closed_over :known_facts"))
+    out += unsafe_aggregations(S, rules)
     for e in shape_errors(S, rules, claims, additivity=False):
         out.append(V("malformed-record", [e.split(":", 1)[0]], e))
+    return out
+
+
+def unsafe_aggregations(S, rules):
+    """IR-007 (SEMANTICS.md, Aggregates). A :sum whose ?x is the value of a :semi-additive measure, with a
+    parameter of the measure local to the conjunction (bound neither by the head nor by an earlier body
+    literal), adds the measure up across that parameter. The slice maps no parameter to a dimension, so every
+    parameter counts as one of the :unsafe_dims (conservative). ?x is the measure's value either from a fetch
+    of it, or through a predicate that carries it (a fixpoint: a head argument bound from the value column,
+    the parameters bound from head arguments, as R104 does)."""
+    semi = {}
+    for c in S.get("concepts") or []:
+        if c.get("kind") == "measure" and c.get("additivity") == "semi-additive" and c.get("params"):
+            ps = [kw(x) for x in c["params"]]
+            semi[kw(c["name"])] = (c["id"], ps, [kw(x) for x in c.get("columns") or [] if kw(x) not in ps])
+
+    def sources(lit, carry):
+        """-> [(measure, value term, {param: term})] that lit binds."""
+        if lit[0] == "fetch" and lit[1] in semi:
+            _, ps, vals = semi[lit[1]]
+            return [(lit[1], lit[3].get(v), {q: lit[2].get(q) for q in ps}) for v in vals if v in lit[3]]
+        if lit[0] in carry and lit[0] not in ("not", "agg", "fetch"):
+            return [(m, lit[1 + i], {q: lit[1 + j] for q, j in pm.items()}) for m, i, pm in carry[lit[0]]
+                    if len(lit) > max([i] + list(pm.values())) + 1]
+        return []
+
+    carry, grew = {}, True
+    while grew:
+        grew = False
+        for r in rules:
+            h = r.get("head")
+            if not h or h[0] == "neg" or r.get("kind") == "defeater": continue
+            pos = {t: i for i, t in enumerate(h[1:]) if is_var(t)}
+            for b in r.get("body") or []:
+                for m, v, pm in sources(b, carry):
+                    if v in pos and all(t in pos for t in pm.values()):
+                        e = (m, pos[v], {q: pos[t] for q, t in pm.items()})
+                        if e not in carry.setdefault(h[0], []):
+                            carry[h[0]].append(e); grew = True
+    out = []
+    for r in rules:
+        bound = set(vars_of(r.get("head")))
+        for b in r.get("body") or []:
+            if b[0] == "agg" and b[1] == "sum":
+                for lit in b[3]:
+                    for m, v, pm in sources(lit, carry):
+                        loc = sorted(q for q, t in pm.items() if is_var(t) and t not in bound)
+                        if v == b[2] and loc:
+                            out.append(V("unsafe-aggregation", [r["id"], semi[m][0]],
+                                         f"{r['id']}: :sum of {semi[m][0]} (:semi-additive) across {loc}, bound inside the aggregate"))
+            bound |= set(vars_of(b))
     return out
 
 

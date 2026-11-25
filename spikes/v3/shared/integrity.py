@@ -12,7 +12,8 @@ A hypothesis that removes a violation is allowed (the check runs on the hypothet
 
 Violations: defeat-cycle (IR-001a), superiority-cycle (IR-001b), duplicate-definition (IR-002),
 rebuttal-without-preference (IR-003), missing-additivity (IR-004), negative-without-completeness
-(IR-005), unbound-call (IR-006), malformed-record (flat-claim shape, recorded_at in a body).
+(IR-005), unbound-call (IR-006), unsafe-aggregation (IR-007), malformed-record (flat-claim shape,
+recorded_at in a body).
 INTEGRITY_GATE=off in the environment disables the gate (cycles_probe.py: the re-entry guard test).
 """
 import json, os, pathlib, sys, time

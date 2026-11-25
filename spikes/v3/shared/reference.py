@@ -253,26 +253,85 @@ def answer(R, q):
 
 
 def qualifier(R, q, k):
-    """SEMANTICS.md, Qualifier (IR-005): CLOSED when the ANSWER rests on absence."""
+    """SEMANTICS.md, Qualifier (IR-005, amended 2026-11-25): CLOSED when the ANSWER rests on absence and the
+    absence is not covered (derived coverage, coverage() below)."""
     if k["status"] != "ANSWER":
         return None
+    h = q.get("hypothesis") or {}
+    cov = Coverage(R, q.get("as_of") or R.today, h.get("withhold") or (), plain(list(E.loads(h["add"]))) if h.get("add") else [])
     closed = {kw(r["id"]) for r in R.S["rules"] if kw(r.get("closed_over")) == "known_facts"}
-    g, d = q["goal"], q.get("as_of") or R.today
+    open_closed = {i for i in closed if not cov.rule(i)}
+    g = q["goal"]
     if k["value"] not in (False, None, []):
-        return CLOSED if set(k["core"]) & closed else None
-    covered = any(plain(c["assertion"]) == ["complete", g[0]] and R.in_force(c, d) for c in R.claims.values())
-    return None if covered else CLOSED if absent(R, g, k["value"], closed) else None
+        return CLOSED if set(k["core"]) & open_closed else None
+    return None if cov.pred(g[0]) else CLOSED if absent(R, g, k["value"], open_closed) else None
+
+
+# Coverage (SEMANTICS.md, Qualifier), read from the rule docs, not from the rule bodies: per predicate, the rules
+# that conclude or attack it, and what each one reads: ("f", concept) a fetch, ("p", predicate) a derived
+# literal or the [:not] of one. Builtins and as_of are always covered and are left out.
+F, P = (lambda c: ("f", c)), (lambda c: ("p", c))
+DEPS = {
+    "booked_total": {"R104": [F("booked_total")]},
+    "headroom": {"R105": [P("booked_total"), F("cost_centre")]},
+    "cap_breach": {"R106": [F("request"), F("employee"), F("ancestors_or_self"), P("booked_total"), F("cost_centre")]},
+    "breach_in": {"R110": [F("request_in_subtree"), P("cap_breach")]},
+    "approved_total": {"R120": [F("request_in_subtree"), P("approved")]},
+    "approved_count": {"R121": [F("request_in_subtree"), P("approved")]},
+    "big_capital": {"R112": [F("request")]},
+    "role_limit": {"R201": [P("limit_on")]},
+    "limit_on": {"R202": [F("role_limit_version")]},
+    "governing_limit": {"R203": [F("request"), P("limit_on")]},
+    "vendor_status_for": {"R204": [F("request"), F("vendor_status")]},
+    "has_approver": {"R301": [F("request"), F("reporting_chain"), P("governing_limit")]},
+    "cap_ok": {"R304": [P("cap_breach")]},
+    "vendor_cleared": {"R305": [P("vendor_status_for")], "R306": [F("request"), P("vendor_status_for")],
+                       "R307": [F("request"), P("vendor_status_for"), P("big_capital")]},     # R307: extension defeater
+    "eligible": {"R308": [P("has_approver"), P("cap_ok"), P("vendor_cleared")]},
+    "denied": {"R309": [F("request"), F("employee")]},
+    "approved": {"R310": [P("eligible"), P("denied")], "R312": [P("auto_approved")], "R314": [P("denied")]},
+    "auto_approved": {"R311": [F("request")]},
+    "home_headroom": {"R315": [P("cost_centre_of"), P("headroom")]},
+    "po_issued": {"R316": [P("approved")]},
+}
+RULE_DEPS = {i: ds for rs in DEPS.values() for i, ds in rs.items()}
+
+
+class Coverage:
+    """A name is covered by an in-force [:complete "N"] claim, or (a predicate) when no claim asserts it or its
+    complement and every present, unwithheld rule that concludes or attacks it reads only covered names."""
+    def __init__(self, R, d, withhold, added):
+        self.R, self.withhold = R, set(withhold)
+        claims = [c for c in list(R.claims.values()) + [x for x in added if "assertion" in x] if c["id"] not in self.withhold]
+        self.complete = {plain(c["assertion"])[1] for c in claims
+                         if plain(c["assertion"])[0] == "complete" and R.in_force(c, d)}
+        self.fed = {(a[1][0] if a[0] == "neg" else a[0]) for a in (plain(c["assertion"]) for c in claims)}
+
+    def rules(self, p):
+        return {i: ds for i, ds in DEPS.get(p, {}).items() if i not in self.withhold and (i != "R307" or self.R.has_R307)}
+
+    def pred(self, p, path=()):
+        if p in self.complete: return True
+        if p in path: return True                      # positive recursion adds no gap (none in the slice)
+        rs = self.rules(p)
+        return bool(rs) and p not in self.fed and all(self.deps(ds, path + (p,)) for ds in rs.values())
+
+    def deps(self, ds, path=()):
+        return all(n in self.complete if t == "f" else self.pred(n, path) for t, n in ds)
+
+    def rule(self, rid):
+        return self.deps(RULE_DEPS[rid])
 
 
 def absent(R, g, v, closed):
     """A negative value rests on absence: open null/[] always; a ground false when no supporter was live,
-    or when the defeater that refutes it is :closed_over. Reasoned per predicate from the rule docs."""
+    or when the defeater that refutes it is an uncovered :closed_over rule. Reasoned per predicate from the rule docs."""
     if v is not False:
         return True                                    # open: no binding is known
     p = g[0]
     if p == "approved":                                # R310 needs [:not denied], so R314 never meets a live R310,
         return True                                    # and a live R312 gives true or CONFLICT: false is none
-    if p == "denied":                                  # R309 is the only supporter; nothing attacks it
+    if p in ("denied", "cap_breach"):                  # R309 / R106 is the only supporter; nothing attacks it
         return True
     if p == "po_issued":                               # R316 is the only supporter; false means approved is refuted
         return True
@@ -346,6 +405,7 @@ def answer1(R, q):
                         via=[["approved", g[1]]], rules=["R316"], roots=[dict(goal=["approved", g[1]], sides=sides)])})
     if p == "breach_in": return A(R.breach_in(g[1]), ["R110", "R106"])
     if p == "denied": return A(R.denied(g[1]), ["R309"])
+    if p == "cap_breach": return A(R.cap_breach(g[1]), ["R106"])
     if p in ("approved_total", "approved_count"):
         rid = {"approved_total": "R120", "approved_count": "R121"}[p]
         st, v, sides, c = R.approved_agg(g[1], "sum" if p == "approved_total" else "count")
