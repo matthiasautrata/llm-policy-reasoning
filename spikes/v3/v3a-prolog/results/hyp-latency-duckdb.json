@@ -1,1 +1,1 @@
-{"cli": "spikes/v3/v3a-prolog/cli", "n": 30, "Q10": {"base": {"p50": 0.14, "p95": 0.15}, "hypothesis": {"p50": 0.17, "p95": 0.19}, "answers": ["ANSWER", "CONFLICT"]}, "Q38": {"base": {"p50": 0.59, "p95": 0.81}, "hypothesis": {"p50": 0.37, "p95": 0.42}, "answers": ["CONFLICT", "ANSWER"]}}
+{"cli": "spikes/v3/v3a-prolog/cli", "n": 30, "Q10": {"base": {"p50": 0.14, "p95": 0.15}, "hypothesis": {"p50": 0.17, "p95": 0.2}, "answers": ["ANSWER", "CONFLICT"]}, "Q38": {"base": {"p50": 0.58, "p95": 0.83}, "hypothesis": {"p50": 0.37, "p95": 0.4}, "answers": ["CONFLICT", "ANSWER"]}}
