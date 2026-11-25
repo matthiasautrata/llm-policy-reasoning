@@ -36,7 +36,7 @@
 :- use_module(library(janus)).
 :- use_module(library(json)).
 
-:- dynamic rule/5, claim/10, claim_link/3, top_claim/2, functional/2, concept/2, term/2, today/1, withheld/1, memo/5, slice/1, asset/2, src/2.
+:- dynamic rule/5, rule_at/2, claim/10, claim_link/3, top_claim/2, functional/2, concept/2, term/2, today/1, withheld/1, memo/5, slice/1, asset/2, src/2.
 
 %   Memo entries are keyed by a state token: `base`, or hyp(N) inside the N-th hypothesis. The token is a
 %   global variable, which SWI keeps per thread. Under snapshot/1, entries asserted inside the hypothesis are
@@ -76,7 +76,14 @@ add_record(Src, M, Ids0, [Id|Ids0]) :-
     mget(id, M, Id),
     (   mget(assertion, M, _) -> add_claim(M, Src)
     ;   edn_vars(M, MV), mget(kind, MV, K), mget(head, MV, H, none), mget(body, MV, B, []),
-        assertz(rule(Id, K, H, B, MV)), assertz(src(Id, Src)) ).
+        assertz(rule(Id, K, H, B, MV)), assertz(src(Id, Src)),
+        ( head_key(H, HK) -> assertz(rule_at(HK, Id)) ; true ) ).
+
+%   rule_at(Key, Id) indexes rules by head (Key: the predicate, neg(P) for a complement), in load order, so a
+%   lookup by head is not a scan of every rule. head_rule/2 falls back to the scan for a head with no key.
+head_key(H, K) :- nonvar(H), H = [P|T], atom(P),
+    (   P == neg -> T = [X], nonvar(X), X = [Q|_], atom(Q), K = neg(Q) ; K = P ).
+head_rule(H, Id) :- ( head_key(H, K) -> rule_at(K, Id) ; rule(Id, _, _, _, _) ).
 
 %   Claims are flat (PLAN-v3-integrity §1): a claim links its members by id, :depends_on (role required)
 %   and :supports (role supporting). The Parent and Role arguments of claim/10 stay null; claim_link/3
@@ -95,7 +102,7 @@ linked(C) :- claim_link(P, C, _), active(P), !.          % a withheld parent no 
 top_claim(Id, About) :- claim(Id, _, _, _, _, _, About, _, _, _), \+ linked(Id).
 
 retract_source(Src) :-
-    forall(src(Id, Src), ( retractall(rule(Id, _, _, _, _)), retractall(claim(Id, _, _, _, _, _, _, _, _, _)) )),
+    forall(src(Id, Src), ( retractall(rule(Id, _, _, _, _)), retractall(rule_at(_, Id)), retractall(claim(Id, _, _, _, _, _, _, _, _, _)) )),
     retractall(src(_, Src)), clear_memo.
 
 %   clear_memo runs at the start of every op.
@@ -186,7 +193,7 @@ eval3(L, D, R) :-
     classify3(S, A, R).
 
 live_sup(L, D, Id, K, _{type:rule, id:Id, goal:L, children:Kids}, V, CL) :-
-    rule(Id, K, L0, _, _), memberchk(K, [strict, defeasible]), active(Id), \+ L0 \= L,
+    head_rule(L, Id), rule(Id, K, L0, _, _), memberchk(K, [strict, defeasible]), active(Id), \+ L0 \= L,
     best_sol(Id, L, D, true, V, Kids, CL).
 live_sup(L, D, Id, claim, P, proven, []) :-
     claim(Id, L, By, At, F, T, _, _, _, _), active(Id), in_force(F, T, D),
@@ -194,11 +201,11 @@ live_sup(L, D, Id, claim, P, proven, []) :-
 
 live_att(L, D, Id, K, H, _{type:rule, id:Id, goal:H, children:Kids}, V, CL) :-
     rival(L, H0, Diff0),
-    rule(Id, K, Hr, _, _), memberchk(K, [strict, defeasible, defeater]), active(Id),
+    head_rule(H0, Id), rule(Id, K, Hr, _, _), memberchk(K, [strict, defeasible, defeater]), active(Id),
     copy_term(H0-Diff0, H-Diff), \+ Hr \= H,
     best_sol(Id, H, D, differs(Diff), V, Kids, CL).
 live_att(L, D, Id, incompatible, [neg, L], _{type:rule, id:Id, goal:[neg, L], children:Kids}, V, CL) :-
-    rule(Id, incompatible, Hr, _, _), active(Id), \+ Hr \= L,    % R314: a declared incompatibility attacks its head
+    head_rule(L, Id), rule(Id, incompatible, Hr, _, _), active(Id), \+ Hr \= L,    % R314: a declared incompatibility attacks its head
     best_sol(Id, L, D, true, V, Kids, CL).
 live_att(L, D, Id, claim, H, P, proven, []) :-
     rival(L, H0, Diff0), copy_term(H0-Diff0, H-Diff),
@@ -323,7 +330,7 @@ pick_sol(_-IEs, P) :-
 
 %!  candidate3(?L, +D)  a ground instance of L with a live supporter
 candidate3(L, D) :-
-    (   rule(Id, K, L, B, _), memberchk(K, [strict, defeasible]), active(Id), body3(B, D, _, _, _)
+    (   head_rule(L, Id), rule(Id, K, L, B, _), memberchk(K, [strict, defeasible]), active(Id), body3(B, D, _, _, _)
     ;   claim(Id, L, _, _, F, T, _, _, _, _), active(Id), in_force(F, T, D) ),
     ground(L).
 

@@ -111,7 +111,7 @@ Bench runs drift by about ±10 % on p50, so differences smaller than that are no
 | cc0000 (L0, root) | CONFLICT | ERROR → 693 | 207 674 | | 10000 |
 
 - The statement count is now O(concepts × rounds × pages), not O(members): 693 at the root against about 260 000 projected one at a time. No statement returns more than `fetch_limit` rows (check 5 holds).
-- Latency is still linear in the members (about 2.3 ms per pending member at the root). The cost has moved from SQL into the evaluator: at cc0002, rule lookup by id (`live_sup`/`live_att` scanning `rule/5`) is 17 % of the profile and `py_call` 9 %.
+- Latency is still linear in the members (about 2.3 ms per pending member at the root). The cost has moved from SQL into the evaluator: at cc0002, rule lookup (`live_sup`/`live_att` scanning `rule/5`) was 17 % of the profile and `py_call` 9 %. Rules are now indexed by head predicate (`rule_at/2`), which cut cc0018 from 5269 to 3454 ms and the root from 207 674 to 139 139 ms, with the same statements and keys.
 - The root (90 028 pending) needs more than SWI's default 1 GB stack and peaks at 12.1 GB RSS, with about 925 000 memo entries; it runs with `stack_limit` 8 GB in the CLI config. Its response is 13.8 MB, of which the why tree is 0.4 MB. The bench session's peak RSS rose from 153 to 656 MB (attributed below).
 
 **IR-007 `unsafe-aggregation`** (`SEMANTICS.md`, Aggregates). The gate rejects a `:sum` of a `:semi-additive` measure across one of the measure's parameters. That covers both a direct fetch of the measure and a predicate that carries it, as R104 carries `booked_total`. Every parameter counts as unsafe, because the slice maps no parameter to a dimension. No slice rule is rejected. The fixture RA1 sums `booked_total` over a chain of ancestors.
@@ -196,7 +196,7 @@ One session per centre, `[:approved_total C ?v]`, 8 GB stack. A cell is one `ter
 ## Known residuals
 
 1. **IR-005 checks existence, not scope.** It requires a completeness claim (`:closed_over :known_facts`) for a rule that rests on negation as failure, but it does not check that the claim's scope covers the query. The slice has no scope language.
-2. **Aggregate latency and memory at the root.** The push-down bounds the statements (693 at the root), not the evaluation: 207 s and 12.1 GB for 90 028 members, with an 8 GB stack. Rule lookup by head rather than by id is the next cost to remove.
+2. **Aggregate latency and memory at the root.** The push-down bounds the statements (693 at the root), not the evaluation: 139 s and 12.7 GB for 90 028 members, with an 8 GB stack. Most of the memory is DuckDB running UNION ALL batches of the recursive `reporting_chain` CTE, and about 1.8 GB is the memo's proof trees (Memory attribution).
 3. **A builtin after a contested binding hides the contest** if it refutes the solution (`SEMANTICS.md`, Known limitation). No slice body has one.
 4. **Propagation's cost on a dispute-heavy base is unmeasured.** The slice now has five questions downstream of two root conflicts (C3/C4, R312/R314), not a dispute-heavy base.
 5. **Rule classes are not deontic** (PROGRESS question 10). `:class` records a rule's inferential role, not whether it grants a permission, obligation or prohibition.

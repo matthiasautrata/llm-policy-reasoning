@@ -1,9 +1,9 @@
 model check (slice + extension + acyclic): OK
-check 1: PASS (37 questions, 2.6s wall)
+check 1: PASS (37 questions, 1.9s wall)
 check 3: PASS (changed ['Q07', 'Q14'])
 check 4: PASS (inside CONFLICT [['C3'], ['C4']], after cc0077)
 check 5: PASS (551 statements, 1006 rows, max 425)
 check 6: PASS 
-check 7: PASS (3.1s) Q30=CONFLICT Q32=ANSWER Q34=ANSWER Q35=CONFLICT Q37=CONFLICT Q40=CONFLICT Q41=CONFLICT Q42=ANSWER Q43=CONFLICT
+check 7: PASS (2.2s) Q30=CONFLICT Q32=ANSWER Q34=ANSWER Q35=CONFLICT Q37=CONFLICT Q40=CONFLICT Q41=CONFLICT Q42=ANSWER Q43=CONFLICT
 check 8: PASS (10 fixtures + add: IR-001a IR-001a IR-001b IR-001b IR-002 IR-003 IR-004 IR-005 IR-006 IR-007)
 GREEN (checks 1345678)
