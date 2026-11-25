@@ -99,3 +99,8 @@ v1 and v2 material outside `spikes/` (`results/` with 68 files, `REWORK.md`, `pa
 
   One defect was introduced and caught here. Removing the engine flag left a stray `}` in `model_check.py`'s summary f-string, which made `accept.py` fail on import. It was fixed before the gate run that counts.
 - **2026-11-25 Not removed:** `clingo` and the other V3e packages in `.venv`. The plan did not ask for it, so this is PROGRESS question 1.
+- **2026-11-25 §5 inventory:** `INVENTORY.md` at the repo root, a proposal only; nothing outside `spikes/` was removed.
+  - The root `HISTORY.md` skeleton is a section of `INVENTORY.md`, not a file of its own. A root HISTORY now would anticipate decisions Matthias has not made.
+  - `world/` was added, although the plan's list omits it: `spikes/v3/shared/gen.py` imports `world.domain`.
+  - "68 files" in `results/` are the files on disk other than `.gitkeep`: 44 tracked (20 reports, 24 `.jsonl.gz`) and 24 untracked plain `.jsonl` copies.
+  - `m6-compile-L3-preR314` was first proposed for history, then changed to keep. The 24 `.gz` files sum to 8,878 records, which is paper v2's total, so that run is counted in the paper.

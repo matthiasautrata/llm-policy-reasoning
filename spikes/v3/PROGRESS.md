@@ -9,7 +9,7 @@ Newest first. `HISTORY.md` holds the earlier phases. `RESULTS.md` describes the 
   - wrote `HISTORY.md`;
   - rewrote RESULTS to the current state.
   - Gate: keys byte-identical; V3a GREEN 1–8; `--mutation` fails check 1; isolation PASS on DuckDB and Postgres; negatives 15/15; bench on both backends; guard probe 2/2 (`v3a-prolog/results/`).
-- [ ] Repo-wide inventory (`INVENTORY.md` at the repo root, a proposal). Matthias decides before anything outside `spikes/` is removed.
+- [x] Repo-wide inventory (2026-11-25, `INVENTORY.md` at the repo root, a proposal with a root HISTORY skeleton). Awaiting Matthias: nothing outside `spikes/` is removed until he decides.
 
 ## Questions for Matthias
 
