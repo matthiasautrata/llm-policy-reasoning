@@ -88,3 +88,5 @@ Both CLIs speak the same JSON contract and support the test-only `sleep` op and 
 ## Decisions
 
 (Executor: append dated entries — what was decided, why.)
+
+**2026-11-24 · Installs (approved by Matthias).** `brew install erlang elixir flix` → Erlang/OTP 29.1.2, Elixir 1.20.5, Flix 0.80.0. The existing openjdk 27.0.1 is used for Flix and the JDBC drivers.

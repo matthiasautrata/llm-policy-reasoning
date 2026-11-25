@@ -1,0 +1,29 @@
+{
+ "cli": "spikes/v3/v3c-elixir/cli",
+ "backend": "duckdb",
+ "n": 200,
+ "errors": 0,
+ "approved_true": 49,
+ "decide_ms": {
+  "p50": 5.502,
+  "p95": 12.0,
+  "max": 22.197,
+  "mean": 7.168295
+ },
+ "decide_ms_warm": {
+  "p50": 5.393,
+  "p95": 11.767
+ },
+ "questions_ms": {
+  "p50": 0.905,
+  "p95": 12.705
+ },
+ "sql_per_decide": 11.17,
+ "load_ms": 35.837,
+ "cold_start_s": 0.3,
+ "session_wall_s": 2.15,
+ "max_rss_mb": {
+  "load_only": 121,
+  "bench": 239
+ }
+}

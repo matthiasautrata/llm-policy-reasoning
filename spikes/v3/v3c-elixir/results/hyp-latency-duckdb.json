@@ -1,0 +1,20 @@
+{
+ "backend": "duckdb",
+ "runs": 50,
+ "Q11 withhold R313 + decide": {
+  "p50": 0.188,
+  "p95": 0.329
+ },
+ "withhold R313, no ops": {
+  "p50": 0.053,
+  "p95": 0.066
+ },
+ "add extension.edn + decide": {
+  "p50": 0.207,
+  "p95": 0.293
+ },
+ "plain decide (no hypothesis)": {
+  "p50": 0.128,
+  "p95": 0.15
+ }
+}

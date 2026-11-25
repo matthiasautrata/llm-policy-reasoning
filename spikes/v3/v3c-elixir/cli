@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# V3c CLI: session script (JSON) on stdin -> result JSON on stdout. Needs `MIX_ENV=prod mix compile` first.
+HERE="$(cd "$(dirname "$0")" && pwd)"; ROOT="$(cd "$HERE/../../.." && pwd)"
+cd "$HERE" && V3C_ROOT="$ROOT" MIX_ENV=prod exec mix run --no-compile --no-deps-check -e 'V3c.CLI.main()'
