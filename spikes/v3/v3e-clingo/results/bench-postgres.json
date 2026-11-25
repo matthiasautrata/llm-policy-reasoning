@@ -1,0 +1,29 @@
+{
+ "cli": "spikes/v3/v3e-clingo/cli",
+ "backend": "postgres",
+ "n": 200,
+ "errors": 0,
+ "approved_true": 49,
+ "decide_ms": {
+  "p50": 11.919736862182617,
+  "p95": 14.384984970092773,
+  "max": 35.965919494628906,
+  "mean": 11.86011552810669
+ },
+ "decide_ms_warm": {
+  "p50": 11.919736862182617,
+  "p95": 13.993978500366211
+ },
+ "questions_ms": {
+  "p50": 4.676103591918945,
+  "p95": 41.0311222076416
+ },
+ "sql_per_decide": 21.855,
+ "load_ms": 57.27577209472656,
+ "cold_start_s": 0.15,
+ "session_wall_s": 2.98,
+ "max_rss_mb": {
+  "load_only": 55,
+  "bench": 82
+ }
+}

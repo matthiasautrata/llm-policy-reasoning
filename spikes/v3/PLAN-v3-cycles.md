@@ -109,3 +109,53 @@ These bind the executor like the sections they amend.
 ## Decisions
 
 (Executor: append dated entries — what was decided, why.)
+
+**2026-11-25 — §1 shared**
+- *A1:* `measure:pending_exposure` is cast to `BIGINT` in `slice.edn`. Q24 is the regression and asks for the root, `cc0000`. After the keys were regenerated, every existing key is byte-identical. That confirms the bug was unreachable top-down.
+- *LinkML docs (`v3a-prolog/linkml/docs/`) were not regenerated for `cycles.edn`.* The cycles extension adds no new record shapes, and V3e calls `build.negatives` directly, so `build.main()`, which rewrites the docs, was not run.
+- *Model check modes are a greatest fixpoint* (`model_check.py` `infer`). A least fixpoint cannot type mutually recursive predicates: every pattern of a defeat cycle would stay unsafe. Starting from "all safe" and removing unsafe patterns accepts a cycle whose calls are all bound.
+- *Check 7 by capability:*
+  - `report` engines must answer Q30–Q39 against the WFS keys;
+  - `reject` engines pass check 7 when the model check rejects the cyclic rule base;
+  - what the engine itself does on cycles is measured separately by `cycles_probe.py`, which bypasses the model check.
+- *Y5 choices (SEMANTICS-cycles.md):* a literal downstream of a blocked conclusion is false (Q35); one downstream of an undefined conclusion is undefined and reports the cycle's sides (Q36); an attacker whose body is blocked does not attack (Q37). These follow from the metaprogram's WFS and were not chosen separately.
+- *RY-rule owners:* the defeaters in the cycles are owned by `compliance`, so the owner checks see a real owner and the existing owner enum stays closed.
+
+**2026-11-25 — §2 V3a WFS**
+- *Truth values come from a tabled metaprogram* (`wdef/3`, `wovr/3`, `wbeat/4` with `tnot/1`). The existing classify, sides and why code works over those values. Undefined literals are read with `call_delays/2`. The memo engine is kept as `ENGINE_MODE=memo` (control).
+- *Tables are keyed by a state token (`base`, `hyp(N)`) and the as_of date, and are abolished on every rule/claim change and, under the default policy `op`, at the start of every op.* `results/table-test.json` is the control: it shows the leak the key prevents. Isolation passes on both backends. No thread-local tables were needed: the token keeps hypotheses apart, and each op starts clean.
+- *Fetch from tabled goals:* `py_call` results are cached per op in `sql.py`, not in the tables. Within an op they are reused through the per-op cache. Across ops the cache is reset, so nothing is reused stale.
+- *Cost:* DuckDB decide p50 4.4 → 4.9 ms, p95 9.2 → 9.4 ms; Postgres p50 10.3 → 10.0 ms (noise). SQL per decide is unchanged (11.2).
+
+**2026-11-25 — §3 V3e Clingo**
+- *clingo 5.8.0, not 5.8.3.* Installing xclingo 2.0b24 downgraded clingo, because it pins `clingo==5.8`. Every V3e result is on 5.8.0. Other versions: clingexplaid 1.5.1, edn_format 0.8.0, Python 3.14.
+- *WFS from answer sets by the Tr_p doubling (Janhunen, Niemelä, Seipel, Simons, You, TOCL 2006).* The defeasible layer is written twice: as `t_*` (true) and `p_*` (possible).
+  - Each `not` in a `t_*` rule reads `p_*`, and each `not` in a `p_*` rule reads `t_*`.
+  - The well-founded model is the knowledge-least partial stable model, so cautious consequences of `t_*` are the WFS-true atoms and brave consequences of `p_*` are the WFS-non-false atoms.
+  - Two solves run on one Control, with `enum_mode` cautious and then brave.
+  - This handles Y3 (the odd loop): the plain encoding has no stable model there (`probes.py`: Y3 0 models, Y2 2 models, Y1 1), but the doubled program always has partial stable models.
+  - No WFS/ASP divergence remains on Y1–Y6: all ten Q30–Q39 match the WFS keys.
+- *`#external active(Id). [free]`, all assumed in every solve.* Externals default to false, and without `[free]` the first solve was UNSAT. Each solve passes `active(Id)` as true for visible ids and false for withheld ones.
+- *32-bit integers:* clingo integers are 32-bit. The host raises a named error for an out-of-range value instead of letting it wrap. No slice value is out of range.
+- *One Control per op, no lock.* Re-grounding is needed for each op anyway (the next point). A Control is not shared between threads, so concurrent hypotheses need no lock and `isolation.py` passes. This departs from §3.2, which asks for one multi-shot Control. Hypotheses still use `#external` plus assumptions as §3.2 asks, but within the op's own Control.
+- *Per-op grounding, not incremental.* In multi-shot clingo, rules already grounded in `base` are not re-grounded for new demand atoms added in later program parts. Per-op demand therefore needs a fresh ground, about 5 ms here: 85% of a decide is grounding and 0.4–0.5 ms is the two solves.
+- *Demand as a magic-set rewrite in the translation, fetch during grounding.*
+  - The translator emits, per rule, demand propagation `dm(P, BoundArgs)` → `need(Concept, Filters)` for its body, keyed by the bound positions in `shared/modes.edn` (the positions bound in every declared mode).
+  - `frow(C,F,R) :- need(C,F), R = @fetch(C,F)` calls V3a's `sql.fetch` during grounding.
+  - §3.2 says `@fetch` alone does not give demand; the dm/need rewrite does, and `@fetch` is only the boundary.
+  - Check 5 holds (Q17: 551 statements, 1006 rows, max 425). The demand is broader than SLG's: 21.9 SQL statements per decide vs V3a's 11.2, because the rewrite demands every body of every rule whose head is demanded, attackers included, without SLG's left-to-right early failure.
+- *The trees come from the host.*
+  - xclingo 2.0b24 fails on its own README example under clingo 5.8.0 / Python 3.14: the explainer program it generates does not parse.
+  - clingexplaid 1.5.1 explains unsatisfiability (MUS, MSS, MCS over assumptions), not derivations. Over `active/1` assumptions on the plain encoding it returns exactly the odd loop for Y3 (`{CY3, RY31, RY32}`, 0.2 ms), the same set as V3a's `undefined.members`. It is recorded as a probe and not used in the tree.
+  - `host.py` builds why/why_not from the three truth values and the ground skeleton (`h/3`, `ih/2`). It is a port of V3a's wfs-mode classify/sides/explain_not, and all trees pass `check_why.py`.
+- *Negatives by V3a's LinkML model:* `negatives.py` calls `v3a-prolog/linkml/build.py` `negatives(S, X)`, and 12/12 are rejected by both linkml-validate and the generated JSON Schema. This was chosen over the shared Python validator because it is the one model that already sees rule bodies, and V3e adds no record shapes.
+- *`hyp_latency.py` (shared) was added,* so both report engines' hypothesis latency is measured through the same CLI path.
+
+**2026-11-25 — §4 other spikes**
+- V3b, V3c and V3d were run unchanged: `cycles_probe.py` plus check 7. No fixes, as §4 says. Outcomes and estimates are in RESULTS "Defeat cycles".
+- Each scores 5/10. All three fail on Q31, Q32, Q33, Q36 and Q39, the questions whose evaluation enters a real cycle:
+  - V3b: StackOverflowError at `engine/rename`;
+  - V3c: 60 s timeout;
+  - V3d: 60 s timeout, under `-Xss512m`.
+- Check 7 passes on all three by `reject`.
+- Probe timeout of 60 s per question, DuckDB only: all three fail in the evaluator before any backend-specific step, so Postgres would add nothing. Logs are in `results/cycles-probe.txt` and `results/cycles-probe-duckdb.json` in each spike.

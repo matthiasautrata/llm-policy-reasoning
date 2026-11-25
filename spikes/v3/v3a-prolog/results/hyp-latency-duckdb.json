@@ -1,0 +1,1 @@
+{"cli": "spikes/v3/v3a-prolog/cli", "backend": "duckdb", "n": 30, "Q10": {"base": {"p50": 0.17, "p95": 0.18}, "hypothesis": {"p50": 0.19, "p95": 0.19}, "answers": ["ANSWER", "CONFLICT"]}, "Q38": {"base": {"p50": 0.76, "p95": 1.07}, "hypothesis": {"p50": 0.38, "p95": 0.41}, "answers": ["CONFLICT", "ANSWER"]}}

@@ -1,0 +1,88 @@
+{
+ "clingo": "5.8.0",
+ "stable": {
+  "Y1 blacklisted fern": {
+   "models": 1,
+   "def_atoms": [
+    []
+   ]
+  },
+  "Y2 preferred dyne": {
+   "models": 2,
+   "def_atoms": [
+    [],
+    [
+     "def(preferred(\"dyne\"))"
+    ]
+   ]
+  },
+  "Y2 control preferred acme": {
+   "models": 1,
+   "def_atoms": [
+    [
+     "def(preferred(\"acme\"))"
+    ]
+   ]
+  },
+  "Y3 trusted edge": {
+   "models": 0,
+   "def_atoms": []
+  }
+ },
+ "latency": {
+  "Q10 cost_centre_of e077": {
+   "total": {
+    "base": 5.64,
+    "hypothesis": 5.66
+   },
+   "ground_ms": {
+    "base": 4.9,
+    "hypothesis": 4.92
+   },
+   "solve_ms": {
+    "base": 0.4,
+    "hypothesis": 0.4
+   }
+  },
+  "Q38 preferred dyne": {
+   "total": {
+    "base": 6.52,
+    "hypothesis": 6.19
+   },
+   "ground_ms": {
+    "base": 5.4,
+    "hypothesis": 5.38
+   },
+   "solve_ms": {
+    "base": 0.53,
+    "hypothesis": 0.42
+   }
+  }
+ },
+ "mus": {
+  "Y3 trusted edge": {
+   "type": "MinimalUnsatisfiableSubset",
+   "ids": [
+    "CY3",
+    "RY31",
+    "RY32"
+   ],
+   "ms": 0.2
+  },
+  "Y2 preferred dyne": {
+   "type": "UnsatisfiableSubset",
+   "ids": [],
+   "ms": 0.1
+  }
+ },
+ "explain": {
+  "xclingo": {
+   "version": "2.0b24",
+   "error": "ExplanationControlParsingError: syntax error"
+  },
+  "clingexplaid": {
+   "version": "1.5.1",
+   "gives": "MUS/MSS/MCS over assumptions, unsat constraints: explains why a program has no model, not why an atom holds (see mus)"
+  }
+ }
+}

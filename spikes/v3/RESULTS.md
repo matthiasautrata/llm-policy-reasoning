@@ -358,3 +358,115 @@ The stack remains open. The new information is about which secondary property is
 - minimal footprint (V3a).
 
 Readability of the four notations is Matthias's call.
+
+## Defeat cycles: V3a with WFS, V3e Clingo
+
+Added 2026-11-25 after `PLAN-v3-cycles.md`. V3e is Python 3.14 with clingo 5.8.0. V3a gains a WFS mode (SWI tabling with `tnot/1`) and keeps its memo mode as the control. V3b–V3d ran unchanged. The sections above are left as written. The semantics is in `shared/SEMANTICS-cycles.md`, versions and deviations are in that plan's Decisions, and raw outputs are in each spike's `results/`.
+
+**Shared work.**
+- `cycles.edn` adds Y1–Y6 as Q30–Q39. `reference.py` (`Cyc`, an alternating fixpoint) keys them.
+- The A1 fix (`pending_exposure` cast to `BIGINT`) left every existing key byte-identical. The new Q24 reaches the root.
+- `model_check.py --cycles` finds two negative cycles: `exempt_from_audit ↔ trusted` (RY31, RY32: Y3, odd) and `preferred ↔ under_review` (RY23, RY24: Y2, even). The bound-variable check finds 0 errors. Modes are inferred as a greatest fixpoint, so mutually recursive predicates can be typed.
+
+### Y1–Y6, five spikes
+
+Each question runs in its own session, with the model check bypassed (`cycles_probe.py`, DuckDB, 60 s timeout). ✓ = matches the WFS key.
+
+| Q | Pattern | Key | V3a WFS | V3e | V3a memo | V3b | V3c | V3d |
+|---|---|---|---|---|---|---|---|---|
+| Q30 | Y1 direct rebut | CONFLICT CY1a / CY1b | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Q31 | Y2 even loop, derived | CONFLICT RY21 / RY23 | ✓ | ✓ | stack limit | StackOverflowError | timeout | timeout |
+| Q32 | Y2 control (acme) | ANSWER true | ✓ | ✓ | stack limit | StackOverflowError | timeout | timeout |
+| Q33 | Y3 odd loop | CONFLICT CY3 / RY32 | ✓ | ✓ | stack limit | StackOverflowError | timeout | timeout |
+| Q34 | Y4 cycle broken by superiority | ANSWER true | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Q35 | Y5a downstream of blocked | ANSWER false | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Q36 | Y5b downstream of undefined | CONFLICT RY21 / RY23 | ✓ | ✓ | stack limit | StackOverflowError | timeout | timeout |
+| Q37 | Y5c attacker's body blocked | ANSWER true | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Q38 | Y6 hypothesis withholds RY23 | ANSWER true | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Q39 | Y6 base after the hypothesis | CONFLICT RY21 / RY23 | ✓ | ✓ | stack limit | StackOverflowError | timeout | timeout |
+| | **matched** | | **10/10** | **10/10** | 5/10 | 5/10 | 5/10 | 5/10 |
+| | check 7 | | PASS (report) | PASS (report) | — | PASS (reject) | PASS (reject) | PASS (reject) |
+
+The memo evaluators fail on the same five questions, and for the same reason. The memo is written only after `evaluate` returns, and nothing marks a goal as in progress. A real dependency cycle therefore re-enters `evaluate → attackers → prove → evaluate` without bound. The JVM throws StackOverflowError (V3b, at `engine/rename`), SWI hits its 1 GB stack limit (V3a memo), and the BEAM process recurses until the 60 s timeout (V3c; its memory was not sampled). V3d runs its CLI with `-Xss512m`, which probably lets the recursion run past the 60 s timeout before the stack overflows (not checked with a longer timeout).
+
+Q32 fails as well, although acme is never suspended. The attacker's body has to be evaluated before it can be found false, and that evaluation runs into the cycle. Q38 passes everywhere because the hypothesis withholds RY23 and so cuts the cycle. Y1 passes everywhere because a direct rebut between claims is not a dependency cycle: it is the "blocked" CONFLICT the slice already had.
+
+Under A2 the reject engines are still correct as deployed: check 7 passes because the shared model check refuses a rule base with a negative cycle. What they lack is a way to *answer* one.
+
+**What V3b–V3d would need.** Port the alternating fixpoint (V3a's `wdef`/`wovr`/`wbeat`, or the host side of V3e) over the ground instances an op demands, plus the `undefined` why node and the sides rule from SEMANTICS-cycles.md. The specs and the tests already exist: `reference.py` `Cyc`, `check_why.py`, Q30–Q39. Estimate: 150–250 lines of evaluator and about 80 for why/sides per spike, about one session each. A cheaper stopgap, an in-progress marker that answers "undefined" on re-entry, stops the loop. It is not WFS, though: it can call a literal undefined that the alternating fixpoint would make false (as for Q32), so it would have to be checked against the keys and probably would not pass.
+
+### Native vs built
+
+| | V3a WFS (SWI-Prolog 11.0.1 tabling) | V3e (clingo 5.8.0) |
+|---|---|---|
+| Three-valued truth of the defeasible layer | **Native.** Tabled `wdef/3`, `wovr/3`, `wbeat/4` with `tnot/1`. SLG resolution gives the well-founded model, and `call_delays/2` reads the undefined residue | **Native, by encoding.** The defeasible layer is doubled (`t_*` / `p_*`, the Tr_p of Janhunen et al. 2006), and two solves on one Control give cautious `t_*` = WFS true and brave `p_*` = WFS not false |
+| Superiority (explicit, strict, authority, later) | In the metaprogram (Prolog) | In the metaprogram (ASP) |
+| Fetch demand (check 5) | Native: SLG calls `fetch` left to right, only for goals it reaches; 11.2 statements per decide | **Built:** a magic-set rewrite (`dm`/`need`) in the translator, keyed by `shared/modes.edn`. `@fetch` during grounding is only the SQL boundary. Bounded, but broader: 21.9 statements per decide, because every body of every demanded rule is demanded, attackers included |
+| Statuses (proven / defeated / blocked / undefined) and CONFLICT sides | Built: `defeasible.pl` classifies over the three values | Built: the host, a Python port of V3a's classify / sides |
+| `why` / `why_not`, including the `undefined` node | Built: `why.pl` over the tabled values | Built in the host from the ground skeleton (`h/3`, `ih/2`). xclingo 2.0b24 fails on its own README example; clingexplaid 1.5.1 explains unsatisfiability, not derivations |
+| Hypotheses | `snapshot/1`; tables keyed by a state token and as_of, abolished per op | `#external active(Id). [free]` plus `solve(assumptions=…)`, one Control per op |
+| Lines | `defeasible.pl` 347, `ops.pl` 282, `why.pl` 63 | `asp.py` 294 (translator and metaprogram), `host.py` 939 (store, Control, statuses, trees, ops) |
+
+So the **truth values** of team defeat over derived conclusions, cycles included, are native on both. Everything that turns truth values into the contract's answers is still built: statuses, sides and trees. On V3e the fetch demand is built too, which comes for free with SLG.
+
+One insight came from tooling built for something else. clingexplaid's MUS over the plain (undoubled) encoding names the odd loop exactly: `{CY3, RY31, RY32}` in 0.2 ms, the same set as V3a's `undefined.members`. An ASP solver's unsat core is therefore a cheap detector for odd loops.
+
+### Semantics: confirmed, assumed, divergence
+
+- **Confirmed in the source** (SEMANTICS-cycles.md):
+  - the ABGM metaprogram (TPLP 2006) that the encoding follows;
+  - that DL equals the Kunen semantics of that metaprogram, not WFS, and that undecided literals imply cycles;
+  - Maier: NDL (blocking) differs from the WFS of the *direct* translation, so blocking has to be encoded in the metaprogram.
+- **Assumed:**
+  - equivalence with Maher & Governatori's WFDL (the AAAI-99 PDF could not be read);
+  - team defeat with authority and `later` superiority, and functional rivals as attackers;
+  - claims as valid-time-gated empty-body rules.
+- **Y5 decided:** blocking (Q35 false, Q37 true). Downstream of an undefined literal is undefined (Q36). Q37 is the question that separates blocking from propagation.
+- **WFS vs answer sets:** no divergence on Y1–Y6 once the encoding is doubled, since partial stable models include the well-founded one. The plain two-valued encoding does diverge (`probes.py`):
+  - Y1: one model, with neither side;
+  - Y2: two models (`{}` and `{preferred(dyne)}`), so cautious reasoning drops `preferred(dyne)` and brave reasoning gives the sides;
+  - Y3: **no** model, so the whole program is inconsistent and every question would fail, not only Q33.
+  
+  "Answer statuses from cautious consequences" therefore holds only over the doubled program. Over the plain one it holds for even loops and breaks on odd ones.
+
+### §7 rows, V3a WFS and V3e
+
+| Criterion | V3a WFS | V3e (Clingo) |
+|---|---|---|
+| Correctness | Green 1–7 (Q30–Q39 10/10 on both backends); mutation fails; isolation PASS on both | Green 1–7 (10/10 on both backends); mutation fails; isolation PASS on both; negatives 12/12 by V3a's LinkML model |
+| Effort | Within §2 (one session): the metaprogram, the tables keyed by state and date, `call_delays` for undefined | Within §3 (one session). Most of it went to the doubled encoding, the demand rewrite, and porting the trees |
+| Explanations | Built (`why.pl` 63), plus the `undefined` node; passes `check_why` | Built in the host. Tooling: xclingo broken, clingexplaid MUS only (see above) |
+| Hypotheses, CLI p50 (DuckDB; Postgres similar), base / with_hypothesis | Q10 0.17 / 0.19 ms; Q38 0.76 / 0.38 ms | Q10 6.66 / 6.60 ms; Q38 8.42 / 7.78 ms. A hypothesis costs nothing extra: each op grounds anyway |
+| Latency, decide p50/p95 | DuckDB 4.9/9.4 ms (memo 4.4/9.2); Postgres 10.0/22.2 (memo 10.3/27.3); RSS 60/127 MB | DuckDB 14.2/14.9 ms; Postgres 11.9/14.4; cold 0.11–0.15 s; RSS 55–61/82–125 MB. In-process: about 5 ms grounding and 0.4–0.5 ms for both solves |
+| Bounded fetch (check 5) | Holds; 11.2 statements per decide, same as memo | Holds (Q17: 551 statements, 1006 rows, max 425); 21.9 per decide |
+
+### Lesson 1, revisited
+
+Lesson 1 in "V3c and V3d" said: *the defeasible layer is not native Datalog on any of the four platforms*. That still holds for **Datalog**: Datahike, ex_datalog and Flix stop at stratified negation. It no longer holds for **logic programming**. Two engines carry defeat over derived conclusions, cycles included, as native semantics, with no evaluator written for the truth values:
+- SWI's tabling under WFS, which is top-down and keeps bounded fetch for free;
+- clingo's partial stable models, which are bottom-up per op and need a demand rewrite to keep fetch bounded.
+
+The lesson therefore splits:
+1. **Semantics needs non-stratified negation, and only WFS or stable-model engines provide it.** A cyclic defeat graph is a legitimate policy state: two departments, each with a rule that defeats the other's conclusion. A stratified engine has to reject it (A2's `reject`), and a memo evaluator crashes on it.
+2. **The answer layer is built on every platform.** Statuses, CONFLICT sides and why trees, including the new `undefined` node, are built in V3a and V3e as well. Explanation tooling for ASP does not reach derivation trees today.
+3. **Top-down demand is native only with SLG.** V3e regains bounded fetch with a magic-set rewrite and pays for it in grounding, roughly 3× V3a's decide latency.
+
+### What each platform makes natural, and what it taught us (A3 order)
+
+This is not a choice. Choosing happens later, for v3's T arm.
+
+**1. Semantics: is the defeasible core native or built?**
+- *V3a WFS:* native truth values with WFS, top-down, with demand for free. Taught: tables must be keyed by state and date and abolished per op, or answers leak across hypotheses (`table-test.json`). The memo mode is the clearest picture of why cycles need tabling.
+- *V3e Clingo:* native truth values through the doubled encoding. Taught: the plain stable-model reading is *not* the intended semantics (Y3 has no model). The doubling is the step that makes ASP agree with WFS. The unsat core is a cycle detector for free.
+- *V3b, V3c, V3d:* built and acyclic only. All three loop on a cycle, and the shared model check (A2) keeps them correct by rejecting such a rule base. Getting to WFS is a port of about one session each, with the reference and keys as its spec.
+
+**2. Guarantees: isolation, static checks, explanations.**
+- Isolation: by value and by construction in V3b–V3d. V3e has a Control per op and no shared mutable state. V3a has a primitive plus discipline, now with table keys as a second discipline.
+- Static checks: the shared model check (cycles, bound variables) now covers every engine, and only its strictness differs. Flix's compiler checks remain the strongest per platform, but they do not reach runtime rules (see "V3c and V3d").
+- Explanations: built everywhere, and complete in the contract's sense on all five (`check_why`). Only the native engines can explain a cycle (the `undefined` node), because only they can answer one.
+
+**3. Operation: resilience, concurrency, audit time.** Unchanged by this addendum: V3c for supervision and throughput, V3b for transaction time. V3e adds per-op Controls that parallelise with no lock. Its latency is dominated by grounding (≈5 ms), not solving, so the cost grows with the demanded program, not with the cycles.
+
+**4. Footprint (information only).** V3e: clingo 5.8.0 from a pip wheel in the shared `.venv` (273 MB in total, up from 250), plus V3a's `sql.py`; RSS about 60 MB. V3a's footprint is unchanged by tabling.
+
+**What changed from the earlier recommendation.** That one compared platforms on secondary properties, assuming the core was equal. It is not: on cycles, V3a WFS and V3e answer, and V3b–V3d need a rule base without cycles or a ported fixpoint. Readability of the notations remains Matthias's call.
