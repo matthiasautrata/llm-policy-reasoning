@@ -68,4 +68,20 @@ RESULTS: current state only; add the aggregation form, the absence qualifier, th
   - `accept.py` is GREEN on checks 1 and 3–8, and `--mutation` fails check 1 (Q27, R312).
   - `isolation.py` PASS; negatives 15/15; guard probe 2/2.
   - bench: 0 errors, 11.17 SQL per decide, p50 4.57 ms.
+- **2026-11-25 §2.1 syntax.** `[:agg Op ?x [L1 .. Ln] ?out]` with Op `:sum` or `:count`: the plan's example form, with the body as a list so that it is a conjunction. No other op was needed. LinkML gains an `Aggregate` literal class and an `AggregateOp` enum.
+- **2026-11-25 §2.1 R314 inside `eval3`.** R314 used to be checked after the fact. To make an aggregate member contested by it, R314 became an attacker of `approved` in `eval3` (for `approved` only, since it is the only `:incompatible` rule). This cost 11.17 → 11.92 SQL per decide.
+- **2026-11-25 §2.1 rules.** R120 `approved_total` and R121 `approved_count`, `recorded_at` 2026-09-14 like the rest of the slice, `:closed_over :known_facts`. Their key core is the aggregate rule only ([R120]), since the members' proofs vary.
+- **2026-11-25 §2.1 the proven part.** A contested aggregate still binds ?out to the total over the proven members. That value appears only in the `contested` node's goal (Q46: 1526000), never as an answer.
+- **2026-11-25 §2.1 truncation.** A truncated fetch inside the aggregate body is an ERROR, scoped to fetches made while the body is evaluated. Edge case: a memo hit from an earlier truncated fetch outside the aggregate would not be seen as truncated. No question reaches it.
+- **2026-11-25 §2.1 qualifier ids.** The set of closed rules is derived from `:closed_over` in the slice, not listed in the reference.
+- **2026-11-25 §2.1 limitation kept.** A builtin after a contested binding is evaluated on the bound value (`SEMANTICS.md`, Known limitation); no slice body has one, so it is documented, not fixed.
+- **2026-11-25 §2.1 `excluded` dropped.** CONTRACT's aggregate node does not list the refuted bindings: `check_why.py` recomputes the total from the members, which is enough to verify it.
+- **2026-11-25 §2.1 fetch volume.** Measured at L4–L0 (RESULTS). It is linear in the members, and L1/L0 exceed `fetch_limit`. The push-down is proposed in RESULTS, not built.
+- **2026-11-25 §2.2 every key holds the qualifier.** Every `decide` key now holds `qualifier`, null or the string, and `:check_qualifier` is retired. A per-question flag would have left most negative answers unchecked.
+- **2026-11-25 §2.2 false by defeat.** It is qualified only when the winning attacker's proof uses a `:closed_over` rule, and V3a inspects the proof of the smallest winning attacker only. In the slice the defeater R307 is not `:closed_over`, so Q07ext stays null.
+- **2026-11-25 §2.2 open answers.** An open `null` or `[]` is always qualified: no binding is known.
+- **2026-11-25 §2.2 the exception.** Completeness covers by predicate name: an in-force `[:complete "P"]` claim on the goal's predicate. No slice question reaches it (C10 names `booked_total`, which is never absent); a probe claim confirmed it in V3a, and the probe was not committed.
+- **2026-11-25 §2.2 keys changed.** Q09 → CLOSED (R310/R304 were already closed, but the key was not checked); Q18 → CLOSED (false, no live supporter); Q47 added (`denied r000005`). Every other `decide` key gained `qualifier: null`.
+- **2026-11-25 §2.3 rules.** R315 `home_headroom` (finance, from `cost_centre_of` and `headroom`), the base-slice counterpart of RY56; R316 `po_issued` (procurement, from `approved`). Both are defeasible, with no `:functional` declaration (like RY56, so the contested instances do not rival each other). `home_headroom` has mode `--`, because `cost_centre_of` is claims-only and so enumerable; the model check inferred it and rejected `+-`.
+- **2026-11-25 §2.3 questions.** Q48 (CONFLICT through C3/C4, R313 withheld), Q49 (ANSWER, resolved by R313), Q50 (CONFLICT through R312/R314). The controls are Q51 (true, qualified) and Q52 (false, R316 not live, qualified). No existing key changed. V3a needed no change.
 

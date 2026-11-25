@@ -11,7 +11,12 @@ Newest first. `HISTORY.md` holds the earlier phases. `RESULTS.md` describes the 
   - Gate: keys byte-identical; V3a GREEN 1–8; `--mutation` fails check 1; isolation PASS on DuckDB and Postgres; negatives 15/15; bench on both backends; guard probe 2/2 (`v3a-prolog/results/`).
 - [x] Repo-wide inventory (2026-11-25): approved and executed (`PLAN-v3-preconditions.md` §1.1); summarised in the root `HISTORY.md`.
 - [x] Postgres retired, `.venv` cleaned (2026-11-25, `PLAN-v3-preconditions.md` §1.2–1.3). Gate on DuckDB: keys byte-identical; GREEN 1, 3–8; `--mutation` fails check 1; isolation PASS; negatives 15/15; bench 0 errors; guard probe 2/2.
-- [ ] Benchmark preconditions (`PLAN-v3-preconditions.md` §2): aggregation over derived literals, the qualifier on answers resting on absence, questions downstream of real conflicts.
+- [x] Benchmark preconditions (2026-11-25, `PLAN-v3-preconditions.md` §2; RESULTS "Benchmark preconditions"):
+  - §2.1 `[:agg :sum|:count ..]`, R120/R121, Q44–Q46; fetch volume measured, push-down proposed;
+  - §2.2 the absence qualifier on every `decide` key, Q47;
+  - §2.3 R315/R316 downstream of C3/C4 and R312/R314, Q48–Q52.
+  - Gate: GREEN 1, 3–8 (36 base questions); `--mutation` fails check 1; isolation PASS; negatives 15/15 (90 literals round-trip); guard probe 2/2; bench 0 errors, 11.92 SQL per decide.
+- [ ] Harvest `PLAN-v3-preconditions.md` into HISTORY and remove it, once Matthias has reviewed its Decisions.
 
 ## Questions for Matthias
 
@@ -25,3 +30,9 @@ Newest first. `HISTORY.md` holds the earlier phases. `RESULTS.md` describes the 
     - R301 was "may approve" (`entitlement`) in `rules/rules.yaml` and became the `material_inference` `has_approver` in the slice.
     - Should deontic rules enter as their own kind, either a `:modality` (permission / obligation / prohibition) beside `:class` or a separate record type issued by an authority? Should R301 go back to a permission?
     - **Open, deferred** with the vocabulary work.
+11. **Integrity candidate** (§2.1): reject aggregating a `:semi-additive` measure across one of its `:unsafe_dims`. Accept it into the ledger, and with which id? Nothing in the slice triggers it.
+12. **IR-005 extended to absence** (§2.2): the qualifier now also covers negative answers, with the `[:complete "P"]` exception. Is this a changed IR-005 or a new ledger entry? The code cites IR-005.
+13. **Duplicate questions:** Q26 and Q27 now duplicate Q01 and Q09 (the qualifier is keyed on every `decide`). Remove them?
+14. **`cap_breach` and C10:** `cap_ok` rests on `[:not [:cap_breach ?r]]`, and `cap_breach` reads `booked_total`, which C10 declares complete. Should C10 then cover the absence, so that Q09 is not qualified? Today completeness covers by predicate name only, and C10 names `booked_total`.
+15. **Aggregate push-down** (RESULTS, residual 2): build the set-at-a-time evaluation before the benchmark, or measure the benchmark at L2 and below?
+
