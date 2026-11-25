@@ -1,0 +1,29 @@
+{
+ "cli": "spikes/v3/v3b-clojure/cli",
+ "backend": "postgres",
+ "n": 200,
+ "errors": 0,
+ "approved_true": 49,
+ "decide_ms": {
+  "p50": 6.027792,
+  "p95": 18.162125,
+  "max": 83.726542,
+  "mean": 7.59980731
+ },
+ "decide_ms_warm": {
+  "p50": 5.740875,
+  "p95": 17.977709
+ },
+ "questions_ms": {
+  "p50": 0.801667,
+  "p95": 152.016125
+ },
+ "sql_per_decide": 11.17,
+ "load_ms": 1369.803583,
+ "cold_start_s": 3.21,
+ "session_wall_s": 4.7,
+ "max_rss_mb": {
+  "load_only": 346,
+  "bench": 628
+ }
+}

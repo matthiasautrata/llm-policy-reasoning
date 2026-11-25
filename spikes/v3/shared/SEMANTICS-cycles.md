@@ -1,5 +1,7 @@
 # Semantics for defeat cycles (PLAN-v3-cycles §1.2)
 
+> **Superseded in part (2026-11-25, PLAN-v3-integrity).** Defeat cycles are now rejected at load (IR-001a), and the Y5 decision (blocking) is replaced by ambiguity propagation: see `SEMANTICS.md`. This file remains the semantics of the retired modes (V3a `wfs`, V3e doubled encoding; `reference.py --semantics blocking`).
+
 Target: **well-founded defeasible semantics with ambiguity blocking**. It is fixed here before keying, and `reference.py` (`Cyc`) implements it independently of every spike.
 
 ## Definition

@@ -5,6 +5,7 @@
 Writes results/probes.json.
 """
 import json, os, pathlib, statistics, sys, time
+os.environ.setdefault("V3E_ENCODING", "doubled")   # plain_rule_body rewrites the doubled per-rule text
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import host  # noqa: E402

@@ -5,11 +5,15 @@ defmodule V3c.Engine do
 
   Literals are lists `[:pred arg ...]`; `[:neg l]` is the complement; variables are `{:var, "?x"}`. A body
   is evaluated left to right as a lazy Stream of substitutions (V3b: lazy seqs). `evaluate` decides a
-  ground literal:
-    {:proven, sups, sup_nodes}       every applicable attacker is beaten by some applicable supporter
-    {:defeated, att, sups, sup_nodes} an unbeaten attacker is superior to every supporter
-    {:blocked, sups, unbeaten}       ambiguity blocking
-    {:none, atts}                    no applicable supporter
+  ground literal with ambiguity propagation (shared/SEMANTICS.md, PLAN-v3-integrity §4): proven, refuted
+  or contested.
+    {:proven, sups, sup_nodes}  a proven-bodied supporter; every live attacker beaten (team defeat)    proven
+    {:defeated, att, sups, dn}  every live supporter beaten by a superior proven-bodied attacker;
+                                att the smallest such id                                                refuted
+    {:none, atts}               no live supporter                                                       refuted
+    {:blocked, sups, unbeaten}  root: proven-bodied supporters meet proven-bodied unbeaten attackers    contested
+    {:contested, rules, via}    downstream: only through contested body literals via                 contested
+  Live = body not refuted (body3: solutions with v :proven | :contested).
   Supporters: strict/defeasible rules whose body holds, in-force claims. Attackers: the same for the
   complement and, for functional predicates, the same key with another value; defeaters attack only.
   Superiority: explicit :superior-to, strict over non-strict, asserter authority (a :superiority rule
@@ -189,7 +193,9 @@ defmodule V3c.Engine do
 
       :not ->
         g = subst(hd(args), s)
-        if Enum.empty?(prove(ctx, g)), do: [{s, %{type: "absent", goal: g}}], else: []
+        # a contested g is not absent
+        absent = if ground?(g), do: value3(evaluate(ctx, g)) == :refuted, else: Enum.empty?(prove(ctx, g))
+        if absent, do: [{s, %{type: "absent", goal: g}}], else: []
 
       :as_of ->
         case unify(hd(args), ctx.d, s) do
@@ -341,6 +347,131 @@ defmodule V3c.Engine do
     end
   end
 
+  # ---------------------------------------------------------------- ambiguity propagation
+
+  def value3({:proven, _, _}), do: :proven
+  def value3({:defeated, _, _, _}), do: :refuted
+  def value3({:none, _}), do: :refuted
+  def value3({st, _, _}) when st in [:blocked, :contested], do: :contested
+
+  @nonderived [:fetch, :not, :as_of, :is, :<, :<=, :>, :>=, :=]
+
+  @doc "One body literal -> stream of {s, node, v, cl}; v :proven | :contested, cl the contested literals ([:not g] as g). Refuted solutions are dropped."
+  def lit3(ctx, [op | args] = l, s) do
+    cond do
+      op == :not and ground?(subst(hd(args), s)) ->
+        g = subst(hd(args), s)
+
+        case value3(evaluate(ctx, g)) do
+          :refuted -> [{s, %{type: "absent", goal: g}, :proven, []}]
+          :contested -> [{s, %{type: "contested_lit", goal: g}, :contested, [g]}]
+          :proven -> []
+        end
+
+      op in @nonderived ->
+        Stream.map(lit(ctx, l, s), fn {s2, n} -> {s2, n, :proven, []} end)
+
+      true ->
+        g = subst(l, s)
+
+        defer(fn ->
+          gs = if ground?(g), do: [g], else: candidates3(ctx, g) |> Enum.filter(&ground?/1) |> sort_terms()
+
+          Stream.flat_map(gs, fn gi ->
+            ev = evaluate(ctx, gi)
+            v = value3(ev)
+            s2 = unify(l, gi, s)
+
+            cond do
+              s2 == nil or v == :refuted -> []
+              v == :proven -> [{s2, Map.update!(hd(elem(ev, 1)).proof, :children, &(&1 ++ elem(ev, 2))), :proven, []}]
+              true -> [{s2, %{type: "contested_lit", goal: gi}, :contested, [gi]}]
+            end
+          end)
+        end)
+    end
+  end
+
+  def body3(_ctx, [], s), do: [{s, [], :proven, []}]
+
+  def body3(ctx, [l | ls], s) do
+    defer(fn ->
+      lit3(ctx, l, s)
+      |> Stream.flat_map(fn {s1, k, v1, c1} ->
+        Stream.map(body3(ctx, ls, s1), fn {s2, ks, v2, c2} ->
+          {s2, [k | ks], if(v1 == :proven and v2 == :proven, do: :proven, else: :contested), c1 ++ c2}
+        end)
+      end)
+    end)
+  end
+
+  defp apply_rule3(ctx, r, l) do
+    [head, bd] = rename([r.head, r.body])
+
+    case unify(head, l, %{}) do
+      nil -> []
+      s -> Stream.map(body3(ctx, bd, s), fn {s2, kids, v, cl} -> {s2, %{type: "rule", id: r.id, goal: subst(l, s2), children: kids}, v, cl} end)
+    end
+  end
+
+  # the first proven solution, else the first (contested) one
+  defp best(sols), do: Enum.find(sols, &(elem(&1, 2) == :proven)) || Enum.at(sols, 0)
+
+  @doc "Instances of l with a live supporter."
+  def candidates3(ctx, l) do
+    Enum.flat_map(rules_of(ctx, @derivers), fn r -> Enum.map(apply_rule3(ctx, r, l), fn {s, _, _, _} -> subst(l, s) end) end) ++
+      for c <- ctx.ix.claims, in_force?(c, ctx.d), s = unify(l, c.assertion, %{}), s != nil, do: subst(l, s)
+  end
+
+  defp supporters3(ctx, l) do
+    for(r <- rules_of(ctx, @derivers), {_, p, v, cl} = best(apply_rule3(ctx, r, l)) || {nil, nil, nil, nil}, p != nil,
+        do: %{id: r.id, kind: r.kind, proof: p, v: v, cl: cl}) ++
+      for c <- ctx.ix.claims, c.assertion == l, in_force?(c, ctx.d), do: %{id: c.id, kind: :claim, proof: claim_proof(c, l), v: :proven, cl: []}
+  end
+
+  defp attackers3(ctx, l) do
+    atts =
+      for {h, diff} <- rivals(ctx, l) do
+        for(r <- rules_of(ctx, @attacking),
+            {s, p, v, cl} = best(Stream.filter(apply_rule3(ctx, r, h), fn {s, _, _, _} -> differs?(diff, s) end)) || {nil, nil, nil, nil},
+            p != nil,
+            do: %{id: r.id, kind: r.kind, head: subst(h, s), proof: p, v: v, cl: cl}) ++
+          for c <- ctx.ix.claims, in_force?(c, ctx.d), s = unify(h, c.assertion, %{}), s != nil, differs?(diff, s),
+              do: %{id: c.id, kind: :claim, head: c.assertion, proof: claim_proof(c, c.assertion), v: :proven, cl: []}
+      end
+
+    atts |> List.flatten() |> Enum.uniq_by(& &1.id)
+  end
+
+  def classify3(_ctx, [], atts), do: {:none, atts}
+
+  def classify3(ctx, sups, atts) do
+    pv? = &(&1.v == :proven)
+    beats = fn xs, loser -> Enum.find_value(xs, fn x -> if pv?.(x), do: (case sup1(ctx, x.id, loser.id) do nil -> nil; src -> {x, src} end) end) end
+
+    if Enum.all?(sups, &beats.(atts, &1)) do
+      # -sigma, team form
+      w = for(t <- sups, a <- atts, pv?.(a), sup1(ctx, a.id, t.id), do: a.id) |> Enum.uniq() |> Enum.sort() |> hd()
+      dn = for t <- sups, {x, src} = beats.(atts, t), do: %{type: "superior", winner: x.id, loser: t.id, source: src}
+      {:defeated, Enum.find(atts, &(&1.id == w)), sups, dn}
+    else
+      sp = Enum.filter(sups, pv?)
+      un = Enum.reject(atts, &beats.(sups, &1))
+      ap = Enum.filter(un, pv?)
+
+      cond do
+        sp != [] and un == [] ->
+          {:proven, sp, for(a <- atts, {x, src} = beats.(sups, a), do: %{type: "superior", winner: x.id, loser: a.id, source: src})}
+
+        sp != [] and ap != [] ->
+          {:blocked, sp, ap}
+
+        true ->
+          {:contested, ids_of(sups ++ un), sort_terms(Enum.flat_map(sups ++ un, & &1.cl))}
+      end
+    end
+  end
+
   @doc """
   Memoised per op. Re-entry guard (PLAN-v3-integrity §3.2): ctx carries the path of literals being
   evaluated; meeting one again is a dependency cycle the integrity gate did not stop
@@ -358,7 +489,7 @@ defmodule V3c.Engine do
         path = Map.get(ctx, :path, [])
         if i = Enum.find_index(path, &(&1 == k)), do: throw({:defeat_cycle, Enum.map(Enum.drop(path, i), &elem(&1, 1)) ++ [l]})
         ctx = Map.put(ctx, :path, path ++ [k])
-        r = classify(ctx, supporters(ctx, l), attackers(ctx, l))
+        r = classify3(ctx, supporters3(ctx, l), attackers3(ctx, l))
         Process.put(ctx.memo, Map.put(Process.get(ctx.memo, %{}), k, r))
         r
     end

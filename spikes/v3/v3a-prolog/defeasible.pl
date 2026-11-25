@@ -5,21 +5,30 @@
       claim(Id, Assertion, By, At, From, To, About, null, null, Meta)   flat; links: claim_link/3
       functional(Pred, KeyArity)  concept(Name, Map)  term(Id, Map)  today(Date)  withheld(Id)
 
-    Literals are lists [Pred|Args]; [neg, L] is the complement. evaluate/3 decides a ground literal:
-      proven(Sups, SupNodes)   every applicable attacker is beaten by some applicable supporter (team defeat)
-      defeated(A, Sups, SupNodes)  an unbeaten attacker A is superior to every supporter
-      blocked(Sups, Unbeaten)  ambiguity blocking: attackers unbeaten, none superior to all supporters
-      none(Atts)               no applicable supporter
+    Literals are lists [Pred|Args]; [neg, L] is the complement. evaluate/3 decides a ground literal
+    (memo mode: ambiguity propagation, shared/SEMANTICS.md; each literal proven, refuted or contested):
+      proven(Sups, SupNodes)   a proven-bodied supporter, every live attacker beaten by a superior
+                               proven-bodied supporter (team defeat)                     -- proven
+      defeated(A, Sups, DN)    every live supporter beaten by a superior proven-bodied attacker; A the
+                               smallest such attacker id                                 -- refuted
+      none(Atts)               no live supporter                                         -- refuted
+      blocked(Sups, Unbeaten)  a root conflict: proven-bodied supporters meet proven-bodied unbeaten
+                               attackers                                                 -- contested
+      contested(Rules, Via)    downstream: contested only through contested body literals Via of the
+                               live supporters / live unbeaten attackers Rules           -- contested
+    Live = body not refuted (body3/5 gives proven or contested solutions).
     Supporters: active strict/defeasible rules whose body is provable, in-force claims. Attackers: the same
     for the complement and, for functional predicates, for the same key with another value; defeaters
     attack only. Superiority: explicit :superior-to, strict over non-strict, asserter authority (a
     :superiority rule, scoped to its :pred), later asserted_at for the same asserter.
     Memoised per op and state (memo/4), cleared whenever the rule/claim set changes.
 
-    Evaluation modes (set_eval_mode/1; host.py reads ENGINE_MODE, default wfs):
-      memo  the original evaluator: evaluate/3 recurses through supporters/attackers, memoised in memo/4.
-            A negative dependency cycle (cycles.edn Y2, Y3) recurses until the stack overflows.
-      wfs   PLAN-v3-cycles §2: truth values come from the tabled metaprogram wdef/wovr/wbeat
+    Evaluation modes (set_eval_mode/1; host.py reads ENGINE_MODE, default memo):
+      memo  evaluate/3 recurses through live supporters/attackers (eval3/3), memoised in memo/4, three-valued
+            with ambiguity propagation (PLAN-v3-integrity §4). A dependency cycle the gate missed hits the
+            re-entry guard.
+      wfs   RETIRED (PLAN-v3-integrity §4.2: kept behind the flag, not ported; ambiguity blocking, the keys
+            of reference.py --semantics blocking). PLAN-v3-cycles §2: truth values come from the tabled metaprogram wdef/wovr/wbeat
             (SEMANTICS-cycles.md, SWI tabling with tnot = well-founded semantics); call_delays/2 tells
             true (no delays) from undefined (a residual answer). evaluate/3 then builds the same
             proven/defeated/blocked/none results as memo mode for true and false literals, following only
@@ -27,7 +36,7 @@
             for undefined ones. Tables are keyed by state token and as_of date, and abolished on every
             change of the rule/claim set and (table policy `op`, default) at the start of every op.
 */
-:- module(defeasible, [load_file/1, add_records/3, retract_source/1, evaluate/3, prove/3, body/3, lit/3,
+:- module(defeasible, [eval3/3, body3/5, candidate3/2, value3/2, contested_info/5, load_file/1, add_records/3, retract_source/1, evaluate/3, prove/3, body/3, lit/3,
                        supporters/3, attackers/3, sup/3, in_force/3, active/1, clear_memo/0, pred_of/2,
                        state_token/1, with_state/2, memo/4, set_eval_mode/1, eval_mode/1,
                        set_table_policy/1, table_policy/1, clear_tables/0, wval/3,
@@ -39,7 +48,7 @@
 
 :- dynamic rule/5, claim/10, claim_link/3, top_claim/2, functional/2, concept/2, term/2, today/1, withheld/1, memo/4, slice/1, asset/2, src/2.
 :- dynamic eval_mode/1, table_policy/1.
-eval_mode(wfs).
+eval_mode(memo).
 table_policy(op).
 set_eval_mode(M) :- atom_string(A, M), memberchk(A, [wfs, memo]), retractall(eval_mode(_)), assertz(eval_mode(A)).
 set_table_policy(M) :- atom_string(A, M), memberchk(A, [op, session]), retractall(table_policy(_)), assertz(table_policy(A)).
@@ -137,8 +146,7 @@ evaluate(L, D, R) :-
     guard_path(P),
     (   append(Pre, [D-L|_], P) -> append(Pre, [D-L], Seg), cycle_goals(Seg, Path), throw(defeat_cycle(Path)) ; true ),
     setup_call_cleanup(nb_setval(v3a_guard, [D-L|P]),
-                       once(( supporters(L, D, Sups), attackers(L, D, Atts),
-                              classify(Sups, Atts, R0) )),    % R0 fresh: callers pass patterns like proven(_, _)
+                       once(eval3(L, D, R0)),          % R0 fresh: callers pass patterns like proven(_, _)
                        nb_setval(v3a_guard, P)),
     state_token(S), assertz(memo(S, D, L, R0)), R = R0.
 
@@ -217,6 +225,121 @@ pred_of([P|_], P).
 
 in_force(F, T, D) :- F @=< D, ( T == null -> true ; D @=< T ).
 
+% ------------------------------------------------------------------ memo mode: ambiguity propagation
+
+%!  eval3(+L, +D, -R)  SEMANTICS.md over the live supporters / attackers of ground L.
+%   Entries: s(Id, K, Proof)-V-CL and a(Id, K, Head, Proof)-V-CL; V proven | contested (body value), CL the
+%   contested body literals ([:not X] as X).
+eval3(L, D, R) :-
+    findall(s(Id, K, P)-V-CL, live_sup(L, D, Id, K, P, V, CL), S),
+    findall(a(Id, K, H, P)-V-CL, live_att(L, D, Id, K, H, P, V, CL), A0), dedup_e(A0, A),
+    classify3(S, A, R).
+
+live_sup(L, D, Id, K, _{type:rule, id:Id, goal:L, children:Kids}, V, CL) :-
+    rule(Id, K, L0, _, _), memberchk(K, [strict, defeasible]), active(Id), \+ L0 \= L,
+    best_sol(Id, L, D, true, V, Kids, CL).
+live_sup(L, D, Id, claim, P, proven, []) :-
+    claim(Id, L, By, At, F, T, _, _, _, _), active(Id), in_force(F, T, D),
+    P = _{type:claim, id:Id, goal:L, asserted_by:By, asserted_at:At, children:[]}.
+
+live_att(L, D, Id, K, H, _{type:rule, id:Id, goal:H, children:Kids}, V, CL) :-
+    rival(L, H0, Diff0),
+    rule(Id, K, Hr, _, _), memberchk(K, [strict, defeasible, defeater]), active(Id),
+    copy_term(H0-Diff0, H-Diff), \+ Hr \= H,
+    best_sol(Id, H, D, differs(Diff), V, Kids, CL).
+live_att(L, D, Id, claim, H, P, proven, []) :-
+    rival(L, H0, Diff0), copy_term(H0-Diff0, H-Diff),
+    claim(Id, H, By, At, F, T, _, _, _, _), active(Id), in_force(F, T, D), differs(Diff),
+    P = _{type:claim, id:Id, goal:H, asserted_by:By, asserted_at:At, children:[]}.
+
+%   A proven body solution if there is one, else a contested one (binds H on the way).
+best_sol(Id, H, D, Chk, V, Kids, CL) :-
+    (   once(( rule(Id, _, H, B, _), body3(B, D, Kids, proven, CL), call(Chk) )) -> V = proven
+    ;   once(( rule(Id, _, H, B, _), body3(B, D, Kids, contested, CL), call(Chk) )) -> V = contested ).
+
+dedup_e([], []).
+dedup_e([E|Es], [E|Fs]) :- eid(E, Id), exclude([X]>>eid(X, Id), Es, Rest), dedup_e(Rest, Fs).
+
+eid(T-_-_, Id) :- arg(1, T, Id).
+eterm(T-_-_, T).
+eproven(_-proven-_).
+
+beats_e(Es, Loser, W, Src) :- member(E, Es), eproven(E), eid(E, W), sup(W, Loser, Src).
+
+classify3([], A, none(As)) :- !, maplist(eterm, A, As).
+classify3(S, A, R) :-
+    maplist(eterm, S, Ss),
+    (   forall(member(T, S), ( eid(T, TId), beats_e(A, TId, _, _) ))       % -sigma, team form
+    ->  findall(W, ( member(T, S), eid(T, TId), beats_e(A, TId, W, _) ), Ws), sort(Ws, [W1|_]),
+        once(( member(AE, A), eid(AE, W1) )), eterm(AE, Def),
+        findall(_{type:superior, winner:W, loser:TId, source:Src},
+                ( member(T, S), eid(T, TId), once(beats_e(A, TId, W, Src)) ), DN),
+        R = defeated(Def, Ss, DN)
+    ;   include(eproven, S, Sp0), maplist(eterm, Sp0, Sp),
+        partition([AE]>>( eid(AE, AId), beats_e(S, AId, _, _) ), A, _, Un),
+        (   Sp \== [], Un == []
+        ->  findall(_{type:superior, winner:W, loser:AId, source:Src},
+                    ( member(AE, A), eid(AE, AId), once(beats_e(S, AId, W, Src)) ), SupN),
+            R = proven(Sp, SupN)
+        ;   include(eproven, Un, Ap0), Sp \== [], Ap0 \== []
+        ->  maplist(eterm, Ap0, Ap), R = blocked(Sp, Ap)
+        ;   append(S, Un, Live), maplist(eid, Live, Rs0), sort(Rs0, Rs),
+            findall(X, ( member(_-_-CL, Live), member(X, CL) ), Vs0), sort(Vs0, Vs),
+            R = contested(Rs, Vs) ) ).
+
+%!  value3(+E, -V)  proven | refuted | contested
+value3(proven(_, _), proven).
+value3(defeated(_, _, _), refuted).
+value3(none(_), refuted).
+value3(blocked(_, _), contested).
+value3(contested(_, _), contested).
+value3(undefined(_, _), contested).
+
+%!  body3(+B, +D, -Kids, ?V, -CL) is nondet.  A live solution of body B: V proven | contested.
+body3([], _, [], proven, []).
+body3([L|Ls], D, [K|Ks], V, CL) :-
+    lit3(L, D, K, V1, C1), body3(Ls, D, Ks, V2, C2),
+    ( V1 == proven, V2 == proven -> V = proven ; V = contested ), append(C1, C2, CL).
+
+lit3([not, X], D, N, V, CL) :- ground(X), !,
+    evaluate(X, D, E), value3(E, V0),
+    (   V0 == refuted -> V = proven, CL = [], N = _{type:absent, goal:X}
+    ;   V0 == contested -> V = contested, CL = [X], N = _{type:contested_lit, goal:X} ).
+lit3(L, D, N, V, CL) :- derived_lit(L), !,
+    (   ground(L) -> Ls = [L] ; findall(L, candidate3(L, D), Ls0), sort(Ls0, Ls) ),
+    member(L, Ls), evaluate(L, D, E), value3(E, V0),
+    (   V0 == proven -> V = proven, CL = [], once(prove(L, D, N))
+    ;   V0 == contested -> V = contested, CL = [L], N = _{type:contested_lit, goal:L} ).
+lit3(L, D, N, proven, []) :- lit(L, D, N).
+
+derived_lit([P|_]) :- \+ memberchk(P, [fetch, not, as_of, is, <, <=, >, >=, =]).
+
+%!  candidate3(?L, +D)  a ground instance of L with a live supporter
+candidate3(L, D) :-
+    (   rule(Id, K, L, B, _), memberchk(K, [strict, defeasible]), active(Id), body3(B, D, _, _, _)
+    ;   claim(Id, L, _, _, F, T, _, _, _, _), active(Id), in_force(F, T, D) ),
+    ground(L).
+
+%!  contested_info(+G, +D, -Via, -Rules, -Roots)  for a downstream-contested G (SEMANTICS.md, why tree):
+%   Via every contested literal reached through contested body literals, Rules the live supporters /
+%   unbeaten attackers of G and the non-root Via literals, Roots [Goal-Sides-SideProofs] per root.
+contested_info(G, D, Via, Rules, Roots) :-
+    cwalk([G], D, [], [], [], [], V0, Ru0, Ro0),
+    sort(V0, Via), sort(Ru0, Rules), sort(Ro0, Roots).
+
+cwalk([], _, _, V, Ru, Ro, V, Ru, Ro).
+cwalk([X|Xs], D, Seen, V0, Ru0, Ro0, V, Ru, Ro) :-
+    (   memberchk(X, Seen) -> cwalk(Xs, D, Seen, V0, Ru0, Ro0, V, Ru, Ro)
+    ;   evaluate(X, D, E),
+        (   E = blocked(Sp, Ap)
+        ->  ids_of(Sp, I1), ids_of(Ap, I2), sort([I1, I2], Sides),
+            maplist([s(_, _, P), P]>>true, Sp, P1), maplist([a(_, _, _, P), P]>>true, Ap, P2), append(P1, P2, Ps),
+            cwalk(Xs, D, [X|Seen], V0, Ru0, [X-Sides-Ps|Ro0], V, Ru, Ro)
+        ;   E = contested(Rs, Vs)
+        ->  append(Rs, Ru0, Ru1), append(Vs, V0, V1), append(Xs, Vs, Q),
+            cwalk(Q, D, [X|Seen], V1, Ru1, Ro0, V, Ru, Ro)
+        ;   cwalk(Xs, D, [X|Seen], V0, Ru0, Ro0, V, Ru, Ro) ) ).
+
 % ------------------------------------------------------------------ rule bodies
 
 body([], _, []).
@@ -229,7 +352,8 @@ lit([fetch, C, map(F), map(O)], _, Node) :- !,
     maplist([Col-V]>>get_dict(Col, Row, V), O),
     Node = Info.put(_{type:fetch, concept:C, filters:Filters, rows:N, row:Row}).
 lit([not, L], D, _{type:absent, goal:L}) :- eval_mode(wfs), !, wval(L, D, false).
-lit([not, L], D, _{type:absent, goal:L}) :- !, \+ prove(L, D, _).
+lit([not, L], D, _{type:absent, goal:L}) :- !,           % memo: L refuted (a contested L is not absent)
+    (   ground(L) -> evaluate(L, D, E), value3(E, refuted) ; \+ prove(L, D, _) ).
 lit([as_of, X], D, _{type:fact, goal:[as_of, D]}) :- !, X = D.
 lit([is, X, E], _, _{type:fact, goal:[is, V, E1]}) :- !, ev(E, V), X = V, inst(E, E1).
 lit([Op, A, B], _, _{type:fact, goal:[Op, A1, B1]}) :- cmp_op(Op), !, inst(A, A1), inst(B, B1), cmp_lit([Op, A1, B1]).

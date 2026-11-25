@@ -2,11 +2,15 @@
   "V3b evaluator: the same defeasible logic as V3a's defeasible.pl, over EDN data as Clojure data.
 
   Literals are vectors [:pred arg ...]; [:neg L] is the complement; variables are symbols ?x. A body is
-  evaluated left to right as a lazy sequence of substitutions. evaluate decides a ground literal:
-    [:proven sups sup-nodes]       every applicable attacker is beaten by some applicable supporter
-    [:defeated att sups sup-nodes] an unbeaten attacker is superior to every supporter
-    [:blocked sups unbeaten]       ambiguity blocking
-    [:none atts]                   no applicable supporter
+  evaluated left to right as a lazy sequence of substitutions. evaluate decides a ground literal with
+  ambiguity propagation (shared/SEMANTICS.md, PLAN-v3-integrity §4): proven, refuted or contested.
+    [:proven sups sup-nodes]       a proven-bodied supporter; every live attacker beaten (team defeat)  proven
+    [:defeated att sups dn]        every live supporter beaten by a superior proven-bodied attacker;
+                                   att the smallest such id                                              refuted
+    [:none atts]                   no live supporter                                                     refuted
+    [:blocked sups unbeaten]       root: proven-bodied supporters meet proven-bodied unbeaten attackers  contested
+    [:contested rules via]         downstream: only through contested body literals via               contested
+  Live = body not refuted (body3: solutions with :v :proven | :contested).
   Supporters: strict/defeasible rules whose body holds, in-force claims. Attackers: the same for the
   complement and, for functional predicates, the same key with another value; defeaters attack only.
   Superiority: explicit :superior-to, strict over non-strict, asserter authority (a :superiority rule
@@ -93,7 +97,7 @@
 
 ;; ------------------------------------------------------------------ bodies
 
-(declare prove evaluate)
+(declare prove evaluate value3)
 
 (defn- ev [t s]
   (let [t (walk t s)]
@@ -132,7 +136,8 @@
                      :when s2]
                  [s2 (merge info {:type "fetch" :concept (name c) :filters fs :rows n :row row})]))
       :not (let [g (subst (first args) s)]
-             (when (empty? (prove ctx g)) [[s {:type "absent" :goal g}]]))
+             (when (if (ground? g) (= :refuted (value3 (evaluate ctx g))) (empty? (prove ctx g)))   ; a contested g is not absent
+               [[s {:type "absent" :goal g}]]))
       :as_of (when-let [s2 (unify (first args) (:d ctx) s)] [[s2 {:type "fact" :goal [:as_of (:d ctx)]}]])
       :is (let [[x e] args v (ev e s)]
             (when-let [s2 (unify x v s)] [[s2 {:type "fact" :goal [:is v (subst e s)]}]]))
@@ -245,6 +250,94 @@
           [:defeated a sups (vec (for [s sups] {:type "superior" :winner (:id a) :loser (:id s) :source (sup1 ctx (:id a) (:id s))}))]
           [:blocked sups (vec unbeaten)])))))
 
+;; ------------------------------------------------------------------ ambiguity propagation
+
+(defn value3 [[st]] (case st :proven :proven (:defeated :none) :refuted (:blocked :contested) :contested))
+
+(declare candidates3 ids-of)
+
+(defn lit3
+  "One body literal -> lazy seq of [s node v cl]; v :proven | :contested, cl the contested literals
+  ([:not g] as g). Refuted solutions are dropped."
+  [ctx l s]
+  (let [[op & args] l]
+    (cond
+      (and (= op :not) (ground? (subst (first args) s)))
+      (let [g (subst (first args) s)]
+        (case (value3 (evaluate ctx g))
+          :refuted [[s {:type "absent" :goal g} :proven []]]
+          :contested [[s {:type "contested_lit" :goal g} :contested [g]]]
+          nil))
+      (#{:fetch :not :as_of :is :< :<= :> :>= :=} op) (for [[s2 n] (lit ctx l s)] [s2 n :proven []])
+      :else
+      (let [g (subst l s)
+            gs (if (ground? g) [g] (filter ground? (sort-terms (candidates3 ctx g))))]
+        (for [gi gs :let [ev (evaluate ctx gi) v (value3 ev) s2 (unify l gi s)]
+              :when (and s2 (not= v :refuted))]
+          (if (= v :proven)
+            [s2 (with-children (:proof (first (second ev))) (nth ev 2)) :proven []]
+            [s2 {:type "contested_lit" :goal gi} :contested [gi]]))))))
+
+(defn body3 [ctx lits s]
+  (if (empty? lits)
+    [[s [] :proven []]]
+    (for [[s1 k v1 c1] (lit3 ctx (first lits) s)
+          [s2 ks v2 c2] (body3 ctx (rest lits) s1)]
+      [s2 (into [k] ks) (if (= :proven v1 v2) :proven :contested) (into c1 c2)])))
+
+(defn- apply-rule3 [ctx r l]
+  (let [{:keys [head] bd :body} (rename (select-keys r [:head :body]))]
+    (when-let [s (unify head l {})]
+      (for [[s2 kids v cl] (body3 ctx bd s)]
+        [s2 {:type "rule" :id (:id r) :goal (subst l s2) :children kids} v cl]))))
+
+(defn- best "The first proven solution, else the first (contested) one." [sols]
+  (or (first (filter #(= :proven (nth % 2)) sols)) (first sols)))
+
+(defn candidates3 "Instances of l with a live supporter." [ctx l]
+  (concat
+   (for [r (rules-of ctx derivers) [s] (apply-rule3 ctx r l)] (subst l s))
+   (for [c (claims ctx) :when (in-force? c (:d ctx)) :let [s (unify l (:assertion c) {})] :when s] (subst l s))))
+
+(defn- supporters3 [ctx l]
+  (concat
+   (for [r (rules-of ctx derivers) :let [[_ p v cl] (best (apply-rule3 ctx r l))] :when p]
+     {:id (:id r) :kind (:kind r) :proof p :v v :cl cl})
+   (for [c (claims ctx) :when (and (= (:assertion c) l) (in-force? c (:d ctx)))]
+     {:id (:id c) :kind :claim :proof (claim-proof c l) :v :proven :cl []})))
+
+(defn- attackers3 [ctx l]
+  (let [atts (for [[h diff] (rivals ctx l)
+                   a (concat
+                      (for [r (rules-of ctx attacking)
+                            :let [[s p v cl] (best (filter (fn [[s]] (differs? diff s)) (apply-rule3 ctx r h)))]
+                            :when p]
+                        {:id (:id r) :kind (:kind r) :head (subst h s) :proof p :v v :cl cl})
+                      (for [c (claims ctx) :when (in-force? c (:d ctx))
+                            :let [s (unify h (:assertion c) {})]
+                            :when (and s (differs? diff s))]
+                        {:id (:id c) :kind :claim :head (:assertion c) :proof (claim-proof c (:assertion c)) :v :proven :cl []}))]
+               a)]
+    (vals (reduce (fn [m a] (if (contains? m (:id a)) m (assoc m (:id a) a))) (array-map) atts))))
+
+(defn classify3 [ctx S A]
+  (let [pv? #(= :proven (:v %))
+        beats (fn [xs loser] (first (for [x xs :when (pv? x) :let [src (sup1 ctx (:id x) (:id loser))] :when src] [x src])))]
+    (cond
+      (empty? S) [:none (vec A)]
+      (every? #(beats A %) S)                                 ; -sigma, team form
+      (let [w (first (sort (distinct (for [t S a A :when (and (pv? a) (sup1 ctx (:id a) (:id t)))] (:id a)))))]
+        [:defeated (first (filter #(= w (:id %)) A)) S
+         (vec (for [t S :let [[x src] (beats A t)]] {:type "superior" :winner (:id x) :loser (:id t) :source src}))])
+      :else
+      (let [sp (filterv pv? S) un (vec (remove #(beats S %) A)) ap (filterv pv? un)]
+        (cond
+          (and (seq sp) (empty? un))
+          [:proven sp (vec (for [a A :let [[x src] (beats S a)]] {:type "superior" :winner (:id x) :loser (:id a) :source src}))]
+          (and (seq sp) (seq ap)) [:blocked sp ap]
+          :else [:contested (ids-of (concat S un)) (vec (sort-terms (mapcat :cl (concat S un))))])))))
+
+
 (defn evaluate
   "Memoised per op. Re-entry guard (PLAN-v3-integrity §3.2): ctx carries the path of literals being
   evaluated; meeting one again means a dependency cycle the integrity gate did not stop
@@ -257,7 +350,7 @@
           (when i
             (throw (ex-info "defeat-cycle" {:defeat-cycle (conj (mapv second (subvec path i)) l)})))
           (let [ctx' (assoc ctx :path (conj path k))
-                r (classify ctx' (vec (supporters ctx' l)) (vec (attackers ctx' l)))]
+                r (classify3 ctx' (vec (supporters3 ctx' l)) (vec (attackers3 ctx' l)))]
             (swap! (:memo ctx) assoc k r)
             r)))))
 

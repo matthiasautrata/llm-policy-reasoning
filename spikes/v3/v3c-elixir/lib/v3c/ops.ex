@@ -19,7 +19,11 @@ defmodule V3c.Ops do
 
   defp scope(ix, p), do: if(Enum.any?(ix.terms, &(&1.id == "term:" <> Atom.to_string(p))), do: "UNDERDETERMINED", else: "OUT_OF_SCOPE")
 
-  defp sub_nodes(x) when is_map(x), do: [x | Enum.flat_map([x[:children], x[:failed]], &sub_nodes/1)]
+  defp sub_nodes(x) when is_map(x) do
+    ids = if x[:type] == "contested", do: Enum.map(x.rules, &%{id: &1}), else: []
+    [x | ids] ++ Enum.flat_map([x[:children], x[:failed], x[:roots]], &sub_nodes/1)
+  end
+
   defp sub_nodes(x) when is_list(x), do: Enum.flat_map(x, &sub_nodes/1)
   defp sub_nodes(_), do: []
 
@@ -45,6 +49,35 @@ defmodule V3c.Ops do
     end)
   end
 
+  @doc """
+  PLAN-v3-integrity §4: {sides, contested node} of a downstream-contested ground g. Follows contested body
+  literals to the root conflicts (SEMANTICS.md, why tree).
+  """
+  def contested_why(c, g), do: cw(c, g, [g], MapSet.new(), [], [], %{})
+
+  defp cw(_c, g, [], _seen, via, rules, roots) do
+    rs = E.sort_terms(Map.keys(roots))
+    {sides(Enum.flat_map(rs, &roots[&1].sides)),
+     %{type: "contested", goal: g, via: E.sort_terms(via), rules: rules |> Enum.uniq() |> Enum.sort(), roots: Enum.map(rs, &roots[&1])}}
+  end
+
+  defp cw(c, g, [x | more], seen, via, rules, roots) do
+    if MapSet.member?(seen, x) do
+      cw(c, g, more, seen, via, rules, roots)
+    else
+      seen = MapSet.put(seen, x)
+
+      case E.evaluate(c, x) do
+        {:blocked, a, b} ->
+          node = %{type: "conflict", goal: x, sides: sides([E.ids_of(a), E.ids_of(b)]), children: Enum.map(a, & &1.proof) ++ Enum.map(b, & &1.proof)}
+          cw(c, g, more, seen, via, rules, Map.put(roots, x, node))
+
+        {:contested, rs, vs} -> cw(c, g, more ++ vs, seen, via ++ vs, rules ++ rs, roots)
+        _ -> cw(c, g, more, seen, via, rules, roots)
+      end
+    end
+  end
+
   defp decide_ground(c, g) do
     case E.evaluate(c, g) do
       {:proven, sups, sn} ->
@@ -57,6 +90,10 @@ defmodule V3c.Ops do
 
       {:blocked, sups, un} ->
         answer(c, "CONFLICT", nil, sides([E.ids_of(sups), E.ids_of(un)]), Enum.map(sups, & &1.proof) ++ Enum.map(un, & &1.proof))
+
+      {:contested, _, _} ->
+        {sd, node} = contested_why(c, g)
+        answer(c, "CONFLICT", nil, sd, [node])
 
       _ ->
         answer(c, "ANSWER", false, nil, [Why.explain_not(c, g)])
@@ -81,16 +118,25 @@ defmodule V3c.Ops do
       end
     end
 
-    cands =
-      (for(r <- c.ix.rules, r.kind in [:strict, :defeasible], {_, p} <- E.apply_rule(c, r, g), do: p.goal) ++
-         for(cl <- c.ix.claims, E.in_force?(cl, c.d), s = E.unify(g, cl.assertion, %{}), s != nil, do: E.subst(g, s)))
-      |> Enum.filter(&E.ground?/1)
-      |> E.sort_terms()
-
+    cands = E.candidates3(c, g) |> Enum.filter(&E.ground?/1) |> E.sort_terms()
     ges = for gi <- cands, do: {gi, E.evaluate(c, gi)}
     won = Enum.filter(ges, fn {_, ev} -> elem(ev, 0) == :proven end)
+    cont = Enum.filter(ges, fn {_, ev} -> E.value3(ev) == :contested end)
 
-    if c.ix.functional[E.pred_of(g)] do
+    cond do
+      # propagation: any contested instance contests the goal
+      cont != [] ->
+        parts =
+          for {gi, ev} <- cont do
+            case ev do
+              {:blocked, a, b} -> {sides([E.ids_of(a), E.ids_of(b)]), Enum.map(a, & &1.proof) ++ Enum.map(b, & &1.proof)}
+              _ -> (fn {sd, n} -> {sd, [n]} end).(contested_why(c, gi))
+            end
+          end
+
+        answer(c, "CONFLICT", nil, sides(Enum.flat_map(parts, &elem(&1, 0))), Enum.flat_map(parts, &elem(&1, 1)))
+
+      c.ix.functional[E.pred_of(g)] ->
       cond do
         length(won) == 1 ->
           [{gi, {_, sups, sn}}] = won
@@ -107,7 +153,8 @@ defmodule V3c.Ops do
         true ->
           %{answer(c, "CONFLICT", nil, nil, []) | value: Enum.map(won, fn {gi, _} -> value.(gi) end)}
       end
-    else
+
+      true ->
       vws = for {gi, {_, sups, sn}} <- won, do: {value.(gi), team_proofs(sups, sn)}
       answer(c, "ANSWER", E.sort_terms(Enum.map(vws, &elem(&1, 0))), nil, Enum.flat_map(vws, &elem(&1, 1)))
     end
@@ -149,6 +196,10 @@ defmodule V3c.Ops do
           q -> st("holds_with_qualifier", nil, q)
         end
 
+      # propagation: a contested required member contests the parent
+      %{standing: "contested"} = s ->
+        Map.put(st("contested", nil, [], s.sides), :via, s.id)
+
       s ->
         Map.put(st("rebutted", s.defeater), :via, s.id)
     end
@@ -159,7 +210,12 @@ defmodule V3c.Ops do
 
     st =
       if E.in_force?(cl, c.d) do
-        st0 = own_standing(E.evaluate(c, cl.assertion))
+        st0 =
+          case E.evaluate(c, cl.assertion) do
+            {:contested, _, _} -> st("contested", nil, [], elem(contested_why(c, cl.assertion), 0))
+            ev -> own_standing(ev)
+          end
+
         if st0.standing == "holds", do: sub_standing(subs), else: st0
       else
         st("not_in_force")

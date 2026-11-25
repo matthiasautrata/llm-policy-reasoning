@@ -17,6 +17,12 @@ backend connection, it re-checks every node:
               reference's well-founded model (`undefined` = the key's {literals, members}); the node for
               the question's goal must list exactly the reference's component, nested ones a subset;
               members must be active ids
+  contested   (ambiguity propagation, SEMANTICS.md) goal, via, rules, roots: the goal must be a
+              downstream-contested ground literal of the reference (`contested` = the key's map
+              json(goal) -> {via, rules, roots}); via (literals), rules (ids) and the roots' {goal, sides}
+              must equal the reference's exactly; rules must be active ids; each root is a conflict node
+  conflict    goal, sides, children: the side members' proofs (rule / claim nodes), each verified; every
+              side id must have a child node
 
 Usage as a library: Checker(slice_plain, active_rules, active_claims, as_of, runsql).check(nodes)
 returns a list of error strings (empty = verified).
@@ -103,6 +109,11 @@ def node_ids(nodes, out=None):
             out.add(n["target"])
         if t == "undefined":
             out |= set(n.get("members") or [])
+        if t == "contested":
+            out |= set(n.get("rules") or [])
+            node_ids(n.get("roots"), out)
+        if t == "conflict":
+            out |= {i for sd in n.get("sides") or [] for i in sd}
         if t == "superior":
             out |= {n["winner"], n["loser"]}
             if n.get("source", "").startswith("authority:"):
@@ -125,11 +136,11 @@ def goals_in(nodes, out=None):
 
 
 class Checker:
-    def __init__(self, slice_, rules, claims, as_of, runsql, undefined=None, goal=None):
+    def __init__(self, slice_, rules, claims, as_of, runsql, undefined=None, goal=None, contested=None):
         """slice_: plain slice; rules: {id: rule}; claims: {id: claim incl. sub-claims}; runsql(sql, params) -> [dict];
         undefined: the reference's undefined component {literals, members} for the question goal (cycles)"""
         self.S, self.rules, self.claims, self.as_of, self.runsql = slice_, rules, claims, as_of, runsql
-        self.undef, self.goal = undefined, goal
+        self.undef, self.goal, self.cont = undefined, goal, contested or {}
         self.errors, self._sql = [], {}
 
     def err(self, path, msg):
@@ -167,6 +178,10 @@ class Checker:
             pass
         elif t == "undefined":
             self.undefined(n, path)
+        elif t == "contested":
+            self.contested(n, path)
+        elif t == "conflict":
+            self.conflict(n, path)
         else:
             self.err(path, f"unknown node type {t}")
 
@@ -188,6 +203,33 @@ class Checker:
             if m not in self.rules and m not in self.claims:
                 self.err(path, f"member {m} not active")
         for j, k in enumerate(n.get("children") or []):
+            self.node(k, f"{path}[{j}]")
+
+    def contested(self, n, path):
+        import json
+        g = n.get("goal"); ref = self.cont.get(json.dumps(g))
+        if ref is None:
+            return self.err(path, f"contested node for {g}, which the reference does not contest downstream")
+        J = lambda xs: sorted(json.dumps(x) for x in xs or [])
+        if J(n.get("via")) != J(ref["via"]): self.err(path, f"contested via {n.get('via')} != reference {ref['via']}")
+        if sorted(n.get("rules") or []) != ref["rules"]: self.err(path, f"contested rules {n.get('rules')} != reference {ref['rules']}")
+        for m in n.get("rules") or []:
+            if m not in self.rules and m not in self.claims:
+                self.err(path, f"rule {m} not active")
+        roots = n.get("roots") or []
+        if any(r.get("type") != "conflict" for r in roots): self.err(path, "a root is not a conflict node")
+        got = sorted(json.dumps([r.get("goal"), sorted(sorted(x) for x in r.get("sides") or [])]) for r in roots)
+        want = sorted(json.dumps([r["goal"], r["sides"]]) for r in ref["roots"])
+        if got != want: self.err(path, f"contested roots {got} != reference {want}")
+        for j, r in enumerate(roots):
+            self.node(r, f"{path}.roots[{j}]")
+
+    def conflict(self, n, path):
+        kids = n.get("children") or []
+        have = node_ids(kids)
+        for i in {i for sd in n.get("sides") or [] for i in sd} - have:
+            self.err(path, f"conflict side {i} has no proof node")
+        for j, k in enumerate(kids):
             self.node(k, f"{path}[{j}]")
 
     def rule(self, n, path):
@@ -253,7 +295,7 @@ class Checker:
                 self.err(path, f"fact goal {k['goal']} != {subst(lit, s2)}")
             return s2
         # derived literal
-        if k.get("type") not in ("rule", "claim", "undefined"):
+        if k.get("type") not in ("rule", "claim", "undefined", "contested"):
             self.err(path, f"expected a proof of {subst(lit, s)}, got {k.get('type')}")
             return None
         s2 = unify(lit, k.get("goal"), s)

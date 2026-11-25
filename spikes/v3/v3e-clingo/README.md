@@ -11,13 +11,13 @@ System A over the shared slice and contract, plus the defeat-cycle extension (`.
 
 | File | What |
 |---|---|
-| `asp.py` | load-time EDN → ASP translator (one text per rule or claim) and the fixed metaprogram `META`: demand (`dm`/`need`, a magic-set rewrite keyed by `shared/modes.edn`), `@fetch` during grounding, supports/attacks, superiority (explicit, strict, authority, later), and the defeasible layer doubled for partial stable models; `PLAIN_META` is the undoubled two-valued encoding used by the probes |
+| `asp.py` | load-time EDN → ASP translator (one text per rule or claim) and the fixed metaprogram `META`: demand (`dm`/`need`, a magic-set rewrite keyed by `shared/modes.edn`), `@fetch` during grounding, supports/attacks, superiority (explicit, strict, authority, later), and the defeasible layer. `V3E_ENCODING` selects it: `plain` (default since PLAN-v3-integrity §4: one two-valued model with explicit status atoms, ambiguity propagation; `PROP_META`) or `doubled` (retired: partial stable models, ambiguity blocking; `probes.py` sets it); `PLAIN_META` is the undoubled encoding the probes use |
 | `host.py` | integrity gate (`shared/integrity.py`, imported) on load, `add`, `with_hypothesis`; store (records + their ASP texts), one clingo `Control` per op (ground with the SQL context, solve cautious and brave under `active/1` assumptions), statuses and why trees from the truth values (a port of V3a's wfs-mode `defeasible.pl` / `ops.pl` / `why.pl`), the contract's ops, `concurrent` / `after` |
 | `cli` | `exec .venv/bin/python host.py` |
 | `capabilities.json` | `{"cycles": "reject"}` since PLAN-v3-integrity: the integrity gate rejects defeat cycles at load for every engine; V3e still answers loops natively when the gate is bypassed (`results/guard-probe.txt`) |
 | `probes.py` | plain stable models for Y1–Y3; clingexplaid MUS for Y3; base vs hypothesis latency (ground/solve split); xclingo trial |
 | `negatives.py` | the 15 negatives, by V3a's LinkML model plus the shared `model_check.shape_errors` (`v3a-prolog/linkml/build.py` `negatives`) |
-| `results/` | `accept.txt`, `bench-{duckdb,postgres}.json`, `cycles-probe-{duckdb,postgres}.json`, `probes.json`, `negatives.txt`, `mutation.txt`, `isolation-{duckdb,postgres}.txt`, `guard-probe.txt` / `guard-probe-duckdb.json` (PLAN-v3-integrity, gate bypassed) |
+| `results/` | `accept.txt`, `bench-{duckdb,postgres}.json`, `cycles-probe-{duckdb,postgres}.json`, `probes.json`, `negatives.txt`, `mutation.txt`, `isolation-{duckdb,postgres}.txt`, `guard-probe.txt` / `guard-probe-duckdb.json` (PLAN-v3-integrity, gate bypassed, doubled encoding); `*-propagation*` (§4, plain encoding), `accept-doubled-blocking.txt` (`V3E_ENCODING=doubled accept.py --semantics blocking`), `guard-probe-plain.*` (the guard probe under the plain encoding) |
 
 ## How a decide runs
 

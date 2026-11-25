@@ -5,7 +5,11 @@ Per op (World):
   program  = asp.META + functional rivals + the texts of the visible records + asof/1 + goal demand dm/2
   ground   with a context whose @fetch(C, Filters) calls the SQL boundary (V3a's sql.py) for each demanded
            filter set, so only demanded rows are fetched (top-down demand by a magic-set rewrite)
-  solve    twice on the same Control, under assumptions active(Id) = not withheld:
+  solve    under assumptions active(Id) = not withheld. Default encoding "plain" (PLAN-v3-integrity §4,
+           ambiguity propagation): asp.PROP_META, stratified over the acyclic base, one stable model with
+           status atoms pro/con (ref = neither), bpro/live per body instance; the host's classify3 recomputes
+           each status for its why tree and checks it against the model.
+           Retired encoding "doubled" (V3E_ENCODING=doubled; ambiguity blocking), solved twice:
              enum_mode cautious -> t_* atoms true in every partial stable model = WFS true
              enum_mode brave    -> p_* atoms in some partial stable model     = WFS not false
   read     the ground skeleton (h/3, ih/2: every head instance with its bindings) from symbolic_atoms
@@ -315,7 +319,8 @@ class World:
             if not ground(args):
                 raise EngineError(f"goal {g} leaves a position its mode binds ({A[0]} {self.M.modes.get(A[0])}) unbound")
             demand.append(f"dm({asp.pn(A[0])},{asp.tup(asp.term(a) for a in args)}).")
-        prog = "\n".join([asp.META, self.M.func_text, *view.text.values(), f"asof({asp.q(as_of)}).", *demand])
+        self.plain = asp.ENCODING == "plain"
+        prog = "\n".join([asp.PROP_META if self.plain else asp.META, self.M.func_text, *view.text.values(), f"asof({asp.q(as_of)}).", *demand])
         t0 = time.time()
         ctl = clingo.Control(["0", "--warn=none"])
         ctl.add("base", [], prog)
@@ -323,7 +328,10 @@ class World:
         t1 = time.time()
         ids = list(view.rules) + list(view.claims)
         assumptions = [(Function("active", [String(i)]), view.active(i)) for i in ids]
-        self.C, self.B = self._solve(ctl, "cautious", assumptions), self._solve(ctl, "brave", assumptions)
+        if self.plain:
+            self.C = self.B = self._solve_one(ctl, assumptions)
+        else:
+            self.C, self.B = self._solve(ctl, "cautious", assumptions), self._solve(ctl, "brave", assumptions)
         t2 = time.time()
         self.timing = {"ground_ms": (t1 - t0) * 1000, "solve_ms": (t2 - t1) * 1000}
         # ground skeleton: every head instance (rules and in-force claims), and R314-style incompatibilities
@@ -358,14 +366,29 @@ class World:
             raise EngineError(f"no partial stable model ({mode})")
         return set(last)
 
-    # ---- truth values
+    @staticmethod
+    def _solve_one(ctl, assumptions):
+        """plain encoding: exactly one stable model (stratified); more or none means a cycle the gate did not stop"""
+        ctl.configuration.solve.models = 2
+        ms = []
+        r = ctl.solve(assumptions=assumptions, on_model=lambda m: ms.append(set(m.symbols(shown=True))))
+        if len(ms) != 1:
+            raise EngineError(f"defeat-cycle: {len(ms)} stable models of the stratified status program "
+                              "(a dependency cycle the integrity gate did not stop)")
+        return ms[0]
+
+    # ---- truth values ("undefined" = contested in the plain encoding)
     def wval(self, L):
         s = lit_sym(L)
+        if self.plain:
+            return "true" if Function("pro", [s]) in self.C else "undefined" if Function("con", [s]) in self.C else "false"
         if Function("t_def", [s]) in self.C: return "true"
         if Function("p_def", [s]) in self.B: return "undefined"
         return "false"
 
     def bval(self, I):
+        if self.plain:
+            return "true" if Function("bpro", [I]) in self.C else "undefined" if Function("live", [I]) in self.C else "false"
         if Function("t_body", [I]) in self.C: return "true"
         if Function("p_body", [I]) in self.B: return "undefined"
         return "false"
@@ -455,6 +478,7 @@ class World:
             if unify(G, H, {}) is None: continue
             for rid, Is in self.by_id(insts, ("strict", "defeasible", "claim")):
                 if any(self.bval(I) == "true" for I in Is): cands[kk] = H
+                elif self.plain and any(self.bval(I) == "undefined" for I in Is): cands[kk] = H
         for H in sorted(cands.values(), key=okey):
             p = self.prove_ground(H)
             if p is not None:
@@ -513,6 +537,9 @@ class World:
         key = k(L)
         if key in self.memo: return self.memo[key]
         if not ground(L): raise EngineError(f"evaluate of a non-ground literal {L}")
+        if self.plain:
+            R = self.memo[key] = self.evaluate3(L)
+            return R
         v = self.wval(L)
         self.stack.append(key)
         try:
@@ -532,6 +559,56 @@ class World:
         finally:
             self.stack.pop()
         self.memo[key] = R
+        return R
+
+    # ---- ambiguity propagation (plain encoding; V3a classify3, SEMANTICS.md)
+    def live_groups(self, L, role):
+        """[{id, kind, head, v, cl, I}] per id: live supporters / attackers, a proven instance first"""
+        heads = [L] if role == "sup" else self.rivals(L)
+        kinds = ("strict", "defeasible", "claim") if role == "sup" else ("strict", "defeasible", "defeater", "claim")
+        g = {}
+        for H in heads:
+            for rid, Is in self.by_id(self.heads.get(k(H), []), kinds):
+                g.setdefault(rid, []).extend(Is)
+        out = []
+        for rid in sorted(g, key=self.V.order):
+            live = [I for I in sorted(g[rid]) if self.bval(I) != "false"]
+            if not live: continue
+            tI = next((I for I in live if self.bval(I) == "true"), None)
+            I = tI if tI is not None else live[0]
+            out.append({"id": rid, "kind": self.V.kind(rid), "head": self.inst[I][2], "I": I,
+                        "v": "true" if tI is not None else "undefined", "cl": [] if tI is not None else self.undefined_lits(I)})
+        return out
+
+    def evaluate3(self, L):
+        S, A = self.live_groups(L, "sup"), self.live_groups(L, "att")
+        pv = lambda x: x["v"] == "true"
+        src = lambda w, l: self.V.sup(w["id"], l["id"])
+        beats = lambda xs, lo: next(((x, src(x, lo)) for x in xs if pv(x) and src(x, lo)), None)
+        stup = lambda t: (t["id"], t["kind"], self.rule_proof(t["I"]) if pv(t) else None)
+        atup = lambda a: (a["id"], a["kind"], a["head"], self.rule_proof(a["I"]) if pv(a) else None)
+        if not S:
+            R = ("none", [atup(a) for a in A])
+        elif all(beats(A, t) for t in S):                      # -sigma, team form; the smallest-id defeater
+            w = min(a["id"] for t in S for a in A if pv(a) and src(a, t))
+            dn = [{"type": "superior", "winner": x["id"], "loser": t["id"], "source": sr}
+                  for t in S for x, sr in [beats(A, t)]]
+            R = ("defeated", atup(next(a for a in A if a["id"] == w)), [stup(t) for t in S], dn)
+        else:
+            sp = [t for t in S if pv(t)]
+            un = [a for a in A if not beats(S, a)]
+            ap = [a for a in un if pv(a)]
+            if sp and not un:
+                supn = [{"type": "superior", "winner": x["id"], "loser": a["id"], "source": sr} for a in A for x, sr in [beats(S, a)]]
+                R = ("proven", [stup(t) for t in sp], supn)
+            elif sp and ap:
+                R = ("blocked", [stup(t) for t in sp], [atup(a) for a in ap])
+            else:
+                R = ("contested", sorted({x["id"] for x in S + un}),
+                     sorted({k(X): X for x in S + un for X in x["cl"]}.values(), key=okey))
+        want = {"proven": "true", "defeated": "false", "none": "false"}.get(R[0], "undefined")
+        if self.wval(L) != want:
+            raise EngineError(f"status_inconsistent({L}, asp {self.wval(L)}, host {R[0]})")
         return R
 
     def classify(self, sups, atts):
@@ -686,7 +763,8 @@ def why_ids(why):
         elif isinstance(x, dict):
             if "id" in x: out.add(x["id"])
             if x.get("type") == "undefined": out.update(x.get("members") or [])
-            for kk in ("children", "failed"):
+            if x.get("type") == "contested": out.update(x.get("rules") or [])
+            for kk in ("children", "failed", "roots"):
                 if kk in x: go(x[kk])
     go(why)
     return sorted(out)
@@ -746,6 +824,27 @@ class Ops:
             out.append(p)
         return out
 
+    @staticmethod
+    def contested_why(W, G):
+        """(sides, contested node) of a downstream-contested ground G: follow contested body literals to the roots"""
+        q, seen, via, rules, roots = [G], set(), {}, set(), {}
+        while q:
+            X = q.pop(0)
+            if k(X) in seen: continue
+            seen.add(k(X))
+            E = W.evaluate(X)
+            if E[0] == "blocked":
+                roots[k(X)] = {"type": "conflict", "goal": X,
+                               "sides": sorted([sorted({s[0] for s in E[1]}), sorted({a[0] for a in E[2]})]),
+                               "children": [s[2] for s in E[1]] + [a[3] for a in E[2]]}
+            elif E[0] == "contested":
+                rules |= set(E[1]); q += E[2]
+                via.update({k(Y): Y for Y in E[2]})
+        rs = sorted(roots.values(), key=lambda n: okey(n["goal"]))
+        sides = sorted({json.dumps(x): x for n in rs for x in n["sides"]}.values())
+        return sides, {"type": "contested", "goal": G, "via": sorted(via.values(), key=okey),
+                       "rules": sorted(rules), "roots": rs}
+
     def decide_ground(self, W, G):
         E = W.evaluate(G)
         if E[0] == "proven":
@@ -760,6 +859,9 @@ class Ops:
             return self.answer(W.V, "CONFLICT", None, sides, [s[2] for s in E[1]] + [a[3] for a in E[2]])
         if E[0] == "undefined":
             return self.answer(W.V, "CONFLICT", None, E[1], [E[2]])
+        if E[0] == "contested":
+            sides, node = self.contested_why(W, G)
+            return self.answer(W.V, "CONFLICT", None, sides, [node])
         return self.answer(W.V, "ANSWER", False, None, [W.explain_not(G)])
 
     def candidates(self, W, G):
@@ -768,7 +870,8 @@ class Ops:
             H = json.loads(kk)
             if unify(G, H, {}) is None: continue
             for rid, Is in W.by_id(insts, ("strict", "defeasible", "claim")):
-                if any(W.bval(I) == "true" for I in Is): out[kk] = H
+                if any(W.bval(I) == "true" for I in Is) or (W.plain and any(W.bval(I) != "false" for I in Is)):
+                    out[kk] = H
         return sorted(out.values(), key=okey)
 
     def decide_open(self, W, G):
@@ -777,6 +880,18 @@ class Ops:
         GEs = [(H, W.evaluate(H)) for H in self.candidates(W, G)]
         won = [(H, E) for H, E in GEs if E[0] == "proven"]
         sups_of = lambda E: E[1] if E[0] == "proven" else (E[2] if E[0] == "defeated" else (E[1] if E[0] == "blocked" else []))
+        cont = [(H, E) for H, E in GEs if E[0] in ("blocked", "contested")] if W.plain else []
+        if cont:   # propagation: any contested instance contests the open goal
+            sides, why = {}, []
+            for H, E in cont:
+                if E[0] == "blocked":
+                    sd = [sorted({s[0] for s in E[1]}), sorted({a[0] for a in E[2]})]
+                    why += [s[2] for s in E[1]] + [a[3] for a in E[2]]
+                else:
+                    sd, n = self.contested_why(W, H)
+                    why.append(n)
+                sides.update({json.dumps(x): x for x in sd})
+            return self.answer(W.V, "CONFLICT", None, sorted(sides.values()), why)
         if pred_of(G) in self.S.meta.functional:
             if len(won) == 1:
                 H, E = won[0]
@@ -823,7 +938,9 @@ class Ops:
         if not V.in_force(c, W.D):
             st = {"standing": "not_in_force", "defeater": None, "qualifier": [], "sides": None}
         else:
-            st = self.own_standing(W.evaluate(c["assertion"]))
+            E = W.evaluate(c["assertion"])
+            st = ({"standing": "contested", "defeater": None, "qualifier": [], "sides": self.contested_why(W, c["assertion"])[0]}
+                  if E[0] == "contested" else self.own_standing(E))
             if st["standing"] == "holds":
                 st = self.sub_standing(subs)
         return {**base, **st, "subclaims": subs}
@@ -843,6 +960,8 @@ class Ops:
     def sub_standing(subs):
         failing = lambda s: s["standing"] not in ("holds", "holds_with_qualifier")
         for s in subs:
+            if s["role"] == "required" and failing(s) and s["standing"] == "contested":   # propagation
+                return {"standing": "contested", "defeater": None, "qualifier": [], "sides": s["sides"], "via": s["id"]}
             if s["role"] == "required" and failing(s):
                 return {"standing": "rebutted", "defeater": s["defeater"], "qualifier": [], "sides": None, "via": s["id"]}
         q = sorted({s["id"] for s in subs if s["role"] == "supporting" and failing(s)})

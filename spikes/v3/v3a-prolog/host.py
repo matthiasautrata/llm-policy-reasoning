@@ -43,9 +43,9 @@ def main():
     sql.configure(json.dumps(script["config"]), root)
     if "hypothesis" in script["config"]:   # "snapshot" (default) | "assert" (original, not isolated)
         janus.query_once("ops:set_hyp_mode(M)", {"M": script["config"]["hypothesis"]})
-    # evaluation mode: ENGINE_MODE (accept.py --mode) or config "eval": wfs (default) | memo;
+    # evaluation mode: ENGINE_MODE (accept.py --mode) or config "eval": memo (default; ambiguity propagation) | wfs (retired, ambiguity blocking);
     # table policy: config "tables": op (default: abolish at every op) | session (keep; keyed by state, as_of)
-    mode = script["config"].get("eval") or os.environ.get("ENGINE_MODE") or "wfs"
+    mode = script["config"].get("eval") or os.environ.get("ENGINE_MODE") or "memo"
     janus.query_once("defeasible:set_eval_mode(M)", {"M": mode})
     janus.query_once("defeasible:set_table_policy(M)", {"M": script["config"].get("tables") or os.environ.get("V3A_TABLES") or "op"})
     janus.query_once("ops:load_files_json(J)", {"J": json.dumps(script.get("load", []))})

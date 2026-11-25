@@ -17,7 +17,7 @@ Probes (a separate Flix project in `probes/`; its `src/` symlinks System A's sou
 | `src/Edn.flix` | EDN reader for the slice subset, hand-written |
 | `src/Model.flix` | ADTs for terms, literals, rules, claims, concepts; EDN → ADT parse plus explicit checks; the 15 negatives |
 | `src/Store.flix` | the state as one immutable record; hypotheses are derived values |
-| `src/Engine.flix` | defeasible evaluator (port of V3b `engine.clj` / V3c `engine.ex`) and why / why_not trees |
+| `src/Engine.flix` | defeasible evaluator (port of V3b `engine.clj` / V3c `engine.ex`) with ambiguity propagation (`shared/SEMANTICS.md`: `lit3`/`body3`/`classify3`, three-valued, team defeat) and why / why_not trees |
 | `src/Ops.flix` | the contract's ops |
 | `src/Sql.flix` | concept bindings → SQL through JDBC (`\ IO`) |
 | `src/Main.flix`, `cli` | JSON CLI, `concurrent` / `after` keys (a thread per op list, a connection per thread); runs the integrity gate on the load before EDN parsing |
@@ -30,4 +30,4 @@ Probes (a separate Flix project in `probes/`; its `src/` symlinks System A's sou
 | `probes/types/` | planted defects T01–T10 (V3c analogs) plus E1, E2; `run.sh <scratch dir>` checks each alone |
 | `probes/hyp_latency.py` | hypothesis latency, 50 runs per variant |
 | `probes/par.py` | the bench's 200 decides, 1 vs 8 threads |
-| `results/` | raw outputs of the shared checks and the probes; `accept.txt` (checks 1–8), `guard-probe.txt` / `guard-probe-duckdb.json` (re-entry guard); `cycles-probe*` are the PLAN-v3-cycles runs |
+| `results/` | raw outputs of the shared checks and the probes; `accept.txt` (checks 1–8, blocking, phase 2), `*-propagation*` (PLAN-v3-integrity §4: accept, mutation, isolation, negatives, bench), `guard-probe.txt` / `guard-probe-duckdb.json` (re-entry guard, refreshed under propagation); `cycles-probe*` are the PLAN-v3-cycles runs |

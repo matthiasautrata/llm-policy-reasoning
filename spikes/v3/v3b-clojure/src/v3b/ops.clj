@@ -35,7 +35,8 @@
   (if (some #(= (str "term:" (name p)) (:id %)) (:terms ix)) "UNDERDETERMINED" "OUT_OF_SCOPE"))
 
 (defn- sub-nodes [x]
-  (cond (map? x) (cons x (mapcat sub-nodes (keep x [:children :failed])))
+  (cond (map? x) (concat [x] (when (= "contested" (:type x)) (map (fn [i] {:id i}) (:rules x)))
+                         (mapcat sub-nodes (keep x [:children :failed :roots])))
         (sequential? x) (mapcat sub-nodes x)
         :else nil))
 
@@ -58,6 +59,25 @@
                :let [[_ p] (first (e/apply-rule c (assoc r :kind :strict) g))] :when p]
            [(:id r) (assoc p :goal [:neg g])])))
 
+(defn- contested-why
+  "PLAN-v3-integrity §4: [sides contested-node] of a downstream-contested ground g. Follows contested body
+  literals to the root conflicts (SEMANTICS.md, why tree)."
+  [c g]
+  (loop [q (list g) seen #{} via #{} rules #{} roots {}]
+    (if-let [[x & more] (seq q)]
+      (if (seen x)
+        (recur more seen via rules roots)
+        (let [[st a b] (e/evaluate c x)]
+          (case st
+            :blocked (recur more (conj seen x) via rules
+                            (assoc roots x {:type "conflict" :goal x :sides (sides (e/ids-of a) (e/ids-of b))
+                                            :children (vec (concat (map :proof a) (map :proof b)))}))
+            :contested (recur (concat more b) (conj seen x) (into via b) (into rules a) roots)
+            (recur more (conj seen x) via rules roots))))
+      (let [rs (e/sort-terms (keys roots))]
+        [(apply sides (mapcat #(:sides (roots %)) rs))
+         {:type "contested" :goal g :via (vec (e/sort-terms (seq via))) :rules (vec (sort rules)) :roots (mapv roots rs)}]))))
+
 (defn- decide-ground [c g]
   (let [[st & more :as ev] (e/evaluate c g)]
     (case st
@@ -67,6 +87,7 @@
                   (answer c "ANSWER" true nil why)))
       :blocked (let [[sups un] more]
                  (answer c "CONFLICT" nil (sides (e/ids-of sups) (e/ids-of un)) (concat (map :proof sups) (map :proof un))))
+      :contested (let [[sd node] (contested-why c g)] (answer c "CONFLICT" nil sd [node]))
       (answer c "ANSWER" false nil [(why/explain-not c g)]))))
 
 (defn- vars-of [t] (distinct (filter e/lvar? (tree-seq vector? seq t))))
@@ -76,14 +97,18 @@
 (defn- decide-open [c g]
   (let [vs (vars-of g)
         value (fn [inst] (let [s (e/unify g inst {}) xs (mapv #(e/subst % s) vs)] (if (= 1 (count xs)) (first xs) xs)))
-        cands (->> (concat
-                    (for [r (filter #(#{:strict :defeasible} (:kind %)) (get-in c [:ix :rules])) [_ p] (e/apply-rule c r g)] (:goal p))
-                    (for [cl (get-in c [:ix :claims]) :when (e/in-force? cl (:d c)) :let [s (e/unify g (:assertion cl) {})] :when s]
-                      (e/subst g s)))
-                   (filter e/ground?) e/sort-terms)
+        cands (->> (e/candidates3 c g) (filter e/ground?) e/sort-terms)
         ges (for [gi cands] [gi (e/evaluate c gi)])
-        won (filter #(= :proven (first (second %))) ges)]
-    (if (get-in c [:ix :functional (e/pred-of g)])
+        won (filter #(= :proven (first (second %))) ges)
+        cont (filter #(= :contested (e/value3 (second %))) ges)]
+    (cond
+      (seq cont)                          ; propagation: any contested instance contests the goal
+      (let [parts (for [[gi ev] cont]
+                    (if (= :blocked (first ev))
+                      (let [[_ a b] ev] [(sides (e/ids-of a) (e/ids-of b)) (concat (map :proof a) (map :proof b))])
+                      (let [[sd n] (contested-why c gi)] [sd [n]])))]
+        (answer c "CONFLICT" nil (apply sides (mapcat first parts)) (mapcat second parts)))
+      (get-in c [:ix :functional (e/pred-of g)])
       (cond
         (= 1 (count won)) (let [[gi [_ sups sn]] (first won)] (answer c "ANSWER" (value gi) nil (team-proofs sups sn)))
         (and (empty? won) (seq ges))
@@ -92,6 +117,7 @@
                 (for [[_ ev] ges s (sups-of ev)] (:proof s)))
         (empty? won) (answer c "ANSWER" nil nil [(why/explain-not c g)])
         :else (assoc (answer c "CONFLICT" nil nil []) :value (mapv (comp value first) won)))
+      :else
       (let [vws (for [[gi [_ sups sn]] won] [(value gi) (team-proofs sups sn)])]
         (answer c "ANSWER" (vec (e/sort-terms (map first vws))) nil (mapcat second vws))))))
 
@@ -119,7 +145,9 @@
 
 (defn- sub-standing [subs]
   (if-let [s (first (filter #(and (= "required" (:role %)) (failing? %)) subs))]
-    {:standing "rebutted" :defeater (:defeater s) :qualifier [] :sides nil :via (:id s)}
+    (if (= "contested" (:standing s))     ; propagation: a contested required member contests the parent
+      {:standing "contested" :defeater nil :qualifier [] :sides (:sides s) :via (:id s)}
+      {:standing "rebutted" :defeater (:defeater s) :qualifier [] :sides nil :via (:id s)})
     (let [q (vec (sort (for [s subs :when (and (= "supporting" (:role s)) (failing? s))] (:id s))))]
       (if (empty? q)
         {:standing "holds" :defeater nil :qualifier [] :sides nil}
@@ -129,7 +157,10 @@
   (let [subs (vec (for [sid (:members cl) :let [s (get-in c [:ix :claim sid])] :when s] (standing c s)))
         st (if-not (e/in-force? cl (:d c))
              {:standing "not_in_force" :defeater nil :qualifier [] :sides nil}
-             (let [st0 (own-standing (e/evaluate c (:assertion cl)))]
+             (let [ev (e/evaluate c (:assertion cl))
+                   st0 (if (= :contested (first ev))
+                         {:standing "contested" :defeater nil :qualifier [] :sides (first (contested-why c (:assertion cl)))}
+                         (own-standing ev))]
                (if (= "holds" (:standing st0)) (sub-standing subs) st0)))]
     (merge {:id (:id cl) :about (:about cl) :assertion (:assertion cl) :asserted_by (:asserted_by cl)
             :asserted_at (:asserted_at cl) :valid_from (:valid_from cl) :valid_to (:valid_to cl)

@@ -69,6 +69,8 @@ decide_ground(G, D, R) :-
     ->  ids_of(Sups, A), ids_of(Un, B), sort([A, B], Sides),
         maplist([s(_, _, P), P]>>true, Sups, W1), maplist([a(_, _, _, P), P]>>true, Un, W2), append(W1, W2, Why),
         answer("CONFLICT", null, Sides, Why, R)
+    ;   E = contested(_, _)                            % memo: downstream of a root conflict
+    ->  contested_why(G, D, Sides, Node), answer("CONFLICT", null, Sides, [Node], R)
     ;   E = undefined(Sides, UNode)                    % wfs mode: undefined by a negative cycle
     ->  answer("CONFLICT", null, Sides, [UNode], R)
     ;   explain_not(G, D, N), answer("ANSWER", false, null, [N], R) ).
@@ -76,6 +78,18 @@ decide_ground(G, D, R) :-
 % R314-style declared incompatibility: the goal is proven and the incompatible body is provable
 incompatible(G, D, Id, _{type:rule, id:Id, goal:[neg, G], children:Kids}) :-
     rule(Id, incompatible, H, B, _), active(Id), H = G, once(body(B, D, Kids)).
+
+%!  contested_why(+G, +D, -Sides, -Node)  PLAN-v3-integrity §4: the contested node of a downstream G
+contested_why(G, D, Sides, _{type:contested, goal:G, via:Via, rules:Rules, roots:RNs}) :-
+    contested_info(G, D, Via, Rules, Roots),
+    maplist([X-Sd-Ps, _{type:conflict, goal:X, sides:Sd, children:Ps}]>>true, Roots, RNs),
+    findall(S, ( member(_-Sd-_, Roots), member(S, Sd) ), S0), sort(S0, Sides).
+
+%   One contested instance of an open goal: its sides and why nodes (a root: the side proofs).
+inst_conflict(_, _, blocked(Sp, Ap), Sides, Why) :- !,
+    ids_of(Sp, A), ids_of(Ap, B), sort([A, B], Sides),
+    maplist([s(_, _, P), P]>>true, Sp, W1), maplist([a(_, _, _, P), P]>>true, Ap, W2), append(W1, W2, Why).
+inst_conflict(G, D, contested(_, _), Sides, [Node]) :- contested_why(G, D, Sides, Node).
 
 team_proofs(Sups, SupN, Why) :-
     maplist(team_proof(SupN), Sups, Why).
@@ -88,8 +102,13 @@ decide_open(G, D, R) :-
     findall(G, candidate_instance(G, D), Gs0), sort(Gs0, Gs),
     findall(G-E, ( member(G, Gs), evaluate(G, D, E) ), GEs),
     include([_-E]>>(E = proven(_, _)), GEs, Won),
+    include([_-E]>>( eval_mode(memo), value3(E, contested) ), GEs, Cont),
     pred_of(G, P),
-    (   functional(P, _)
+    (   Cont \== []                                    % propagation: any contested instance contests the goal
+    ->  findall(Sd-W, ( member(Gi-Ei, Cont), inst_conflict(Gi, D, Ei, Sd, W) ), SWs),
+        pairs_keys_values(SWs, Sds, Ws), append(Sds, S0), sort(S0, Sides), append(Ws, Why),
+        answer("CONFLICT", null, Sides, Why, R)
+    ;   functional(P, _)
     ->  (   Won = [G1-proven(S, SN)] -> G = G1, value_of(Vs, V), team_proofs(S, SN, Why), answer("ANSWER", V, null, Why, R)
         ;   Won = [], GEs \== []
         ->  findall(Ids, ( member(_-E, GEs), sups_of(E, Ss), Ss \== [], ids_of(Ss, Ids) ), Sides0), sort(Sides0, Sides),
@@ -102,6 +121,7 @@ decide_open(G, D, R) :-
         pairs_keys_values(VWs, Vals0, Whys), sort(Vals0, Vals), append(Whys, Why),
         answer("ANSWER", Vals, null, Why, R) ).
 
+candidate_instance(G, D) :- eval_mode(memo), !, candidate3(G, D).
 candidate_instance(G, D) :-
     (   rule(Id, K, G, B, _), memberchk(K, [strict, defeasible]), active(Id), body(B, D, _)
     ;   claim(Id, G, _, _, F, T, _, _, _, _), active(Id), in_force(F, T, D) ),
@@ -129,7 +149,8 @@ qualifier(_, _, _, null).
 
 why_ids(Why, Ids) :- findall(Id, ( sub_node(Why, N), is_dict(N), get_dict(id, N, Id) ), Ids0), sort(Ids0, Ids).
 sub_node(X, X).
-sub_node(X, N) :- is_dict(X), get_dict(K, X, C), memberchk(K, [children, failed]), sub_node(C, N).
+sub_node(X, N) :- is_dict(X), get_dict(K, X, C), memberchk(K, [children, failed, roots]), sub_node(C, N).
+sub_node(X, _{id:Id}) :- is_dict(X), get_dict(type, X, contested), get_dict(rules, X, Ms), member(Id, Ms).
 sub_node(X, _{id:Id}) :- is_dict(X), get_dict(type, X, undefined), get_dict(members, X, Ms), member(Id, Ms).
 sub_node(L, N) :- is_list(L), member(X, L), sub_node(X, N).
 
@@ -152,7 +173,10 @@ standing(Id, D, Role, R) :-
              backing:Bk, modal:Modal, role:Role},
     findall(S, ( claim_link(Id, SId, SR), active(SId), standing(SId, D, SR, S) ), Subs),
     (   \+ in_force(F, T, D) -> St = _{standing:"not_in_force", defeater:null, qualifier:[], sides:null}
-    ;   evaluate(A, D, E), own_standing(E, St0),
+    ;   evaluate(A, D, E),
+        (   E = contested(_, _) -> contested_why(A, D, Sides, _),
+            St0 = _{standing:"contested", defeater:null, qualifier:[], sides:Sides}
+        ;   own_standing(E, St0) ),
         (   St0.standing == "holds" -> sub_standing(Subs, St) ; St = St0 ) ),
     R = Base.put(St).put(subclaims, Subs).
 
@@ -166,7 +190,10 @@ own_standing(none(_), _{standing:"holds", defeater:null, qualifier:[], sides:nul
 own_standing(undefined(Sides, _), _{standing:"contested", defeater:null, qualifier:[], sides:Sides}).
 
 sub_standing(Subs, St) :-
-    (   member(S, Subs), get_dict(role, S, required), failing(S)
+    (   member(S, Subs), get_dict(role, S, required), failing(S), get_dict(standing, S, "contested")
+    ->  get_dict(id, S, Via), get_dict(sides, S, Sd),    % propagation: a contested required member contests
+        St = _{standing:"contested", defeater:null, qualifier:[], sides:Sd, via:Via}
+    ;   member(S, Subs), get_dict(role, S, required), failing(S)
     ->  get_dict(defeater, S, Df), get_dict(id, S, Via),
         St = _{standing:"rebutted", defeater:Df, qualifier:[], sides:null, via:Via}
     ;   findall(SId, ( member(S, Subs), get_dict(role, S, supporting), failing(S), get_dict(id, S, SId) ), Q0), sort(Q0, Q),

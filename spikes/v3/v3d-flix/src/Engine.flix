@@ -7,11 +7,14 @@
 /// to stop (V3b lazy seqs, V3c Streams). Everything the engine needs from outside (concept rows, the
 /// per-op memo, fresh names, failure) is the effect Eval; Sql.withEval handles it per op.
 ///
-/// evaluate decides a ground goal:
-///   Proven(sups, supNodes)        every applicable attacker is beaten by some applicable supporter
-///   Defeated(att, sups, nodes)    an unbeaten attacker is superior to every supporter
-///   Blocked(sups, unbeaten)       ambiguity blocking
-///   NoneEv(atts)                  no applicable supporter
+/// evaluate decides a ground goal with ambiguity propagation (shared/SEMANTICS.md, PLAN-v3-integrity §4):
+/// proven, refuted or contested. Live = body not refuted (body3: solutions with pv true | false).
+///   Proven(sups, supNodes)        a proven-bodied supporter; every live attacker beaten (team defeat)   proven
+///   Defeated(att, sups, nodes)    every live supporter beaten by a superior proven-bodied attacker;
+///                                 att the smallest such id                                              refuted
+///   NoneEv(atts)                  no live supporter                                                     refuted
+///   Blocked(sups, unbeaten)       root: proven-bodied supporters meet proven-bodied unbeaten attackers  contested
+///   Contested(rules, via)         downstream: only through contested body literals via                contested
 ///
 pub mod Engine {
 
@@ -45,15 +48,23 @@ pub mod Engine {
         case NDefeated(String, String, List[Node], Bool)
         /// winner, loser, source
         case NSuperior(String, String, String)
+        /// a body literal that is contested (propagation placeholder)
+        case NContestedLit(Goal)
+        /// root conflict: goal, sides, side proofs
+        case NConflict(Goal, List[List[String]], List[Node])
+        /// downstream contested: goal, via, rules, roots (NConflict nodes)
+        case NContested(Goal, List[Goal], List[String], List[Node])
     }
 
-    pub type alias Sup = {id = String, proof = Node}
+    /// pv: the body is proven (else contested); cl: the contested literals of the body
+    pub type alias Sup = {id = String, proof = Node, pv = Bool, cl = List[Goal]}
 
     pub enum Ev {
         case Proven(List[Sup], List[Node])
         case Defeated(Sup, List[Sup], List[Node])
         case Blocked(List[Sup], List[Sup])
         case NoneEv(List[Sup])
+        case Contested(List[String], List[Goal])
     }
 
     /// what the evaluator asks of the world
@@ -221,7 +232,7 @@ pub mod Engine {
         case (Neg(_), Pos(q, _)) => cmpI(":neg", ":" + q)
     }
 
-    def toCmp(i: Int32): Comparison = if (i < 0) Comparison.LessThan else if (i > 0) Comparison.GreaterThan else Comparison.EqualTo
+    pub def toCmp(i: Int32): Comparison = if (i < 0) Comparison.LessThan else if (i > 0) Comparison.GreaterThan else Comparison.EqualTo
 
     pub def sortGoals(gs: List[Goal]): List[Goal] = List.sortWith((x, y) -> toCmp(gcmp(x, y)), List.distinct(gs))
 
@@ -308,6 +319,13 @@ pub mod Engine {
                 (if (bl) ("blocked", JBool(true)) :: Nil else Nil))
         case Node.NSuperior(w, l, src) =>
             obj(("type", JString("superior")) :: ("winner", JString(w)) :: ("loser", JString(l)) :: ("source", JString(src)) :: Nil)
+        case Node.NContestedLit(g) => obj(("type", JString("contested_lit")) :: ("goal", goalJson(g)) :: Nil)
+        case Node.NConflict(g, sd, ks) =>
+            obj(("type", JString("conflict")) :: ("goal", goalJson(g)) :: ("sides", jarr(List.map(xs -> jarr(List.map(JString, xs)), sd))) ::
+                ("children", jarr(List.map(nodeJson, ks))) :: Nil)
+        case Node.NContested(g, via, rs, roots) =>
+            obj(("type", JString("contested")) :: ("goal", goalJson(g)) :: ("via", jarr(List.map(goalJson, via))) ::
+                ("rules", jarr(List.map(JString, rs))) :: ("roots", jarr(List.map(nodeJson, roots))) :: Nil)
     }
 
     // ------------------------------------------------------------------ store access
@@ -386,7 +404,9 @@ pub mod Engine {
             eachRow(rows, os, s, mk, k)
         case Lit.Not(g) =>
             let g1 = substG(g, s);
-            if (provable(c, g1)) false else k(s, Node.NAbsent(goalJson(g1), None))
+            // a contested g is not absent
+            let absent = if (groundG(g1)) value3(evaluate(c, g1)) == "refuted" else not provable(c, g1);
+            if (absent) k(s, Node.NAbsent(goalJson(g1), None)) else false
         case Lit.AsOf(t) => match unify(t, Val(VStr(c#d)), s) {
             case Some(s2) => k(s2, Node.NFact(jarr(JString("as_of") :: JString(c#d) :: Nil), None))
             case None => false
@@ -466,10 +486,6 @@ pub mod Engine {
         Ref.get(out)
     }
 
-    def supporters(c: Ctx, l: Goal): List[Sup] \ Eval =
-        List.filterMap(r -> firstRule(c, r, l, _ -> true) |> Option.map(match (_, p) -> {id = r#id, proof = p}), logicOf(c, derivers())) ++
-        List.filterMap(cl -> if (cl#assertion == l and inForce(cl, c#d)) Some({id = cl#id, proof = claimProof(cl, l)}) else None, c#claims)
-
     /// (head, diff): diff None, or (v, v2) for a functional rival with the key fixed and value v2 /= v
     def rivals(c: Ctx, l: Goal): List[(Goal, Option[(Term, Term)])] \ Eval = match l {
         case Neg(h) => (h, None) :: Nil
@@ -487,15 +503,6 @@ pub mod Engine {
         case None => true
         case Some((v, v2)) => v != substT(v2, s)
     }
-
-    def attackers(c: Ctx, l: Goal): List[Sup] \ Eval =
-        let atts = List.flatMap(match (h, diff) ->
-            List.filterMap(r -> firstRule(c, r, h, differs(diff)) |> Option.map(match (_, p) -> {id = r#id, proof = p}), logicOf(c, attacking())) ++
-            List.filterMap(cl -> if (inForce(cl, c#d)) match unifyG(h, cl#assertion, Map.empty()) {
-                    case Some(s) if differs(diff, s) => Some({id = cl#id, proof = claimProof(cl, cl#assertion)})
-                    case _ => None
-                } else None, c#claims), rivals(c, l));
-        uniqById(atts, Set.empty(), Nil)
 
     def uniqById(xs: List[Sup], seen: Set[String], acc: List[Sup]): List[Sup] = match xs {
         case Nil => List.reverse(acc)
@@ -533,18 +540,119 @@ pub mod Engine {
 
     def sup1(c: Ctx, w: String, l: String): Option[String] = List.head(sup(c, w, l))
 
-    def classify(c: Ctx, sups: List[Sup], atts: List[Sup]): Ev =
+    // ------------------------------------------------------------------ ambiguity propagation
+
+    pub def value3(ev: Ev): String = match ev {
+        case Ev.Proven(_, _) => "proven"
+        case Ev.Defeated(_, _, _) => "refuted"
+        case Ev.NoneEv(_) => "refuted"
+        case Ev.Blocked(_, _) => "contested"
+        case Ev.Contested(_, _) => "contested"
+    }
+
+    /// one body literal under s: k(s', node, pv, contested literals) per live solution ([:not g] as g);
+    /// refuted solutions are dropped
+    pub def lit3(c: Ctx, l: Lit, s: Subst, k: (Subst, Node, Bool, List[Goal]) -> Bool \ ef): Bool \ ef + Eval = match l {
+        case Lit.Not(g) =>
+            let g1 = substG(g, s);
+            if (groundG(g1)) {
+                let v = value3(evaluate(c, g1));
+                if (v == "refuted") k(s, Node.NAbsent(goalJson(g1), None), true, Nil)
+                else if (v == "contested") k(s, Node.NContestedLit(g1), false, g1 :: Nil)
+                else false
+            } else lit(c, l, s, (s2, n) -> k(s2, n, true, Nil))
+        case Lit.Derived(g) =>
+            let g1 = substG(g, s);
+            let gs = if (groundG(g1)) g1 :: Nil else sortGoals(List.filter(groundG, candidates3(c, g1)));
+            eachInst3(c, g, gs, s, k)
+        case _ => lit(c, l, s, (s2, n) -> k(s2, n, true, Nil))
+    }
+
+    def eachInst3(c: Ctx, g: Goal, gs: List[Goal], s: Subst, k: (Subst, Node, Bool, List[Goal]) -> Bool \ ef): Bool \ ef + Eval = match gs {
+        case Nil => false
+        case gi :: rest =>
+            let ev = evaluate(c, gi);
+            let stop = match unifyG(g, gi, s) {
+                case None => false
+                case Some(s2) => match ev {
+                    case Ev.Proven(s1 :: _, sn) => k(s2, withChildren(s1#proof, sn), true, Nil)
+                    case Ev.Blocked(_, _) => k(s2, Node.NContestedLit(gi), false, gi :: Nil)
+                    case Ev.Contested(_, _) => k(s2, Node.NContestedLit(gi), false, gi :: Nil)
+                    case _ => false
+                }
+            };
+            if (stop) true else eachInst3(c, g, rest, s, k)
+    }
+
+    pub def body3(c: Ctx, ls: List[Lit], s: Subst, k: (Subst, List[Node], Bool, List[Goal]) -> Bool \ ef): Bool \ ef + Eval = match ls {
+        case Nil => k(s, Nil, true, Nil)
+        case l :: rest => lit3(c, l, s, (s1, n, v1, c1) -> body3(c, rest, s1, (s2, ns, v2, c2) -> k(s2, n :: ns, v1 and v2, c1 ++ c2)))
+    }
+
+    def applyRule3(c: Ctx, r: LR, g: Goal, k: (Subst, Node, Bool, List[Goal]) -> Bool \ ef): Bool \ ef + Eval =
+        let (h, b) = rename(r);
+        match unifyG(h, g, Map.empty()) {
+            case Some(s) => body3(c, b, s, (s2, kids, v, cl) -> k(s2, Node.NRule(r#id, substG(g, s2), kids, None), v, cl))
+            case None => false
+        }
+
+    /// the first proven solution satisfying p, else the first (contested) one
+    def best3(c: Ctx, r: LR, g: Goal, p: Subst -> Bool): Option[(Subst, Node, Bool, List[Goal])] \ Eval = region rc {
+        let out = Ref.fresh(rc, None);
+        discard applyRule3(c, r, g, (s, n, v, cl) ->
+            if (not p(s)) false
+            else if (v) { Ref.put(Some((s, n, v, cl)), out); true }
+            else { if (Option.isEmpty(Ref.get(out))) Ref.put(Some((s, n, v, cl)), out) else (); false });
+        Ref.get(out)
+    }
+
+    def allRule3(c: Ctx, r: LR, g: Goal): List[Subst] \ Eval = region rc {
+        let out = Ref.fresh(rc, Nil);
+        discard applyRule3(c, r, g, (s, _, _, _) -> { Ref.put(s :: Ref.get(out), out); false });
+        List.reverse(Ref.get(out))
+    }
+
+    /// instances of l with a live supporter
+    pub def candidates3(c: Ctx, l: Goal): List[Goal] \ Eval =
+        List.flatMap(r -> List.map(s -> substG(l, s), allRule3(c, r, l)), logicOf(c, derivers())) ++
+        List.filterMap(cl -> if (inForce(cl, c#d)) unifyG(l, cl#assertion, Map.empty()) |> Option.map(substG(l)) else None, c#claims)
+
+    def supporters3(c: Ctx, l: Goal): List[Sup] \ Eval =
+        List.filterMap(r -> best3(c, r, l, _ -> true) |> Option.map(match (_, p, v, cl) -> {id = r#id, proof = p, pv = v, cl = cl}), logicOf(c, derivers())) ++
+        List.filterMap(cl -> if (cl#assertion == l and inForce(cl, c#d)) Some({id = cl#id, proof = claimProof(cl, l), pv = true, cl = Nil}) else None, c#claims)
+
+    def attackers3(c: Ctx, l: Goal): List[Sup] \ Eval =
+        let atts = List.flatMap(match (h, diff) ->
+            List.filterMap(r -> best3(c, r, h, differs(diff)) |> Option.map(match (_, p, v, cl) -> {id = r#id, proof = p, pv = v, cl = cl}), logicOf(c, attacking())) ++
+            List.filterMap(cl -> if (inForce(cl, c#d)) match unifyG(h, cl#assertion, Map.empty()) {
+                    case Some(s) if differs(diff, s) => Some({id = cl#id, proof = claimProof(cl, cl#assertion), pv = true, cl = Nil})
+                    case _ => None
+                } else None, c#claims), rivals(c, l));
+        uniqById(atts, Set.empty(), Nil)
+
+    /// the first proven-bodied x in xs superior to loser, with the source
+    def beats(c: Ctx, xs: List[Sup], loser: Sup): Option[(Sup, String)] =
+        List.findMap(x -> if (x#pv) sup1(c, x#id, loser#id) |> Option.map(src -> (x, src)) else None, xs)
+
+    def classify3(c: Ctx, sups: List[Sup], atts: List[Sup]): Ev =
         if (List.isEmpty(sups)) Ev.NoneEv(atts)
-        else {
-            let beater = a -> List.find(s -> Option.nonEmpty(sup1(c, s#id, a#id)), sups);
-            let (beaten, unbeaten) = List.partition(a -> Option.nonEmpty(beater(a)), atts);
-            let sn = List.filterMap(a -> beater(a) |> Option.map(s ->
-                Node.NSuperior(s#id, a#id, Option.getWithDefault("", sup1(c, s#id, a#id)))), beaten);
-            if (List.isEmpty(unbeaten)) Ev.Proven(sups, sn)
-            else match List.find(a -> List.forAll(s -> Option.nonEmpty(sup1(c, a#id, s#id)), sups), unbeaten) {
-                case Some(a) => Ev.Defeated(a, sups, List.map(s -> Node.NSuperior(a#id, s#id, Option.getWithDefault("", sup1(c, a#id, s#id))), sups))
-                case None => Ev.Blocked(sups, unbeaten)
+        else if (List.forAll(t -> Option.nonEmpty(beats(c, atts, t)), sups)) {
+            // -sigma, team form
+            let w = List.flatMap(t -> List.filterMap(a -> if (a#pv and Option.nonEmpty(sup1(c, a#id, t#id))) Some(a#id) else None, atts), sups)
+                    |> List.distinct |> List.sort |> List.head;
+            let dn = List.filterMap(t -> beats(c, atts, t) |> Option.map(match (x, src) -> Node.NSuperior(x#id, t#id, src)), sups);
+            match List.find(a -> Some(a#id) == w, atts) {
+                case Some(a) => Ev.Defeated(a, sups, dn)
+                case None => Ev.NoneEv(atts)
             }
+        } else {
+            let sp = List.filter(x -> x#pv, sups);
+            let un = List.filter(a -> Option.isEmpty(beats(c, sups, a)), atts);
+            let ap = List.filter(x -> x#pv, un);
+            if (not List.isEmpty(sp) and List.isEmpty(un))
+                Ev.Proven(sp, List.filterMap(a -> beats(c, sups, a) |> Option.map(match (x, src) -> Node.NSuperior(x#id, a#id, src)), atts))
+            else if (not List.isEmpty(sp) and not List.isEmpty(ap)) Ev.Blocked(sp, ap)
+            else Ev.Contested(idsOf(sups ++ un), sortGoals(List.flatMap(x -> x#cl, sups ++ un)))
         }
 
     /// Memoised per op. Re-entry guard (PLAN-v3-integrity §3.2): the ctx carries the path of goals being
@@ -560,7 +668,7 @@ pub mod Engine {
                     case None => ()
                 };
                 let c = {path = c0#path ++ (key :: Nil) | c0};
-                let r = classify(c, supporters(c, l), attackers(c, l));
+                let r = classify3(c, supporters3(c, l), attackers3(c, l));
                 Eval.memoPut(key, r);
                 r
         }
@@ -607,8 +715,11 @@ pub mod Engine {
             } else Node.NAbsent(litJson(l), None)
         case Lit.Not(g) =>
             let g1 = substG(g, s);
-            let kids = match firstProof(c, g1) { case Some((_, p)) => p :: Nil case None => Nil };
-            Node.NAbsent(jarr(JString("not") :: goalJson(g1) :: Nil), Some(kids))
+            if (groundG(g1) and value3(evaluate(c, g1)) == "contested") Node.NContestedLit(g1)
+            else {
+                let kids = match firstProof(c, g1) { case Some((_, p)) => p :: Nil case None => Nil };
+                Node.NAbsent(jarr(JString("not") :: goalJson(g1) :: Nil), Some(kids))
+            }
         case Lit.Derived(g) => explainNot(c, substG(g, s))
         case Lit.Cmp(o, a, b) => Node.NFact(litJson(Lit.Cmp(o, substT(a, s), substT(b, s))), Some(false))
         case Lit.Is(x, o, a, b) => Node.NFact(jarr(JString("is") :: termJson(substT(Var(x), s)) :: termJson(substT(Ar(o, a, b), s)) :: Nil), Some(false))

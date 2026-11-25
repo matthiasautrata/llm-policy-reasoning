@@ -87,6 +87,8 @@ pub mod Ops {
         case Node.NClaim(_, _, _, _, ks) => List.flatMap(subIds, ks)
         case Node.NDefeated(id, _, ks, _) => id :: List.flatMap(subIds, ks)
         case Node.NAbsent(_, Some(ks)) => List.flatMap(subIds, ks)
+        case Node.NContested(_, _, rs, roots) => rs ++ List.flatMap(subIds, roots)
+        case Node.NConflict(_, _, ks) => List.flatMap(subIds, ks)
         case _ => Nil
     }
 
@@ -123,6 +125,28 @@ pub mod Ops {
                 case _ => (r#id, p)
             }))
 
+    /// PLAN-v3-integrity §4: (sides, contested node) of a downstream-contested ground g. Follows contested
+    /// body literals to the root conflicts (SEMANTICS.md, why tree).
+    def contestedWhy(c: Ctx, g: Goal): (Option[List[List[String]]], Node) \ Engine.Eval = cw(c, g, g :: Nil, Nil, Nil, Nil, Nil)
+
+    def cw(c: Ctx, g: Goal, todo: List[Goal], seen: List[Goal], via: List[Goal], rules: List[String],
+           roots: List[(Goal, List[List[String]], Node)]): (Option[List[List[String]]], Node) \ Engine.Eval = match todo {
+        case Nil =>
+            let rs = List.sortWith((p1, p2) -> { let (x, _, _) = p1; let (y, _, _) = p2; Engine.toCmp(Engine.gcmp(x, y)) }, roots);
+            (sides(List.flatMap(match (_, sd, _) -> sd, rs)),
+             Node.NContested(g, Engine.sortGoals(via), List.sort(List.distinct(rules)), List.map(match (_, _, n) -> n, rs)))
+        case x :: more =>
+            if (List.memberOf(x, seen)) cw(c, g, more, seen, via, rules, roots)
+            else match Engine.evaluate(c, x) {
+                case Ev.Blocked(a, b) =>
+                    let sd = List.sort(List.distinct(idsOf(a) :: idsOf(b) :: Nil));
+                    let n = Node.NConflict(x, sd, List.map(s -> s#proof, a) ++ List.map(s -> s#proof, b));
+                    cw(c, g, more, x :: seen, via, rules, (x, sd, n) :: roots)
+                case Ev.Contested(rs, vs) => cw(c, g, more ++ vs, x :: seen, via ++ vs, rules ++ rs, roots)
+                case _ => cw(c, g, more, x :: seen, via, rules, roots)
+            }
+    }
+
     def decideGround(c: Ctx, g: Goal): Json \ Engine.Eval = match Engine.evaluate(c, g) {
         case Ev.Proven(sups, sn) =>
             let why = teamProofs(sups, sn);
@@ -132,6 +156,9 @@ pub mod Ops {
             }
         case Ev.Blocked(sups, un) =>
             answer(c, "CONFLICT", JNull, sides(idsOf(sups) :: idsOf(un) :: Nil), List.map(s -> s#proof, sups) ++ List.map(s -> s#proof, un))
+        case Ev.Contested(_, _) =>
+            let (sd, n) = contestedWhy(c, g);
+            answer(c, "CONFLICT", JNull, sd, n :: Nil)
         case _ => answer(c, "ANSWER", JBool(false), None, Engine.explainNot(c, g) :: Nil)
     }
 
@@ -164,16 +191,18 @@ pub mod Ops {
             case Some(s) => List.map(v -> Engine.substT(Var(v), s), vs)
             case None => Nil
         };
-        let fromRules = List.filter(r -> List.memberOf(r#kind, Engine.derivers()), c#logic)
-            |> List.flatMap(r -> Engine.allRule(c, r, g) |> List.filterMap(match (_, p) -> match p {
-                case Node.NRule(_, gi, _, _) => Some(gi)
-                case _ => None
-            }));
-        let fromClaims = List.filterMap(cl -> if (Engine.inForce(cl, c#d)) Engine.unifyG(g, cl#assertion, Map.empty()) |> Option.map(Engine.substG(g)) else None, c#claims);
-        let cands = Engine.sortGoals(List.filter(Engine.groundG, fromRules ++ fromClaims));
+        let cands = Engine.sortGoals(List.filter(Engine.groundG, Engine.candidates3(c, g)));
         let ges = List.map(gi -> (gi, Engine.evaluate(c, gi)), cands);
         let won = List.filter(match (_, ev) -> match ev { case Ev.Proven(_, _) => true case _ => false }, ges);
-        if (Map.memberOf(Engine.predOf(g), c#functional)) {
+        let cont = List.filter(match (_, ev) -> Engine.value3(ev) == "contested", ges);
+        // propagation: any contested instance contests the goal
+        if (not List.isEmpty(cont)) {
+            let parts = List.map(match (gi, ev) -> match ev {
+                case Ev.Blocked(a, b) => (idsOf(a) :: idsOf(b) :: Nil, List.map(s -> s#proof, a) ++ List.map(s -> s#proof, b))
+                case _ => let (sd, n) = contestedWhy(c, gi); (Option.getWithDefault(Nil, sd), n :: Nil)
+            }, cont);
+            answer(c, "CONFLICT", JNull, sides(List.flatMap(fst, parts)), List.flatMap(snd, parts))
+        } else if (Map.memberOf(Engine.predOf(g), c#functional)) {
             match won {
                 case (gi, Ev.Proven(sups, sn)) :: Nil => answer(c, "ANSWER", valueJ(value(gi)), None, teamProofs(sups, sn))
                 case Nil if not List.isEmpty(ges) =>
@@ -224,6 +253,8 @@ pub mod Ops {
 
     def subStanding(subs: List[(Role, Claim, St, Json)]): St =
         match List.find(match (r, _, s, _) -> r == Role.Required and failing(s), subs) {
+            // propagation: a contested required member contests the parent
+            case Some((_, cl, s, _)) if s#standing == "contested" => {sides = s#sides, via = Some(cl#id) | st("contested")}
             case Some((_, cl, s, _)) => {defeater = s#defeater, via = Some(cl#id) | st("rebutted")}
             case None =>
                 match List.filterMap(match (r, cl, s, _) -> if (r == Role.Supporting and failing(s)) Some(cl#id) else None, subs) |> List.sort {
@@ -246,7 +277,10 @@ pub mod Ops {
     def standing(c: Ctx, role: Option[Role], cl: Claim): (Role, Claim, St, Json) \ Engine.Eval =
         let subs = members(c, cl) |> List.map(match (r, s) -> standing(c, Some(r), s));
         let s = if (Engine.inForce(cl, c#d)) {
-            let s0 = ownStanding(Engine.evaluate(c, cl#assertion));
+            let s0 = match Engine.evaluate(c, cl#assertion) {
+                case Ev.Contested(_, _) => {sides = fst(contestedWhy(c, cl#assertion)) | st("contested")}
+                case ev => ownStanding(ev)
+            };
             if (s0#standing == "holds") subStanding(subs) else s0
         } else st("not_in_force");
         let j = obj(("id", jstr(cl#id)) :: ("about", jstr(cl#about)) :: ("assertion", goalJson(cl#assertion)) ::

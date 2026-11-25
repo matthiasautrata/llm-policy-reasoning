@@ -15,7 +15,8 @@ The CLI reads a session script (CONTRACT.md) on stdin and prints {"results": [..
   6 resolve_term probes match
   7 disputes on an acyclic base (PLAN-v3-integrity §3): load slice + extension + cycles-acyclic.edn;
     every question matches its extended key and the :state :acyclic questions match keys["acyclic"]
-    (why trees re-verified). Y6: a with_hypothesis that adds the rule closing a loop (RY24 -> Y2;
+    (why trees re-verified; a downstream CONFLICT has one contested node per contested instance,
+    SEMANTICS.md). Y6: a with_hypothesis that adds the rule closing a loop (RY24 -> Y2;
     RY31/RY32/CY3 -> Y3) returns an error naming defeat-cycle and its members; Q32/Q43 are the same
     before and after
   8 integrity fixtures (fixtures/integrity/manifest.edn): each is loaded on top of slice + extension
@@ -157,7 +158,11 @@ def check_question(q, key, r, env, as_of_default):
         if miss: errs.append(f"core ids missing from why: {sorted(miss)}")
         if key["status"] in ("ANSWER", "CONFLICT") and not r.get("why") and key.get("value") != []:   # [] : no instance, nothing to explain
             errs.append("no why tree")
-        errs += Checker(env.S, env.rules, env.claims, as_of, env.runsql, key.get("undefined"), q.get("goal")).check(r.get("why"))
+        errs += Checker(env.S, env.rules, env.claims, as_of, env.runsql, key.get("undefined"), q.get("goal"),
+                        key.get("contested")).check(r.get("why"))
+        tops = {json.dumps(n.get("goal")) for n in r.get("why") or [] if n.get("type") == "contested"}
+        for g in key.get("contested") or {}:     # propagation: every contested instance explained at the top
+            if g not in tops: errs.append(f"contested goal {g} without a contested node")
         if key.get("undefined") and not any(n.get("type") == "undefined" for n in walk_nodes(r.get("why"))):
             errs.append("undefined goal without an undefined node")
     elif q["kind"] == "why_not":
@@ -217,9 +222,14 @@ def main():
     ap.add_argument("--out", help="write the raw results here (JSON)")
     ap.add_argument("--mode", help="engine mode for capabilities.json (e.g. v3a: wfs | memo)")
     ap.add_argument("--timeout", type=float, default=120, help="checks 7, 8: seconds before a session counts as looping")
+    ap.add_argument("--semantics", choices=["propagation", "blocking"], default="propagation",
+                    help="check 7 keys: propagation (keys.json) | blocking (reference.py --semantics blocking; "
+                         "retired engine modes V3a wfs, V3e doubled encoding)")
     a = ap.parse_args()
     S, X, Q, Y, QC = load(cycles=True)
     K = ref_keys(mutate=True) if a.mutation else json.loads((HERE / "keys.json").read_text())
+    if a.semantics == "blocking":
+        K["acyclic"] = ref_keys(semantics="blocking")["acyclic"]
     today = S["today"]
     ops = [op_for(q) for q in Q]
     report, raw, green = {}, {}, True

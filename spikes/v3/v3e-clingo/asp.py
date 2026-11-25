@@ -27,10 +27,24 @@ Two layers per rule r with head literal p(..) (or [:neg p(..)]):
   WFS non-false = p_X in the brave consequences. Per rule only the body rule is emitted here
   (t_body / p_body); def / ovr / beat are generic (META).
 
+2' Status (default, PLAN-v3-integrity §4; encoding "plain", ENCODING below): the base is acyclic (integrity gate),
+  so a plain two-valued, stratified program with explicit status atoms computes ambiguity propagation
+  (SEMANTICS.md) in its single stable model. Per rule:
+    bref(I) :- hd, ref(X).            for a derived body literal X        (a refuted literal refutes the body)
+    bref(I) :- hd, pro(X).            for [:not X]
+    bpro(I) :- hd, active(r), pro(X1), .., ref(N1), ..                    (every literal proven)
+    lit_(X) :- hd.                    X gets a status even without a supporter (refuted, vacuously)
+  PROP_META derives live/beaten/pro/ref/con from those (team defeat). The doubled encoding (2) is retired
+  behind V3E_ENCODING=doubled (ambiguity blocking; accept.py --semantics blocking).
+
 Terms: ?x -> V_x; strings stay strings; true/false/null constants; integers (32-bit in clingo); rule
 and claim ids are strings; predicates are function symbols; [:neg L] -> neg(L).
 """
-import json, re
+import json, os, re
+
+ENCODING = os.environ.get("V3E_ENCODING", "plain")   # plain (propagation, default) | doubled (retired, WFS blocking)
+if ENCODING not in ("plain", "doubled"):
+    raise ValueError(f"V3E_ENCODING={ENCODING!r}: plain | doubled")
 
 CMP = {"<": "<", "<=": "<=", ">": ">", ">=": ">=", "=": "="}
 IDENT = re.compile(r"^[a-z][A-Za-z0-9_]*$")
@@ -168,7 +182,7 @@ def translate_rule(r, modes, concepts):
     sign = "neg" if H[0] == "neg" else "pos"
     guard = dm(H, modes)
     I = f"inst({q(rid)},{tup(var(v) for v in rule_vars(r))})"
-    pos, tb, pb = [], [], []
+    pos, tb, pb, st, refs, lits = [], [], [], [], [], []
     for b in B:
         prefix = ", ".join([guard] + pos)
         if b[0] == "fetch":
@@ -178,16 +192,23 @@ def translate_rule(r, modes, concepts):
         elif b[0] == "not":
             out.append(f"{dm(b[1], modes)} :- {prefix}.")
             tb.append(f"not p_def({lit(b[1])})"); pb.append(f"not t_def({lit(b[1])})")
+            st.append(f"ref({lit(b[1])})"); refs.append(f"pro({lit(b[1])})"); lits.append(lit(b[1]))
         elif is_builtin(b):
             pos.append(builtin(b))
         else:
             out.append(f"{dm(b, modes)} :- {prefix}.")
             pos.append(f"pos({lit(b)})")
             tb.append(f"t_def({lit(b)})"); pb.append(f"p_def({lit(b)})")
+            st.append(f"pro({lit(b)})"); refs.append(f"ref({lit(b)})"); lits.append(lit(b))
     hd = f"ih({I},{atom(A)})" if kind == "incompatible" else f"h({I},{sign},{atom(A)})"
     out.append(f"{hd} :- {', '.join([guard] + pos)}.")
-    for t, xs in (("t_body", tb), ("p_body", pb)):
-        out.append(f"{t}({I}) :- {', '.join([hd, f'active({q(rid)})'] + xs)}.")
+    if ENCODING == "doubled":
+        for t, xs in (("t_body", tb), ("p_body", pb)):
+            out.append(f"{t}({I}) :- {', '.join([hd, f'active({q(rid)})'] + xs)}.")
+    else:
+        out.append(f"bpro({I}) :- {', '.join([hd, f'active({q(rid)})'] + st)}.")
+        out += [f"bref({I}) :- {hd}, {x}." for x in refs]
+        out += [f"lit_({x}) :- {hd}." for x in dict.fromkeys(lits)]
     return "\n".join(out) + "\n"
 
 
@@ -254,6 +275,41 @@ p_beat(J,L) :- attacks(J,L), supports(I,L), I = inst(R,_), J = inst(Q,_), sup(R,
 :- t_body(I), not p_body(I).
 
 #show t_def/1. #show p_def/1. #show t_body/1. #show p_body/1. #show t_beat/2. #show sup/3.
+"""
+
+# Ambiguity propagation with explicit status atoms (ENCODING "plain", the default; PLAN-v3-integrity §4.2).
+# Stratified over an acyclic base: one stable model. pro = +delta, ref = -sigma, con = +sigma and -delta.
+PROP_META = r"""
+frow(C,F,R) :- need(C,F), R = @fetch(C,F).
+pos(A) :- h(_,pos,A).
+pos(neg(A)) :- h(_,neg,A).
+inforce(C) :- claimrec(C,_,_,F,null), asof(D), F <= D.
+inforce(C) :- claimrec(C,_,_,F,T), T != null, asof(D), F <= D, D <= T.
+h(inst(C,()),S,A) :- claimrec(C,S,A,_,_), inforce(C).
+bpro(inst(C,())) :- h(inst(C,()),_,_), kind(C,claim), active(C).
+supports(I,A) :- h(I,pos,A), I = inst(R,_), not kind(R,defeater).
+supports(I,neg(A)) :- h(I,neg,A), I = inst(R,_), not kind(R,defeater).
+attacks(J,neg(A)) :- h(J,pos,A).
+attacks(J,A) :- h(J,neg,A).
+sup(W,L,explicit) :- superior_to(W,L).
+sup(W,L,strict) :- kind(W,strict), kind(L,K), K != strict.
+sup(W,L,auth(S)) :- cpred(W,P), cpred(L,P), cby(W,BW), cby(L,BL), BW != BL,
+                    order(S,P,BW,NW), order(S,P,BL,NL), NW < NL, active(S).
+sup(W,L,later) :- cby(W,B), cby(L,B), cat(W,AW), cat(L,AL), AW > AL.
+% live: active and the body not refuted; bpro implies live
+act(I) :- h(I,_,_), I = inst(R,_), active(R).
+live(I) :- act(I), not bref(I).
+lit_(L) :- supports(_,L).
+lit_(L) :- attacks(_,L).
+% team defeat: an attacker is beaten by a superior supporter with a proven body, and vice versa
+beaten(J,L) :- attacks(J,L), live(J), supports(I,L), bpro(I), I = inst(R,_), J = inst(Q,_), sup(R,Q,_).
+sbeaten(I,L) :- supports(I,L), live(I), attacks(J,L), bpro(J), I = inst(R,_), J = inst(Q,_), sup(Q,R,_).
+lsu(L) :- supports(I,L), live(I), not sbeaten(I,L).
+unb(L) :- attacks(J,L), live(J), not beaten(J,L).
+ref(L) :- lit_(L), not lsu(L).
+pro(L) :- supports(I,L), bpro(I), not unb(L), not ref(L).
+con(L) :- lit_(L), not pro(L), not ref(L).
+#show pro/1. #show con/1. #show bpro/1. #show live/1.
 """
 
 # A plain (undoubled) encoding of the same metaprogram, for the stable-model probe (probe_stable.py):

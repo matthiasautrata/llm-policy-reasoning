@@ -181,7 +181,7 @@ class Ref:
         blockers = [a for a in A if not any(self.sup(s, a, r313) for s in S)]
         if not blockers:
             return "proven", S, []
-        if any(all(self.sup(a, s, r313) for s in S) for a in blockers):
+        if all(any(self.sup(a, s, r313) for a in blockers) for s in S):   # team: each supporter beaten by some blocker
             return "rebutted", S, blockers
         return "contested", S, blockers
 
@@ -201,7 +201,7 @@ class Ref:
         if not self.in_force(c, d):
             return dict(standing="not_in_force", defeater=None, qualifier=[], core=[cid])
         if st == "rebutted":
-            dft = sorted(a for a in B if all(self.sup(a, s) for s in S))[0]
+            dft = sorted(a for a in B if any(self.sup(a, s) for s in S))[0]
             return dict(standing="rebutted", defeater=dft, qualifier=[], core=[cid, dft])
         if st == "contested":
             return dict(standing="contested", defeater=None, qualifier=[], core=[cid] + B)
@@ -211,6 +211,8 @@ class Ref:
             r = self.standing(sid, d)
             if r["standing"] in ("holds", "holds_with_qualifier"):
                 continue
+            if role == "required" and r["standing"] == "contested":   # propagation (SEMANTICS.md): a contested member contests the parent
+                return dict(standing="contested", defeater=None, qualifier=[], core=[cid] + r["core"])
             if role == "required":
                 return dict(standing="rebutted", defeater=r["defeater"], qualifier=[], core=[cid, sid] + ([r["defeater"]] if r["defeater"] else []))
             qual.append(sid); core += [sid] + ([r["defeater"]] if r["defeater"] else [])
@@ -426,7 +428,9 @@ class Cyc:
         return dict(status="ANSWER", value=False, sides=None, core=sorted({r[0] for r in self.supporters(L)}))
 
 
-def answer_acyclic(R, q):
+def answer_acyclic_blocking(R, q):
+    """PLAN-v3-cycles semantics (ambiguity blocking, WFS; SEMANTICS-cycles.md), kept for the retired
+    engine modes (V3a wfs, V3e doubled): reference.py --semantics blocking."""
     w = tuple((q.get("hypothesis") or {}).get("withhold") or ())
     d, g = q.get("as_of") or R.today, q["goal"]
     if g[0] == "screening_clear":                      # RY55: [:not [:blacklisted ?v]], closed over known facts
@@ -443,6 +447,184 @@ def answer_acyclic(R, q):
     return k
 
 
+# ---------------------------------------------------------------------------- ambiguity propagation
+PROVEN, REFUTED, CONTESTED = "proven", "refuted", "contested"
+AUTH = {"watchlisted": ("RY4", ["risk", "compliance"]), "cost_centre_of": ("R313", ["finance", "hr"])}
+
+
+def pos(b):
+    """A body literal's derived literal: [:not L] -> L."""
+    return b[1] if b[0] == "not" else b
+
+
+class Prop:
+    """Ambiguity propagation (SEMANTICS.md) over the acyclic dispute theory of cycles-acyclic.edn plus
+    the slice's claims, grounded by hand. A ground rule: (id, kind, head, body literals). Bodies list
+    only derived literals and [:not L]; fetches, builtins and as_of are decided here in Python.
+    Each literal is proven, refuted or contested; memoised top-down (the theory is acyclic)."""
+
+    def __init__(self, R, d, withhold=()):
+        self.R, self.d = R, d
+        present = {y["id"] for y in R.cyc_recs}
+        V = sorted({v for v, *_ in R.vstat})
+        ok = lambda v: any(x == v and s == "approved" and f <= d <= t for x, s, f, t in R.vstat)
+        sus = lambda v: any(x == v and s == "suspended" for x, s, *_ in R.vstat)
+        rules = []
+        for v in V:
+            rules += [("RY21", "defeasible", ["preferred", v], [], ok(v)),
+                      ("RY22", "defeasible", ["under_review", v], [], sus(v)),
+                      ("RY23", "defeater", ["neg", ["preferred", v]], [["under_review", v]], True),
+                      ("RY51", "defeasible", ["flagged", v], [["blacklisted", v]], True),
+                      ("RY53", "defeasible", ["cleared_for_tender", v], [["onboarded", v]], True),
+                      ("RY54", "defeater", ["neg", ["cleared_for_tender", v]], [["blacklisted", v]], True),
+                      ("RY55", "defeasible", ["screening_clear", v], [["not", ["blacklisted", v]]], True)]
+        claims = list(R.cyc_claims) + list(R.claims.values())
+        self.claims = {c["id"]: c for c in claims}
+        for c in claims:
+            rules.append((c["id"], "claim", plain(c["assertion"]), [["claim_dep", m] for m in c.get("depends_on") or []],
+                          R.in_force(c, d)))
+        # RY56: home_budget(e, v) :- cost_centre_of(e, c), fetch booked_total(c) = v; one instance per claimed (e, c)
+        for e, c in sorted({tuple(plain(x["assertion"])[1:]) for x in claims if plain(x["assertion"])[0] == "cost_centre_of"}):
+            rules.append(("RY56", "defeasible", ["home_budget", e, R.booked_total(c)], [["cost_centre_of", e, c]], True))
+        self.rules = [r[:4] for r in rules if r[4] and r[0] not in withhold and (r[0] in present or r[0] in R.claims)]
+        self.auth = {p: o for p, (rid, o) in AUTH.items() if rid not in withhold and (rid in present or rid == "R313")}
+        self.memo = {}
+
+    # ---- structure
+    def sup(self, t, s):
+        """t > s: authority (RY4, R313) or later asserted_at by the same asserter, between claims only."""
+        if t[1] != "claim" or s[1] != "claim": return False
+        A, B = self.claims[t[0]], self.claims[s[0]]
+        pred = t[2][1][0] if t[2][0] == "neg" else t[2][0]
+        o = self.auth.get(pred)
+        a, b = kw(A["asserted_by"]), kw(B["asserted_by"])
+        if o and a in o and b in o and a != b:
+            return o.index(a) < o.index(b)
+        return a == b and iso(A["asserted_at"]) > iso(B["asserted_at"])
+
+    def supporters(self, L):
+        return [r for r in self.rules if r[2] == L and r[1] != "defeater"]
+
+    def attackers(self, L):
+        """Head ~L, or a functional rival (cost_centre_of with the same employee, another cost centre)."""
+        rival = lambda h: L[0] == h[0] == "cost_centre_of" and L[1] == h[1] and L[2] != h[2]
+        return [r for r in self.rules if r[2] == neg(L) or rival(r[2])]
+
+    # ---- values
+    def val(self, b):
+        if b[0] == "not":
+            return {PROVEN: REFUTED, REFUTED: PROVEN, CONTESTED: CONTESTED}[self.val(b[1])]
+        if b[0] == "claim_dep":                       # depends_on: the member claim holds
+            c = next(r for r in self.rules if r[0] == b[1]) if any(r[0] == b[1] for r in self.rules) else None
+            return self.val(c[2]) if c else REFUTED
+        k = json.dumps(b)
+        if k not in self.memo:
+            self.memo[k] = None                       # acyclic: never re-entered
+            self.memo[k] = self.compute(b)
+        assert self.memo[k] is not None, f"re-entered {b}"
+        return self.memo[k]
+
+    def body(self, r):
+        vs = [self.val(b) for b in r[3]]
+        return REFUTED if REFUTED in vs else PROVEN if all(v == PROVEN for v in vs) else CONTESTED
+
+    def live(self, r):
+        return self.body(r) != REFUTED
+
+    def beaten(self, a, L):
+        return any(self.sup(t, a) and self.body(t) == PROVEN for t in self.supporters(L) if self.live(t))
+
+    def compute(self, L):
+        S = [r for r in self.supporters(L) if self.live(r)]
+        A = [a for a in self.attackers(L) if self.live(a)]
+        if all(any(self.body(a) == PROVEN and self.sup(a, t) for a in A) for t in S):   # -sigma; vacuous if no S
+            return REFUTED
+        if any(self.body(t) == PROVEN for t in S) and all(self.beaten(a, L) for a in A):
+            return PROVEN
+        return CONTESTED
+
+    # ---- explanation of a contested literal
+    def explain(self, L):
+        """-> ("root", sides) when a proven-bodied supporter meets a proven-bodied unbeaten attacker;
+        else ("via", rules, contested body literals) over the live supporters and live unbeaten attackers."""
+        S = [r for r in self.supporters(L) if self.live(r)]
+        A = [a for a in self.attackers(L) if self.live(a) and not self.beaten(a, L)]
+        Sp, Ap = [r for r in S if self.body(r) == PROVEN], [a for a in A if self.body(a) == PROVEN]
+        if Sp and Ap:
+            return "root", sorted([sorted({r[0] for r in Sp}), sorted({a[0] for a in Ap})])
+        via = [pos(b) for r in S + A for b in r[3] if b[0] != "claim_dep" and self.val(b) == CONTESTED]
+        via += [self.rule_of(b[1])[2] for r in S + A for b in r[3] if b[0] == "claim_dep" and self.val(b) == CONTESTED]
+        return "via", sorted({r[0] for r in S + A}), via
+
+    def rule_of(self, rid):
+        return next(r for r in self.rules if r[0] == rid)
+
+    def contested(self, G):
+        """-> {via, rules, roots: [{goal, sides}]} for a downstream-contested G, or None when G is itself a root."""
+        if self.explain(G)[0] == "root":
+            return None
+        via, rules, roots, seen, st = {}, set(), {}, set(), [G]
+        while st:
+            x = st.pop(); k = json.dumps(x)
+            if k in seen: continue
+            seen.add(k)
+            e = self.explain(x)
+            if e[0] == "root":
+                roots[k] = dict(goal=x, sides=e[1])
+            else:
+                rules |= set(e[1])
+                for b in e[2]:
+                    via[json.dumps(b)] = b; st.append(b)
+        return dict(via=[via[k] for k in sorted(via)], rules=sorted(rules), roots=[roots[k] for k in sorted(roots)])
+
+    def answer(self, G):
+        v = self.val(G)
+        if v == PROVEN:
+            win = sorted({r[0] for r in self.supporters(G) if self.body(r) == PROVEN})
+            A = [a for a in self.attackers(G) if self.live(a)]
+            src = AUTH.get(G[1][0] if G[0] == "neg" else G[0])
+            src = [src[0]] if src and A and self.auth.get(G[0]) and any(
+                a[1] == "claim" and kw(self.claims[a[0]]["asserted_by"]) in self.auth[G[0]] for a in A) else []
+            return dict(status="ANSWER", value=True, sides=None, core=sorted(win + src))
+        if v == REFUTED:
+            return dict(status="ANSWER", value=False, sides=None, core=sorted({r[0] for r in self.supporters(G)}))
+        return self.conflict({json.dumps(G): G})
+
+    def conflict(self, inst):
+        """CONFLICT key for contested ground instances {json: goal}: root sides, or the roots' sides."""
+        sides, core, cmap = [], set(), {}
+        for k in sorted(inst):
+            G = inst[k]; c = self.contested(G)
+            if c is None:
+                sd = self.explain(G)[1]
+            else:
+                cmap[k] = c; core |= set(c["rules"])
+                sd = [s for r in c["roots"] for s in r["sides"]]
+            for s in sd:
+                core |= set(s)
+                if s not in sides: sides.append(s)
+        k = dict(status="CONFLICT", value=None, sides=sorted(sides), core=sorted(core))
+        if cmap: k["contested"] = cmap
+        return k
+
+
+def answer_acyclic(R, q):
+    w = tuple((q.get("hypothesis") or {}).get("withhold") or ())
+    d, g = q.get("as_of") or R.today, q["goal"]
+    P = Prop(R, d, w)
+    if g[0] == "home_budget":                          # open goal [:home_budget e ?v]: one RY56 instance per claimed cc
+        inst = {json.dumps(r[2]): r[2] for r in P.rules if r[0] == "RY56" and r[2][1] == g[1]}
+        vals = {k: P.val(G) for k, G in inst.items()}
+        if CONTESTED in vals.values():                 # a measure over a contested binding is contested
+            return P.conflict({k: inst[k] for k, v in vals.items() if v == CONTESTED})
+        won = sorted(inst[k][2] for k, v in vals.items() if v == PROVEN)
+        return dict(status="ANSWER", value=won, sides=None, core=["RY56"] if won else [])
+    k = P.answer(g)
+    if q.get("check_qualifier"):                       # RY55 is :closed_over :known_facts
+        k["qualifier"] = CLOSED if k["status"] == "ANSWER" and k["value"] and "RY55" in k["core"] else None
+    return k
+
+
 def load(cycles=False):
     """-> slice, extension, questions (base / extended list; with cycles=True also the records of
     cycles-acyclic.edn and the :state :acyclic questions)."""
@@ -456,7 +638,7 @@ def load(cycles=False):
     return S, X, Q, Y, [q for q in QA if q.get("state") == "acyclic"]
 
 
-def keys(mutate=False):
+def keys(mutate=False, semantics="propagation"):
     S, X, Q, Y, QC = load(cycles=True)
     out = {}
     for state, ext in (("base", []), ("extended", X)):
@@ -465,14 +647,16 @@ def keys(mutate=False):
     out["changed"] = sorted(i for i in out["base"] if out["base"][i] != out["extended"][i])
     R = Ref(S, X, mutate)
     R.cyc_claims, R.cyc_recs = [y for y in Y if "assertion" in y], Y
-    out["acyclic"] = {q["id"]: answer_acyclic(R, q) for q in QC}
+    f = answer_acyclic if semantics == "propagation" else answer_acyclic_blocking
+    out["acyclic"] = {q["id"]: f(R, q) for q in QC}
     return out
 
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(); ap.add_argument("--mutate", action="store_true"); a = ap.parse_args()
-    k = keys(a.mutate)
-    if a.mutate:
+    ap = argparse.ArgumentParser(); ap.add_argument("--mutate", action="store_true")
+    ap.add_argument("--semantics", choices=["propagation", "blocking"], default="propagation"); a = ap.parse_args()
+    k = keys(a.mutate, a.semantics)
+    if a.mutate or a.semantics != "propagation":
         json.dump(k, sys.stdout, indent=1, sort_keys=True)
     else:
         (HERE / "keys.json").write_text(json.dumps(k, indent=1, sort_keys=True) + "\n")

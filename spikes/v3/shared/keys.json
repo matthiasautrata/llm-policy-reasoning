@@ -34,35 +34,222 @@
    "value": true
   },
   "Q35": {
+   "contested": {
+    "[\"flagged\", \"fern\"]": {
+     "roots": [
+      {
+       "goal": [
+        "blacklisted",
+        "fern"
+       ],
+       "sides": [
+        [
+         "CY1a"
+        ],
+        [
+         "CY1b"
+        ]
+       ]
+      }
+     ],
+     "rules": [
+      "RY51"
+     ],
+     "via": [
+      [
+       "blacklisted",
+       "fern"
+      ]
+     ]
+    }
+   },
    "core": [
+    "CY1a",
+    "CY1b",
     "RY51"
    ],
-   "sides": null,
-   "status": "ANSWER",
-   "value": false
+   "sides": [
+    [
+     "CY1a"
+    ],
+    [
+     "CY1b"
+    ]
+   ],
+   "status": "CONFLICT",
+   "value": null
   },
   "Q37": {
+   "contested": {
+    "[\"cleared_for_tender\", \"fern\"]": {
+     "roots": [
+      {
+       "goal": [
+        "blacklisted",
+        "fern"
+       ],
+       "sides": [
+        [
+         "CY1a"
+        ],
+        [
+         "CY1b"
+        ]
+       ]
+      }
+     ],
+     "rules": [
+      "RY53",
+      "RY54"
+     ],
+     "via": [
+      [
+       "blacklisted",
+       "fern"
+      ]
+     ]
+    }
+   },
    "core": [
-    "RY53"
+    "CY1a",
+    "CY1b",
+    "RY53",
+    "RY54"
    ],
-   "sides": null,
-   "status": "ANSWER",
-   "value": true
+   "sides": [
+    [
+     "CY1a"
+    ],
+    [
+     "CY1b"
+    ]
+   ],
+   "status": "CONFLICT",
+   "value": null
   },
   "Q40": {
+   "contested": {
+    "[\"screening_clear\", \"fern\"]": {
+     "roots": [
+      {
+       "goal": [
+        "blacklisted",
+        "fern"
+       ],
+       "sides": [
+        [
+         "CY1a"
+        ],
+        [
+         "CY1b"
+        ]
+       ]
+      }
+     ],
+     "rules": [
+      "RY55"
+     ],
+     "via": [
+      [
+       "blacklisted",
+       "fern"
+      ]
+     ]
+    }
+   },
    "core": [
+    "CY1a",
+    "CY1b",
     "RY55"
    ],
-   "qualifier": "total over known facts in declared scope",
-   "sides": null,
-   "status": "ANSWER",
-   "value": true
+   "qualifier": null,
+   "sides": [
+    [
+     "CY1a"
+    ],
+    [
+     "CY1b"
+    ]
+   ],
+   "status": "CONFLICT",
+   "value": null
   },
   "Q41": {
-   "core": [],
-   "sides": null,
-   "status": "ANSWER",
-   "value": []
+   "contested": {
+    "[\"home_budget\", \"e077\", 699000]": {
+     "roots": [
+      {
+       "goal": [
+        "cost_centre_of",
+        "e077",
+        "cc0077"
+       ],
+       "sides": [
+        [
+         "C3"
+        ],
+        [
+         "C4"
+        ]
+       ]
+      }
+     ],
+     "rules": [
+      "RY56"
+     ],
+     "via": [
+      [
+       "cost_centre_of",
+       "e077",
+       "cc0077"
+      ]
+     ]
+    },
+    "[\"home_budget\", \"e077\", 774000]": {
+     "roots": [
+      {
+       "goal": [
+        "cost_centre_of",
+        "e077",
+        "cc0078"
+       ],
+       "sides": [
+        [
+         "C3"
+        ],
+        [
+         "C4"
+        ]
+       ]
+      }
+     ],
+     "rules": [
+      "RY56"
+     ],
+     "via": [
+      [
+       "cost_centre_of",
+       "e077",
+       "cc0078"
+      ]
+     ]
+    }
+   },
+   "core": [
+    "C3",
+    "C4",
+    "RY56"
+   ],
+   "sides": [
+    [
+     "C3"
+    ],
+    [
+     "C4"
+    ]
+   ],
+   "status": "CONFLICT",
+   "value": null
   },
   "Q42": {
    "core": [

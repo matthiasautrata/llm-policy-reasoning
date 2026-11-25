@@ -41,8 +41,11 @@ defmodule V3c.Why do
 
       op == :not ->
         g = E.subst(hd(args), s)
-        {_, p} = Enum.at(E.prove(ctx, g), 0)
-        %{type: "absent", goal: [:not, g], children: [p]}
+        case Enum.at(E.prove(ctx, g), 0) do
+          {_, p} -> %{type: "absent", goal: [:not, g], children: [p]}
+          # propagation: [:not g] fails on a contested g too
+          nil -> %{type: "contested_lit", goal: g}
+        end
 
       op in @builtins ->
         %{type: "fact", goal: E.subst(l, s), holds: false}
