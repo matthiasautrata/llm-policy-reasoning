@@ -83,12 +83,17 @@ Goals are JSON arrays, predicate first: `["approved", "r000005"]`; `["neg", [...
 | `defeated_by` | `id`, `target`, `children` | rule/claim `id` defeated `target`; children: its own proof and a `superior` node |
 | `superior` | `winner`, `loser`, `source` | `source`: `explicit`, `authority:R313`, `later`, `strict` |
 | `contested` | `goal`, `via`, `rules`, `roots` | ambiguity propagation (`SEMANTICS.md`): `goal` (ground) is contested only because it rests on contested literals. `via`: every contested literal reached through the bodies of its live supporters and live unbeaten attackers, roots included (`[:not L]` as L); `rules`: the ids of those live supporters / attackers of `goal` and of each non-root `via` literal; `roots`: one `conflict` node per root, sorted by goal |
+| `aggregate` | `op`, `value`, `members`, `excluded` | an `[:agg Op ?x [..] ?out]` body literal (`SEMANTICS.md`, Aggregates). `members`: one `{value, children}` per proven solution, in binding order. `value` is that solution's ?x, and `children` are the proofs of the conjunction's literals, as for a rule. `excluded`: the number of refuted bindings. `check_why.py` re-verifies every member and recomputes the aggregate |
 | `conflict` | `goal`, `sides`, `children` | a root conflict: a proven-bodied supporter meets a proven-bodied unbeaten attacker; children are the proofs of the side members |
 
 Downstream CONFLICT (PLAN-v3-integrity §4): `sides` are the deduplicated, sorted sides of every root the
 goal depends on; `why` holds one `contested` node per contested ground instance of the goal (an open goal
 whose candidate instances include a contested one is CONFLICT as a whole). A root CONFLICT keeps the list
 of side proofs as its `why`. A claim whose `depends_on` member is contested is `contested`.
+
+Aggregates: a contested aggregate gives the downstream CONFLICT above. Its contested node's `goal` binds ?out to the aggregate over the proven members only, and `via` lists the contested members' literals. A truncated fetch inside an aggregate's conjunction ends the op with `{"status": "ERROR", "error": {"op", "aggregate": <goal>, "truncated": <concept>, "message"}}`.
+
+Declared incompatibility (R314): an `:incompatible` rule is an attacker of its head (`SEMANTICS.md`), so `approved` against `denied` is a root conflict. Its side proof is a `rule` node with goal `[neg, head]`.
 
 why-not trees: an `absent` node for the goal whose children are, per candidate rule, a `rule` node
 with `failed`: the first body literal that did not hold (an `absent` node, recursively explained for

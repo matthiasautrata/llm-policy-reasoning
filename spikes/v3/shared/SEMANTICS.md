@@ -18,6 +18,7 @@ A **claim** is a rule with an empty body. `depends_on` adds its member claims to
 For a literal L:
 - its **supporters** are the non-defeater rules and claims with head L;
 - its **attackers** are the rules, defeaters and claims with head ~L, plus, for a functional predicate (`cost_centre_of`), the claims of another value for the same key.
+- an `:incompatible` rule whose head is L (R314: `approved` against `denied`) is an attacker of L with conclusion ~L. Nothing is superior to it except a strict supporter, so a proven-bodied supporter meeting it is a root conflict.
 
 Each literal is **proven**, **refuted** or **contested**.
 
@@ -41,7 +42,23 @@ Each literal is **proven**, **refuted** or **contested**.
 **Measures and strict rules**
 - A **measure** over a set with a contested member is contested. In the slice's rule language a measure is a fetch keyed by a binding, so a fetch whose key comes from a contested literal is contested (RY56, Y5e).
 - An open goal (`[:home_budget "e077" ?v]`) is contested if any of its candidate instances is contested. Otherwise its value is the set of proven instances.
-- **Strict** rules propagate the same way. The slice has no strict rule whose body can be contested.
+- **Strict** rules propagate the same way. Before §2.1 of PLAN-v3-preconditions, no strict rule in the slice could have a contested body. R120 and R121 now can: they aggregate over `approved`.
+
+**Aggregates** (PLAN-v3-preconditions §2.1)
+
+The body literal `[:agg Op ?x [L1 .. Ln] ?out]` aggregates over the solutions of a conjunction. Op is `:sum` or `:count`.
+- **Solutions.** A solution is a distinct binding of the conjunction's local variables, meaning those not bound when the literal is reached. Each live (not refuted) binding counts once: proven if some proof of the conjunction under it is proven, contested otherwise.
+- **Members.** The members are the proven solutions. Refuted bindings are excluded. `:sum` is the sum of ?x over the members, and `:count` is the number of members. With no members, both are 0.
+- **The literal's value.**
+  - It is **proven** if no solution is contested; ?out is then bound to the aggregate.
+  - It is **contested** if any solution is contested. Its contested literals are those of the contested solutions, so the roots of the contested members become the sides of a downstream CONFLICT.
+  - It is never refuted: ?out must be unbound, which `modes.edn` enforces.
+- **The proven part.** A contested aggregate still binds ?out, to the aggregate over the proven members only. This bound value appears only in the goal of the `contested` why node. It is never an answer value, because the status is CONFLICT.
+- **Truncation.** A truncated fetch reached while evaluating the conjunction (more than `fetch_limit` rows) makes the op an ERROR. A truncated member set would give a wrong total, not a qualified one.
+- **IR-005.** An aggregate is an aggregation, so its rule must name `:completeness` or be `:closed_over :known_facts`. The answer is total only over the known facts.
+- **Stratification.** Aggregation is not monotone, so the dependency graph gives each derived literal inside the conjunction a `-` edge. As for `[:not ..]`, a cycle through an aggregate is rejected.
+
+**Known limitation.** A comparison or arithmetic literal placed after a contested binding is evaluated on the bound value. It contributes no contested literal of its own, which is sound only because the body is already contested by the literal that bound the value. A builtin that refutes such a solution therefore hides the contest. No slice body has a builtin after a contested binding.
 
 ## Mapping to statuses
 
@@ -106,6 +123,7 @@ The definitions were read in Maher, *Relative Expressiveness of Defeasible Logic
   - functional rivals as attackers;
   - claims as empty-body rules gated by valid time, with `depends_on` as body literals;
   - measures and open goals being contested when any instance is.
+  - aggregates over derived literals (members = proven solutions, contested if any solution is contested).
 - **The three-way mapping onto CONFLICT.** Contested = +σ −δ. The −Δ~q clause has no work to do: there are no strict conflicts.
 
 ## Literature
