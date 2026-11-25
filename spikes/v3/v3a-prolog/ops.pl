@@ -1,7 +1,7 @@
 /*  V3a System A surface (CONTRACT.md): run_op(+OpJSON, -ResultJSON).
     decide, why_not, claims, resolve_term, describe, fetch, add, with_hypothesis.
 */
-:- module(ops, [run_op/2, load_files_json/1]).
+:- module(ops, [run_op/2, load_files_json/1, set_hyp_mode/1, run_concurrent/2, memo_test/1]).
 :- use_module(edn).
 :- use_module(defeasible).
 :- use_module(why).
@@ -196,12 +196,58 @@ do_op("fetch", Op, _{concept:C, filters:Op.filters, rows:Rows, sql:Sql, params:P
 
 do_op("add", Op, _{added:Ids}) :- !, edn_parse(Op.edn, Recs), add_records(Recs, ext, Ids).
 
+%   Hypotheses. mode snapshot (default): snapshot/1 (SWI >= 9): the hypothesis's withholds, added records and
+%   memo entries are local to this thread and discarded on exit; other threads see the base state throughout.
+%   mode assert: the original mechanism (assert/retract on the shared database under setup_call_cleanup), kept
+%   so the isolation test can show it fails.
+:- dynamic hyp_mode/1.
+hyp_mode(snapshot).
+set_hyp_mode(M) :- retractall(hyp_mode(_)), atom_string(A, M), assertz(hyp_mode(A)).
+
 do_op("with_hypothesis", Op, _{results:Rs, added:Ids, withheld:W}) :- !,
     ( get_dict(withhold, Op, W0) -> maplist([S, A]>>atom_string(A, S), W0, W) ; W = [] ),
     ( get_dict(add, Op, E), E \== null -> edn_parse(E, Recs) ; Recs = [] ),
+    hyp_mode(M), flag(v3a_hyp, N, N + 1),
+    hypothesis(M, hyp(N), W, Recs, Op.ops, Ids, Rs).
+
+hypothesis(snapshot, S, W, Recs, Ops, Ids, Rs) :-
+    snapshot(with_state(S, ( forall(member(I, W), assertz(withheld(I))), add_records(Recs, hyp, Ids),
+                             maplist([O, R]>>op_result(O, R), Ops, Rs) ))).
+hypothesis(assert, S, W, Recs, Ops, Ids, Rs) :-
     setup_call_cleanup(
         ( forall(member(I, W), assertz(withheld(I))), add_records(Recs, hyp, Ids) ),
-        maplist([O, R]>>op_result(O, R), Op.ops, Rs),
+        with_state(S, maplist([O, R]>>op_result(O, R), Ops, Rs)),
         ( forall(member(I, W), retract(withheld(I))), retract_source(hyp) )).
 
+%   Test-only op: sleep, reporting wall-clock start/end (epoch ms) so the isolation test can check overlap.
+do_op("sleep", Op, _{t0:T0, t1:T1}) :- !,
+    get_time(A), T0 is A * 1000, S is Op.ms / 1000, sleep(S), get_time(B), T1 is B * 1000.
+
+%!  run_concurrent(+JsonListOfOpLists, -Out)  each op list in its own Prolog thread; results per list, each op
+%   result stamped with wall-clock t_start/t_end (epoch ms).
+run_concurrent(J, Out) :-
+    atom_json_dict(J, Lists, [value_string_as(string)]),
+    maplist([Ops, Id]>>thread_create(run_list(Ops), Id, []), Lists, Ids),
+    maplist([Id, Rs]>>( thread_join(Id, St), ( St = exited(Rs) -> true ; format(string(E), "~q", [St]), Rs = [_{status:"ERROR", error:E}] ) ), Ids, Rss),
+    with_output_to(string(Out), json_write_dict(current_output, Rss, [width(0)])).
+
+run_list(Ops) :- maplist(timed_op, Ops, Rs), thread_exit(Rs).
+
+timed_op(O, R) :-          % not a yall lambda: dict functional notation would expand outside it
+    get_time(A), op_result(O, R0), get_time(B), Ta is A * 1000, Tb is B * 1000,
+    R = R0.put(_{t_start:Ta, t_end:Tb}).
+
+%!  memo_test(-Out)  base memo entries must not be used inside a hypothesis, and hypothesis entries must not
+%   survive it. Control: the same hypothesis run under the `base` token reuses the base entry (the leak the key prevents).
+memo_test(Out) :-
+    G = _{op:"decide", goal:"[:cost_centre_of \"e077\" ?c]", as_of:"2026-07-15"},
+    clear_memo,
+    do_op("decide", G, B1),                                    % populates memo(base, ...)
+    aggregate_all(count, memo(base, _, _, _), NBase),
+    snapshot(with_state(hyp(t), ( assertz(withheld('R313')), do_op("decide", G, H) ))),
+    snapshot(( assertz(withheld('R313')), do_op("decide", G, Leak) )),     % control: token stays base
+    do_op("decide", G, B2),
+    aggregate_all(count, memo(hyp(_), _, _, _), NHyp),
+    Out = _{base_before:B1.status-B1.value, base_memo_entries:NBase, hypothesis:H.status, control_same_token:Leak.status,
+            base_after:B2.status-B2.value, hyp_entries_left:NHyp}.
 do_op(Name, _, _) :- throw(error(unknown_op(Name), _)).

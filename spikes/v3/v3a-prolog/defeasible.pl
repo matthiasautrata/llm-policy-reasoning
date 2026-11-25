@@ -14,17 +14,27 @@
     for the complement and, for functional predicates, for the same key with another value; defeaters
     attack only. Superiority: explicit :superior-to, strict over non-strict, asserter authority (a
     :superiority rule, scoped to its :pred), later asserted_at for the same asserter.
-    Memoised per op (memo/3), cleared whenever the rule/claim set changes.
+    Memoised per op and state (memo/4), cleared whenever the rule/claim set changes.
 */
 :- module(defeasible, [load_file/1, add_records/3, retract_source/1, evaluate/3, prove/3, body/3, lit/3,
                        supporters/3, attackers/3, sup/3, in_force/3, active/1, clear_memo/0, pred_of/2,
+                       state_token/1, with_state/2, memo/4,
                        fetch_rows/5, cmp_lit/1, ev/2, ids_of/2,
                        rule/5, claim/10, functional/2, concept/2, term/2, today/1, withheld/1, slice/1, asset/2, src/2]).
 :- use_module(edn).
 :- use_module(library(janus)).
 :- use_module(library(json)).
 
-:- dynamic rule/5, claim/10, functional/2, concept/2, term/2, today/1, withheld/1, memo/3, slice/1, asset/2, src/2.
+:- dynamic rule/5, claim/10, functional/2, concept/2, term/2, today/1, withheld/1, memo/4, slice/1, asset/2, src/2.
+
+%   Memo entries are keyed by a state token: `base`, or hyp(N) inside the N-th hypothesis. The token is a
+%   global variable, which SWI keeps per thread. Under snapshot/1, entries asserted inside the hypothesis are
+%   discarded with it; entries the base asserted before the snapshot stay visible inside it, and the key keeps
+%   them from being used there (tested by ops:memo_test/1).
+
+:- meta_predicate with_state(+, 0).
+state_token(S) :- ( nb_current(v3a_state, S0) -> S = S0 ; S = base ).
+with_state(S, G) :- state_token(Old), setup_call_cleanup(nb_setval(v3a_state, S), G, nb_setval(v3a_state, Old)).
 
 % ------------------------------------------------------------------ loading
 
@@ -69,7 +79,7 @@ retract_source(Src) :-
     forall(src(Id, Src), ( retractall(rule(Id, _, _, _, _)), retractall(claim(Id, _, _, _, _, _, _, _, _, _)) )),
     retractall(src(_, Src)), clear_memo.
 
-clear_memo :- retractall(memo(_, _, _)).
+clear_memo :- retractall(memo(_, _, _, _)).
 
 active(Id) :- \+ withheld(Id).
 
@@ -89,11 +99,11 @@ candidate(L, D) :-
 
 with_children(P0, Extra, P) :- get_dict(children, P0, Cs0), append(Cs0, Extra, Cs), put_dict(children, P0, Cs, P).
 
-evaluate(L, D, R) :- memo(D, L, R0), !, R = R0.
+evaluate(L, D, R) :- state_token(S), memo(S, D, L, R0), !, R = R0.
 evaluate(L, D, R) :-
     supporters(L, D, Sups), attackers(L, D, Atts),
     classify(Sups, Atts, R0),          % R0 fresh: callers pass patterns like proven(_, _)
-    assertz(memo(D, L, R0)), R = R0.
+    state_token(S), assertz(memo(S, D, L, R0)), R = R0.
 
 %!  supporters(+L, +D, -Sups)  [s(Id, Kind, Proof)]: one proof per applicable rule / in-force claim
 supporters(L, D, Sups) :-

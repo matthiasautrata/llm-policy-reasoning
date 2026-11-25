@@ -32,9 +32,11 @@
         (when-let [s (store/load-file! @ops/conn (str root "/" f))]
           (doseq [c (:concepts s) :when (:sql c)] (sql/register! (:name c) (:sql c) (:params c []))))))
     (let [load-ms (/ (- (System/nanoTime) t0) 1e6)
-          results (mapv ops/run-op (:ops script))]
+          results (mapv ops/run-op (:ops script))
+          conc (when (:concurrent script) (ops/run-concurrent (:concurrent script)))
+          after (when (:after script) (mapv ops/run-op (:after script)))]
       (store/destroy! @ops/conn)
-      {:results results :load_ms load-ms})))
+      (cond-> {:results results :load_ms load-ms} conc (assoc :concurrent conc) after (assoc :after after)))))
 
 (defn -main [& _]
   (timbre/merge-config! {:min-level :warn

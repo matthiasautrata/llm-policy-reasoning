@@ -7,11 +7,20 @@ fetch(concept, filters_json) through janus. Everything dialect-specific lives he
   - $name required parameters -> bound placeholders; other filters wrap the template as
     SELECT * FROM (<sql>) t WHERE t."col" = ? ... LIMIT fetch_limit + 1
 Rows come back as JSON (dates already ISO strings via @iso). A per-op cache avoids re-issuing the same
-statement inside one op; the per-op log is what the CLI reports as sql_log.
+statement inside one op; the per-op log is what the CLI reports as sql_log. Cache and log are per thread
+(threading.local; each Prolog thread that py_calls gets its own Python thread state), and statements are
+serialised on the one connection, so concurrent Prolog threads (the isolation test) do not mix their logs.
 """
-import json, re
+import json, re, threading
 
-_cfg, _con, _concepts, _cache, _log = {}, None, {}, {}, []
+_cfg, _con, _concepts = {}, None, {}
+_tl, _lock = threading.local(), threading.Lock()
+
+
+def _state():
+    if not hasattr(_tl, "cache"):
+        _tl.cache, _tl.log = {}, []
+    return _tl
 
 
 def configure(cfg_json, root):
@@ -68,28 +77,31 @@ def _val(v):
 
 def fetch(concept, filters_json):
     filters = json.loads(filters_json)
+    st = _state()
     key = (concept, json.dumps(filters, sort_keys=True))
-    if key in _cache:
-        return _cache[key]
+    if key in st.cache:
+        return st.cache[key]
     sql, params, limit = build(concept, filters)
-    if _cfg["backend"] == "duckdb":
-        cur = _con.execute(sql, params)
-    else:
-        cur = _con.cursor(); cur.execute(sql, params)
-    cols = [d[0] for d in cur.description]
-    rows = [{c: _val(v) for c, v in zip(cols, r)} for r in cur.fetchall()]
+    with _lock:
+        if _cfg["backend"] == "duckdb":
+            cur = _con.execute(sql, params)
+        else:
+            cur = _con.cursor(); cur.execute(sql, params)
+        cols = [d[0] for d in cur.description]
+        raw = cur.fetchall()
+    rows = [{c: _val(v) for c, v in zip(cols, r)} for r in raw]
     truncated = len(rows) > limit
     rows = rows[:limit]
-    _log.append({"concept": concept, "sql": sql, "params": params, "rows": len(rows)})
+    st.log.append({"concept": concept, "sql": sql, "params": params, "rows": len(rows)})
     out = json.dumps({"rows": rows, "sql": sql, "params": params, "truncated": truncated})
-    _cache[key] = out
+    st.cache[key] = out
     return out
 
 
 def begin_op():
-    _cache.clear(); _log.clear()
+    st = _state(); st.cache.clear(); st.log.clear()
     return True
 
 
 def take_log():
-    return json.dumps(_log)
+    return json.dumps(_state().log)

@@ -12,7 +12,11 @@
   (:import [java.sql DriverManager ResultSet]
            [java.util Properties]))
 
-(def ^:private state (atom {:cfg nil :con nil :concepts {} :cache {} :log []}))
+;; cfg, connection and concept bindings are shared; the per-op cache and log are per thread (ThreadLocal), and
+;; statements are serialised on the one connection, so concurrent ops (shared/isolation.py) do not mix logs.
+(def ^:private state (atom {:cfg nil :con nil :concepts {}}))
+(def ^:private ^ThreadLocal op-state (ThreadLocal/withInitial (reify java.util.function.Supplier (get [_] (atom {:cache {} :log []})))))
+(defn- ostate [] (.get op-state))
 
 (defn configure! [cfg root]
   (when-let [c (:con @state)] (.close ^java.sql.Connection c))
@@ -67,10 +71,10 @@
   "-> {:rows [{string value}] :sql :params :truncated}"
   [c filters]
   (let [k [c filters]]
-    (or (get-in @state [:cache k])
+    (or (get-in @(ostate) [:cache k])
         (let [[sql params limit] (build c filters)
               ^java.sql.Connection con (:con @state)
-              rows (with-open [ps (.prepareStatement con sql)]
+              rows (locking con (with-open [ps (.prepareStatement con sql)]
                      (doseq [[i p] (map-indexed vector params)] (.setObject ps (int (inc i)) p))
                      (with-open [^ResultSet rs (.executeQuery ps)]
                        (let [md (.getMetaData rs) n (.getColumnCount md)
@@ -79,13 +83,13 @@
                            (if (.next rs)
                              (recur (conj! acc (into (array-map) (map (fn [i col] [col (value (.getObject rs (int i)))])
                                                                       (range 1 (inc n)) cols))))
-                             (persistent! acc))))))
+                             (persistent! acc)))))))
               truncated (> (count rows) limit)
               rows (vec (take limit rows))
               out {:rows rows :sql (reported sql) :params params :truncated truncated}]
-          (swap! state (fn [s] (-> s (assoc-in [:cache k] out)
+          (swap! (ostate) (fn [s] (-> s (assoc-in [:cache k] out)
                                    (update :log conj {:concept (name c) :sql (reported sql) :params params :rows (count rows)}))))
           out))))
 
-(defn begin-op! [] (swap! state assoc :cache {} :log []))
-(defn take-log [] (:log @state))
+(defn begin-op! [] (reset! (ostate) {:cache {} :log []}))
+(defn take-log [] (:log @(ostate)))

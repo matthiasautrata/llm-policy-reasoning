@@ -13,13 +13,24 @@ def main():
     t0 = time.time()
     janus.consult(str(HERE / "ops.pl"))
     sql.configure(json.dumps(script["config"]), root)
+    if "hypothesis" in script["config"]:   # "snapshot" (default) | "assert" (original, not isolated)
+        janus.query_once("ops:set_hyp_mode(M)", {"M": script["config"]["hypothesis"]})
     janus.query_once("ops:load_files_json(J)", {"J": json.dumps(script.get("load", []))})
     load_ms = (time.time() - t0) * 1000
     results = []
     for op in script.get("ops", []):
         r = janus.query_once("ops:run_op(J, Out)", {"J": json.dumps(op)})
         results.append(json.loads(r["Out"]))
-    json.dump({"results": results, "load_ms": load_ms}, sys.stdout)
+    out = {"results": results, "load_ms": load_ms}
+    if "concurrent" in script:   # test mode: each op list in its own Prolog thread (shared/isolation.py)
+        out["concurrent"] = json.loads(janus.query_once("ops:run_concurrent(J, Out)",
+                                                        {"J": json.dumps(script["concurrent"])})["Out"])
+    if "after" in script:        # ops run on the main thread after the concurrent lists have joined
+        out["after"] = [json.loads(janus.query_once("ops:run_op(J, Out)", {"J": json.dumps(op)})["Out"])
+                        for op in script["after"]]
+    if script.get("memo_test"):
+        out["memo_test"] = janus.query_once("ops:memo_test(Out)")["Out"]
+    json.dump(out, sys.stdout)
 
 
 if __name__ == "__main__":

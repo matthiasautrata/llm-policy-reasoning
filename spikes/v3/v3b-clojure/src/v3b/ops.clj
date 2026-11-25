@@ -174,6 +174,7 @@
                :row_count (count rows) :truncated truncated})
     "add" (let [ids (store/add-records! @conn (store/read-edn (:edn op)) :ext)] {:added ids})
     "with_hypothesis" (with-hypothesis op)
+    "sleep" (let [t0 (System/currentTimeMillis)] (Thread/sleep (long (:ms op))) {:t0 t0 :t1 (System/currentTimeMillis)})  ; test only
     (throw (ex-info (str "unknown op " (:op op)) {}))))
 
 (defn run-op [op]
@@ -184,3 +185,10 @@
                  (catch Exception ex {:status "ERROR" :error (str (.getSimpleName (class ex)) ": " (.getMessage ex))})))
         ms (/ (- (System/nanoTime) t0) 1e6)]
     (assoc r :ms ms :sql_log (if (= "with_hypothesis" (:op op)) [] (sql/take-log)))))
+
+(defn run-concurrent
+  "Test mode (shared/isolation.py): each op list on its own thread; every result stamped with wall-clock
+  :t_start/:t_end (epoch ms)."
+  [lists]
+  (let [timed (fn [op] (let [a (System/currentTimeMillis) r (run-op op)] (assoc r :t_start a :t_end (System/currentTimeMillis))))]
+    (mapv deref (mapv (fn [ops] (future (mapv timed ops))) lists))))
