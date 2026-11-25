@@ -22,7 +22,7 @@ How spike v3 (System A: rules and claims as data, a defeasible engine, a bounded
 
 **Findings that still hold.**
 - The `fetch` boundary is the stable part: 11.17 SQL statements per decide, no table ever loaded, and a backend swap is a config change.
-- Backend independence: DuckDB and Postgres 18 gave the same answers and explanations, SQL text aside (check 2), in every later phase too. That settled it, so Postgres and check 2 were retired on 2026-11-25 (`PLAN-v3-preconditions.md` §1.2; the last Postgres outputs are at tag `spike-v3-housekeeping`).
+- Backend independence: DuckDB and Postgres 18 gave the same answers and explanations, SQL text aside (check 2), in every later phase too. That settled it, so Postgres and check 2 were retired on 2026-11-25 (phase 7; the last Postgres outputs are at tag `spike-v3-housekeeping`).
 - The defeasible layer is small, about 150–200 lines, and is built, not native.
 - "Rules are data, interpreted at runtime" matters more than the platform.
 - Valid time and assertion provenance (`asserted_by`/`asserted_at`) are semantic attributes. Transaction time is only an audit axis.
@@ -132,6 +132,29 @@ How spike v3 (System A: rules and claims as data, a defeasible engine, a bounded
 - Keys were byte-identical before and after the pruning, and every check of the gate passed on both backends.
 - One defect was introduced and caught by the gate: a stray `}` in `model_check.py`'s f-string, left by removing the engine flag.
 - Kept because current claims cite them: `gen.py`, `hyp_latency.py` and the LinkML artefacts.
+
+### 7 Benchmark preconditions (2026-11-25; 105c967..fc5e834, tag `spike-v3-preconditions`)
+
+**Question.** Finish the cleanup to DuckDB only, then make the slice express and exercise what the benchmark needs: aggregation over derived literals, a qualifier on answers that rest on absence, and questions downstream of real conflicts. `PLAN-v3-preconditions.md` (at the tag) holds every Decision.
+
+**Decisions and why.**
+- Postgres and check 2 retired, since backend independence was shown (phase 1). Check numbers are kept, not renumbered, because the docs cite them. The V3e packages and psycopg left `.venv`.
+- `[:agg :sum|:count ?x [L1 .. Ln] ?out]` over proven members; any contested member contests the aggregate, and the total over the proven ones appears only in the contested node. R314 became an attacker of `approved` inside the evaluator so that a member can be contested by it (11.17 → 11.92 SQL per decide).
+- Every `decide` key holds the qualifier; `:check_qualifier` retired, because a per-question flag left most negatives unchecked.
+- Coverage is derived (PROGRESS 14, IR-005 amended): a predicate is covered by an in-force `[:complete "N"]` claim, or when no claim asserts it and every rule that concludes or attacks it reads only covered names. Claims are not assumed complete. Recursion counts as covered. C10 does not cover `cap_breach`.
+- IR-007 `unsafe-aggregation` (PROGRESS 11) treats every parameter of a semi-additive measure as unsafe, since the slice maps none to a dimension. Fixture RA1.
+- The aggregate push-down (PROGRESS 15) as rounds over the per-op cache, not as SQL compilation, so the rules stay data run by the one evaluator. Fetches inside an aggregate are paged. The cost fixes needed: a round-scoped memo for misses, a Prolog copy of the fetch cache, `variant_hash` keys, a `keysort` grouping. The CLI config gained an optional `stack_limit`.
+
+**Findings kept.**
+- R315/R316 put five base questions downstream of C3/C4 and R312/R314. V3a needed no change: propagation already handled them.
+- The push-down bounds statements: 693 at the root against about 260 000 one member at a time; no statement exceeds `fetch_limit`.
+- The cost moved into the evaluator: the root takes 208 s and peaks at 12.1 GB (about 925 000 memo entries). This is the open question of `PLAN-v3-memory.md`.
+
+**Findings reversed.**
+- "A truncated fetch inside an aggregate is an ERROR" and "L1 and the root exceed `fetch_limit`": reversed by paging (fc5e834).
+- "Fetch volume is linear in the members, about 2.9 statements each": reversed by the push-down. Latency is still linear.
+- "Completeness covers by predicate name only" (§2.2): replaced by derived coverage (ae7d906).
+- Q26/Q27 retired: they duplicated Q01/Q09.
 
 ## Platform lessons (platforms dropped, lessons kept)
 

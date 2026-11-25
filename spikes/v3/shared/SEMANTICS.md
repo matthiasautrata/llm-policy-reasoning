@@ -42,9 +42,9 @@ Each literal is **proven**, **refuted** or **contested**.
 **Measures and strict rules**
 - A **measure** over a set with a contested member is contested. In the slice's rule language a measure is a fetch keyed by a binding, so a fetch whose key comes from a contested literal is contested (RY56, Y5e).
 - An open goal (`[:home_budget "e077" ?v]`) is contested if any of its candidate instances is contested. Otherwise its value is the set of proven instances.
-- **Strict** rules propagate the same way. Before §2.1 of PLAN-v3-preconditions, no strict rule in the slice could have a contested body. R120 and R121 now can: they aggregate over `approved`.
+- **Strict** rules propagate the same way. Before aggregates (HISTORY phase 7), no strict rule in the slice could have a contested body. R120 and R121 now can: they aggregate over `approved`.
 
-**Aggregates** (PLAN-v3-preconditions §2.1)
+**Aggregates** (HISTORY phase 7)
 
 The body literal `[:agg Op ?x [L1 .. Ln] ?out]` aggregates over the solutions of a conjunction. Op is `:sum` or `:count`.
 - **Solutions.** A solution is a distinct binding of the conjunction's local variables, meaning those not bound when the literal is reached. Each live (not refuted) binding counts once: proven if some proof of the conjunction under it is proven, contested otherwise.

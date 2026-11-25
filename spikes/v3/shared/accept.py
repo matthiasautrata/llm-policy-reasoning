@@ -6,7 +6,7 @@
 The CLI reads a session script (CONTRACT.md) on stdin and prints {"results": [...]}. Checks:
   1 every question matches keys.json (extended state): status, value, sides / standing, defeater,
     qualifier / candidates; core ids within the explanation; every why tree re-verifies (check_why.py)
-  2 retired 2026-11-25 (backend swap; DuckDB only since PLAN-v3-preconditions §1.2, HISTORY phase 1)
+  2 retired 2026-11-25 (backend swap; DuckDB only since HISTORY phase 7)
   3 runtime extension: base state answers base keys; `add` extension.edn in the same process; answers
     then match extended keys and exactly keys["changed"] differ
   4 with_hypothesis withholding R313: Q10 is CONFLICT inside, ANSWER before and after, state unchanged

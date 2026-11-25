@@ -90,7 +90,7 @@ SWI-Prolog hosted from Python through janus. It has one evaluation mode: recursi
 
 Bench runs drift by about ±10 % on p50, so differences smaller than that are noise.
 
-## Benchmark preconditions (`PLAN-v3-preconditions.md` §2)
+## Benchmark preconditions (HISTORY phase 7)
 
 **Aggregation over derived literals** (`SEMANTICS.md`, Aggregates).
 - Form: `[:agg Op ?x [L1 .. Ln] ?out]`, Op `:sum` or `:count`. R120 (`approved_total`) and R121 (`approved_count`) sum or count the pending requests of a subtree whose approval is proven.

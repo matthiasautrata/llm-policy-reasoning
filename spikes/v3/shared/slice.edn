@@ -316,7 +316,7 @@
    :doc "A denied request is never approved. Declared, not inferred: deriving both is a CONFLICT."
    :head [:approved ?r]
    :body [[:denied ?r]]}
-  ;; Downstream of the slice's root conflicts (PLAN-v3-preconditions §2.3)
+  ;; Downstream of the slice's root conflicts (HISTORY phase 7)
   {:id :R315 :kind :defeasible :owner :finance :class :material_inference
    :recorded_at #inst "2026-09-14"
    :doc "An employee's home headroom is the headroom of the cost centre the employee is in."

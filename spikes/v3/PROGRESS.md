@@ -4,25 +4,13 @@ Newest first. `HISTORY.md` holds the earlier phases. `RESULTS.md` describes the 
 
 ## Status
 
-- [x] Pruning to Python + Prolog (2026-11-25, `PLAN-v3-housekeeping.md` at tag `spike-v3-housekeeping`):
-  - tagged `spike-v3-five-platforms`, then deleted V3b–V3e, V3a's WFS mode, the blocking semantics, `cycles.edn`, `SEMANTICS-cycles.md` and the executed plans (each removal is listed in the plan's Decisions);
-  - wrote `HISTORY.md`;
-  - rewrote RESULTS to the current state.
-  - Gate: keys byte-identical; V3a GREEN 1–8; `--mutation` fails check 1; isolation PASS on DuckDB and Postgres; negatives 15/15; bench on both backends; guard probe 2/2 (`v3a-prolog/results/`).
-- [x] Repo-wide inventory (2026-11-25): approved and executed (`PLAN-v3-preconditions.md` §1.1); summarised in the root `HISTORY.md`.
-- [x] Postgres retired, `.venv` cleaned (2026-11-25, `PLAN-v3-preconditions.md` §1.2–1.3). Gate on DuckDB: keys byte-identical; GREEN 1, 3–8; `--mutation` fails check 1; isolation PASS; negatives 15/15; bench 0 errors; guard probe 2/2.
-- [x] Benchmark preconditions (2026-11-25, `PLAN-v3-preconditions.md` §2; RESULTS "Benchmark preconditions"):
-  - §2.1 `[:agg :sum|:count ..]`, R120/R121, Q44–Q46; fetch volume measured, push-down proposed;
-  - §2.2 the absence qualifier on every `decide` key, Q47;
-  - §2.3 R315/R316 downstream of C3/C4 and R312/R314, Q48–Q52.
-  - Gate: GREEN 1, 3–8 (36 base questions); `--mutation` fails check 1; isolation PASS; negatives 15/15 (90 literals round-trip); guard probe 2/2; bench 0 errors, 11.92 SQL per decide.
-- [x] PROGRESS 11–15 (2026-11-25; Decisions in `PLAN-v3-preconditions.md`): IR-007 with fixture RA1; derived coverage (IR-005 amended), Q53–Q55; Q26/Q27 removed; the aggregate push-down, measured to the root (693 statements, 207 s, 12.1 GB; RESULTS "Fetch volume").
-  - Gate: keys changed only by Q26/Q27 removed and Q53–Q55 added; GREEN 1, 3–8 (37 base questions); `--mutation` fails check 1; isolation PASS; negatives unchanged; guard probe 2/2; bench 0 errors.
-- [ ] Harvest `PLAN-v3-preconditions.md` into HISTORY and remove it, once Matthias has reviewed its Decisions.
+- [x] Pruning to Python + Prolog (2026-11-25; HISTORY phase 6, tag `spike-v3-housekeeping`).
+- [x] Inventory executed, Postgres retired, benchmark preconditions, PROGRESS 11–15 (2026-11-25; HISTORY phase 7, tag `spike-v3-preconditions`).
+- [ ] Memory and aggregate cost (`PLAN-v3-memory.md`).
 
 ## Questions for Matthias
 
-1. ~~Tooling: Postgres via brew services; the leftover V3e packages in `.venv`~~: answered 2026-11-25 by `PLAN-v3-preconditions.md` §1.2–1.3. The service is stopped, not uninstalled; to remove it, run `brew uninstall postgresql@18`, then delete `/opt/homebrew/var/postgresql@18`. The V3e packages and psycopg are gone from `.venv`.
+1. ~~Tooling: Postgres via brew services; the leftover V3e packages in `.venv`~~: answered 2026-11-25 (HISTORY phase 7). The service is stopped, not uninstalled; to remove it, run `brew uninstall postgresql@18`, then delete `/opt/homebrew/var/postgresql@18`. The V3e packages and psycopg are gone from `.venv`.
    - Still to do by hand: the session's permission check refused deleting the untracked local copies `results/*.jsonl`, which are byte-identical to the `.gz` files, and the untracked `__pycache__` directories. To delete them, run `rm results/*.jsonl; find . -path ./.venv -prune -o -name __pycache__ -type d -exec rm -rf {} +`.
 2. ~~Framing of the recommendation (shape vs stack)~~: answered 2026-11-25 by the platform decision, Python + Prolog (`HISTORY.md`, Decision).
 3. ~~Optional search (Scriptum/Lucene, HNSW) for `resolve_term`~~: folded into the platform decision 2026-11-25. Not part of v3; listed under RESULTS "Not done".
