@@ -27,6 +27,20 @@ BASES, NS = ROOT / "bench/bases", [50, 100, 200]
 STRATA = [(1, 1), (2, 3), (4, 5), (6, 99)]
 PER = 4
 FAMILY_GOALS = ("programme_limit_ok", "programme_cleared", "capitalised")
+# How a reply states a decide check's answer in prose (PLAN-v3-bench-full §3e.1), by predicate: [regex, polarity]
+# pairs tried in order, a matched span consumed before the next pair, so a negated phrase is read before its word.
+SAYS = {
+    "limit_ok": [[r"\bnot\s+(?:\w+\s+)?within\b|\bexceed|\bbreach|\boutside\b|\babove\b|(?<!prevails )(?<!prevail )\bover\b|\d\s*>\s*\d", "false"],
+                 [r"\bwithin\b|\binside\b|\d\s*(?:≤|<=)\s*\d", "true"]],
+    "cleared": [[r"\bnot\s+(?:be\s+)?(?:\w+-)?(?:cleared|clearable|chargeable)\b|\buncleared\b|\bblocked\b", "false"],
+                [r"\bcleared\b|\bchargeable\b", "true"]],
+    "capitalised": [[r"\bnot\s+(?:be\s+)?capitali[sz](?:ed|able)\b", "false"], [r"\bnot\s+expensed\b", "true"],
+                    [r"\bcapitali[sz](?:ed|e)\b", "true"], [r"\bexpensed\b", "false"]],
+}
+
+
+def says(pred):
+    return SAYS[next(k for k in SAYS if pred.endswith(k))]
 
 
 def day(d):
@@ -155,17 +169,17 @@ def a4(n, picks):
                              f"in both ranges has a rule on each side, not one owner's answer") if len(ds) == 1 else
                             (f"{len(ds)} capitalisation policies cover {cat} requests ({pol}); they conclude the same thing, "
                              f"so every rule whose body holds for a request takes part, not one policy"),
-             refs=[x for d in ds for x in (d["for"]["id"], d["against"]["id"])], turns=[3]),
+             refs=[x for d in ds for x in (d["for"]["id"], d["against"]["id"])], turns=[3], contest=len(ds) == 1),
         dict(id="GR7", text=("Stated precedence: " + "; ".join(f"{a} ({side[a][0]} {side[a][1]}) prevails over {b}"
                                                                  + (f" ({side[b][0]} {side[b][1]})" if b in side else "") for a, b in sup)
                              if sup else "No precedence is stated between the capitalisation rules")
                             + "; a rule that expenses is set aside only by a superior rule that capitalises and holds (and the reverse), "
                               "and where no such rule holds the outcome is contested, with both sides and their rules, not a yes or no",
-             refs=sorted({x for ab in sup for x in ab}), turns=[3]),
+             refs=sorted({x for ab in sup for x in ab}), turns=[3], contest=True),
         dict(id="GR8", text=f"Sub-programme chain: " + ", ".join(lv(L) for L in chain) + f"; a request reaches {um['code']} only "
                             f"through every level, so a contested capitalisation makes the clearance contested from "
                             f"{next((L['code'] for L in chain if L['base']['capitalised']), um['code'])} down, not false",
-             refs=[L["base"]["id"] for L in chain], turns=[4]),
+             refs=[L["base"]["id"] for L in chain], turns=[4], contest=True),
     ]
     ex = [L for L in chain if L["exception"]]
     if ex:
@@ -197,6 +211,15 @@ def a4(n, picks):
         dict(id="A4.K13", subject=um["code"], gr=[gold[-1]["id"]], turn=4, component=f"{cat} requests whose clearance under {um['code']} is contested",
              call=["chain_count", um["pred"], "contested"]),
     ]
+    for c in checks:
+        if c["call"][0] == "decide":
+            c["says"] = says(c["call"][1])
+    for g in gold:                 # the keys that decide each reason: every check graded under it (§3e.1); a reason that
+        by = [c for c in checks if g["id"] in c["gr"]]     # something is contested is decided by them only where one is
+        if not g.pop("contest", False) or any(c["call"][0] == "decide" and R.decide(c["call"][1:])["status"] == "CONFLICT" for c in by):
+            g["decided_by"] = [c["id"] for c in by]
+        else:                      # contested at this N; else a yes or no reported for them does not test the reason
+            g["decided_by"], g["untested_by"] = [], [c["id"] for c in by]
     return dict(turns=turns, gold=gold, checks=checks)
 
 

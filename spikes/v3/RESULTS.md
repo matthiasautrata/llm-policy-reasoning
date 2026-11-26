@@ -234,7 +234,7 @@ Against the pilot (same model; the pilot's 10 manager questions, gold reasons ju
 - The qualifier is where the arms differ on manager questions: G and G+ miss it in 5–7 of 25 (almost all under-qualified: a "no" or a total over the known facts given as plain), T in 1. Strict sides lose G and G+ every CONFLICT key at N 25 (0 of 3; tolerant 1–2), T none. Before §3b′ the qualifier was not part of correct, and M16's key (Q16, a why_not) stated none and was read as "not qualified"; it is qualified, and only T at N 200 says so.
 - Judge noise: of the 162 grades whose session and reason text did not change, 7 flipped between the two judgings (4 %). Differences of one or two reasons per cell are within it.
 - Every gold reason is now covered by some arm at some N. Before §3a, A2 GR9 and GR12 were wrong in all six cells: they asked for a historical approver chain, which the data cannot give (`emp.manager` is undated). Revised, they are covered in 3 and 2 cells.
-- T's gap on analyst gold reasons closed: 27 and 29 against G's 28 and 30. Half of it is the revised texts; the A1 re-run adds the rest (A1 at N 200: 7 by-id calls, all answered, where before 3 returned OUT_OF_SCOPE; GR2, GR5, GR7 and GR11 now covered, GR9 lost).
+- T's gap on analyst gold reasons closed: 27 and 29 against G's 28 and 30 (judge). Graded from keys where keys decide (§3e.1), T has 28 and 29, G 29 and 26. Half of it is the revised texts; the A1 re-run adds the rest (A1 at N 200: 7 by-id calls, all answered, where before 3 returned OUT_OF_SCOPE; GR2, GR5, GR7 and GR11 now covered, GR9 lost).
 - The forced final answer (§1.4) changed G most: every turn at the limit now has a reply, and G's A1 at N 200 went from 7/13 to 13/13. The pilot's "G degrades at N 200" does not recur in batch 1.
 - T uses the design tools (319 `rules`, 121 `summary` calls; none over the result cap). A2 at N 200: 12 `decide` calls instead of 238.
 - Every arm reaches the analyst call limit in 2 of 12 turns; manager turns at the limit are mostly wrong for G (0/6 correct) and mostly right for G+ and T (4/5).
@@ -255,7 +255,7 @@ Scored as in batch 1 (§3b′: qualifier in correct; strict and tolerant sides a
 | T | 200 | 12 | 12 | 10 | 9/9, 2/2, 1/1 | 11 / 0 / 0 | 3 |
 
 - Manager accuracy does not move with N (k only reaches 3). With the qualifier, T is 23 of 24 and G and G+ 18 and 19; their misses are at k ≥ 2 (dated limit versions and clearance, unqualified "no"s). Without it, 71 of 72 were correct. k is only 1–3, because the generator keeps programmes independent (PLAN-v3-bench-full Decisions, §3b finding): what N adds is distraction, not interaction. Without the qualifier, G's only miss (F07 at N 50) answers an owner dispute without superiority as a plain yes or no rather than contested. The qualifier misses (G and G+ on F02, F04, F06 and F08) leave out the limit version or the conflict note while the answer is right; T misses one.
-- A4 does not separate the arms at N 50 (8 of 9 each). At N 200, G and G+ each have 3 wrong reasons and T has none. The reason that separates them is GR6: under K01 (no superiority) a request is contested, and G and G+ answer "expensed" or "not capitalised" in 3 of 4 sessions, while T reports the conflict in both. GR2 (a request outside P01's category is outside the limit: false, not unknown) is wrong for G at both N and for G+ at N 200; they answer null or "not covered". All three numeric checks are reported in all six sessions; none gives the naive limit or the count without the exception. N 200's variant has two more reasons (on claims), so the comparison across N is not on the same items.
+- A4 does not separate the arms at N 50 (8 of 9 each). At N 200, G and G+ each have 3 wrong reasons and T has none. By the judge, the reason that separates them is GR6 (§3b's task has no subject per check, so it is not graded from keys, §3e.1): under K01 (no superiority) a request is contested, and G and G+ answer "expensed" or "not capitalised" in 3 of 4 sessions, while T reports the conflict in both. GR2 (a request outside P01's category is outside the limit: false, not unknown) is wrong for G at both N and for G+ at N 200; they answer null or "not covered". All three numeric checks are reported in all six sessions; none gives the naive limit or the count without the exception. N 200's variant has two more reasons (on claims), so the comparison across N is not on the same items.
 - The judge agrees with itself: 60 of 60 grades on §3b, kappa 1.00; 198 of 204 on batch 1's 18 sessions judged a second time, kappa 0.90 (second judging $0.283). Batch 1's two judgings give G 28 and 26 at N 25, and 30 and 28 at N 200, against 28 at both N in the table above; the other arms differ by at most one reason. Mechanical checks and the judge agree 24 of 24 on §3b.
 
 ## Interacting rules and the floor arm (PLAN-v3-bench-full §3b′, 2026-11-26)
@@ -286,15 +286,15 @@ By the key's outcome, correct, at N 50 / N 200. Each cell reads 15/15 for true, 
 
 - The expected outcomes hold. (b) T's difference is closure. G and G+ never qualify a "no" that rests on absence: 0 of 27 at both N, and in 25 of 27 misses the value is right and only the qualifier is missing. T qualifies 21 of 27. On contested keys, G's sides get worse with the dispute count: strict 6 of 9 at N 50 (one dispute), 2 of 9 at N 200 (d 4–7). T has all 18. (c) There is no accuracy difference on values: G's status is right in 90 of 96, its value wrong on 1 of 30 true keys, and false by defeat is 6 of 6 for every rule arm. (a) G does not stay flat by k (9/12 at k 1, 3/12 at k 6+ at N 200), but the fall is closure, not wrong values. The k ≥ 6 slots at N 200 are contested or absence keys, and G misses their sides and qualifiers. (d) F answers almost nothing: 6 of 96, all "true" keys at N 200, which it answered "yes" without the rules.
 - G+ (trusted functions) is not better than G here: none of its functions covers the families.
-- A4, gold reasons covered / missed / wrong, from the first judging (second in brackets); 9 reasons per session at N 50 and 10 at N 200, 3 sessions:
+- A4, gold reasons covered / missed / wrong, graded from keys where keys decide and by the first judging elsewhere (§3e.1); the judge alone in brackets (first judging); 9 reasons per session at N 50 and 10 at N 200, 3 sessions:
 
 | arm | N 50 (of 27) | N 200 (of 30) | numeric checks reported, judge-confirmed (of 15) |
 |---|---|---|---|
-| F | 0 / 3 / 24 (0 / 4 / 23) | 0 / 5 / 25 (0 / 4 / 26) | 0 and 0 |
-| G | 14 / 0 / 13 (15 / 0 / 12) | 25 / 0 / 5 (24 / 0 / 6) | 13 and 15 |
-| T | 25 / 0 / 2 (25 / 0 / 2) | 25 / 0 / 5 (25 / 0 / 5) | 15 and 15 |
+| F | 4 / 7 / 16 (0 / 3 / 24) | 5 / 10 / 15 (0 / 5 / 25) | 0 and 0 |
+| G | 14 / 0 / 13 (14 / 0 / 13) | 23 / 2 / 5 (25 / 0 / 5) | 13 and 15 |
+| T | 25 / 0 / 2 (25 / 0 / 2) | 28 / 0 / 2 (25 / 0 / 5) | 15 and 15 |
 
-- The A4 reason that separates the arms is GR7 (precedence, and contested where no superior rule holds). G gets it wrong in 6 of 6 sessions at both N: it lets the expensing defeater decide ("not capitalised", "expensed") where the outcome is contested. T covers it in 4 of 6 at N 50 and 3 of 6 at N 200; at N 200, with superiority across four disputes, T too misreads which rule survives. Counts per reason are over both judgings. GR2 (outside P01's category the limit answer is false, not unknown) is wrong for G in 10 of 12 and for T in 3 of 12. At N 50, G gets GR8 and GR9 (the chain) wrong in 4 of 6 and covers them in all at N 200. GR6 (every policy's rules take part), reworded for one dispute at N 50: T 4 of 6 at both N, G 0 of 6 at N 50 and 6 of 6 at N 200.
+- GR7 (precedence, and contested where no superior rule holds), graded from keys (§3e.1). At N 200, T reports r000059 as contested with both sides in 3 of 3 sessions; G does so in 1, gives a plain value in 1, and is unclear in 1. The judge's "T too misreads which rule survives" does not hold: on reading, T's explanations match the stated precedence (G020 over G017), and the judge marked them wrong. At N 50, GR7 is not tested by keys: r000059 is not contested there (8,000 is in no capitalise range), and G's answers for both requests are right. The judge's "G wrong in 6 of 6" at N 50 is about G's general rule ("blocked by G010" for the band where both rules hold), not about any reported answer. Counts per reason are over both judgings. GR2 (outside P01's category the limit answer is false, not unknown) is wrong for G in 10 of 12 and for T in 3 of 12. At N 50, G gets GR8 (the chain) wrong in 4 of 6 by the judge and in 2 of 2 read by keys (1 unclear); at N 200 the judge covers it in 6 of 6, while by keys G gives the U04 contest without all its sides in 2 of 3 (missed). GR9 at N 50 is graded by the judge only (wrong in 4 of 6). GR6 (every policy's rules take part), reworded for one dispute at N 50: by the judge (untested by keys at N 50) T 4 of 6 and G 0 of 6; at N 200 by keys T 3 of 3, G 1 covered and 1 wrong (r000059 "not capitalised"), where the judge has G 6 of 6.
 - G and T report the numeric checks, including the chain counts (N 200: 2,050 cleared and 3,692 contested under U04); none gives the naive value. A mechanical grade counts only in a block or under a heading that names the check's subject, and only where the judge's grade of that check agrees (§3c.1). Neither condition alone separates F: its 8,000 is r000228's amount, which equals the limit, and its 0 is a row count, both next to the subject. With the judge's confirmation, F reports none: the judge contradicts 12 of its 16 mechanical "reported" or "naive" grades, and the other 4 are naive limits. G at N 50 misses K13 once and once gives a K13 figure the judge does not credit. Mechanical and judge agree on 67 of 90 numeric grades; every difference but two is F's.
 - Cost per correct family answer at N 200: T $0.0013, G $0.0017. Calls at the limit: F reaches it in 33 of 96 manager cells, T in 3, G in none.
 - Three repetitions on fixed items make this the first confirmatory comparison. It still covers one model and one generator; the strata at N 50 stop at k 4.
@@ -318,40 +318,40 @@ Same items, scoring and judge as §3b′ (family F01–F16 and A4, 3 repetitions
 
 **N 100 (§3c.3, replication).** DeepSeek, all arms. Family of 48. A4 has 3 sessions of 10 reasons; the first judging is given, the second in brackets. Cost: $0.327, judge $0.167. Self-agreement 0.96, kappa 0.93.
 
-| arm | correct; tolerant | qualifier (of 42) | sides strict (of 6) | by k: 1 / 2–3 / 4–5 / 6+ | A4 covered / missed / wrong (of 30) | manager cells at the limit |
+| arm | correct; tolerant | qualifier (of 42) | sides strict (of 6) | by k: 1 / 2–3 / 4–5 / 6+ | A4 covered / missed / wrong (of 30): keys where they decide (judge) | manager cells at the limit |
 |---|---|---|---|---|---|---|
-| F | 3; 3 | 34 | 0 | 0, 3, 0, 0 | 0 / 11 / 19 (0 / 10 / 20) | 24 |
-| G | 40; 41 | 36 | 5 | 9, 8, 14, 9 | 20 / 0 / 10 (20 / 0 / 10) | 0 |
+| F | 3; 3 | 34 | 0 | 0, 3, 0, 0 | 1 / 15 / 14 (0 / 11 / 19) | 24 |
+| G | 40; 41 | 36 | 5 | 9, 8, 14, 9 | 21 / 0 / 9 (20 / 0 / 10) | 0 |
 | G+ | 39; 40 | 36 | 4 | 8, 7, 15, 9 | – | 0 |
-| T | 47; 47 | 42 | 6 | 11, 12, 15, 9 | 26 / 2 / 2 (27 / 1 / 2) | 1 |
+| T | 47; 47 | 42 | 6 | 11, 12, 15, 9 | 25 / 3 / 2 (26 / 2 / 2) | 1 |
 
 - G scores higher at N 100 than at N 50 or 200. This is the item mix, not an effect of N. N 100 has 2 absence items (6 cells) against 5 at N 200, and its disputes reach d 2–3 rather than d 4+ (strata below).
 - The absence result holds: G is 0 of 6 on false by absence, T 6 of 6. On contested keys G is 5 of 6, T 6 of 6. On true keys G is 26 of 27.
-- A4: G is wrong on GR7 (precedence; contested where no superior rule holds) and GR8 (the chain is contested, not false) in 6 of 6 gradings. T covers GR7 in 4 of 6, and GR8 in 1 of 6 (missed 3, wrong 2). F covers nothing.
+- A4: at N 100 no capitalisation key is contested, so GR7 and GR8 are not tested by keys and keep the judge's grades: G wrong on both in 6 of 6 gradings, T covering GR7 in 4 of 6 and GR8 in 1 of 6 (missed 3, wrong 2). With keys where they decide and the judge elsewhere (GR2, GR7, GR8, GR10), G and T cover 21 and 25 of 30, F 1 (judge alone: 20, 26, 0).
 - Numeric checks reported, judge-confirmed: G 14, T 15, F 0 (of 15).
 
 **A second model (§3c.4 and §3d.1, replication).** GLM 5.3, N 200, arms G, G+ and T. Family: 3 repetitions, $1.82. A4: 3 repetitions, $1.28, judge $0.130. Self-agreement 0.97, kappa 0.91.
 
-| arm | correct; tolerant | qualifier (of 42) | sides strict (of 9) | by k: 1 / 2–3 / 4–5 / 6+ | true / absence / contested (of 15 / 15 / 9) | A4 covered / missed / wrong (of 30) | $ per correct |
+| arm | correct; tolerant | qualifier (of 42) | sides strict (of 9) | by k: 1 / 2–3 / 4–5 / 6+ | true / absence / contested (of 15 / 15 / 9) | A4 covered / missed / wrong (of 30): keys where they decide (judge) | $ per correct |
 |---|---|---|---|---|---|---|---|
-| G | 25; 27 | 27 | 3 | 9, 6, 8, 2 | 13, 0, 3 | 17 / 0 / 13 (19 / 0 / 11) | 0.026 |
-| G+ | 21; 23 | 27 | 2 | 9, 6, 6, 0 | 10, 0, 2 | 23 / 0 / 7 (23 / 0 / 7) | 0.032 |
-| T | 40; 40 | 42 | 9 | 11, 12, 8, 9 | 12, 11, 9 | 28 / 1 / 1 (27 / 2 / 1) | 0.012 |
+| G | 25; 27 | 27 | 3 | 9, 6, 8, 2 | 13, 0, 3 | 16 / 6 / 8 (17 / 0 / 13) | 0.026 |
+| G+ | 21; 23 | 27 | 2 | 9, 6, 6, 0 | 10, 0, 2 | 23 / 5 / 2 (23 / 0 / 7) | 0.032 |
+| T | 40; 40 | 42 | 9 | 11, 12, 8, 9 | 12, 11, 9 | 29 / 1 / 0 (28 / 1 / 1) | 0.012 |
 
 - The pattern is DeepSeek's. G and G+ never qualify absence and lose contested sides. T qualifies every key and has every contested side.
-- GLM's T is weaker than DeepSeek's on true keys (12 of 15) and at k 4–5. In A4, G and G+ are wrong on GR7 in 6 of 6 gradings, and on GR2 in 6 and 4 of 6. G is also wrong on GR8 and GR10 (the chain and its count under U03) in 4 of 6. T is wrong on GR7 in 2 of 6, and misses GR2 in 3. Numeric checks reported, judge-confirmed: T 15, G 11, G+ 11 (of 15). Unlike DeepSeek, G+ does better than G here (23 against 17 covered), though none of its functions covers the families.
+- GLM's T is weaker than DeepSeek's on true keys (12 of 15) and at k 4–5. In A4, by keys (§3e.1), T covers GR7 in 3 of 3 sessions, G+ in 2 (1 contested without all sides), G in 1 (1 missed, 1 wrong); the judge has G and G+ wrong in 6 of 6 gradings. G and G+ are wrong on GR2 in 6 and 4 of 6 (judge only). G is wrong on GR8 in 2 of 3 by keys; on GR10 (the count under U04) it misses in 3 of 3, where one session says "0 undecided": a wrong count other than the naive one reads as not reported, so keys under-count G's wrong reasons here. T misses GR2 in 3 (judge). Numeric checks reported, judge-confirmed: T 15, G 11, G+ 11 (of 15). Unlike DeepSeek, G+ does better than G here (23 against 16 covered; wrong 2 against 8), though none of its functions covers the families.
 - Per correct family answer GLM costs about 9× DeepSeek for T ($0.012 against $0.0013) and 15× for G ($0.026 against $0.0017); T is the cheapest arm with either model.
 
 **Rules as a lookup tool (§3d.2, confirmatory; outcomes recorded before the run).** G-tools has G's material without the rules and claims sections. It looks them up with T's `rules` tool, which evaluates nothing, and applies them itself with `sql`. DeepSeek, N 200. Cost: $0.148, judge $0.068. Self-agreement 0.90, kappa 0.67.
 
-| arm | correct; tolerant | qualifier (of 42) | sides strict (of 9) | by k: 1 / 2–3 / 4–5 / 6+ | true / absence / contested | A4 covered / missed / wrong (of 30) |
+| arm | correct; tolerant | qualifier (of 42) | sides strict (of 9) | by k: 1 / 2–3 / 4–5 / 6+ | true / absence / contested | A4 covered / missed / wrong (of 30): keys where they decide (judge) |
 |---|---|---|---|---|---|---|
-| G (§3b′) | 25; 26 | 27 | 2 | 9, 6, 7, 3 | 14, 0, 2 | 25 / 0 / 5 (24 / 0 / 6) |
-| G-tools | 27; 29 | 27 | 3 | 9, 6, 9, 3 | 15, 0, 3 | 25 / 0 / 5 (24 / 0 / 6) |
-| T (§3b′) | 46; 46 | 40 | 9 | 11, 11, 12, 12 | 15, 13, 9 | 25 / 0 / 5 (25 / 0 / 5) |
+| G (§3b′) | 25; 26 | 27 | 2 | 9, 6, 7, 3 | 14, 0, 2 | 23 / 2 / 5 (25 / 0 / 5) |
+| G-tools | 27; 29 | 27 | 3 | 9, 6, 9, 3 | 15, 0, 3 | 27 / 2 / 1 (25 / 0 / 5) |
+| T (§3b′) | 46; 46 | 40 | 9 | 11, 11, 12, 12 | 15, 13, 9 | 28 / 0 / 2 (25 / 0 / 5) |
 
-- G-tools scores with G, not with T. Being able to navigate the rule base is not what T gains. What T gains is exact evaluation, so the engine is needed.
-- G-tools is wrong on GR7 in 5 of 6 gradings, as G is. It reports 15 of 15 numeric checks and cites all 102 of its refs. 3 of 48 manager cells reach the call limit.
+- On family answers G-tools scores with G, not with T. Being able to navigate the rule base is not what T gains. What T gains is exact evaluation, so the engine is needed. On A4's reasons graded from keys, G-tools (27 / 2 / 1) is close to T (28 / 0 / 2), not to G (23 / 2 / 5): its one analyst session per turn applies the looked-up rules to two or three named requests, which the lookup suffices for.
+- G-tools reports r000059 as contested with both sides in 3 of 3 sessions (GR7 by keys, §3e.1), where the judge has it wrong in 5 of 6 gradings. Its explanation ("G020 beats G017") is the stated precedence. It reports 15 of 15 numeric checks and cites all 102 of its refs. 3 of 48 manager cells reach the call limit.
 
 **Strata by N (§3d.3).** Family items, of 16:
 
@@ -366,6 +366,40 @@ Each N fills different strata: d 1 occurs only at N 50, and d 4+ only at N 200. 
 **Checks on the arms (§3d.3).**
 - G+'s functions do not reach the families. `gplus.py` has five functions (request_status, approved_total, spend, role_limit, breaching_requests), all over the slice rules R1xx–R3xx. On the family items G+ is G with unused tools, as its scores show.
 - T's A4 sessions (§3b′) did not re-derive rules in SQL. Every SQL query flagged as inlining reads a governed table (cap, vendor_status, emp violation). T made 27–40 calls to rules, decide and why per session, and at most 9 SQL calls. Of the 5 turns that reached the limit, 4 used `summary`. T was not enumerating in SQL in place of `summary`.
+
+## Gold reasons graded from keys (PLAN-v3-bench-full §3e.1, 2026-11-26)
+
+**Method.** A gold reason is decided by the checks whose `gr` names it (`decided_by` in the task data; generated for A4 by `bench/gen_items.py`, hand-written for A1–A3). It is graded from the session's answers for those checks:
+- covered when every one is reported correctly;
+- wrong when one is reported wrongly: the naive value, a plain value for a contested key, or the other value;
+- missed otherwise, including a contested key reported without all its sides.
+
+Numbers are read as before (subject-named, block-scoped). A decide check is read by a scoped prose reader (`bench/score.py`, `read_decide`). It reads only the subject's own line, table cell or section, using a per-check vocabulary (`says`, generated). Where the reader finds both values and no wrong one, the reason is unclear and keeps the judge's grade (counted as fallback). No judge call was made; the judge's grades stand beside the keys grades and are not used for them.
+
+Some reasons stay with the judge, labelled per task and N in the report:
+- no keys: caveats and labels (A1 GR6, GR11, GR12; A2 GR9–GR12; A3 GR3, GR6; A4 GR2);
+- unread: keys no reader reads, i.e. claim standings, every A3 key, and counts under 10 (A2 GR1, GR5, GR6, GR8; A4 GR9 at N 50, GR10 at N 100);
+- untested: reasons that say something is contested, where no key is contested at that N (A4 GR6 and GR7 at N 50; GR7 and GR8 at N 100). A4's requests are picked once, at N 200. At N 50, r000059 (8,000) is in no capitalise range, so a yes or no reported for it cannot show whether a session treats the both-ranges band as contested.
+
+**Re-scored.** Every analyst run was re-scored: batch 1, §3b′ (b3c, with the re-judged grades), N 100, G-tools and GLM. §3b is not re-scored, because its task (the old generator) has no subject per check, and the tables above say so where they cite it.
+
+Keys against the judge, per reason and both judgings, by arm. A pair is one keys grade against one judging:
+
+| run | arm | pairs | agree |
+|---|---|---|---|
+| batch 1 (A1, A2) | G / G+ / T | 56 / 56 / 56 | 0.59 / 0.89 / 0.68 |
+| §3b′ (A4, N 50, 200) | F / G / T | 82 / 64 / 54 | 0.50 / 0.88 / 0.91 |
+| N 100 | F / G / T | 24 / 34 / 26 | 0.58 / 0.94 / 0.92 |
+| G-tools | G-tools | 36 | 0.69 |
+| GLM | G / G+ / T | 52 / 44 / 40 | 0.67 / 0.64 / 0.95 |
+
+I read every disagreement. They fall into four kinds:
+1. **Right answer, rejected explanation; keys credit it and the judge does not.** This covers all 18 of F's covered|wrong pairs in §3b′. F has no rules, gets K4, K5 and K11 right, and explains them with invented gates ("the emergency flag has no rule attached"). GLM's G and G+ give a per-policy view or say that "across policies nothing prevails" (false: G017 prevails over G016) and still report the contest with its sides. In A1, GR9 is credited because the snapshot cost centre coincides with the dated one for e077.
+2. **The judge misreads a correct explanation.** DeepSeek G (one session) and T (two), and G-tools (three), write that G020 defeats G017 and that G021 survives. That is the stated precedence and the oracle's sides, and the judge grades it wrong.
+3. **Stated in words without the key's value; the judge credits it and the keys do not.** Batch 1's missed|covered pairs are a rule restated without its number, and A4 GR8 is the U04 contest given without all its sides (partial, so missed). These are definitional: the keys ask for the answer, the judge for the reason.
+4. **Reader limits; the keys under-call.** A wrong count other than the naive one reads as not reported: GLM G's "0 undecided" against 3,692 is graded missed, not wrong. A rule stated only in general, with no per-subject answer, reads as absent (GLM G, session 3: "capitalised iff amount ≥ 45,000"). Unclear readings fall back to the judge: K11 at N 200 in most rule-arm sessions, where "cleared" and "not cleared" are both said of r000092 at different levels.
+
+**Validity finding.** The judge is reliable (self-agreement 0.90–0.97) but does not measure the same thing as the keys. On a mapped reason it grades the stated rule; the keys grade the answers the rule produces. Where the arm has the rules and explains them (DeepSeek G and T on A4), the two agree on 0.88–0.94 of pairs, and most remaining differences are judge errors of kind 2. Where answers and explanations come apart (F, GLM's G and G+, A1's coincident cost centre), agreement falls to 0.50–0.68. Neither instrument alone grades "the reason is covered". The arm comparison on answers (keys) keeps T ahead of G at N 200 for both models (DeepSeek 28 against 23 covered, GLM 29 against 16). The comparison on explanations (judge) is the one in which the GR7 claims were made. Those claims are replaced above.
 
 ## State of the benchmark (PLAN-v3-bench-full §3c.5, 2026-11-26)
 
@@ -401,12 +435,14 @@ F answers almost nothing without the rules, which shows what the material contri
    - the qualifier is part of correct, and every decide key states one (§3b′);
    - strict and tolerant sides (§3b′);
    - numeric checks name a subject and need the judge's confirmation (§3c.1; F's coincidental 8,000 and 0);
-   - failed records superseded by a re-run count in cost only (§3d.3).
+   - failed records superseded by a re-run count in cost only (§3d.3);
+   - gold reasons graded from keys where keys decide them, the judge elsewhere and on unclear readings (§3e.1; the judge had graded explanations, which on GR7 it misread).
 6. The generator (§3b′). Interactions now grow with N, after §3b found programmes independent. §3b is exploratory for this reason.
 
 **Open:**
 - every confirmatory comparison uses one generator;
-- the judge is one model, not yet checked against hand grading (`bench/grading/grades.json`).
+- the judge is one model, not yet checked against hand grading (`bench/grading/grades.json`); against keys it agrees on 0.50–0.95 of reason grades by arm (§3e.1), and its errors on GR7 were found by reading;
+- keys read answers, not explanations, and a wrong count other than the naive one reads as not reported (§3e.1).
 
 ## Built vs native
 

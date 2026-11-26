@@ -14,19 +14,19 @@
    "example": "Give the approval limit of a manager and the cost centre of employee e077 as they stood then."}
  ],
  "gold": [
-  {"id": "GR1", "text": "Booked total rolls up over the subtree; it is semi-additive across the hierarchy: never add a parent's and its children's totals", "refs": ["R104", "IR-004", "IR-007"], "turns": [1, 2]},
-  {"id": "GR2", "text": "Headroom is cap minus booked total and is not additive into a budget: a sum over centres is bounded by their ancestors' caps, and over overlapping subtrees it double-counts", "refs": ["R105"], "turns": [2]},
-  {"id": "GR3", "text": "A request can breach a parent's cap while its own centre still has headroom: the cap check runs against the requester's centre and every ancestor", "refs": ["R106", "R304"], "turns": [1]},
-  {"id": "GR4", "text": "\"Committed spend\" is not defined: finance has not decided whether pending requests count. Show both readings or refuse the label; do not pick one silently", "refs": ["term:committed_spend"], "turns": [3]},
-  {"id": "GR5", "text": "The approval limit that governs a request is the version valid on the request date, not today's", "refs": ["R202", "R203"], "turns": [1, 4]},
-  {"id": "GR6", "text": "Vendor status is taken on the request date; emergency requests pass despite a suspended vendor", "refs": ["R204", "R305", "R306"], "turns": [1]},
-  {"id": "GR7", "text": "Software requests under 10,000 are approved automatically, without the other checks; show them as their own segment", "refs": ["R311", "R312"], "turns": [1]},
-  {"id": "GR8", "text": "A request both denied and approved is a conflict (R314): show it as contested; it must not be counted in an approved total", "refs": ["R309", "R310", "R314", "R120"], "turns": [1]},
-  {"id": "GR9", "text": "Employee cost centre: hr and finance disagree for e077; finance prevails by R313. Use finance's mapping, and show the dispute where R313 does not apply", "refs": ["C3", "C4", "R313"], "turns": [1, 2]},
-  {"id": "GR10", "text": "A mid-year transfer (e077, cc0077 → cc0078): which centre a request counts for depends on the date", "refs": ["C3", "C4", "C5"], "turns": [4]},
-  {"id": "GR11", "text": "Booked totals are declared complete (C10); pending-pipeline figures rest on known facts only: label them", "refs": ["C10", "IR-005"], "turns": [1]},
-  {"id": "GR12", "text": "All dated policy needs an \"as of\" parameter; a period-end view is not today's view with a filter", "refs": ["R202", "R204", "as_of"], "turns": [4]},
-  {"id": "GR13", "text": "A selection of centres is totalled over the union of their subtrees, not by adding their totals: a parent and its child selected together must not double-count", "refs": ["R104", "IR-007"], "turns": [2]}
+  {"id": "GR1", "text": "Booked total rolls up over the subtree; it is semi-additive across the hierarchy: never add a parent's and its children's totals", "refs": ["R104", "IR-004", "IR-007"], "turns": [1, 2], "decided_by": ["A1.K1", "A1.K7"]},
+  {"id": "GR2", "text": "Headroom is cap minus booked total and is not additive into a budget: a sum over centres is bounded by their ancestors' caps, and over overlapping subtrees it double-counts", "refs": ["R105"], "turns": [2], "decided_by": ["A1.K2", "A1.K8"]},
+  {"id": "GR3", "text": "A request can breach a parent's cap while its own centre still has headroom: the cap check runs against the requester's centre and every ancestor", "refs": ["R106", "R304"], "turns": [1], "decided_by": ["A1.K4", "A1.K15"]},
+  {"id": "GR4", "text": "\"Committed spend\" is not defined: finance has not decided whether pending requests count. Show both readings or refuse the label; do not pick one silently", "refs": ["term:committed_spend"], "turns": [3], "decided_by": ["A1.K10", "A1.K11"]},
+  {"id": "GR5", "text": "The approval limit that governs a request is the version valid on the request date, not today's", "refs": ["R202", "R203"], "turns": [1, 4], "decided_by": ["A1.K12"]},
+  {"id": "GR6", "text": "Vendor status is taken on the request date; emergency requests pass despite a suspended vendor", "refs": ["R204", "R305", "R306"], "turns": [1], "decided_by": []},
+  {"id": "GR7", "text": "Software requests under 10,000 are approved automatically, without the other checks; show them as their own segment", "refs": ["R311", "R312"], "turns": [1], "decided_by": ["A1.K6"]},
+  {"id": "GR8", "text": "A request both denied and approved is a conflict (R314): show it as contested; it must not be counted in an approved total", "refs": ["R309", "R310", "R314", "R120"], "turns": [1], "decided_by": ["A1.K5"]},
+  {"id": "GR9", "text": "Employee cost centre: hr and finance disagree for e077; finance prevails by R313. Use finance's mapping, and show the dispute where R313 does not apply", "refs": ["C3", "C4", "R313"], "turns": [1, 2], "decided_by": ["A1.K13"]},
+  {"id": "GR10", "text": "A mid-year transfer (e077, cc0077 → cc0078): which centre a request counts for depends on the date", "refs": ["C3", "C4", "C5"], "turns": [4], "decided_by": ["A1.K13", "A1.K14"]},
+  {"id": "GR11", "text": "Booked totals are declared complete (C10); pending-pipeline figures rest on known facts only: label them", "refs": ["C10", "IR-005"], "turns": [1], "decided_by": []},
+  {"id": "GR12", "text": "All dated policy needs an \"as of\" parameter; a period-end view is not today's view with a filter", "refs": ["R202", "R204", "as_of"], "turns": [4], "decided_by": []},
+  {"id": "GR13", "text": "A selection of centres is totalled over the union of their subtrees, not by adding their totals: a parent and its child selected together must not double-count", "refs": ["R104", "IR-007"], "turns": [2], "decided_by": ["A1.K9"]}
  ],
  "checks": [
   {"id": "A1.K1", "gr": ["GR1"], "turn": 1, "component": "booked total of cc0049", "call": ["booked_total", "cc0049"]},

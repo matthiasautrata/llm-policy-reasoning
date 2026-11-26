@@ -13,10 +13,16 @@ and defeater; for a term, its status and candidates. correct = status, value, st
 Analyst: each check is searched for mechanically when its value is a number or an id: "reported" (in that turn's
 reply, in a block or under a heading that names the check's subject where the task gives one), "naive" (only the
 known wrong value is), "computed" (only in that turn's tool results), "absent"; a reported or naive grade the
-judge's grade of that check contradicts is counted "unconfirmed" (PLAN-v3-bench-full §3c.1). Gold
-reasons are graded by the judge (bench/judge_rubric.md; an OpenAI model via the Batch API, a family not under test) as covered / missed / wrong; the
-mechanical checks are also graded by it, which gives a mechanical-vs-judge agreement for free. Rule ids cited
-per gold reason are counted mechanically.
+judge's grade of that check contradicts is counted "unconfirmed" (PLAN-v3-bench-full §3c.1). A decide check with a
+vocabulary ("says") is read from the subject's own line, table cell or section: "reported", "wrong", "partial"
+(contested without every side id), "unclear" (both values, none wrong) or "absent".
+Gold reasons (PLAN-v3-bench-full §3e.1): a reason with keys ("decided_by") is graded from them, never from the judge:
+covered when every one is reported, wrong when one is wrong or naive, missed otherwise; the judge's grade stands
+where the reader is unclear, where its keys are unreadable (claim standings, small counts), where it says something
+is contested and none of its keys is at that N ("untested_by"), and where it has none (caveats, labels). The judge
+(bench/judge_rubric.md; an OpenAI model via the Batch API, a family not under test) grades every reason and check as
+covered / missed / wrong, kept beside the keys grade for their agreement. Rule ids cited per gold reason are counted
+mechanically.
 Further measures: cross-question consistency (pairs of manager questions whose answers must agree whatever they
 are), silent interpretation (an undefined or ambiguous term answered as decided), inlining (T's own SQL over the
 tables the rules govern), cost and tokens per correct answer / covered reason.
@@ -183,6 +189,107 @@ def answering(pats, text, subject):
     return [i for i in hits if near(i)]
 
 
+NOT_CONTESTED = re.compile(r"\b(?:no|not|un|without|non)[\s-]*(?:in\s+)?(?:contest|conflict|disput)\w*|\bconflict-free\b", re.I)
+CONTEST = re.compile(CONTESTED.pattern + r"|unresolved", re.I)
+CELL_YES, CELL_NO = re.compile(r"(?:yes|true)\b", re.I), re.compile(r"(?:no|false)\b", re.I)
+MARKUP = re.compile(r"[*`]")
+
+
+def cells(line):
+    return [x.strip() for x in line.strip().strip("|").split("|")]
+
+
+def segments(text, subject, others):
+    """the parts of a reply that speak of one subject (§3e.1), each as (text, header, block): on a line, from a
+    mention of the subject to the next mention of another (another request the turn asks a decide check of); in a table whose header names the
+    subjects, the subject's column (the row's first cell as its header); in a section under a heading that names the
+    subject alone, its lines that name no subject. header is the column header of a table cell (for a bare yes or
+    no), block the lines of the paragraph, table or section the part is in (for the sides of a contested result)."""
+    name = lambda s: re.compile(rf"(?<![\w]){re.escape(s)}(?![\w])")
+    me, rest = name(subject), [name(o) for o in others if o != subject]
+    lines = [MARKUP.sub("", l) for l in text.splitlines()]
+    def block(i):
+        lo = hi = i
+        while lo > 0 and lines[lo - 1].strip(): lo -= 1
+        while hi + 1 < len(lines) and lines[hi + 1].strip(): hi += 1
+        return lo, hi
+    out, head, cols, sect = [], [], None, None
+    for i, l in enumerate(lines):
+        if HEADING.search(l):
+            sect = (i, next((j - 1 for j in range(i + 1, len(lines)) if HEADING.search(lines[j])), len(lines) - 1)) \
+                if me.search(l) and not any(r.search(l) for r in rest) else None
+        if l.lstrip().startswith("|"):
+            cs = cells(l)
+            if i == 0 or not lines[i - 1].lstrip().startswith("|"):            # a table's header row
+                head = cs
+                cols = [j for j, c in enumerate(cs) if me.search(c)] if any(r.search(c) for c in cs for r in [me] + rest) else None
+                if cols is not None:
+                    continue
+            elif re.fullmatch(r"[\s|:-]+", l):
+                continue
+            if cols is not None:                                                # a column per subject
+                out += [(f"{cs[0]} {cs[j]}", cs[0], block(i)) for j in cols if j < len(cs)]
+                continue
+            who = [1 if me.search(c) else 0 if any(r.search(c) for r in rest) else None for c in cs]
+            own = None                                                          # a row: the cells from a mention
+            for j, c in enumerate(cs):                                          # of the subject to the next mention
+                own = who[j] if who[j] is not None else own
+                if own:
+                    out.append((c, head[j] if j < len(head) else "", block(i)))
+            if any(w is not None for w in who) or not (sect and sect[0] < i <= sect[1]):
+                continue
+        else:
+            head, cols = [], None
+        spans = sorted([(m.start(), 1) for m in me.finditer(l)] + [(m.start(), 0) for r in rest for m in r.finditer(l)])
+        for n, (at, mine) in enumerate(spans):
+            if mine:
+                out.append((l[at:spans[n + 1][0] if n + 1 < len(spans) else len(l)], "", sect or block(i)))
+        if not spans and sect and sect[0] < i <= sect[1] and l.strip():
+            out.append((l, "", sect))
+    return out, lines
+
+
+def polarity(seg, header, says):
+    """the answers one part states: "true", "false", "contested" (a contested result, unless negated)"""
+    got = set()
+    if CONTEST.search(NOT_CONTESTED.sub(" ", seg)):
+        got.add("contested")
+    t = seg
+    for pat, pol in says:
+        p = re.compile(pat, re.I)
+        if p.search(t):
+            got.add(pol)
+            t = p.sub(" ", t)
+    bare = re.sub(r"[\s.:;,—–-]+$", "", seg.split(header, 1)[-1] if header and seg.startswith(header) else seg).strip()
+    if header and any(re.search(p, header, re.I) for p, _ in says):         # a yes / no cell under the check's column
+        if CELL_YES.match(bare): got.add("true")
+        if CELL_NO.match(bare): got.add("false")
+    m = re.search(r":\s*\"?(true|false)\"?\s*$", seg) or re.search(r"\"value\":\s*(true|false)\b", seg)  # "component: true", a key
+    if m:
+        got.add(m.group(1))
+    return got
+
+
+def read_decide(text, subject, others, says, key):
+    """§3e.1: a decide check's answer read from the subject's parts of the reply. ANSWER: reported when only the
+    key's value is stated, wrong when only the other value or contested is, unclear when both are, absent when
+    neither. CONFLICT: reported when a part says contested and every id of the key's sides is in its block,
+    partial when it says contested without them (under-reported, not misreported), wrong when it gives only a
+    plain value, absent when it says nothing."""
+    segs, lines = segments(text, subject, others)
+    said = [(polarity(s, h, says), b) for s, h, b in segs]
+    if key.get("status") == "CONFLICT":
+        con = [b for p, b in said if "contested" in p]
+        if con:
+            want = {i for s in key["sides"] for i in s}
+            return "reported" if any(want <= set(IDS.findall("\n".join(lines[lo:hi + 1]))) for lo, hi in con) else "partial"
+        return "wrong" if any(p for p, _ in said) else "absent"
+    exp = "true" if key.get("value") is True else "false"
+    pos = any(exp in p for p, _ in said)
+    neg = any(p - {exp} for p, _ in said)
+    return "unclear" if pos and neg else "reported" if pos else "wrong" if neg else "absent"
+
+
 def score_checks(rec):
     task, keys = B.item(rec["item"], rec["n"]), B.task_keys(rec["item"], rec["n"])
     text = {t["turn"]: t["content"] for t in rec["turns"]}
@@ -194,7 +301,12 @@ def score_checks(rec):
         k = keys[c["id"]]
         pe, pn = patterns(k["value"]), patterns(k["naive"]) if "naive" in k else None
         if pe is None:
-            out[c["id"]] = "judge"
+            if c.get("says") and c.get("subject"):
+                others = [x["subject"] for x in task["checks"] if x["turn"] == c["turn"] and x.get("says")]
+                v = k["value"] if isinstance(k["value"], dict) else {"status": "ANSWER", "value": k["value"]}
+                out[c["id"]] = read_decide(text.get(c["turn"], ""), c["subject"], others, c["says"], v)
+            else:
+                out[c["id"]] = "judge"
             continue
         s, sub = text.get(c["turn"], ""), c.get("subject")
         at = answering(pe, s, sub)
@@ -208,7 +320,7 @@ def score_checks(rec):
     return out
 
 
-MECH = {"reported": "reported", "naive": "wrong"}
+MECH = {"reported": "reported", "naive": "wrong", "wrong": "wrong"}
 
 
 def confirmed(mech, j):
@@ -217,6 +329,47 @@ def confirmed(mech, j):
     judging, the mechanical grade stands"""
     jc = {x["id"]: x["grade"] for x in (j or {}).get("checks", [])}
     return {k: "unconfirmed" if v in MECH and k in jc and jc[k] != MECH[v] else v for k, v in mech.items()}
+
+
+SMALL = 10     # a count below it (0, 1, 9) is found in any reply: read by the judge only (§3e.1)
+
+
+def readable(c, key):
+    """can a check be read without the judge (§3e.1)? a number of two digits or more, an id, or a decide answer with
+    the task's vocabulary for it and a subject"""
+    v = key["value"].get("value") if isinstance(key["value"], dict) else key["value"]
+    if isinstance(v, int) and not isinstance(v, bool) and abs(v) < SMALL:
+        return False
+    return patterns(key["value"]) is not None or bool(c.get("says") and c.get("subject"))
+
+
+def reason_kinds(item, n):
+    """per gold reason: "keys" (decided by checks read mechanically), "judge: unread" (its keys are of a kind no
+    reader reads: claim standings, a status word, a small count), "judge: untested" (it says something is contested and
+    none of its keys is at this N, so a yes or no does not test it), "judge: no keys" (a caveat or label, or no check)"""
+    task, keys = B.item(item, n), B.task_keys(item, n)
+    by = {c["id"]: c for c in task["checks"]}
+    return {g["id"]: "judge: untested" if g.get("untested_by") else "judge: no keys" if not g.get("decided_by") else
+            "keys" if all(readable(by[k], keys[k]) for k in g["decided_by"]) else "judge: unread" for g in task["gold"]}
+
+
+def score_reasons(rec, mech=None):
+    """§3e.1: a reason decided by keys is graded from its checks, never from the judge: wrong when one is reported
+    wrongly (the naive value, a plain value for a contested one, the other value), covered when every one is
+    reported, missed otherwise (a partly reported reason, or a contested one without its sides, is missed); None where the judge's grade stands (the reason
+    has no readable keys, or the reader found a check unclear and none wrong)."""
+    task, keys = B.item(rec["item"], rec["n"]), B.task_keys(rec["item"], rec["n"])
+    mech = mech or score_checks(rec)
+    kinds = reason_kinds(rec["item"], rec["n"])
+    out = {}
+    for g in task["gold"]:
+        if kinds[g["id"]] != "keys":
+            out[g["id"]] = None
+            continue
+        gs = [mech[k] for k in g["decided_by"]]
+        out[g["id"]] = ("wrong" if any(x in ("wrong", "naive") for x in gs) else None if "unclear" in gs else
+                        "covered" if all(x == "reported" for x in gs) else "missed")
+    return out
 
 
 def cited(rec):
@@ -409,6 +562,69 @@ def kappa(pairs):
 
 # ---------------------------------------------------------------- report
 
+def reasons(rec, j, mech=None):
+    """per gold reason: (grade, how) with how "keys" (score_reasons), "fallback" (keys, but the reader found a check
+    unclear: the judge's grade) or "judge" (no readable keys: the judge's grade); grade None if not judged"""
+    jr = {x["id"]: x["grade"] for x in (j or {}).get("reasons", [])}
+    kinds = reason_kinds(rec["item"], rec["n"])
+    return {g: (v, "keys") if v else (jr.get(g), "fallback" if kinds[g] == "keys" else "judge")
+            for g, v in score_reasons(rec, mech).items()}
+
+
+def reason_tables(recs, jg, jg2):
+    """§3e.1: the reasons by kind per task; keys against the judge per reason, by arm; and per reason, by arm"""
+    an = [r for r in recs if r["kind"] == "analyst" and not r["error"]]
+    if not an:
+        return ""
+    L = ["Gold reasons by kind (PLAN-v3-bench-full §3e.1): graded from keys; keys of a kind no reader reads (judge); "
+         "keys that do not test it at this N, none contested (judge); no keys, a caveat or label (judge):", "",
+         "| task | N | keys | judge: unread | judge: untested | judge: no keys |", "|---|---|---|---|---|---|"]
+    for item, n in sorted({(r["item"], r["n"]) for r in an}):
+        k = reason_kinds(item, n)
+        L.append(f"| {item} | {n} | " + " | ".join(", ".join(g for g, v in k.items() if v == kind) or "–"
+                                                   for kind in ("keys", "judge: unread", "judge: untested", "judge: no keys")) + " |")
+    agree = collections.defaultdict(collections.Counter)
+    per = collections.defaultdict(collections.Counter)
+    for r in an:
+        cell = json.dumps(B.cell(r))
+        j, j2 = jg.get(cell), jg2.get(cell)
+        jr = [{x["id"]: x["grade"] for x in (x or {}).get("reasons", [])} for x in (j, j2)]
+        mech = score_checks(r)
+        for g, (v, how) in reasons(r, j, mech).items():
+            x = per[(r["item"], r["model"].split("/")[-1], r["n"], g, reason_kinds(r["item"], r["n"])[g])]
+            if how == "keys":
+                x[(arm(r), "k_" + v)] += 1
+                a = agree[(arm(r), r["model"].split("/")[-1])]
+                for d in jr:
+                    if g in d:
+                        a["n"] += 1; a["agree"] += d[g] == v; a[f"{v}|{d[g]}"] += 1
+            elif how == "fallback":
+                x[(arm(r), "fallback")] += 1
+            for d in jr:
+                if g in d:
+                    x[(arm(r), "j_" + d[g])] += 1
+    pairs = [f"{a}|{b}" for a in ("covered", "missed", "wrong") for b in ("covered", "missed", "wrong") if a != b]
+    L += ["", "Reasons graded from keys against the judge's grade of the same reason (every judging), by arm; "
+          "disagreements as keys|judge:", "", "| arm | model | pairs | agree | " + " | ".join(pairs) + " |",
+          "|---|---|---|---|" + "---|" * len(pairs)]
+    for k in sorted(k for k in agree if agree[k]["n"]):      # an arm with no judging has no pairs
+        a = agree[k]
+        L.append(f"| {k[0]} | {k[1]} | {a['n']} | {a['agree']} ({a['agree'] / a['n']:.2f}) | " + " | ".join(str(a[p]) for p in pairs) + " |")
+    arms = sorted({a for x in per.values() for a, _ in x})
+    L += ["", "Per gold reason, by arm: keys covered / missed / wrong (+ fallback to the judge) · judge covered / missed / "
+          "wrong over every judging; keys \"–\" where the reason is graded by the judge only:", "",
+          "| task | model | N | reason | kind | " + " | ".join(arms) + " |", "|---|---|---|---|---|" + "---|" * len(arms)]
+    for k in sorted(per, key=lambda k: (k[0], k[1], k[2], int(k[3][2:]))):
+        x = per[k]
+        def cell(a):
+            kk = f"{x[(a, 'k_covered')]}/{x[(a, 'k_missed')]}/{x[(a, 'k_wrong')]}" + (f" (+{x[(a, 'fallback')]})" if x[(a, "fallback")] else "") \
+                if k[4] == "keys" else "–"
+            return f"{kk} · {x[(a, 'j_covered')]}/{x[(a, 'j_missed')]}/{x[(a, 'j_wrong')]}"
+        L.append(f"| {k[0]} | {k[1]} | {k[2]} | {k[3]} | {k[4]} | " + " | ".join(cell(a) for a in arms) + " |")
+    return "\n".join(L)
+
+
+
 def group(iid):
     """the item set: the slice's (core, at every N) or one on the generated families (§3b)"""
     return "family" if iid.startswith("F") else "A4" if iid == "A4" else "core"
@@ -450,10 +666,15 @@ def report(recs, jpath, gradedir, jpath2=None, results=None):
         else:
             c["a"] += 1; c["a_cost"] += r["cost"]
             j = jg.get(json.dumps(B.cell(r)))
-            for v in confirmed(score_checks(r), j).values():
+            mech = score_checks(r)
+            for v in confirmed(mech, j).values():
                 c["k_" + v] += 1
             for x in (j or {}).get("reasons", []):
                 c["gr_" + x["grade"]] += 1
+            for g, (v, kind) in reasons(r, j, mech).items():
+                if v:
+                    c["rs_" + v] += 1
+                c["rs_" + kind] += 1
             for x in (jg2.get(json.dumps(B.cell(r))) or {}).get("reasons", []):
                 c["gr2_" + x["grade"]] += 1
             c["a_judged"] += bool(j)
@@ -461,18 +682,20 @@ def report(recs, jpath, gradedir, jpath2=None, results=None):
                 c["cite"] += got; c["cite_n"] += n
             if r["arm"] == "T":
                 g, n = inlining(r); c["inl"] += g; c["sql"] += n; c["inl_sessions"] += g > 0
-    L.append("| arm | model | N | items | manager correct (strict; tolerant sides) | status | qualifier | sides strict / tolerant (CONFLICT keys) | silent | analyst checks reported / naive / computed / absent / unconfirmed | gold covered / missed / wrong | refs cited | T inlining (sessions; SQL) | cost | $ per correct manager | $ per covered reason | empty replies | errors (+ superseded by a re-run) |")
-    L.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
+    L.append("| arm | model | N | items | manager correct (strict; tolerant sides) | status | qualifier | sides strict / tolerant (CONFLICT keys) | silent | analyst checks reported / naive / computed / absent / unconfirmed; decide answers wrong / partial / unclear | gold covered / missed / wrong (judge) | gold covered / missed / wrong (keys where they decide; reasons by keys + fallback + judge only) | refs cited | T inlining (sessions; SQL) | cost | $ per correct manager | $ per covered reason | empty replies | errors (+ superseded by a re-run) |")
+    L.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
     for k in sorted(cells):
         c = cells[k]
         per_m = f"{c['m_cost'] / c['m_correct']:.4f}" if c["m_correct"] else "–"
-        per_a = f"{c['a_cost'] / c['gr_covered']:.4f}" if c["gr_covered"] else "–"
+        per_a = f"{c['a_cost'] / c['rs_covered']:.4f}" if c["rs_covered"] else "–"
         inl = f"{c['inl_sessions']}; {c['inl']}/{c['sql']}" if k[0] == "T" else "–"
         g2 = f"; 2nd {c['gr2_covered']} / {c['gr2_missed']} / {c['gr2_wrong']}" if jg2 else ""
         L.append(f"| {k[0]} | {k[1].split('/')[-1]} | {k[2]} | {k[3]} | {c['m_correct']}/{c['m']}; {c['m_tol']} | {c['m_status']}/{c['m']} | "
-                 f"{c['m_qual']}/{c['m_qual_n']} | {c['m_sides']} / {c['m_sides_tol']} of {c['m_con']} | {c['m_silent']} | {c['k_reported']} / {c['k_naive']} / {c['k_computed']} / {c['k_absent']} / {c['k_unconfirmed']} "
-                 f"(judge {c['k_judge']}) | {c['gr_covered']} / {c['gr_missed']} / {c['gr_wrong']} ({c['a_judged']}/{c['a']} judged{g2}) | "
+                 f"{c['m_qual']}/{c['m_qual_n']} | {c['m_sides']} / {c['m_sides_tol']} of {c['m_con']} | {c['m_silent']} | {c['k_reported']} / {c['k_naive']} / {c['k_computed']} / {c['k_absent']} / {c['k_unconfirmed']}; "
+                 f"{c['k_wrong']} / {c['k_partial']} / {c['k_unclear']} (judge {c['k_judge']}) | {c['gr_covered']} / {c['gr_missed']} / {c['gr_wrong']} ({c['a_judged']}/{c['a']} judged{g2}) | "
+                 f"{c['rs_covered']} / {c['rs_missed']} / {c['rs_wrong']} ({c['rs_keys']} + {c['rs_fallback']} + {c['rs_judge']}) | "
                  f"{c['cite']}/{c['cite_n']} | {inl} | {c['cost']:.4f} | {per_m} | {per_a} | {c['empty']} | {c['errors']}" + (f" (+{c['superseded']})" if c["superseded"] else "") + " |")
+    L.append("\n" + reason_tables(recs, jg, jg2))
     kt = k_table(recs)
     if kt:
         L.append("\n" + kt)

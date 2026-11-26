@@ -123,6 +123,30 @@ STOP: report, then the write-up of §3c.5 includes these results.
 
 Later, before the paper (separate study): the shared authoring-defect experiment (the same defects in both arms' sources; detection measured), for claim C4.
 
+## 3e Judge validity and a third model (Matthias, 2026-11-26)
+
+### 3e.1 Grade gold reasons from keys where keys exist (no new arm calls)
+
+A spot check by Claude (a model, not a human; reported as a validity check of the judge, not as ground truth) of A4 GR7 at N 200 found the judge consistent but wrong: in 3 of 6 sessions it graded GR7 wrong on both passes where the session states the oracle's answer (r000059 contested with the right sides, r000002 capitalised; keys K7, K8), plus one split. Self-agreement measures reliability, not validity; an LLM judge cannot reliably grade the defeasible reasoning under test.
+
+1. For every gold reason in A1–A4, map it to the oracle keys that decide it (e.g. A4 GR7 → K7, K8; status, value and sides). Record the mapping in the task data, generated where the task is generated.
+2. A reason with a mapping is graded mechanically from the session's reported answers for those keys (the existing subject-named, block-scoped extraction): covered when every mapped key is reported correctly, wrong when one is reported incorrectly, missed when none is reported. The judge's grade is kept beside it, not used.
+3. Reasons without a mapping keep the judge's grades, labelled as such. Report the count of each kind per task.
+4. Re-score every analyst run (batch 1, §3b, §3b′, §3c, §3d) and report judge-vs-mechanical agreement per reason, by arm. RESULTS: replace judge-based claims on mapped reasons (e.g. "G wrong on GR7 in 6 of 6", "T misreads precedence at N 200") with the mechanical result, and state the validity finding.
+
+STOP: report the mapping, the re-scored tables and what changed in RESULTS.
+
+### 3e.2 A third model: a strong one, on the OpenAI credits
+
+The strongest objection to the main result is "a frontier model gets closure right by itself". DeepSeek and GLM are value models.
+
+- **Model:** the strongest OpenAI model whose estimated cost for this run fits the budget, checked on OpenAI's official pricing page (date recorded); no model OpenAI is retiring. Reasoning effort medium. Prompt caching as OpenAI provides it; record cached tokens.
+- **Cells:** family questions F01–F16, N 200, arms G, G-q and T, 3 repetitions. Scored mechanically (no judge), so testing the judge's own family raises no conflict; say so in RESULTS.
+- **Budget (Matthias, 2026-11-26):** use the OpenAI credits first (about $16, cap $16), then continue the same model on OpenRouter (its `openai/…` id) with what is left there (about $4.3 of the $10 cap after $5.71 spent; keep $0.50 in reserve). The runner is resumable: cells stopped by the OpenAI cap are resumed on OpenRouter. On OpenRouter use `--quantization any` for this model and record the provider per call; check the served model is the same id. Combined, about $19.8. Estimate first from §3b′'s actual tokens per cell at N 200, with prompt caching, at each endpoint's price; pick the strongest model whose estimate fits the combined budget. If none fits, propose the next model down or fewer repetitions (never fewer arms) and STOP before any call.
+- **Expected outcomes, recorded before the run:** if G and G-q qualify absence near 0 as with DeepSeek and GLM, the closure result holds for a frontier model; if they qualify it near T, the finding is that closure without an engine depends on model strength, and RESULTS says so.
+
+STOP: report by arm (correct, qualifier, absence, contested sides, by k) beside DeepSeek and GLM, with cost.
+
 ## 4 Later: other models (GLM on family questions is now §3c.4)
 
 After the DeepSeek run, Matthias decides on a second family. Candidates: GLM, Ling Flash 3.1, Hy4 Flash. Selection by OpenRouter's Models and Benchmarks APIs, re-ranked by our cost per cell against the agentic index, then one A1 session per candidate on G and T at N = 25. Local column (gpt-oss:20b) likewise later: manager questions at all N; analyst tasks only at N = 25, or at 128k context if it fits in memory.
@@ -176,3 +200,5 @@ After the DeepSeek run, Matthias decides on a second family. Candidates: GLM, Li
 - 2026-11-26 — §3d.2 run into `b3d-gtools.jsonl` ($0.148), judged twice ($0.068). G-tools scores with G, not T (27 of 48 against 25 and 46), so the plan's "engine needed" reading applies.
 - 2026-11-26 — §3c.5 write-up: RESULTS gains "Variants, N 100 and a second model" and "State of the benchmark". The latter labels each run as exploratory, confirmatory or replication, and lists every change made after seeing results, with its reason. Spend for §3c.2–§3d: OpenRouter about $2.80, judge about $0.28.
 - 2026-11-26 — §3d.1 GLM A4 reps 2–3 (Matthias: yes) run into `b3d-glm-a4.jsonl`, $0.872, so A4 cost $1.28 against the plan's $0.50. The gate estimated $3.63 for the 6 sessions, so the cap was $4.2. Judged twice ($0.130 in all for the 9 sessions), self-agreement 0.97, kappa 0.91. RESULTS now has 3 repetitions for GLM A4, and the open item is removed. Spend for §3c.2–§3d is now OpenRouter about $3.67 and the judge about $0.37.
+- 2026-11-26 — §3e.1 mapping (Matthias: invert `gr`, minus labels). A gold reason's `decided_by` is every check graded under it (A1–A3 written into the task data, A4 generated by gen_items). Reasons that are labels or explanations with no key of their own get none and keep the judge's grade as "judge: no keys". Picks are fixed at N 200, so a reason claiming a contest is decided by its checks only where one of them is CONFLICT at that N. Otherwise it gets `untested_by` and keeps the judge's grade as "judge: untested", because a yes or no reported for those keys does not test it: GR6 and GR7 at N 50 (K7 and K8 are not contested there), GR7 and GR8 at N 100. Reading the disagreements found the N 50 GR7 case, where a first mapping produced a false judge error. selftest checks that `decided_by ∪ untested_by` ⊆ the inverse of `gr`.
+- 2026-11-26 — §3e.1 grading (Matthias: scoped prose reader). A mapped reason is covered when all its keys are reported, wrong when any key is wrong or naive, and missed otherwise. Contested without all sides counts as missed. A reading the reader cannot settle is "unclear" and falls back to the judge, counted. Counts below 10 (SMALL) are left unread, so they also fall back. Values for others are read only for the subjects of decide checks. The judge never grades a keyed reason. The judge's grade is shown beside it, and every disagreement was read by hand (four kinds, in RESULTS). The polarity reader also accepts `"value": true|false`, since the stub writes JSON. b3b is not re-scored, a deviation from "re-score every analyst run": it uses an old task whose checks have no subject. "$ per covered reason" now counts keyed grades plus the judge's grade on the rest.

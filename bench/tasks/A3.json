@@ -14,15 +14,15 @@
    "example": "Give the standing of fitness for bolt and cog then."}
  ],
  "gold": [
-  {"id": "GR1", "text": "Fit for use is procurement's claim, resting on required sub-claims (due diligence, not sanctioned) and a supporting one (price within benchmark)", "refs": ["C1", "C2"], "turns": [1]},
-  {"id": "GR2", "text": "A failing required sub-claim rebuts fitness; a failing supporting one only qualifies it", "refs": ["depends_on", "supports"], "turns": [1, 2]},
-  {"id": "GR3", "text": "Each sub-claim has its own asserter (compliance, risk, finance) and validity; report them per claim, not under procurement", "refs": ["C1.1", "C1.2", "C1.3", "C2.1", "C2.2", "C2.3"], "turns": [3]},
-  {"id": "GR4", "text": "cog: finance's later claim (C7, from 10 May) that the price is not within benchmark supersedes its earlier C2.3 (same asserter, later wins): fitness is qualified from that date", "refs": ["C2.3", "C7"], "turns": [2, 4]},
-  {"id": "GR5", "text": "bolt: risk's later claim (C6, sanctioned, from 1 June) supersedes its earlier C1.2: fitness rebutted from that date", "refs": ["C1.2", "C6"], "turns": [1, 4]},
-  {"id": "GR6", "text": "Later wins only within one asserter; between different asserters a disagreement stays contested unless superiority is stated", "refs": ["superiority"], "turns": [2]},
-  {"id": "GR7", "text": "Validity windows end (C1, C2 to 31 Dec): fitness expires; it is not permanent", "refs": ["valid_to"], "turns": [1]},
-  {"id": "GR8", "text": "\"What we knew at <date>\" (assertion and recording time) differs from \"what held at <date>\" (valid time): two axes, two views", "refs": ["asserted_at", "recorded_at", "valid_from", "valid_to"], "turns": [4]},
-  {"id": "GR9", "text": "Vendor status (register) is distinct from fitness claims: a vendor can be approved in the register yet not fit, and the reverse", "refs": ["term:vendor_status"], "turns": [1]}
+  {"id": "GR1", "text": "Fit for use is procurement's claim, resting on required sub-claims (due diligence, not sanctioned) and a supporting one (price within benchmark)", "refs": ["C1", "C2"], "turns": [1], "decided_by": ["A3.K1", "A3.K2"]},
+  {"id": "GR2", "text": "A failing required sub-claim rebuts fitness; a failing supporting one only qualifies it", "refs": ["depends_on", "supports"], "turns": [1, 2], "decided_by": ["A3.K2"]},
+  {"id": "GR3", "text": "Each sub-claim has its own asserter (compliance, risk, finance) and validity; report them per claim, not under procurement", "refs": ["C1.1", "C1.2", "C1.3", "C2.1", "C2.2", "C2.3"], "turns": [3], "decided_by": []},
+  {"id": "GR4", "text": "cog: finance's later claim (C7, from 10 May) that the price is not within benchmark supersedes its earlier C2.3 (same asserter, later wins): fitness is qualified from that date", "refs": ["C2.3", "C7"], "turns": [2, 4], "decided_by": ["A3.K6", "A3.K7", "A3.K10"]},
+  {"id": "GR5", "text": "bolt: risk's later claim (C6, sanctioned, from 1 June) supersedes its earlier C1.2: fitness rebutted from that date", "refs": ["C1.2", "C6"], "turns": [1, 4], "decided_by": ["A3.K1", "A3.K9"]},
+  {"id": "GR6", "text": "Later wins only within one asserter; between different asserters a disagreement stays contested unless superiority is stated", "refs": ["superiority"], "turns": [2], "decided_by": []},
+  {"id": "GR7", "text": "Validity windows end (C1, C2 to 31 Dec): fitness expires; it is not permanent", "refs": ["valid_to"], "turns": [1], "decided_by": ["A3.K5"]},
+  {"id": "GR8", "text": "\"What we knew at <date>\" (assertion and recording time) differs from \"what held at <date>\" (valid time): two axes, two views", "refs": ["asserted_at", "recorded_at", "valid_from", "valid_to"], "turns": [4], "decided_by": ["A3.K8", "A3.K9", "A3.K10"]},
+  {"id": "GR9", "text": "Vendor status (register) is distinct from fitness claims: a vendor can be approved in the register yet not fit, and the reverse", "refs": ["term:vendor_status"], "turns": [1], "decided_by": ["A3.K3", "A3.K4"]}
  ],
  "checks": [
   {"id": "A3.K1", "gr": ["GR1", "GR5"], "turn": 1, "component": "fitness of bolt today", "call": ["claim_standing", "C1"]},

@@ -22,7 +22,7 @@
    abstaining stub does not, family items (F*, A4) are asked from N 50 only (PLAN-v3-bench-full §3b). The stub
    judge writes parseable grades, a second judging is compared with the first, and the export runs.
 """
-import json, pathlib, subprocess, sys, tempfile
+import collections, json, pathlib, subprocess, sys, tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PY = sys.executable
@@ -214,6 +214,14 @@ def main():
         S.B.manager_key = real
     print("sides strict / tolerant, qualifier stated in every key: ok")
 
+    for item, n in {(t, n) for t in ("A1", "A2", "A3", "A4") for n in (25, 50, 100, 200)}:    # §3e.1: the mapping
+        task = S.B.item(item, n)
+        for g in task["gold"] if task else []:
+            inv = [c["id"] for c in task["checks"] if g["id"] in c["gr"]]
+            assert set(g["decided_by"]) <= set(inv) and not set(g.get("untested_by", [])) - set(inv), (item, n, g["id"])
+        assert not task or all(c.get("says") for c in task["checks"] if item == "A4" and c["call"][0] == "decide"), (item, n)
+    print("gold reasons decided only by their own checks, A4 decide checks with a vocabulary: ok")
+
     for model, want in (("stub:key", True), ("stub:abstain", False)):
         out = d / f"{model.split(':')[1]}.jsonl"
         p = run("bench/run.py", "--models", model, "--n", "25", "200", "--out", str(out), "--budget", "1")
@@ -222,8 +230,9 @@ def main():
         m = [S.score_manager(r)["correct"] for r in recs if r["kind"] == "manager"]
         k = [v for r in recs if r["kind"] == "analyst" for v in S.score_checks(r).values() if v != "judge"]
         c = list(S.consistency(recs).values())
-        full = all(m) and all(v == "reported" for v in k) and all(ok == n for ok, n in c)
-        assert full == want, (model, sum(m), len(m), k.count("reported"), len(k), c)
+        rs = [v for r in recs if r["kind"] == "analyst" for v in S.score_reasons(r).values() if v]   # §3e.1
+        full = all(m) and all(v == "reported" for v in k) and all(ok == n for ok, n in c) and all(v == "covered" for v in rs)
+        assert full == want and rs, (model, sum(m), len(m), k.count("reported"), len(k), c, collections.Counter(rs))
         assert not any(r["kind"] == "analyst" and r["arm"] == "G+" for r in recs)
         fam = {(r["n"], r["item"]) for r in recs if r["item"].startswith("F") or r["item"] == "A4"}
         assert fam and not any(n == 25 for n, _ in fam), sorted(fam)[:5]      # families start at N 50 (§3b)
