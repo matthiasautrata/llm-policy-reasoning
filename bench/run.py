@@ -570,7 +570,7 @@ def truncation(res, msgs, tools, context):
 
 
 CALL_FIELDS = ("model_served", "provider", "generation_id", "finish_reason", "prompt_tokens", "completion_tokens",
-               "reasoning_tokens", "cached_tokens", "cost", "seconds", "attempts")
+               "reasoning_tokens", "cached_tokens", "cost", "seconds", "attempts", "effort")
 
 
 def failure(e):

@@ -7,12 +7,18 @@ are sent. Cost: OpenRouter's charged cost; OpenAI's from tokens and OPENAI_PRICE
 Every call returns what the run record needs: content, reasoning text, served model and provider,
 token counts, cost and wall time. With tools (OpenAI-style definitions; tool_choice "none" forbids calling them), the
 assistant message is returned as sent ("message", to append to the conversation) with its "tool_calls".
+OpenAI with tools goes through the Responses API (Chat Completions refuses function tools with reasoning effort
+for its reasoning models): the chat messages and tools are converted, the call is stateless (store false), and the
+output items, encrypted reasoning included, ride on the assistant message ("output_items") and are sent back
+verbatim on the next call, so the model keeps its reasoning across tool calls. The result has the chat fields.
 """
+import hashlib
 import json, os, random, re, time, urllib.error, urllib.request
 
 URL = "https://openrouter.ai/api/v1/chat/completions"
 ENDPOINTS = {"openrouter": (URL, "OPENROUTER_API_KEY"),
              "openai": ("https://api.openai.com/v1/chat/completions", "OPENAI_API_KEY"),
+             "openai-responses": ("https://api.openai.com/v1/responses", "OPENAI_API_KEY"),
              "ollama": ("http://localhost:11434/v1/chat/completions", None)}
 # OpenAI USD per token (input, output, cached input), Standard tier, short context (<= 272K input); the Batch tier
 # is half of each (the page's Batch table agrees). Checked 2026-11-26 against developers.openai.com/api/docs/pricing.
@@ -74,6 +80,67 @@ def body(model, messages, *, temperature, max_tokens, reasoning=None, provider=N
     return b
 
 
+def responses_body(model, messages, *, temperature, max_tokens, reasoning=None, tools=None, tool_choice=None):
+    """Chat messages and tools -> a stateless Responses API request. The prompt cache key is the system prompt's
+    hash, so calls sharing that prefix are routed to the same cache."""
+    items = []
+    for m in messages:
+        if m["role"] == "tool":
+            items.append({"type": "function_call_output", "call_id": m["tool_call_id"], "output": m["content"]})
+        elif m["role"] == "assistant" and m.get("output_items"):
+            items.extend(m["output_items"])
+        elif m["role"] == "assistant":
+            if m.get("content"):
+                items.append({"role": "assistant", "content": m["content"]})
+            items.extend({"type": "function_call", "call_id": tc["id"], "name": tc["function"]["name"],
+                          "arguments": tc["function"]["arguments"]} for tc in m.get("tool_calls") or [])
+        else:
+            items.append({"role": m["role"], "content": m["content"]})
+    b = {"model": model, "input": items, "max_output_tokens": max_tokens, "store": False,
+         "include": ["reasoning.encrypted_content"]}
+    sys_ = next((m["content"] for m in messages if m["role"] == "system"), "")
+    b["prompt_cache_key"] = hashlib.sha256(sys_.encode()).hexdigest()[:32]
+    if temperature is not None:
+        b["temperature"] = temperature
+    if reasoning is not None:
+        b["reasoning"] = {"effort": reasoning}
+    if tools:
+        b["tools"] = [{"type": "function", "name": t["function"]["name"], "description": t["function"].get("description", ""),
+                       "parameters": t["function"]["parameters"], "strict": False} for t in tools]
+        if tool_choice is not None:
+            b["tool_choice"] = tool_choice
+    return b
+
+
+def parse_responses(d, seconds=None, attempts=1):
+    """A Responses API response -> the record fields of parse()."""
+    out, u = d.get("output") or [], d.get("usage") or {}
+    text = "".join(c.get("text", "") for o in out if o.get("type") == "message" for c in o.get("content") or []
+                   if c.get("type") == "output_text")
+    tcs = [{"id": o["call_id"], "type": "function", "function": {"name": o["name"], "arguments": o["arguments"]}}
+           for o in out if o.get("type") == "function_call"]
+    cached = (u.get("input_tokens_details") or {}).get("cached_tokens") or 0
+    inc = (d.get("incomplete_details") or {}).get("reason")
+    return {
+        "content": text,
+        "reasoning": "",
+        "finish_reason": "tool_calls" if tcs else "length" if inc == "max_output_tokens" else inc or "stop",
+        "model_served": d.get("model"),
+        "provider": "openai",
+        "generation_id": d.get("id"),
+        "prompt_tokens": u.get("input_tokens"),
+        "completion_tokens": u.get("output_tokens"),
+        "reasoning_tokens": (u.get("output_tokens_details") or {}).get("reasoning_tokens"),
+        "effort": (d.get("reasoning") or {}).get("effort"),           # as served
+        "cached_tokens": cached,
+        "cost": openai_cost(d.get("model") and _base(d["model"]), u.get("input_tokens") or 0, u.get("output_tokens") or 0, cached),
+        "seconds": seconds,
+        "attempts": attempts,
+        "tool_calls": tcs,
+        "message": {"role": "assistant", "content": text or None, "tool_calls": tcs, "output_items": out},
+    }
+
+
 def endpoint_prices(model, timeout=30):
     """OpenRouter's public endpoints list for a model (no key) -> [{provider, quantization, prompt, completion,
     cache_read}], USD per token (cache_read None where not listed)."""
@@ -96,8 +163,13 @@ def openai_cost(model, prompt, completion, cached, batch=False):
 
 def chat(model, messages, *, temperature, max_tokens, reasoning=None, provider=None, tools=None, tool_choice=None,
          timeout=300, tries=5, endpoint="openrouter"):
-    b = body(model, messages, temperature=temperature, max_tokens=max_tokens, reasoning=reasoning, provider=provider,
-             tools=tools, tool_choice=tool_choice, endpoint=endpoint)
+    if endpoint == "openai" and tools:
+        endpoint = "openai-responses"
+        b = responses_body(model, messages, temperature=temperature, max_tokens=max_tokens, reasoning=reasoning,
+                           tools=tools, tool_choice=tool_choice)
+    else:
+        b = body(model, messages, temperature=temperature, max_tokens=max_tokens, reasoning=reasoning, provider=provider,
+                 tools=tools, tool_choice=tool_choice, endpoint=endpoint)
     url, env = ENDPOINTS[endpoint]
     headers = {"Content-Type": "application/json"}
     if env:
@@ -120,8 +192,10 @@ def chat(model, messages, *, temperature, max_tokens, reasoning=None, provider=N
         except (urllib.error.URLError, TimeoutError, ConnectionError, json.JSONDecodeError) as e:
             last = f"{type(e).__name__}: {e}"
         else:
-            if "error" in d:
+            if d.get("error"):
                 last = f"API error: {json.dumps(d['error'])[:300]}"
+            elif endpoint == "openai-responses":
+                return parse_responses(d, round(time.time() - t0, 3), attempt + 1)
             elif not d.get("choices"):
                 last = "no choices in response"
             else:

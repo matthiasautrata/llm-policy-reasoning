@@ -367,6 +367,27 @@ Each N fills different strata: d 1 occurs only at N 50, and d 4+ only at N 200. 
 - G+'s functions do not reach the families. `gplus.py` has five functions (request_status, approved_total, spend, role_limit, breaching_requests), all over the slice rules R1xx–R3xx. On the family items G+ is G with unused tools, as its scores show.
 - T's A4 sessions (§3b′) did not re-derive rules in SQL. Every SQL query flagged as inlining reads a governed table (cap, vendor_status, emp violation). T made 27–40 calls to rules, decide and why per session, and at most 9 SQL calls. Of the 5 turns that reached the limit, 4 used `summary`. T was not enumerating in SQL in place of `summary`.
 
+## A third, stronger model (PLAN-v3-bench-full §3e.2, 2026-11-26)
+
+**Setup.** gpt-6.2-sol on OpenAI's API (`openai@gpt-6.2-sol`), reasoning effort medium, family questions F01–F16 at N 200, arms G, G-q and T, 3 repetitions (144 cells). It is the strongest model on OpenAI's pricing page (read 2026-11-26) whose estimate fits the budget, and it is not on the deprecations page: gpt-6.2-astra was estimated at $29 for 3 repetitions, against $19.8 combined. Every call was served as `gpt-6.2-sol` with effort medium (two calls of the check cell predate the recorded field). Calls with tools go through the Responses API, statelessly, with the encrypted reasoning sent back between tool calls (`harness/openrouter.py`), because Chat Completions refuses function tools with reasoning effort for this model. Scored mechanically, with no judge. gpt-6.2-sol is also the judge's model, but no judge grade enters these results, so there is no conflict. The expected outcomes were recorded in the plan before the run.
+
+| model | arm | correct; tolerant | qualifier (of 42) | sides strict / tolerant (of 9) | true / absence / contested (of 15 / 15 / 9) | by k: 1 / 2–3 / 4–5 / 6+ | $ per correct |
+|---|---|---|---|---|---|---|---|
+| gpt-6.2-sol | G | 26; 27 | 27 | 2 / 3 | 15, 0, 2 | 9, 6, 8, 3 | 0.017 |
+| gpt-6.2-sol | G-q | 25; 25 | 27 | 1 / 1 | 15, 0, 1 | 9, 6, 7, 3 | 0.017 |
+| gpt-6.2-sol | T | 48; 48 | 42 | 9 / 9 | 15, 15, 9 | 12, 12, 12, 12 | 0.008 |
+| DeepSeek | G (§3b′) | 25; 26 | 27 | 2 / 3 | 14, 0, 2 | 9, 6, 7, 3 | |
+| DeepSeek | G-q (§3c.2) | 26; 28 | 27 | 4 / 6 | 13, 0, 4 | 9, 6, 8, 3 | |
+| DeepSeek | T (§3b′) | 46; 46 | 40 | 9 / 9 | 15, 13, 9 | 11, 11, 12, 12 | |
+| GLM 5.3 | G | 25; 27 | 27 | 3 | 13, 0, 3 | 9, 6, 8, 2 | 0.026 |
+| GLM 5.3 | T | 40; 40 | 42 | 9 | 12, 11, 9 | 11, 12, 8, 9 | 0.012 |
+
+- **The closure result holds for the stronger model.** G and G-q qualify a "no" that rests on absence in 0 of 15 each, with the value right in 15 of 15. T qualifies all 15. This is the plan's first expected outcome; the second (G near T) does not occur.
+- Values are not the gap. G and G-q are right on all 15 true keys and all 3 false-by-defeat keys. They lose on contested sides (2 and 1 of 9) and on qualifiers. T is right on all 48 cells.
+- G-q's sentence does nothing here either (0 of 15, as G).
+- **The model barely reasons.** At effort medium it averages 28 (G), 21 (G-q) and 9 (T) reasoning tokens per cell, and 255–281 completion tokens, against DeepSeek's 2,500–3,800 and 3,200–4,200. A higher effort was not tried. So "a frontier model gets closure right by itself" is refuted at medium effort, not at its highest.
+- **Cost.** Charged $1.25 for the 144 cells: G $0.43, G-q $0.43, T $0.36. That is $0.009 per cell for G against DeepSeek's $0.0009. The prompt was 99% cached for G and G-q and 82% for T. The estimate, $7.15, assumed DeepSeek's completion lengths. Nine cells were stopped by OpenAI's rate limit (1M tokens per minute, 6 workers) and re-run with 2 workers. A call refused with a 429 is not charged, but the runner books its reserve ($0.23 each, $2.10 in all), so the report's arm cost ($3.34) is an upper bound. The figures above are from the calls' tokens at list price.
+
 ## Gold reasons graded from keys (PLAN-v3-bench-full §3e.1, 2026-11-26)
 
 **Method.** A gold reason is decided by the checks whose `gr` names it (`decided_by` in the task data; generated for A4 by `bench/gen_items.py`, hand-written for A1–A3). It is graded from the session's answers for those checks:
@@ -421,9 +442,10 @@ After the change F covers no reason by keys at any N (N 50: 0 / 11 / 16; N 100: 
 | §3d.2 G-tools | F01–F16, A4 | DeepSeek; 200 | 3 | confirmatory (outcomes recorded before) |
 | §3c.3 | F01–F16, A4 | DeepSeek; 100 | 3 | replication |
 | §3c.4, §3d.1 | F01–F16; A4 | GLM 5.3; 200 | 3 | replication |
+| §3e.2 | F01–F16 | gpt-6.2-sol; 200 | 3 | confirmatory (outcomes recorded before) |
 
-**Main result.** Across two models and three N, the rule arms do not differ on values. They differ on closure:
-- a "no" that rests on absence is qualified by T in 13 of 15 (DeepSeek N 200), 6 of 6 (N 100) and 11 of 15 (GLM), and by G, G+, G-q, G+-q and G-tools in 0 of every count;
+**Main result.** Across three models and three N, the rule arms do not differ on values. They differ on closure:
+- a "no" that rests on absence is qualified by T in 13 of 15 (DeepSeek N 200), 6 of 6 (N 100), 11 of 15 (GLM) and 15 of 15 (gpt-6.2-sol, §3e.2), and by G, G+, G-q, G+-q and G-tools in 0 of every count, the stronger model's G and G-q included;
 - contested sides are complete for T on every contested key, and degrade for G as disputes accumulate.
 
 The two controls rule out the obvious explanations:
