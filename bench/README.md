@@ -1,6 +1,6 @@
 # v3 benchmark (PLAN-v3-bench)
 
-Built 2026-11-25 on branch spike/v3. The design is in `notes/warrant-layer/benchmark-design.md`; the build plan is HISTORY phase 10 (`PLAN-v3-bench.md` at tag `spike-v3-bench`), hardening and the pilot HISTORY phase 11 (`PLAN-v3-bench-run.md` at tag `spike-v3-bench-run`), the current plan `spikes/v3/PLAN-v3-bench-full.md`. The engine is reached only through `spikes/v3/v3a-prolog/cli`.
+Built 2026-11-25 on branch spike/v3. The design is in `notes/warrant-layer/benchmark-design.md`; the build plan is HISTORY phase 10 (`PLAN-v3-bench.md` at tag `spike-v3-bench`), hardening and the pilot HISTORY phase 11 (`PLAN-v3-bench-run.md` at tag `spike-v3-bench-run`), the full runs HISTORY phases 12–21 (`PLAN-v3-bench-full.md` at tag `spike-v3-benchmark`). Results: `spikes/v3/RESULTS.md`. The engine is reached only through `spikes/v3/v3a-prolog/cli`.
 
 From the repo root:
 
@@ -85,3 +85,80 @@ The judge is `openai@gpt-6.2-sol` through the OpenAI Batch API (`harness/openai_
 A contested check counts as reported only on a line that also says contested (or conflict, disputed, undecided); a plain figure counts as the naive answer. Since §3c.1, a check with a `subject` (A4's: its request, vendor or chain level) counts only in a block (a table, list or paragraph) or under a heading that names the subject, and a mechanical reported or naive grade that the judge's grade of the check contradicts is counted `unconfirmed`. `--judge-reasoning` (default medium, HISTORY phase 11) sets the judge's `reasoning_effort`; grades go to `<results>.judge-<effort>.jsonl` (low: `<results>.judge.jsonl`), so levels can be compared on the same sessions. Results in `bench/results/` are committed gzipped (`gzip -k -9`; `gunzip -k` before scoring); the plain JSONL and the batch state stay local.
 
 Pilot (HISTORY phase 11): DeepSeek, A1–A3 and ten manager questions, N = 25 and 200, 72 cells, run 2026-11-26 for $0.60 (`results/pilot*.jsonl.gz`); its analyst grades are withdrawn (empty replies at the call limit).
+
+## Reproducing the confirmatory runs (RESULTS, The benchmark)
+
+**Generated inputs.** Regenerate the bases, keys and items with the commands at the top, then run the bench gate:
+- `selftest.py`;
+- `check_bases.py` (base keys, slice keys, and task keys equal to the regenerated ones);
+- `render_md.py` (completeness).
+
+Generation is deterministic. A regenerated key that differs from the committed one is a bug, unless a plan lists it with its reason.
+
+**Runs.** Each command writes one record file. The run resumes: run it again and it skips the cells already done and re-runs failed ones. `--estimate` prints the cost and makes no call.
+- **Budget.** `--budget` caps the summed cost of `--out` and `--also`, and the run refuses before any call if its estimate exceeds what is left.
+- **Calibration.** The OpenAI runs calibrate their estimate on the DeepSeek run (`--calibrate`).
+- **Workers.** §3e.2 ran at 6 workers and re-ran its rate-limited cells at 2. §3f ran at 2 workers.
+- **GLM caps.** GLM was run one repetition at a time (`--reps 1`, then 2, then 3), with caps of $2.5, $3.2 and $3.8 at 2 workers. The A4 run's caps went up to $4.2.
+
+Endpoints:
+- DeepSeek and GLM run through OpenRouter (`OPENROUTER_API_KEY`), with the fp8 quantization filter.
+- gpt-6.2-sol runs through OpenAI's Responses API (`openai@`, `OPENAI_API_KEY`).
+- The temperature is 1.0 and `--max-tokens` is 16000 throughout.
+
+```
+F="F01 F02 F03 F04 F05 F06 F07 F08 F09 F10 F11 F12 F13 F14 F15 F16"
+DS=deepseek/deepseek-v4.1-flash
+# §3b′ (b3c): DeepSeek, N 50 and 200, all arms, family + A4
+.venv/bin/python bench/run.py --models $DS --n 50 200 --arms G G+ T F --analyst-arms G T F --items ${=F} A4 --reps 3 --out bench/results/b3c.jsonl --budget 2 --workers 4
+# §3c.2 (b3d-q): the qualifier sentence
+.venv/bin/python bench/run.py --models $DS --n 200 --arms G-q G+-q --items ${=F} --reps 3 --out bench/results/b3d-q.jsonl --budget 1.5
+# §3c.3 (b3d-n100): N 100
+.venv/bin/python bench/run.py --models $DS --n 100 --arms G G+ T F --analyst-arms G T F --items ${=F} A4 --reps 3 --out bench/results/b3d-n100.jsonl --budget 2
+# §3d.2 (b3d-gtools): rules as a lookup tool
+.venv/bin/python bench/run.py --models $DS --n 200 --arms G-tools --analyst-arms G-tools --items ${=F} A4 --reps 3 --out bench/results/b3d-gtools.jsonl --budget 2
+# §3c.4 (b3d-glm) and §3d.1 (b3d-glm-a4): GLM 5.3
+.venv/bin/python bench/run.py --models z-ai/glm-5.3 --n 200 --arms G G+ T --items ${=F} --reps 3 --out bench/results/b3d-glm.jsonl --budget 3.8 --workers 2
+.venv/bin/python bench/run.py --models z-ai/glm-5.3 --n 200 --analyst-arms G G+ T --items A4 --reps 3 --out bench/results/b3d-glm-a4.jsonl --budget 4.2 --workers 2
+# §3e.2 (b3e) and §3f (b3f): gpt-6.2-sol at effort medium and high
+.venv/bin/python bench/run.py --models openai@gpt-6.2-sol --reasoning medium --n 200 --arms G G-q T --items ${=F} --reps 3 --out bench/results/b3e.jsonl --budget 16 --calibrate bench/results/b3c.jsonl
+.venv/bin/python bench/run.py --models openai@gpt-6.2-sol --reasoning high --n 200 --arms G G-q T --items ${=F} --reps 3 --out bench/results/b3f.jsonl --budget 12.75 --workers 2 --calibrate bench/results/b3c.jsonl
+```
+
+(`${=F}` splits the list in zsh; in bash write `$F`.)
+
+**Judge.** Analyst runs only: b3c, b3d-n100, b3d-gtools and b3d-glm-a4.
+- The judge is `openai@gpt-6.2-sol` through the OpenAI Batch API, at effort medium (`judge_rubric.md`). Each session is judged twice, and the second judging is written beside the first.
+- §3b′ uses its re-judging after §3c.1, `b3c.rejudge-medium*.jsonl`. The first judging, `b3c.judge-medium*`, is kept as the record of that change.
+- Each call submits a batch. Rerun it to collect the grades: the exit code is 3 while the batch is pending.
+
+```
+.venv/bin/python bench/score.py bench/results/b3d-n100.jsonl --judge --budget 2
+.venv/bin/python bench/score.py bench/results/b3d-n100.jsonl --judge --budget 2 --judge-out bench/results/b3d-n100.judge-medium.2.jsonl
+.venv/bin/python bench/score.py bench/results/b3c.jsonl --judge --budget 2 --judge-out bench/results/b3c.rejudge-medium.jsonl     # and .rejudge-medium.2.jsonl
+```
+
+**Scoring** makes no API calls. Grades come from oracle keys where keys decide (`decided_by`). The judge's grades are used only where no key decides, and on unclear readings. Every RESULTS table of a run comes from that run's report.
+
+Decompress the committed files first (`gunzip -k bench/results/*.gz`). Then score:
+
+```
+.venv/bin/python bench/score.py bench/results/b3c.jsonl --judge-out bench/results/b3c.rejudge-medium.jsonl   # §3b′: family, by key type, A4
+.venv/bin/python bench/score.py bench/results/b3d-q.jsonl        # §3c.2
+.venv/bin/python bench/score.py bench/results/b3d-n100.jsonl     # §3c.3
+.venv/bin/python bench/score.py bench/results/b3d-gtools.jsonl   # §3d.2
+.venv/bin/python bench/score.py bench/results/b3d-glm.jsonl      # §3c.4
+.venv/bin/python bench/score.py bench/results/b3d-glm-a4.jsonl   # §3d.1
+.venv/bin/python bench/score.py bench/results/b3e.jsonl          # §3e.2
+.venv/bin/python bench/score.py bench/results/b3f.jsonl          # §3f
+```
+
+Each report also gives:
+- the k and d tables;
+- the call-limit table;
+- keys against the judge, by reason and arm;
+- the judge's agreement with itself;
+- the cost line.
+
+The strata table is `gen_items.py`'s output (`stratum`, `k` and `d` in `questions/family.json`). The exploratory runs (pilot, b1, b3b, smoke) score the same way. Their tables are in `spikes/v3/HISTORY.md`.
+
