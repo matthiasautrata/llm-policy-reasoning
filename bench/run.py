@@ -10,7 +10,8 @@ question (M..). Arms:
        example SQL) and a read-only `sql` tool
   G+   G plus the trusted functions of bench/gplus.py (fn_*)
   T    the data model only (the material's section 1), the goal vocabulary of the base, and the engine's
-       tools resolve_term, describe, decide, why, why_not through spikes/v3/v3a-prolog/cli, plus `sql`
+       tools resolve_term, describe, decide, why, why_not, and (PLAN-v3-bench-full §2, after the pilot) the
+       design tools rules and summary, through spikes/v3/v3a-prolog/cli, plus `sql`
 Every tool runs here and is logged here (name, args, seconds, result size, error), never read from model
 output. Every model call records model, provider, tokens, cost and time, as v2.
 
@@ -172,15 +173,33 @@ T_TOOLS = [
     _fn("describe", "An asset (vendor:<id>, emp:<id>): its doc, data bindings, and every claim about it with its "
         "standing on as_of: holds, holds_with_qualifier (a supporting sub-claim failed), rebutted (with the "
         "defeater), contested (with sides) or not_in_force.", {"asset": "asset id", "as_of": AS_OF}, ["asset"]),
-    _fn("decide", "Decide a goal. Returns status (ANSWER, CONFLICT: rules or claims on both sides and none prevails, "
+    _fn("decide", "For answers: decide one goal. Returns status (ANSWER, CONFLICT: rules or claims on both sides and none prevails, "
         "UNDERDETERMINED: a known term nothing defines, OUT_OF_SCOPE: an unknown predicate), value, sides of a "
         "conflict, the owners of the rules used, and qualifier (\"total over known facts in declared scope\" when "
         "the answer rests on absence).", {"goal": "EDN goal", "as_of": AS_OF}, ["goal"]),
-    _fn("why", "decide plus the proof: the rules, claims and data rows the answer rests on.",
+    _fn("why", "For answers: decide plus the proof: the rules, claims and data rows the answer rests on.",
         {"goal": "EDN goal", "as_of": AS_OF}, ["goal"]),
     _fn("why_not", "For a goal that does not hold: per rule that could conclude it, the conditions that failed.",
         {"goal": "EDN goal", "as_of": AS_OF}, ["goal"]),
+    _fn("rules", "For design: the rule base around a predicate, a term (term:<name>), a concept or an asset "
+        "(vendor:<id>, emp:<id>): every rule and claim that concludes, attacks or reads it, each with doc, owner, "
+        "kind, class, validity, which rules it prevails over or yields to and why, and what it depends on; and the "
+        "conflicts the engine knows of (pairs with no priority either way, live wherever both bodies hold). "
+        "Reads the rules; evaluates nothing.", {"about": "predicate, term:<name>, concept, asset id, or an EDN goal "
+                                                "pattern that narrows a predicate, e.g. [:capitalised \"K01\" ?a]"}, ["about"]),
+    {"type": "function", "function": {"name": "summary", "description":
+        "For design: decide an open goal over all its instances in one call: counts proven / refuted / contested, "
+        "the conflicts the contested ones rest on, and up to 10 ids per status. filters gives each variable a "
+        "domain: a list of values, or a concept with its filters, e.g. {\"?r\": {\"concept\": \"request_in_subtree\", "
+        "\"filters\": {\"root\": \"cc0049\", \"status\": \"pending\"}}}.", "parameters": {
+        "type": "object", "properties": {"goal": {"type": "string", "description": "EDN goal with variables"},
+                                         "filters": {"type": "object", "description": "variable -> domain"},
+                                         "as_of": {"type": "string", "description": AS_OF}},
+        "required": ["goal"]}}},
     SQL_TOOL]
+
+
+T_NAMES = tuple(t["function"]["name"] for t in T_TOOLS if t is not SQL_TOOL)
 
 
 def tools_for(arm):
@@ -257,6 +276,12 @@ def run_t(n, name, a):
         return r if name == "why" else {k: v for k, v in r.items() if k != "why"}
     if name == "why_not":
         return engine(n, [{"op": "why_not", "goal": a["goal"], **as_of}])[0]
+    if name == "rules":
+        return engine(n, [{"op": "rules", "about": a["about"]}])[0]
+    if name == "summary":
+        f = a.get("filters")
+        f = json.loads(f) if isinstance(f, str) else f
+        return engine(n, [{"op": "summary", "goal": a["goal"], **({"filters": f} if f else {}), **as_of}])[0]
     raise KeyError(name)
 
 
@@ -269,7 +294,7 @@ def execute(arm, n, name, args):
             out = run_sql(a["query"])
         elif name.startswith("fn_") and arm == "G+":
             out = run_fn(name[3:], a)
-        elif arm == "T" and name in ("resolve_term", "describe", "decide", "why", "why_not"):
+        elif arm == "T" and name in T_NAMES:
             out = run_t(n, name, a)
         else:
             raise KeyError(f"no tool {name} in arm {arm}")
@@ -682,7 +707,8 @@ def main():
         done = {cell(r) for r in map(json.loads, out.read_text().splitlines()) if not r.get("error")}
     budget = Budget(a.budget, spent_in(out, *a.also))
     provider = None if a.quantization == "any" else {"quantizations": [a.quantization], "sort": "price"}
-    config = {"temperature": a.temperature, "max_tokens": a.max_tokens, "provider": provider, "prices": prices}
+    config = {"temperature": a.temperature, "max_tokens": a.max_tokens, "provider": provider, "prices": prices,
+              "t_tools": list(T_NAMES)}                # PLAN-v3-bench-full §2.3: which T version made the record
     if any(endpoint_of(m)[0] == "ollama" for m in a.models):
         config["context"] = a.context
     its = items()

@@ -87,7 +87,7 @@ def consistency(recs):
     by = collections.defaultdict(dict)
     for r in recs:
         if r["kind"] == "manager" and not r["error"]:
-            by[(r["arm"], r["model"], r["n"], r["rep"])][r["item"]] = r.get("answer") or {}
+            by[(arm(r), r["model"], r["n"], r["rep"])][r["item"]] = r.get("answer") or {}
     out = collections.defaultdict(lambda: [0, 0])
     for k, ans in by.items():
         for x, y, _ in CONSISTENT:
@@ -340,7 +340,7 @@ def report(recs, jpath, gradedir):
     L = []
     cells = collections.defaultdict(lambda: collections.Counter())
     for r in recs:
-        k = (r["arm"], r["model"], r["n"])
+        k = (arm(r), r["model"], r["n"])
         c = cells[k]
         c["empty"] += sum(1 for x in r["turns"] if (x.get("forced_final") or not x.get("tool_limit"))   # pre-§1.4 records:
                           and not (x["content"] or "").strip())                                     # limit turns not final
@@ -378,6 +378,7 @@ def report(recs, jpath, gradedir):
                  f"{c['m_qual']}/{c['m_qual_n']} | {c['m_silent']} | {c['k_reported']} / {c['k_naive']} / {c['k_computed']} / {c['k_absent']} "
                  f"(judge {c['k_judge']}) | {c['gr_covered']} / {c['gr_missed']} / {c['gr_wrong']} ({c['a_judged']}/{c['a']} judged) | "
                  f"{c['cite']}/{c['cite_n']} | {inl} | {c['cost']:.4f} | {per_m} | {per_a} | {c['empty']} | {c['errors']} |")
+    L.append("\n" + limit_table(recs))
     L.append("\nConsistency (manager pairs that must agree): " + "; ".join(
         f"{a} {m.split('/')[-1]} N{n} {ok}/{tot}" for (a, m, n), (ok, tot) in sorted(consistency(recs).items())))
     # mechanical vs judge on the mechanically checkable checks
@@ -397,6 +398,30 @@ def report(recs, jpath, gradedir):
              if ag else "\nJudge vs hand grading: not graded yet (bench/grading/grades.json).")
     L.append(f"\nTotal cost of the arms: ${sum(r['cost'] for r in recs):.4f} over {len(recs)} cells; judge "
              f"${B.spent_in(jpath) if jpath else 0:.4f} (OpenAI Batch).")
+    return "\n".join(L)
+
+
+def arm(r):
+    """T-eval: T before the design tools (the pilot; no rules / summary), reported apart (PLAN-v3-bench-full §2.3)."""
+    return "T-eval" if r["arm"] == "T" and "rules" not in r.get("config", {}).get("t_tools", ()) else r["arm"]
+
+
+def limit_table(recs):
+    """PLAN-v3-bench-full §2.4: one call bound for every arm; the cells that reach it are their own outcome, by arm."""
+    c = collections.defaultdict(collections.Counter)
+    for r in recs:
+        if r["error"]: continue
+        x = c[(arm(r), r["kind"], r["model"], r["n"])]
+        hit = [t for t in r["turns"] if t.get("tool_limit")]
+        x["cells"] += 1; x["turns"] += len(r["turns"]); x["hit_turns"] += len(hit); x["hit_cells"] += bool(hit)
+        if r["kind"] == "manager" and hit:
+            x["hit_correct"] += score_manager(r)["correct"]
+    L = ["Call limit (a turn closed by the forced final answer), by arm:", "",
+         "| arm | kind | model | N | cells at the limit | turns at the limit | manager correct among them |", "|---|---|---|---|---|---|---|"]
+    for k in sorted(c):
+        x = c[k]
+        L.append(f"| {k[0]} | {k[1]} | {k[2].split('/')[-1]} | {k[3]} | {x['hit_cells']}/{x['cells']} | {x['hit_turns']}/{x['turns']} | "
+                 + (f"{x['hit_correct']}/{x['hit_cells']} |" if k[1] == "manager" else "– |"))
     return "\n".join(L)
 
 

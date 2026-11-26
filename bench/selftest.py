@@ -10,7 +10,8 @@
    that are not JSON (returned to the model, the session goes on); a reply without "tool_calls" (taken as final);
    a reply reporting far fewer prompt tokens than were sent ("truncated"); an empty final reply (flagged, counted).
    Call limit: a client that always calls tools still ends every turn with a non-empty reply, made by one call
-   with tools forbidden (forced_final; PLAN-v3-bench-full §1.4).
+   with tools forbidden (forced_final; PLAN-v3-bench-full §1.4), and score.py counts such cells by arm (§2.4).
+   Design tools (§2): T offers rules and summary through the engine, with design / answer descriptions.
 4. Keys: .env is git-ignored; the loader refuses a file git does not ignore or others can read, loads the
    values, and leaves variables already set alone.
 5. Endpoints: the OpenRouter body is v2's; OpenAI's has no OpenRouter fields; a Batch output line parses into the
@@ -80,7 +81,26 @@ def main():
         assert len(r["turns"]) == (4 if r["kind"] == "analyst" else 1) and len(r["calls"]) == len(r["turns"]) * (k + 1)
         assert [c.get("forced", False) for c in r["calls"]] == ([False] * k + [True]) * len(r["turns"])
         assert r["kind"] == "analyst" or r["answer"], r.get("answer")
-    print("call limit: ok (a client that always calls tools ends every turn with a forced, non-empty final reply)")
+    s = run("bench/score.py", str(d / "loop.jsonl"))
+    assert s.returncode == 0 and "| T | analyst | fake:0.01:loop | 25 | 1/1 | 4/4 | – |" in s.stdout \
+        and "| G | manager | fake:0.01:loop | 25 | 1/1 | 1/1 | 1/1 |" in s.stdout, s.stdout + s.stderr
+    print("call limit: ok (a client that always calls tools ends every turn with a forced, non-empty final reply; "
+          "score.py reports the cells at the limit by arm)")
+
+    assert R.T_NAMES == ("resolve_term", "describe", "decide", "why", "why_not", "rules", "summary"), R.T_NAMES
+    desc = {t["function"]["name"]: t["function"]["description"] for t in R.T_TOOLS}
+    assert all(desc[n].startswith("For design") for n in ("rules", "summary")) and \
+        all(desc[n].startswith("For answers") for n in ("decide", "why")), desc
+    ru = json.loads(R.execute("T", 25, "rules", {"about": "[:approved ?r]"})[0])
+    assert [i["id"] for i in ru["rules"]] == ["R310", "R312", "R314"] and \
+        {"predicate": "approved", "sides": [["R312"], ["R314"]]} in ru["conflicts"], ru
+    dom = {"?r": {"concept": "request_in_subtree", "filters": {"root": "cc0049", "status": "pending"}}}
+    sm = json.loads(R.execute("T", 25, "summary", {"goal": "[:approved ?r]", "filters": json.dumps(dom)})[0])
+    assert sm["counts"] == {"proven": 88, "refuted": 336, "contested": 1}, sm      # keys.json Q56
+    er = json.loads(R.execute("T", 25, "summary", {"goal": "[:approved ?r]"})[0])
+    assert er["status"] == "ERROR" and "filters" in er["error"], er
+    print("design tools: ok (T has rules and summary, described for design; decide and why for answers; "
+          "rules narrows to a pattern, summary takes a domain and explains a missing one)")
 
     from harness import openrouter as o, openai_batch as ob
     real = o.endpoint_prices
