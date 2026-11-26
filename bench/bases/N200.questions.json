@@ -1,0 +1,2390 @@
+[
+ {
+  "id": "B001",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P01",
+   "r000962"
+  ]
+ },
+ {
+  "id": "B002",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P01",
+   "r000344"
+  ]
+ },
+ {
+  "id": "B003",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P01",
+   "r000205"
+  ]
+ },
+ {
+  "id": "B004",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P01",
+   "r000371"
+  ]
+ },
+ {
+  "id": "B005",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P01",
+   "r000962"
+  ]
+ },
+ {
+  "id": "B006",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P01",
+   "r000344"
+  ]
+ },
+ {
+  "id": "B007",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P01",
+   "r001193"
+  ]
+ },
+ {
+  "id": "B008",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P01",
+   "r006287"
+  ]
+ },
+ {
+  "id": "B009",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P02",
+   "r000164"
+  ]
+ },
+ {
+  "id": "B010",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P02",
+   "r000673"
+  ]
+ },
+ {
+  "id": "B011",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P02",
+   "r000284"
+  ]
+ },
+ {
+  "id": "B012",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P02",
+   "r000644"
+  ]
+ },
+ {
+  "id": "B013",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P02",
+   "r004682"
+  ]
+ },
+ {
+  "id": "B014",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P02",
+   "r000440"
+  ]
+ },
+ {
+  "id": "B015",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P02",
+   "r000164"
+  ]
+ },
+ {
+  "id": "B016",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P02",
+   "r000673"
+  ]
+ },
+ {
+  "id": "B017",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P02",
+   "r000914"
+  ]
+ },
+ {
+  "id": "B018",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P02",
+   "r008658"
+  ]
+ },
+ {
+  "id": "B019",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P03",
+   "r000986"
+  ]
+ },
+ {
+  "id": "B020",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P03",
+   "r000259"
+  ]
+ },
+ {
+  "id": "B021",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P03",
+   "r000001"
+  ]
+ },
+ {
+  "id": "B022",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P03",
+   "r000493"
+  ]
+ },
+ {
+  "id": "B023",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P03",
+   "r000986"
+  ]
+ },
+ {
+  "id": "B024",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P03",
+   "r000259"
+  ]
+ },
+ {
+  "id": "B025",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P03",
+   "r001021"
+  ]
+ },
+ {
+  "id": "B026",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P03",
+   "r001265"
+  ]
+ },
+ {
+  "id": "B027",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P04",
+   "r002623"
+  ]
+ },
+ {
+  "id": "B028",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P04",
+   "r000157"
+  ]
+ },
+ {
+  "id": "B029",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P04",
+   "r000829"
+  ]
+ },
+ {
+  "id": "B030",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P04",
+   "r000102"
+  ]
+ },
+ {
+  "id": "B031",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P04",
+   "r002623"
+  ]
+ },
+ {
+  "id": "B032",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P04",
+   "r000157"
+  ]
+ },
+ {
+  "id": "B033",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P04",
+   "r000685"
+  ]
+ },
+ {
+  "id": "B034",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P04",
+   "r003032"
+  ]
+ },
+ {
+  "id": "B035",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P05",
+   "r000656"
+  ]
+ },
+ {
+  "id": "B036",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P05",
+   "r001036"
+  ]
+ },
+ {
+  "id": "B037",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P05",
+   "r000101"
+  ]
+ },
+ {
+  "id": "B038",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P05",
+   "r000385"
+  ]
+ },
+ {
+  "id": "B039",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P05",
+   "r000656"
+  ]
+ },
+ {
+  "id": "B040",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P05",
+   "r001036"
+  ]
+ },
+ {
+  "id": "B041",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P05",
+   "r001537"
+  ]
+ },
+ {
+  "id": "B042",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P05",
+   "r007253"
+  ]
+ },
+ {
+  "id": "B043",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P06",
+   "r000059"
+  ]
+ },
+ {
+  "id": "B044",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P06",
+   "r000700"
+  ]
+ },
+ {
+  "id": "B045",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P06",
+   "r000847"
+  ]
+ },
+ {
+  "id": "B046",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P06",
+   "r000036"
+  ]
+ },
+ {
+  "id": "B047",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P06",
+   "r000059"
+  ]
+ },
+ {
+  "id": "B048",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P06",
+   "r000700"
+  ]
+ },
+ {
+  "id": "B049",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P06",
+   "r000644"
+  ]
+ },
+ {
+  "id": "B050",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P06",
+   "r003980"
+  ]
+ },
+ {
+  "id": "B051",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P07",
+   "r000933"
+  ]
+ },
+ {
+  "id": "B052",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P07",
+   "r000435"
+  ]
+ },
+ {
+  "id": "B053",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P07",
+   "r000559"
+  ]
+ },
+ {
+  "id": "B054",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P07",
+   "r000254"
+  ]
+ },
+ {
+  "id": "B055",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P07",
+   "r002697"
+  ]
+ },
+ {
+  "id": "B056",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P07",
+   "r000379"
+  ]
+ },
+ {
+  "id": "B057",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P07",
+   "r000933"
+  ]
+ },
+ {
+  "id": "B058",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P07",
+   "r000435"
+  ]
+ },
+ {
+  "id": "B059",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P07",
+   "r000031"
+  ]
+ },
+ {
+  "id": "B060",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P07",
+   "r010032"
+  ]
+ },
+ {
+  "id": "B061",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P08",
+   "r000610"
+  ]
+ },
+ {
+  "id": "B062",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P08",
+   "r000227"
+  ]
+ },
+ {
+  "id": "B063",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P08",
+   "r001474"
+  ]
+ },
+ {
+  "id": "B064",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P08",
+   "r000159"
+  ]
+ },
+ {
+  "id": "B065",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P08",
+   "r000712"
+  ]
+ },
+ {
+  "id": "B066",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P08",
+   "r002471"
+  ]
+ },
+ {
+  "id": "B067",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P08",
+   "r000610"
+  ]
+ },
+ {
+  "id": "B068",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P08",
+   "r000227"
+  ]
+ },
+ {
+  "id": "B069",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P08",
+   "r000856"
+  ]
+ },
+ {
+  "id": "B070",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P08",
+   "r013102"
+  ]
+ },
+ {
+  "id": "B071",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P09",
+   "r000461"
+  ]
+ },
+ {
+  "id": "B072",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P09",
+   "r000453"
+  ]
+ },
+ {
+  "id": "B073",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P09",
+   "r000760"
+  ]
+ },
+ {
+  "id": "B074",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P09",
+   "r001063"
+  ]
+ },
+ {
+  "id": "B075",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P09",
+   "r000461"
+  ]
+ },
+ {
+  "id": "B076",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P09",
+   "r000453"
+  ]
+ },
+ {
+  "id": "B077",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P09",
+   "r000609"
+  ]
+ },
+ {
+  "id": "B078",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P09",
+   "r000666"
+  ]
+ },
+ {
+  "id": "B079",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P10",
+   "r000027"
+  ]
+ },
+ {
+  "id": "B080",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P10",
+   "r000385"
+  ]
+ },
+ {
+  "id": "B081",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P10",
+   "r000740"
+  ]
+ },
+ {
+  "id": "B082",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P10",
+   "r000569"
+  ]
+ },
+ {
+  "id": "B083",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P10",
+   "r000564"
+  ]
+ },
+ {
+  "id": "B084",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P10",
+   "r002124"
+  ]
+ },
+ {
+  "id": "B085",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P10",
+   "r000027"
+  ]
+ },
+ {
+  "id": "B086",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P10",
+   "r000385"
+  ]
+ },
+ {
+  "id": "B087",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P10",
+   "r000171"
+  ]
+ },
+ {
+  "id": "B088",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P10",
+   "r004707"
+  ]
+ },
+ {
+  "id": "B089",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P11",
+   "r000299"
+  ]
+ },
+ {
+  "id": "B090",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P11",
+   "r000359"
+  ]
+ },
+ {
+  "id": "B091",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P11",
+   "r000081"
+  ]
+ },
+ {
+  "id": "B092",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P11",
+   "r000613"
+  ]
+ },
+ {
+  "id": "B093",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P11",
+   "r000503"
+  ]
+ },
+ {
+  "id": "B094",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P11",
+   "r002015"
+  ]
+ },
+ {
+  "id": "B095",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P11",
+   "r000299"
+  ]
+ },
+ {
+  "id": "B096",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P11",
+   "r000359"
+  ]
+ },
+ {
+  "id": "B097",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P11",
+   "r001450"
+  ]
+ },
+ {
+  "id": "B098",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P11",
+   "r011923"
+  ]
+ },
+ {
+  "id": "B099",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P12",
+   "r000106"
+  ]
+ },
+ {
+  "id": "B100",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P12",
+   "r000041"
+  ]
+ },
+ {
+  "id": "B101",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P12",
+   "r003312"
+  ]
+ },
+ {
+  "id": "B102",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P12",
+   "r002364"
+  ]
+ },
+ {
+  "id": "B103",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P12",
+   "r000106"
+  ]
+ },
+ {
+  "id": "B104",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P12",
+   "r000041"
+  ]
+ },
+ {
+  "id": "B105",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P12",
+   "r000021"
+  ]
+ },
+ {
+  "id": "B106",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P12",
+   "r000900"
+  ]
+ },
+ {
+  "id": "B107",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P13",
+   "r000654"
+  ]
+ },
+ {
+  "id": "B108",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P13",
+   "r000194"
+  ]
+ },
+ {
+  "id": "B109",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P13",
+   "r000175"
+  ]
+ },
+ {
+  "id": "B110",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P13",
+   "r000855"
+  ]
+ },
+ {
+  "id": "B111",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P13",
+   "r003712"
+  ]
+ },
+ {
+  "id": "B112",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P13",
+   "r002058"
+  ]
+ },
+ {
+  "id": "B113",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P14",
+   "r000585"
+  ]
+ },
+ {
+  "id": "B114",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P14",
+   "r000242"
+  ]
+ },
+ {
+  "id": "B115",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P14",
+   "r001982"
+  ]
+ },
+ {
+  "id": "B116",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P14",
+   "r000960"
+  ]
+ },
+ {
+  "id": "B117",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P14",
+   "r000585"
+  ]
+ },
+ {
+  "id": "B118",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P14",
+   "r000242"
+  ]
+ },
+ {
+  "id": "B119",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P15",
+   "r001090"
+  ]
+ },
+ {
+  "id": "B120",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P15",
+   "r000285"
+  ]
+ },
+ {
+  "id": "B121",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P15",
+   "r001809"
+  ]
+ },
+ {
+  "id": "B122",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P15",
+   "r000621"
+  ]
+ },
+ {
+  "id": "B123",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P15",
+   "r000843"
+  ]
+ },
+ {
+  "id": "B124",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P15",
+   "r007023"
+  ]
+ },
+ {
+  "id": "B125",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P16",
+   "r000390"
+  ]
+ },
+ {
+  "id": "B126",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P16",
+   "r001182"
+  ]
+ },
+ {
+  "id": "B127",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P16",
+   "r000740"
+  ]
+ },
+ {
+  "id": "B128",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P16",
+   "r000336"
+  ]
+ },
+ {
+  "id": "B129",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P16",
+   "r002687"
+  ]
+ },
+ {
+  "id": "B130",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P16",
+   "r001296"
+  ]
+ },
+ {
+  "id": "B131",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P16",
+   "r000390"
+  ]
+ },
+ {
+  "id": "B132",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P16",
+   "r001182"
+  ]
+ },
+ {
+  "id": "B133",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P17",
+   "r000893"
+  ]
+ },
+ {
+  "id": "B134",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P17",
+   "r000044"
+  ]
+ },
+ {
+  "id": "B135",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P17",
+   "r000076"
+  ]
+ },
+ {
+  "id": "B136",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P17",
+   "r007010"
+  ]
+ },
+ {
+  "id": "B137",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P17",
+   "r000893"
+  ]
+ },
+ {
+  "id": "B138",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P17",
+   "r000044"
+  ]
+ },
+ {
+  "id": "B139",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P18",
+   "r002295"
+  ]
+ },
+ {
+  "id": "B140",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P18",
+   "r000474"
+  ]
+ },
+ {
+  "id": "B141",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P18",
+   "r000630"
+  ]
+ },
+ {
+  "id": "B142",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P18",
+   "r000328"
+  ]
+ },
+ {
+  "id": "B143",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P18",
+   "r001142"
+  ]
+ },
+ {
+  "id": "B144",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P18",
+   "r006536"
+  ]
+ },
+ {
+  "id": "B145",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P19",
+   "r000566"
+  ]
+ },
+ {
+  "id": "B146",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P19",
+   "r000164"
+  ]
+ },
+ {
+  "id": "B147",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P19",
+   "r002964"
+  ]
+ },
+ {
+  "id": "B148",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P19",
+   "r001945"
+  ]
+ },
+ {
+  "id": "B149",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P19",
+   "r000566"
+  ]
+ },
+ {
+  "id": "B150",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P19",
+   "r000164"
+  ]
+ },
+ {
+  "id": "B151",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P20",
+   "r000310"
+  ]
+ },
+ {
+  "id": "B152",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P20",
+   "r000479"
+  ]
+ },
+ {
+  "id": "B153",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P20",
+   "r000638"
+  ]
+ },
+ {
+  "id": "B154",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P20",
+   "r002676"
+  ]
+ },
+ {
+  "id": "B155",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P20",
+   "r000913"
+  ]
+ },
+ {
+  "id": "B156",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P20",
+   "r000695"
+  ]
+ },
+ {
+  "id": "B157",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P21",
+   "r000814"
+  ]
+ },
+ {
+  "id": "B158",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P21",
+   "r000539"
+  ]
+ },
+ {
+  "id": "B159",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P21",
+   "r000027"
+  ]
+ },
+ {
+  "id": "B160",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P21",
+   "r000623"
+  ]
+ },
+ {
+  "id": "B161",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P21",
+   "r003092"
+  ]
+ },
+ {
+  "id": "B162",
+  "kind": "decide",
+  "goal": [
+   "programme_limit_ok",
+   "P21",
+   "r002108"
+  ]
+ },
+ {
+  "id": "B163",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P21",
+   "r000814"
+  ]
+ },
+ {
+  "id": "B164",
+  "kind": "decide",
+  "goal": [
+   "programme_cleared",
+   "P21",
+   "r000539"
+  ]
+ },
+ {
+  "id": "B165",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K01",
+   "r001129"
+  ]
+ },
+ {
+  "id": "B166",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K01",
+   "r000774"
+  ]
+ },
+ {
+  "id": "B167",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K01",
+   "r000136"
+  ]
+ },
+ {
+  "id": "B168",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K02",
+   "r000174"
+  ]
+ },
+ {
+  "id": "B169",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K02",
+   "r000542"
+  ]
+ },
+ {
+  "id": "B170",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K02",
+   "r000289"
+  ]
+ },
+ {
+  "id": "B171",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K03",
+   "r001922"
+  ]
+ },
+ {
+  "id": "B172",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K03",
+   "r000288"
+  ]
+ },
+ {
+  "id": "B173",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K03",
+   "r000013"
+  ]
+ },
+ {
+  "id": "B174",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K04",
+   "r000196"
+  ]
+ },
+ {
+  "id": "B175",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K04",
+   "r000735"
+  ]
+ },
+ {
+  "id": "B176",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K04",
+   "r000119"
+  ]
+ },
+ {
+  "id": "B177",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K05",
+   "r000424"
+  ]
+ },
+ {
+  "id": "B178",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K05",
+   "r000805"
+  ]
+ },
+ {
+  "id": "B179",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K05",
+   "r000043"
+  ]
+ },
+ {
+  "id": "B180",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K06",
+   "r000087"
+  ]
+ },
+ {
+  "id": "B181",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K06",
+   "r000021"
+  ]
+ },
+ {
+  "id": "B182",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K06",
+   "r000257"
+  ]
+ },
+ {
+  "id": "B183",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K07",
+   "r000424"
+  ]
+ },
+ {
+  "id": "B184",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K07",
+   "r000136"
+  ]
+ },
+ {
+  "id": "B185",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K07",
+   "r000194"
+  ]
+ },
+ {
+  "id": "B186",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K08",
+   "r000209"
+  ]
+ },
+ {
+  "id": "B187",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K08",
+   "r000428"
+  ]
+ },
+ {
+  "id": "B188",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K08",
+   "r000142"
+  ]
+ },
+ {
+  "id": "B189",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K09",
+   "r001150"
+  ]
+ },
+ {
+  "id": "B190",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K09",
+   "r000792"
+  ]
+ },
+ {
+  "id": "B191",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K09",
+   "r000076"
+  ]
+ },
+ {
+  "id": "B192",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K10",
+   "r000886"
+  ]
+ },
+ {
+  "id": "B193",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K10",
+   "r001504"
+  ]
+ },
+ {
+  "id": "B194",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K10",
+   "r000064"
+  ]
+ },
+ {
+  "id": "B195",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K11",
+   "r000424"
+  ]
+ },
+ {
+  "id": "B196",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K11",
+   "r000284"
+  ]
+ },
+ {
+  "id": "B197",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K11",
+   "r000336"
+  ]
+ },
+ {
+  "id": "B198",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K12",
+   "r000867"
+  ]
+ },
+ {
+  "id": "B199",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K12",
+   "r001199"
+  ]
+ },
+ {
+  "id": "B200",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K12",
+   "r000229"
+  ]
+ },
+ {
+  "id": "B201",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K13",
+   "r000829"
+  ]
+ },
+ {
+  "id": "B202",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K13",
+   "r000534"
+  ]
+ },
+ {
+  "id": "B203",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K13",
+   "r000055"
+  ]
+ },
+ {
+  "id": "B204",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K14",
+   "r000755"
+  ]
+ },
+ {
+  "id": "B205",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K14",
+   "r000696"
+  ]
+ },
+ {
+  "id": "B206",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K14",
+   "r000194"
+  ]
+ },
+ {
+  "id": "B207",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K15",
+   "r000299"
+  ]
+ },
+ {
+  "id": "B208",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K15",
+   "r000389"
+  ]
+ },
+ {
+  "id": "B209",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K15",
+   "r000146"
+  ]
+ },
+ {
+  "id": "B210",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K16",
+   "r000553"
+  ]
+ },
+ {
+  "id": "B211",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K16",
+   "r000893"
+  ]
+ },
+ {
+  "id": "B212",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K16",
+   "r000191"
+  ]
+ },
+ {
+  "id": "B213",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K17",
+   "r000029"
+  ]
+ },
+ {
+  "id": "B214",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K17",
+   "r000403"
+  ]
+ },
+ {
+  "id": "B215",
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "K17",
+   "r000236"
+  ]
+ },
+ {
+  "id": "B216",
+  "kind": "decide",
+  "goal": [
+   "perk",
+   "D01",
+   "e042"
+  ]
+ },
+ {
+  "id": "B217",
+  "kind": "decide",
+  "goal": [
+   "perk",
+   "D01",
+   "e10000"
+  ]
+ },
+ {
+  "id": "B218",
+  "kind": "decide",
+  "goal": [
+   "centre_tag",
+   "D02",
+   "cc0004"
+  ]
+ },
+ {
+  "id": "B219",
+  "kind": "decide",
+  "goal": [
+   "centre_tag",
+   "D02",
+   "cc0322"
+  ]
+ },
+ {
+  "id": "B220",
+  "kind": "decide",
+  "goal": [
+   "centre_tag",
+   "D03",
+   "cc0338"
+  ]
+ },
+ {
+  "id": "B221",
+  "kind": "decide",
+  "goal": [
+   "centre_tag",
+   "D03",
+   "cc0015"
+  ]
+ },
+ {
+  "id": "B222",
+  "kind": "decide",
+  "goal": [
+   "perk",
+   "D04",
+   "e10032"
+  ]
+ },
+ {
+  "id": "B223",
+  "kind": "decide",
+  "goal": [
+   "perk",
+   "D04",
+   "e003"
+  ]
+ },
+ {
+  "id": "B224",
+  "kind": "decide",
+  "goal": [
+   "perk",
+   "D05",
+   "e003"
+  ]
+ },
+ {
+  "id": "B225",
+  "kind": "decide",
+  "goal": [
+   "perk",
+   "D05",
+   "e013"
+  ]
+ },
+ {
+  "id": "B226",
+  "kind": "decide",
+  "goal": [
+   "perk",
+   "D06",
+   "e1021"
+  ]
+ },
+ {
+  "id": "B227",
+  "kind": "decide",
+  "goal": [
+   "perk",
+   "D06",
+   "e034"
+  ]
+ },
+ {
+  "id": "B228",
+  "kind": "claim",
+  "asset": "vendor:dyne",
+  "claim": "H13"
+ },
+ {
+  "id": "B229",
+  "kind": "claim",
+  "asset": "vendor:dyne",
+  "claim": "H13",
+  "as_of": "2026-06-30"
+ },
+ {
+  "id": "B230",
+  "kind": "claim",
+  "asset": "vendor:acme",
+  "claim": "H14"
+ },
+ {
+  "id": "B231",
+  "kind": "claim",
+  "asset": "vendor:acme",
+  "claim": "H15"
+ },
+ {
+  "id": "B232",
+  "kind": "claim",
+  "asset": "vendor:acme",
+  "claim": "H15",
+  "as_of": "2026-08-09"
+ },
+ {
+  "id": "B233",
+  "kind": "claim",
+  "asset": "vendor:dyne",
+  "claim": "H16"
+ },
+ {
+  "id": "B234",
+  "kind": "claim",
+  "asset": "vendor:acme",
+  "claim": "H17"
+ },
+ {
+  "id": "B235",
+  "kind": "claim",
+  "asset": "vendor:acme",
+  "claim": "H17",
+  "as_of": "2026-08-09"
+ },
+ {
+  "id": "B236",
+  "kind": "claim",
+  "asset": "vendor:acme",
+  "claim": "H18"
+ },
+ {
+  "id": "B237",
+  "kind": "claim",
+  "asset": "vendor:cog",
+  "claim": "H19"
+ },
+ {
+  "id": "B238",
+  "kind": "claim",
+  "asset": "vendor:cog",
+  "claim": "H19",
+  "as_of": "2026-06-30"
+ },
+ {
+  "id": "B239",
+  "kind": "claim",
+  "asset": "vendor:edge",
+  "claim": "H20"
+ },
+ {
+  "id": "B240",
+  "kind": "claim",
+  "asset": "vendor:edge",
+  "claim": "H21"
+ },
+ {
+  "id": "B241",
+  "kind": "claim",
+  "asset": "vendor:edge",
+  "claim": "H21",
+  "as_of": "2026-06-30"
+ },
+ {
+  "id": "B242",
+  "kind": "claim",
+  "asset": "vendor:cog",
+  "claim": "H22"
+ },
+ {
+  "id": "B243",
+  "kind": "claim",
+  "asset": "vendor:edge",
+  "claim": "H23"
+ },
+ {
+  "id": "B244",
+  "kind": "claim",
+  "asset": "vendor:edge",
+  "claim": "H23",
+  "as_of": "2026-08-09"
+ },
+ {
+  "id": "B245",
+  "kind": "claim",
+  "asset": "vendor:fern",
+  "claim": "H24"
+ },
+ {
+  "id": "B246",
+  "kind": "claim",
+  "asset": "vendor:fern",
+  "claim": "H25"
+ },
+ {
+  "id": "B247",
+  "kind": "claim",
+  "asset": "vendor:fern",
+  "claim": "H25",
+  "as_of": "2026-08-09"
+ },
+ {
+  "id": "B248",
+  "kind": "claim",
+  "asset": "vendor:acme",
+  "claim": "H26"
+ },
+ {
+  "id": "B249",
+  "kind": "claim",
+  "asset": "vendor:acme",
+  "claim": "H27"
+ },
+ {
+  "id": "B250",
+  "kind": "claim",
+  "asset": "vendor:acme",
+  "claim": "H27",
+  "as_of": "2026-06-30"
+ },
+ {
+  "id": "B251",
+  "kind": "claim",
+  "asset": "vendor:bolt",
+  "claim": "H28"
+ },
+ {
+  "id": "B252",
+  "kind": "claim",
+  "asset": "vendor:bolt",
+  "claim": "H29"
+ },
+ {
+  "id": "B253",
+  "kind": "claim",
+  "asset": "vendor:bolt",
+  "claim": "H29",
+  "as_of": "2026-08-09"
+ },
+ {
+  "id": "B254",
+  "kind": "claim",
+  "asset": "vendor:bolt",
+  "claim": "H1.1"
+ },
+ {
+  "id": "B255",
+  "kind": "decide",
+  "goal": [
+   "export_licensed",
+   "X01",
+   "bolt"
+  ]
+ },
+ {
+  "id": "B256",
+  "kind": "claim",
+  "asset": "vendor:fern",
+  "claim": "H2.1"
+ },
+ {
+  "id": "B257",
+  "kind": "decide",
+  "goal": [
+   "data_protection_ok",
+   "X02",
+   "fern"
+  ]
+ },
+ {
+  "id": "B258",
+  "kind": "claim",
+  "asset": "vendor:bolt",
+  "claim": "H3.1"
+ },
+ {
+  "id": "B259",
+  "kind": "decide",
+  "goal": [
+   "export_licensed",
+   "X03",
+   "bolt"
+  ]
+ },
+ {
+  "id": "B260",
+  "kind": "claim",
+  "asset": "vendor:edge",
+  "claim": "H4.1"
+ },
+ {
+  "id": "B261",
+  "kind": "decide",
+  "goal": [
+   "data_protection_ok",
+   "X04",
+   "edge"
+  ]
+ },
+ {
+  "id": "B262",
+  "kind": "claim",
+  "asset": "vendor:bolt",
+  "claim": "H5.1"
+ },
+ {
+  "id": "B263",
+  "kind": "decide",
+  "goal": [
+   "export_licensed",
+   "X05",
+   "bolt"
+  ]
+ },
+ {
+  "id": "B264",
+  "kind": "claim",
+  "asset": "vendor:edge",
+  "claim": "H6.1"
+ },
+ {
+  "id": "B265",
+  "kind": "decide",
+  "goal": [
+   "data_protection_ok",
+   "X06",
+   "edge"
+  ]
+ },
+ {
+  "id": "B266",
+  "kind": "claim",
+  "asset": "vendor:cog",
+  "claim": "H7.1"
+ },
+ {
+  "id": "B267",
+  "kind": "decide",
+  "goal": [
+   "export_licensed",
+   "X07",
+   "cog"
+  ]
+ },
+ {
+  "id": "B268",
+  "kind": "claim",
+  "asset": "vendor:edge",
+  "claim": "H8.1"
+ },
+ {
+  "id": "B269",
+  "kind": "decide",
+  "goal": [
+   "data_protection_ok",
+   "X08",
+   "edge"
+  ]
+ },
+ {
+  "id": "B270",
+  "kind": "claim",
+  "asset": "vendor:fern",
+  "claim": "H9.1"
+ },
+ {
+  "id": "B271",
+  "kind": "decide",
+  "goal": [
+   "export_licensed",
+   "X09",
+   "fern"
+  ]
+ },
+ {
+  "id": "B272",
+  "kind": "claim",
+  "asset": "vendor:dyne",
+  "claim": "H10.1"
+ },
+ {
+  "id": "B273",
+  "kind": "decide",
+  "goal": [
+   "data_protection_ok",
+   "X10",
+   "dyne"
+  ]
+ },
+ {
+  "id": "B274",
+  "kind": "claim",
+  "asset": "vendor:fern",
+  "claim": "H11.1"
+ },
+ {
+  "id": "B275",
+  "kind": "decide",
+  "goal": [
+   "export_licensed",
+   "X11",
+   "fern"
+  ]
+ },
+ {
+  "id": "B276",
+  "kind": "claim",
+  "asset": "vendor:edge",
+  "claim": "H12.1"
+ },
+ {
+  "id": "B277",
+  "kind": "decide",
+  "goal": [
+   "data_protection_ok",
+   "X12",
+   "edge"
+  ]
+ }
+]

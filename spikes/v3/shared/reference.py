@@ -3,6 +3,7 @@ plain Python over the detail data, without any rule interpreter, the concept bin
 
   python spikes/v3/shared/reference.py               # -> shared/keys.json
   python spikes/v3/shared/reference.py --mutate      # flipped comparisons -> stdout (mutation test)
+  python spikes/v3/shared/reference.py --bench bench/bases/N050 ...   # benchmark family keys -> N050.keys.json
 
 Reads slice.edn only for constants a reader of the docs would also read (today, claims, terms,
 functional predicates); every rule is a Python function below. Data: a full load of DuckDB (the
@@ -635,9 +636,102 @@ def keys(mutate=False):
     return out
 
 
+# ---------------------------------------------------------------------------- benchmark families (PLAN-v3-bench §2)
+# Hand-written from the documented meaning of each family: the parameters in bench/bases/N*.params.json, which
+# bench/gen.py writes beside the rule docs; never from the EDN. The slice reference answers the slice predicates the
+# families read (vendor_cleared). Generated predicates are never covered (the request concept is not complete), so a
+# false is CLOSED exactly when no supporter of the instance was live (SEMANTICS.md, Qualifier).
+class Bench(Ref):
+    def __init__(self, S, X, params, claims):
+        super().__init__(S, X)
+        self.B = params
+        for c in claims:
+            self.claims[c["id"]] = c
+        import duckdb
+        con = duckdb.connect(str(HERE / "slice.duckdb"), read_only=True)
+        self.unit = dict(con.execute("SELECT id, org_unit FROM cc").fetchall())
+        self.prog = {p["code"]: p for p in params["programmes"]}
+        self.disp = {d["code"]: d for d in params["disputes"]}
+        self.dist = {d["code"]: d for d in params["distractor_rules"]}
+
+    def sup(self, a, b, r313=True):                    # one authority order per predicate (the export licence rule)
+        o = self.B.get("superiority")
+        A, Bc = self.claims[a], self.claims[b]
+        lit = plain(A["assertion"]); pred = lit[1][0] if lit[0] == "neg" else lit[0]
+        x, y = kw(A["asserted_by"]), kw(Bc["asserted_by"])
+        if o and pred == o["pred"] and x != y and x in o["order"] and y in o["order"]:
+            return o["order"].index(x) < o["order"].index(y)
+        return super().sup(a, b, r313)
+
+    def limit_ok(self, P, r):
+        """-> the version that admits r, or None"""
+        p, q = self.prog[P], self.req[r]
+        return next((v["id"] for v in p["versions"] if q["category"] == p["category"]
+                     and v["valid_from"] <= q["date"] <= v["valid_to"] and q["amount"] <= v["limit"]), None)
+
+    def decide(self, g):
+        p, A = g[0], lambda v, core, qual=None: dict(status="ANSWER", value=v, sides=None, core=core, qualifier=qual)
+        if p == "programme_limit_ok":
+            v = self.limit_ok(g[1], g[2])
+            return A(True, [v]) if v else A(False, [x["id"] for x in self.prog[g[1]]["versions"]], CLOSED)
+        if p == "programme_cleared":
+            P, r = g[1], g[2]
+            c, q, ok = self.prog[P]["clearance"], self.req[r], self.limit_ok(P, r)
+            e = c["exception"] and q["vendor"] == c["exception"]["vendor"]          # the exception's body holds
+            x = bool(c["counter"]) and e and q["emergency"] and ok                      # the counter-exception's body holds
+            live = ([c["base"]] if ok and self.vendor_cleared(r)[0] else []) + ([c["counter"]["id"]] if x else [])
+            if not live:
+                return A(False, [c["base"]] + ([c["counter"]["id"]] if c["counter"] else []), CLOSED)
+            if not e:
+                return A(True, live)
+            if x:                                       # the counter-exception beats the exception
+                return A(True, [c["counter"]["id"]])
+            return A(False, [c["exception"]["id"]])     # the exception beats the base rule
+        if p == "capitalised":
+            d, q = self.disp[g[1]], self.req[g[2]]
+            yes = q["category"] == d["category"] and q["amount"] >= d["for"]["min"]
+            no = q["category"] == d["category"] and q["amount"] < d["against"]["below"]
+            s, a = d["for"]["id"], d["against"]["id"]
+            if not yes: return A(False, [s], CLOSED)
+            if not no or d["superior"] == "for": return A(True, [s])
+            if d["superior"] == "against": return A(False, [a])
+            return dict(status="CONFLICT", value=None, sides=[[s], [a]], core=[s, a], qualifier=None)
+        if p in ("perk", "centre_tag"):
+            d = self.dist[g[1]]
+            hit = self.emp[g[2]]["role"] == d["role"] if p == "perk" else self.unit[g[2]] == d["org_unit"]
+            return A(True, [d["id"]]) if hit else A(False, [d["id"]], CLOSED)
+        st, S_, B_ = self.literal(g, self.today)               # claims-only predicates
+        if st == "proven": return A(True, S_)
+        if st == "rebutted": return A(False, B_)
+        if st == "contested": return dict(status="CONFLICT", value=None, sides=sorted([sorted(S_), sorted(B_)]), core=S_ + B_, qualifier=None)
+        return A(False, [], CLOSED)
+
+    def answer(self, q):
+        if q["kind"] == "claim":
+            return self.standing(q["claim"], q.get("as_of") or self.today)
+        return self.decide(q["goal"])
+
+
+def bench_keys(stem):
+    """bench/bases/N*.{params,questions}.json + the base's claims -> keys per question"""
+    stem = pathlib.Path(stem)
+    S, X, _ = load()
+    base = plain(E.loads(stem.with_suffix(".edn").read_text()))
+    ours = {c["id"] for c in S["claims"]}
+    R = Bench(S, X, json.loads(stem.with_suffix(".params.json").read_text()), [c for c in base["claims"] if c["id"] not in ours])
+    return {q["id"]: R.answer(q) for q in json.loads(stem.with_suffix(".questions.json").read_text())}
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(); ap.add_argument("--mutate", action="store_true")
+    ap.add_argument("--bench", nargs="+", metavar="STEM", help="bench bases (e.g. bench/bases/N050) -> STEM.keys.json")
     a = ap.parse_args()
+    if a.bench:
+        for st in a.bench:
+            k = bench_keys(st)
+            pathlib.Path(st + ".keys.json").write_text(json.dumps(k, indent=1, sort_keys=True) + "\n")
+            print(st, len(k), "keys")
+        sys.exit(0)
     k = keys(a.mutate)
     if a.mutate:
         json.dump(k, sys.stdout, indent=1, sort_keys=True)

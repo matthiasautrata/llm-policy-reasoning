@@ -1,0 +1,46 @@
+{
+ "seed": 1,
+ "n": 25,
+ "density": 20,
+ "distractors": 0.3,
+ "programmes": [],
+ "disputes": [],
+ "distractor_rules": [],
+ "claim_trees": [],
+ "claim_disputes": [],
+ "superiority": null,
+ "report": {
+  "rules": 25,
+  "claims": 14,
+  "generated_rules": 0,
+  "generated_claims": 0,
+  "interactions": 4,
+  "density_per_100": 16.0,
+  "distractor_share": 0.0,
+  "questions": 0,
+  "union_all": [
+   {
+    "concept": "request",
+    "columns": [
+     "category",
+     "id"
+    ],
+    "constants": [
+     "category=capital",
+     "category=software"
+    ],
+    "rules": [
+     "R112",
+     "R311"
+    ],
+    "predicates": [
+     "approved",
+     "approved_count",
+     "approved_total",
+     "po_issued"
+    ],
+    "generated": false
+   }
+  ]
+ }
+}

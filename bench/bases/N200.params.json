@@ -1,0 +1,2205 @@
+{
+ "seed": 1,
+ "n": 200,
+ "density": 20,
+ "distractors": 0.3,
+ "programmes": [
+  {
+   "code": "P01",
+   "name": "cloud tooling",
+   "owner": "procurement",
+   "category": "services",
+   "versions": [
+    {
+     "id": "G036",
+     "valid_from": "2026-01-01",
+     "valid_to": "2026-06-30",
+     "limit": 8000
+    },
+    {
+     "id": "G037",
+     "valid_from": "2026-07-01",
+     "valid_to": "2026-12-31",
+     "limit": 60000
+    }
+   ],
+   "clearance": {
+    "base": "G038",
+    "exception": {
+     "id": "G039",
+     "owner": "compliance",
+     "vendor": "dyne"
+    },
+    "counter": {
+     "id": "G040"
+    }
+   }
+  },
+  {
+   "code": "P02",
+   "name": "lab equipment",
+   "owner": "marketing",
+   "category": "capital",
+   "versions": [
+    {
+     "id": "G041",
+     "valid_from": "2026-01-01",
+     "valid_to": "2026-07-31",
+     "limit": 30000
+    },
+    {
+     "id": "G042",
+     "valid_from": "2026-08-01",
+     "valid_to": "2026-08-31",
+     "limit": 20000
+    },
+    {
+     "id": "G043",
+     "valid_from": "2026-09-01",
+     "valid_to": "2026-12-31",
+     "limit": 12000
+    }
+   ],
+   "clearance": {
+    "base": "G044",
+    "exception": {
+     "id": "G045",
+     "owner": "legal",
+     "vendor": "acme"
+    },
+    "counter": null
+   }
+  },
+  {
+   "code": "P03",
+   "name": "field services",
+   "owner": "finance",
+   "category": "software",
+   "versions": [
+    {
+     "id": "G046",
+     "valid_from": "2026-01-01",
+     "valid_to": "2026-06-30",
+     "limit": 12000
+    },
+    {
+     "id": "G047",
+     "valid_from": "2026-07-01",
+     "valid_to": "2026-12-31",
+     "limit": 45000
+    }
+   ],
+   "clearance": {
+    "base": "G048",
+    "exception": {
+     "id": "G049",
+     "owner": "risk",
+     "vendor": "acme"
+    },
+    "counter": {
+     "id": "G050"
+    }
+   }
+  },
+  {
+   "code": "P04",
+   "name": "office refit",
+   "owner": "operations",
+   "category": "software",
+   "versions": [
+    {
+     "id": "G051",
+     "valid_from": "2026-01-01",
+     "valid_to": "2026-06-30",
+     "limit": 8000
+    },
+    {
+     "id": "G052",
+     "valid_from": "2026-07-01",
+     "valid_to": "2026-12-31",
+     "limit": 8000
+    }
+   ],
+   "clearance": {
+    "base": "G053",
+    "exception": {
+     "id": "G054",
+     "owner": "compliance",
+     "vendor": "edge"
+    },
+    "counter": null
+   }
+  },
+  {
+   "code": "P05",
+   "name": "fleet renewal",
+   "owner": "marketing",
+   "category": "capital",
+   "versions": [
+    {
+     "id": "G055",
+     "valid_from": "2026-01-01",
+     "valid_to": "2026-06-30",
+     "limit": 20000
+    },
+    {
+     "id": "G056",
+     "valid_from": "2026-07-01",
+     "valid_to": "2026-12-31",
+     "limit": 60000
+    }
+   ],
+   "clearance": {
+    "base": "G057",
+    "exception": {
+     "id": "G058",
+     "owner": "risk",
+     "vendor": "edge"
+    },
+    "counter": {
+     "id": "G059"
+    }
+   }
+  },
+  {
+   "code": "P06",
+   "name": "training",
+   "owner": "it",
+   "category": "capital",
+   "versions": [
+    {
+     "id": "G060",
+     "valid_from": "2026-01-01",
+     "valid_to": "2026-08-31",
+     "limit": 45000
+    },
+    {
+     "id": "G061",
+     "valid_from": "2026-09-01",
+     "valid_to": "2026-12-31",
+     "limit": 12000
+    }
+   ],
+   "clearance": {
+    "base": "G062",
+    "exception": {
+     "id": "G063",
+     "owner": "legal",
+     "vendor": "edge"
+    },
+    "counter": null
+   }
+  },
+  {
+   "code": "P07",
+   "name": "events",
+   "owner": "it",
+   "category": "software",
+   "versions": [
+    {
+     "id": "G064",
+     "valid_from": "2026-01-01",
+     "valid_to": "2026-06-30",
+     "limit": 60000
+    },
+    {
+     "id": "G065",
+     "valid_from": "2026-07-01",
+     "valid_to": "2026-07-31",
+     "limit": 12000
+    },
+    {
+     "id": "G066",
+     "valid_from": "2026-08-01",
+     "valid_to": "2026-12-31",
+     "limit": 8000
+    }
+   ],
+   "clearance": {
+    "base": "G067",
+    "exception": {
+     "id": "G068",
+     "owner": "risk",
+     "vendor": "edge"
+    },
+    "counter": {
+     "id": "G069"
+    }
+   }
+  },
+  {
+   "code": "P08",
+   "name": "security tooling",
+   "owner": "finance",
+   "category": "services",
+   "versions": [
+    {
+     "id": "G070",
+     "valid_from": "2026-01-01",
+     "valid_to": "2026-07-31",
+     "limit": 12000
+    },
+    {
+     "id": "G071",
+     "valid_from": "2026-08-01",
+     "valid_to": "2026-08-31",
+     "limit": 8000
+    },
+    {
+     "id": "G072",
+     "valid_from": "2026-09-01",
+     "valid_to": "2026-12-31",
+     "limit": 45000
+    }
+   ],
+   "clearance": {
+    "base": "G073",
+    "exception": {
+     "id": "G074",
+     "owner": "compliance",
+     "vendor": "dyne"
+    },
+    "counter": null
+   }
+  },
+  {
+   "code": "P09",
+   "name": "data licences",
+   "owner": "procurement",
+   "category": "software",
+   "versions": [
+    {
+     "id": "G075",
+     "valid_from": "2026-01-01",
+     "valid_to": "2026-07-31",
+     "limit": 60000
+    },
+    {
+     "id": "G076",
+     "valid_from": "2026-08-01",
+     "valid_to": "2026-12-31",
+     "limit": 45000
+    }
+   ],
+   "clearance": {
+    "base": "G077",
+    "exception": {
+     "id": "G078",
+     "owner": "risk",
+     "vendor": "edge"
+    },
+    "counter": {
+     "id": "G079"
+    }
+   }
+  },
+  {
+   "code": "P10",
+   "name": "consulting",
+   "owner": "finance",
+   "category": "capital",
+   "versions": [
+    {
+     "id": "G080",
+     "valid_from": "2026-01-01",
+     "valid_to": "2026-07-31",
+     "limit": 60000
+    },
+    {
+     "id": "G081",
+     "valid_from": "2026-08-01",
+     "valid_to": "2026-08-31",
+     "limit": 60000
+    },
+    {
+     "id": "G082",
+     "valid_from": "2026-09-01",
+     "valid_to": "2026-12-31",
+     "limit": 30000
+    }
+   ],
+   "clearance": {
+    "base": "G083",
+    "exception": {
+     "id": "G084",
+     "owner": "compliance",
+     "vendor": "bolt"
+    },
+    "counter": null
+   }
+  },
+  {
+   "code": "P11",
+   "name": "print and post",
+   "owner": "it",
+   "category": "hardware",
+   "versions": [
+    {
+     "id": "G085",
+     "valid_from": "2026-01-01",
+     "valid_to": "2026-07-31",
+     "limit": 12000
+    },
+    {
+     "id": "G086",
+     "valid_from": "2026-08-01",
+     "valid_to": "2026-08-31",
+     "limit": 45000
+    },
+    {
+     "id": "G087",
+     "valid_from": "2026-09-01",
+     "valid_to": "2026-12-31",
+     "limit": 30000
+    }
+   ],
+   "clearance": {
+    "base": "G088",
+    "exception": {
+     "id": "G089",
+     "owner": "legal",
+     "vendor": "edge"
+    },
+    "counter": {
+     "id": "G090"
+    }
+   }
+  },
+  {
+   "code": "P12",
+   "name": "test rigs",
+   "owner": "marketing",
+   "category": "hardware",
+   "versions": [
+    {
+     "id": "G091",
+     "valid_from": "2026-01-01",
+     "valid_to": "2026-08-31",
+     "limit": 12000
+    },
+    {
+     "id": "G092",
+     "valid_from": "2026-09-01",
+     "valid_to": "2026-12-31",
+     "limit": 20000
+    }
+   ],
+   "clearance": {
+    "base": "G093",
+    "exception": {
+     "id": "G094",
+     "owner": "risk",
+     "vendor": "bolt"
+    },
+    "counter": null
+   }
+  },
+  {
+   "code": "P13",
+   "name": "site maintenance",
+   "owner": "it",
+   "category": "capital",
+   "versions": [
+    {
+     "id": "G095",
+     "valid_from": "2026-01-01",
+     "valid_to": "2026-07-31",
+     "limit": 20000
+    },
+    {
+     "id": "G096",
+     "valid_from": "2026-08-01",
+     "valid_to": "2026-08-31",
+     "limit": 30000
+    },
+    {
+     "id": "G097",
+     "valid_from": "2026-09-01",
+     "valid_to": "2026-12-31",
+     "limit": 20000
+    }
+   ],
+   "clearance": null
+  },
+  {
+   "code": "P14",
+   "name": "developer laptops",
+   "owner": "finance",
+   "category": "hardware",
+   "versions": [
+    {
+     "id": "G098",
+     "valid_from": "2026-01-01",
+     "valid_to": "2026-08-31",
+     "limit": 12000
+    },
+    {
+     "id": "G099",
+     "valid_from": "2026-09-01",
+     "valid_to": "2026-12-31",
+     "limit": 12000
+    }
+   ],
+   "clearance": {
+    "base": "G100",
+    "exception": null,
+    "counter": null
+   }
+  },
+  {
+   "code": "P15",
+   "name": "network upgrade",
+   "owner": "finance",
+   "category": "software",
+   "versions": [
+    {
+     "id": "G101",
+     "valid_from": "2026-01-01",
+     "valid_to": "2026-07-31",
+     "limit": 8000
+    },
+    {
+     "id": "G102",
+     "valid_from": "2026-08-01",
+     "valid_to": "2026-08-31",
+     "limit": 20000
+    },
+    {
+     "id": "G103",
+     "valid_from": "2026-09-01",
+     "valid_to": "2026-12-31",
+     "limit": 60000
+    }
+   ],
+   "clearance": null
+  },
+  {
+   "code": "P16",
+   "name": "translation",
+   "owner": "operations",
+   "category": "capital",
+   "versions": [
+    {
+     "id": "G104",
+     "valid_from": "2026-01-01",
+     "valid_to": "2026-07-31",
+     "limit": 45000
+    },
+    {
+     "id": "G105",
+     "valid_from": "2026-08-01",
+     "valid_to": "2026-08-31",
+     "limit": 20000
+    },
+    {
+     "id": "G106",
+     "valid_from": "2026-09-01",
+     "valid_to": "2026-12-31",
+     "limit": 12000
+    }
+   ],
+   "clearance": {
+    "base": "G107",
+    "exception": null,
+    "counter": null
+   }
+  },
+  {
+   "code": "P17",
+   "name": "catering",
+   "owner": "facilities",
+   "category": "software",
+   "versions": [
+    {
+     "id": "G108",
+     "valid_from": "2026-01-01",
+     "valid_to": "2026-08-31",
+     "limit": 8000
+    },
+    {
+     "id": "G109",
+     "valid_from": "2026-09-01",
+     "valid_to": "2026-12-31",
+     "limit": 60000
+    }
+   ],
+   "clearance": {
+    "base": "G110",
+    "exception": null,
+    "counter": null
+   }
+  },
+  {
+   "code": "P18",
+   "name": "recruiting",
+   "owner": "finance",
+   "category": "services",
+   "versions": [
+    {
+     "id": "G111",
+     "valid_from": "2026-01-01",
+     "valid_to": "2026-06-30",
+     "limit": 8000
+    },
+    {
+     "id": "G112",
+     "valid_from": "2026-07-01",
+     "valid_to": "2026-08-31",
+     "limit": 8000
+    },
+    {
+     "id": "G113",
+     "valid_from": "2026-09-01",
+     "valid_to": "2026-12-31",
+     "limit": 60000
+    }
+   ],
+   "clearance": null
+  },
+  {
+   "code": "P19",
+   "name": "archive digitisation",
+   "owner": "finance",
+   "category": "capital",
+   "versions": [
+    {
+     "id": "G114",
+     "valid_from": "2026-01-01",
+     "valid_to": "2026-08-31",
+     "limit": 12000
+    },
+    {
+     "id": "G115",
+     "valid_from": "2026-09-01",
+     "valid_to": "2026-12-31",
+     "limit": 30000
+    }
+   ],
+   "clearance": {
+    "base": "G116",
+    "exception": null,
+    "counter": null
+   }
+  },
+  {
+   "code": "P20",
+   "name": "warehouse racking",
+   "owner": "it",
+   "category": "hardware",
+   "versions": [
+    {
+     "id": "G117",
+     "valid_from": "2026-01-01",
+     "valid_to": "2026-07-31",
+     "limit": 12000
+    },
+    {
+     "id": "G118",
+     "valid_from": "2026-08-01",
+     "valid_to": "2026-08-31",
+     "limit": 45000
+    },
+    {
+     "id": "G119",
+     "valid_from": "2026-09-01",
+     "valid_to": "2026-12-31",
+     "limit": 45000
+    }
+   ],
+   "clearance": null
+  },
+  {
+   "code": "P21",
+   "name": "cloud tooling 21",
+   "owner": "finance",
+   "category": "capital",
+   "versions": [
+    {
+     "id": "G120",
+     "valid_from": "2026-01-01",
+     "valid_to": "2026-06-30",
+     "limit": 45000
+    },
+    {
+     "id": "G121",
+     "valid_from": "2026-07-01",
+     "valid_to": "2026-08-31",
+     "limit": 30000
+    },
+    {
+     "id": "G122",
+     "valid_from": "2026-09-01",
+     "valid_to": "2026-12-31",
+     "limit": 20000
+    }
+   ],
+   "clearance": {
+    "base": "G123",
+    "exception": null,
+    "counter": null
+   }
+  }
+ ],
+ "disputes": [
+  {
+   "code": "K01",
+   "category": "capital",
+   "superior": null,
+   "for": {
+    "id": "G002",
+    "owner": "finance",
+    "min": 8000
+   },
+   "against": {
+    "id": "G003",
+    "owner": "audit",
+    "below": 20000
+   }
+  },
+  {
+   "code": "K02",
+   "category": "hardware",
+   "superior": "for",
+   "for": {
+    "id": "G004",
+    "owner": "finance",
+    "min": 12000
+   },
+   "against": {
+    "id": "G005",
+    "owner": "audit",
+    "below": 30000
+   }
+  },
+  {
+   "code": "K03",
+   "category": "software",
+   "superior": "against",
+   "for": {
+    "id": "G006",
+    "owner": "controller",
+    "min": 8000
+   },
+   "against": {
+    "id": "G007",
+    "owner": "tax",
+    "below": 60000
+   }
+  },
+  {
+   "code": "K04",
+   "category": "hardware",
+   "superior": null,
+   "for": {
+    "id": "G008",
+    "owner": "audit",
+    "min": 12000
+   },
+   "against": {
+    "id": "G009",
+    "owner": "controller",
+    "below": 30000
+   }
+  },
+  {
+   "code": "K05",
+   "category": "capital",
+   "superior": "for",
+   "for": {
+    "id": "G010",
+    "owner": "controller",
+    "min": 12000
+   },
+   "against": {
+    "id": "G011",
+    "owner": "tax",
+    "below": 20000
+   }
+  },
+  {
+   "code": "K06",
+   "category": "hardware",
+   "superior": "against",
+   "for": {
+    "id": "G012",
+    "owner": "finance",
+    "min": 12000
+   },
+   "against": {
+    "id": "G013",
+    "owner": "tax",
+    "below": 45000
+   }
+  },
+  {
+   "code": "K07",
+   "category": "capital",
+   "superior": null,
+   "for": {
+    "id": "G014",
+    "owner": "audit",
+    "min": 12000
+   },
+   "against": {
+    "id": "G015",
+    "owner": "controller",
+    "below": 30000
+   }
+  },
+  {
+   "code": "K08",
+   "category": "hardware",
+   "superior": "for",
+   "for": {
+    "id": "G016",
+    "owner": "finance",
+    "min": 20000
+   },
+   "against": {
+    "id": "G017",
+    "owner": "audit",
+    "below": 45000
+   }
+  },
+  {
+   "code": "K09",
+   "category": "software",
+   "superior": "against",
+   "for": {
+    "id": "G018",
+    "owner": "audit",
+    "min": 8000
+   },
+   "against": {
+    "id": "G019",
+    "owner": "controller",
+    "below": 20000
+   }
+  },
+  {
+   "code": "K10",
+   "category": "software",
+   "superior": null,
+   "for": {
+    "id": "G020",
+    "owner": "audit",
+    "min": 12000
+   },
+   "against": {
+    "id": "G021",
+    "owner": "controller",
+    "below": 20000
+   }
+  },
+  {
+   "code": "K11",
+   "category": "capital",
+   "superior": "for",
+   "for": {
+    "id": "G022",
+    "owner": "audit",
+    "min": 12000
+   },
+   "against": {
+    "id": "G023",
+    "owner": "controller",
+    "below": 30000
+   }
+  },
+  {
+   "code": "K12",
+   "category": "software",
+   "superior": "against",
+   "for": {
+    "id": "G024",
+    "owner": "audit",
+    "min": 12000
+   },
+   "against": {
+    "id": "G025",
+    "owner": "controller",
+    "below": 30000
+   }
+  },
+  {
+   "code": "K13",
+   "category": "software",
+   "superior": null,
+   "for": {
+    "id": "G026",
+    "owner": "finance",
+    "min": 12000
+   },
+   "against": {
+    "id": "G027",
+    "owner": "tax",
+    "below": 30000
+   }
+  },
+  {
+   "code": "K14",
+   "category": "capital",
+   "superior": "for",
+   "for": {
+    "id": "G028",
+    "owner": "finance",
+    "min": 8000
+   },
+   "against": {
+    "id": "G029",
+    "owner": "audit",
+    "below": 20000
+   }
+  },
+  {
+   "code": "K15",
+   "category": "hardware",
+   "superior": "against",
+   "for": {
+    "id": "G030",
+    "owner": "controller",
+    "min": 8000
+   },
+   "against": {
+    "id": "G031",
+    "owner": "tax",
+    "below": 20000
+   }
+  },
+  {
+   "code": "K16",
+   "category": "software",
+   "superior": null,
+   "for": {
+    "id": "G032",
+    "owner": "controller",
+    "min": 8000
+   },
+   "against": {
+    "id": "G033",
+    "owner": "tax",
+    "below": 20000
+   }
+  },
+  {
+   "code": "K17",
+   "category": "capital",
+   "superior": "for",
+   "for": {
+    "id": "G034",
+    "owner": "finance",
+    "min": 20000
+   },
+   "against": {
+    "id": "G035",
+    "owner": "audit",
+    "below": 45000
+   }
+  }
+ ],
+ "distractor_rules": [
+  {
+   "code": "D01",
+   "id": "G124",
+   "kind": "perk",
+   "role": "senior_manager",
+   "name": "home-office allowance"
+  },
+  {
+   "code": "D02",
+   "id": "G125",
+   "kind": "centre_tag",
+   "org_unit": "leadership",
+   "name": "hot-desk pilot"
+  },
+  {
+   "code": "D03",
+   "id": "G126",
+   "kind": "centre_tag",
+   "org_unit": "delivery",
+   "name": "quiet floor"
+  },
+  {
+   "code": "D04",
+   "id": "G127",
+   "kind": "perk",
+   "role": "analyst",
+   "name": "car allowance"
+  },
+  {
+   "code": "D05",
+   "id": "G128",
+   "kind": "perk",
+   "role": "director",
+   "name": "lounge access"
+  },
+  {
+   "code": "D06",
+   "id": "G129",
+   "kind": "perk",
+   "role": "manager",
+   "name": "language course"
+  },
+  {
+   "code": "D07",
+   "id": "G130",
+   "kind": "perk",
+   "role": "analyst",
+   "name": "standing desk"
+  },
+  {
+   "code": "D08",
+   "id": "G131",
+   "kind": "centre_tag",
+   "org_unit": "support",
+   "name": "hot-desk pilot"
+  },
+  {
+   "code": "D09",
+   "id": "G132",
+   "kind": "perk",
+   "role": "vp",
+   "name": "second monitor"
+  },
+  {
+   "code": "D10",
+   "id": "G133",
+   "kind": "centre_tag",
+   "org_unit": "support",
+   "name": "fire drill group"
+  },
+  {
+   "code": "D11",
+   "id": "G134",
+   "kind": "centre_tag",
+   "org_unit": "leadership",
+   "name": "badge refresh"
+  },
+  {
+   "code": "D12",
+   "id": "G135",
+   "kind": "perk",
+   "role": "vp",
+   "name": "conference budget"
+  },
+  {
+   "code": "D13",
+   "id": "G136",
+   "kind": "centre_tag",
+   "org_unit": "support",
+   "name": "energy audit"
+  },
+  {
+   "code": "D14",
+   "id": "G137",
+   "kind": "centre_tag",
+   "org_unit": "delivery",
+   "name": "hot-desk pilot"
+  },
+  {
+   "code": "D15",
+   "id": "G138",
+   "kind": "perk",
+   "role": "vp",
+   "name": "lounge access"
+  },
+  {
+   "code": "D16",
+   "id": "G139",
+   "kind": "perk",
+   "role": "manager",
+   "name": "language course"
+  },
+  {
+   "code": "D17",
+   "id": "G140",
+   "kind": "perk",
+   "role": "director",
+   "name": "standing desk"
+  },
+  {
+   "code": "D18",
+   "id": "G141",
+   "kind": "perk",
+   "role": "senior_manager",
+   "name": "gym subsidy"
+  },
+  {
+   "code": "D19",
+   "id": "G142",
+   "kind": "centre_tag",
+   "org_unit": "leadership",
+   "name": "energy audit"
+  },
+  {
+   "code": "D20",
+   "id": "G143",
+   "kind": "centre_tag",
+   "org_unit": "leadership",
+   "name": "hot-desk pilot"
+  },
+  {
+   "code": "D21",
+   "id": "G144",
+   "kind": "perk",
+   "role": "vp",
+   "name": "home-office allowance"
+  },
+  {
+   "code": "D22",
+   "id": "G145",
+   "kind": "perk",
+   "role": "vp",
+   "name": "conference budget"
+  },
+  {
+   "code": "D23",
+   "id": "G146",
+   "kind": "perk",
+   "role": "director",
+   "name": "mobile phone"
+  },
+  {
+   "code": "D24",
+   "id": "G147",
+   "kind": "centre_tag",
+   "org_unit": "leadership",
+   "name": "plant care"
+  },
+  {
+   "code": "D25",
+   "id": "G148",
+   "kind": "perk",
+   "role": "manager",
+   "name": "lounge access"
+  },
+  {
+   "code": "D26",
+   "id": "G149",
+   "kind": "perk",
+   "role": "manager",
+   "name": "language course"
+  },
+  {
+   "code": "D27",
+   "id": "G150",
+   "kind": "perk",
+   "role": "senior_manager",
+   "name": "standing desk"
+  },
+  {
+   "code": "D28",
+   "id": "G151",
+   "kind": "perk",
+   "role": "director",
+   "name": "gym subsidy"
+  },
+  {
+   "code": "D29",
+   "id": "G152",
+   "kind": "centre_tag",
+   "org_unit": "delivery",
+   "name": "badge refresh"
+  },
+  {
+   "code": "D30",
+   "id": "G153",
+   "kind": "perk",
+   "role": "manager",
+   "name": "parking space"
+  },
+  {
+   "code": "D31",
+   "id": "G154",
+   "kind": "perk",
+   "role": "analyst",
+   "name": "home-office allowance"
+  },
+  {
+   "code": "D32",
+   "id": "G155",
+   "kind": "perk",
+   "role": "analyst",
+   "name": "conference budget"
+  },
+  {
+   "code": "D33",
+   "id": "G156",
+   "kind": "perk",
+   "role": "manager",
+   "name": "mobile phone"
+  },
+  {
+   "code": "D34",
+   "id": "G157",
+   "kind": "centre_tag",
+   "org_unit": "support",
+   "name": "fire drill group"
+  },
+  {
+   "code": "D35",
+   "id": "G158",
+   "kind": "perk",
+   "role": "director",
+   "name": "lounge access"
+  },
+  {
+   "code": "D36",
+   "id": "G159",
+   "kind": "perk",
+   "role": "vp",
+   "name": "language course"
+  },
+  {
+   "code": "D37",
+   "id": "G160",
+   "kind": "perk",
+   "role": "senior_manager",
+   "name": "standing desk"
+  },
+  {
+   "code": "D38",
+   "id": "G161",
+   "kind": "perk",
+   "role": "vp",
+   "name": "gym subsidy"
+  },
+  {
+   "code": "D39",
+   "id": "G162",
+   "kind": "centre_tag",
+   "org_unit": "support",
+   "name": "quiet floor"
+  },
+  {
+   "code": "D40",
+   "id": "G163",
+   "kind": "perk",
+   "role": "vp",
+   "name": "parking space"
+  },
+  {
+   "code": "D41",
+   "id": "G164",
+   "kind": "centre_tag",
+   "org_unit": "leadership",
+   "name": "badge refresh"
+  },
+  {
+   "code": "D42",
+   "id": "G165",
+   "kind": "centre_tag",
+   "org_unit": "leadership",
+   "name": "plant care"
+  },
+  {
+   "code": "D43",
+   "id": "G166",
+   "kind": "perk",
+   "role": "senior_manager",
+   "name": "mobile phone"
+  },
+  {
+   "code": "D44",
+   "id": "G167",
+   "kind": "centre_tag",
+   "org_unit": "support",
+   "name": "hot-desk pilot"
+  },
+  {
+   "code": "D45",
+   "id": "G168",
+   "kind": "perk",
+   "role": "senior_manager",
+   "name": "lounge access"
+  },
+  {
+   "code": "D46",
+   "id": "G169",
+   "kind": "perk",
+   "role": "vp",
+   "name": "language course"
+  },
+  {
+   "code": "D47",
+   "id": "G170",
+   "kind": "perk",
+   "role": "manager",
+   "name": "standing desk"
+  },
+  {
+   "code": "D48",
+   "id": "G171",
+   "kind": "centre_tag",
+   "org_unit": "support",
+   "name": "plant care"
+  },
+  {
+   "code": "D49",
+   "id": "G172",
+   "kind": "perk",
+   "role": "director",
+   "name": "second monitor"
+  },
+  {
+   "code": "D50",
+   "id": "G173",
+   "kind": "perk",
+   "role": "analyst",
+   "name": "parking space"
+  },
+  {
+   "code": "D51",
+   "id": "G174",
+   "kind": "centre_tag",
+   "org_unit": "delivery",
+   "name": "quiet floor"
+  },
+  {
+   "code": "D52",
+   "id": "G175",
+   "kind": "perk",
+   "role": "vp",
+   "name": "conference budget"
+  }
+ ],
+ "claim_trees": [
+  {
+   "code": "S01",
+   "vendor": "dyne",
+   "top": {
+    "id": "H13",
+    "asserted_at": "2026-04-20",
+    "valid_from": "2026-01-01",
+    "valid_to": null
+   },
+   "members": [
+    {
+     "id": "H13.1",
+     "pred": "insurance_valid",
+     "asserter": "risk",
+     "role": "required",
+     "asserted_at": "2026-04-19",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H13.2",
+     "pred": "quality_audited",
+     "asserter": "compliance",
+     "role": "required",
+     "asserted_at": "2026-04-19",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H13.3",
+     "pred": "delivery_on_time",
+     "asserter": "operations",
+     "role": "supporting",
+     "asserted_at": "2026-04-19",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    }
+   ],
+   "later": {
+    "id": "H13.4",
+    "target": "H13.3",
+    "asserted_at": "2026-07-01",
+    "valid_from": "2026-07-01"
+   }
+  },
+  {
+   "code": "S02",
+   "vendor": "acme",
+   "top": {
+    "id": "H14",
+    "asserted_at": "2026-02-20",
+    "valid_from": "2026-01-01",
+    "valid_to": "2026-12-31"
+   },
+   "members": [
+    {
+     "id": "H14.1",
+     "pred": "insurance_valid",
+     "asserter": "risk",
+     "role": "required",
+     "asserted_at": "2026-02-19",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H14.2",
+     "pred": "quality_audited",
+     "asserter": "compliance",
+     "role": "required",
+     "asserted_at": "2026-02-19",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H14.3",
+     "pred": "delivery_on_time",
+     "asserter": "operations",
+     "role": "supporting",
+     "asserted_at": "2026-02-19",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    }
+   ],
+   "later": null
+  },
+  {
+   "code": "S03",
+   "vendor": "acme",
+   "top": {
+    "id": "H15",
+    "asserted_at": "2026-03-05",
+    "valid_from": "2026-01-01",
+    "valid_to": "2026-12-31"
+   },
+   "members": [
+    {
+     "id": "H15.1",
+     "pred": "insurance_valid",
+     "asserter": "risk",
+     "role": "required",
+     "asserted_at": "2026-03-04",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H15.2",
+     "pred": "quality_audited",
+     "asserter": "compliance",
+     "role": "required",
+     "asserted_at": "2026-03-04",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H15.3",
+     "pred": "delivery_on_time",
+     "asserter": "operations",
+     "role": "supporting",
+     "asserted_at": "2026-03-04",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    }
+   ],
+   "later": {
+    "id": "H15.4",
+    "target": "H15.3",
+    "asserted_at": "2026-08-10",
+    "valid_from": "2026-08-10"
+   }
+  },
+  {
+   "code": "S04",
+   "vendor": "dyne",
+   "top": {
+    "id": "H16",
+    "asserted_at": "2026-03-12",
+    "valid_from": "2026-01-01",
+    "valid_to": null
+   },
+   "members": [
+    {
+     "id": "H16.1",
+     "pred": "insurance_valid",
+     "asserter": "risk",
+     "role": "required",
+     "asserted_at": "2026-03-11",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H16.2",
+     "pred": "quality_audited",
+     "asserter": "compliance",
+     "role": "required",
+     "asserted_at": "2026-03-11",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H16.3",
+     "pred": "delivery_on_time",
+     "asserter": "operations",
+     "role": "supporting",
+     "asserted_at": "2026-03-11",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    }
+   ],
+   "later": null
+  },
+  {
+   "code": "S05",
+   "vendor": "acme",
+   "top": {
+    "id": "H17",
+    "asserted_at": "2026-03-12",
+    "valid_from": "2026-01-01",
+    "valid_to": "2026-10-31"
+   },
+   "members": [
+    {
+     "id": "H17.1",
+     "pred": "insurance_valid",
+     "asserter": "risk",
+     "role": "required",
+     "asserted_at": "2026-03-11",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H17.2",
+     "pred": "quality_audited",
+     "asserter": "compliance",
+     "role": "required",
+     "asserted_at": "2026-03-11",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H17.3",
+     "pred": "delivery_on_time",
+     "asserter": "operations",
+     "role": "supporting",
+     "asserted_at": "2026-03-11",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    }
+   ],
+   "later": {
+    "id": "H17.4",
+    "target": "H17.1",
+    "asserted_at": "2026-08-10",
+    "valid_from": "2026-08-10"
+   }
+  },
+  {
+   "code": "S06",
+   "vendor": "acme",
+   "top": {
+    "id": "H18",
+    "asserted_at": "2026-03-20",
+    "valid_from": "2026-01-01",
+    "valid_to": "2026-10-31"
+   },
+   "members": [
+    {
+     "id": "H18.1",
+     "pred": "insurance_valid",
+     "asserter": "risk",
+     "role": "required",
+     "asserted_at": "2026-03-19",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H18.2",
+     "pred": "quality_audited",
+     "asserter": "compliance",
+     "role": "required",
+     "asserted_at": "2026-03-19",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H18.3",
+     "pred": "delivery_on_time",
+     "asserter": "operations",
+     "role": "supporting",
+     "asserted_at": "2026-03-19",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    }
+   ],
+   "later": null
+  },
+  {
+   "code": "S07",
+   "vendor": "cog",
+   "top": {
+    "id": "H19",
+    "asserted_at": "2026-02-20",
+    "valid_from": "2026-01-01",
+    "valid_to": "2026-12-31"
+   },
+   "members": [
+    {
+     "id": "H19.1",
+     "pred": "insurance_valid",
+     "asserter": "risk",
+     "role": "required",
+     "asserted_at": "2026-02-19",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H19.2",
+     "pred": "quality_audited",
+     "asserter": "compliance",
+     "role": "required",
+     "asserted_at": "2026-02-19",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H19.3",
+     "pred": "delivery_on_time",
+     "asserter": "operations",
+     "role": "supporting",
+     "asserted_at": "2026-02-19",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    }
+   ],
+   "later": {
+    "id": "H19.4",
+    "target": "H19.3",
+    "asserted_at": "2026-07-01",
+    "valid_from": "2026-07-01"
+   }
+  },
+  {
+   "code": "S08",
+   "vendor": "edge",
+   "top": {
+    "id": "H20",
+    "asserted_at": "2026-03-05",
+    "valid_from": "2026-01-01",
+    "valid_to": "2026-12-31"
+   },
+   "members": [
+    {
+     "id": "H20.1",
+     "pred": "insurance_valid",
+     "asserter": "risk",
+     "role": "required",
+     "asserted_at": "2026-03-04",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H20.2",
+     "pred": "quality_audited",
+     "asserter": "compliance",
+     "role": "required",
+     "asserted_at": "2026-03-04",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H20.3",
+     "pred": "delivery_on_time",
+     "asserter": "operations",
+     "role": "supporting",
+     "asserted_at": "2026-03-04",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    }
+   ],
+   "later": null
+  },
+  {
+   "code": "S09",
+   "vendor": "edge",
+   "top": {
+    "id": "H21",
+    "asserted_at": "2026-02-12",
+    "valid_from": "2026-01-01",
+    "valid_to": "2026-10-31"
+   },
+   "members": [
+    {
+     "id": "H21.1",
+     "pred": "insurance_valid",
+     "asserter": "risk",
+     "role": "required",
+     "asserted_at": "2026-02-11",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H21.2",
+     "pred": "quality_audited",
+     "asserter": "compliance",
+     "role": "required",
+     "asserted_at": "2026-02-11",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H21.3",
+     "pred": "delivery_on_time",
+     "asserter": "operations",
+     "role": "supporting",
+     "asserted_at": "2026-02-11",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    }
+   ],
+   "later": {
+    "id": "H21.4",
+    "target": "H21.1",
+    "asserted_at": "2026-07-01",
+    "valid_from": "2026-07-01"
+   }
+  },
+  {
+   "code": "S10",
+   "vendor": "cog",
+   "top": {
+    "id": "H22",
+    "asserted_at": "2026-04-05",
+    "valid_from": "2026-01-01",
+    "valid_to": "2026-10-31"
+   },
+   "members": [
+    {
+     "id": "H22.1",
+     "pred": "insurance_valid",
+     "asserter": "risk",
+     "role": "required",
+     "asserted_at": "2026-04-04",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H22.2",
+     "pred": "quality_audited",
+     "asserter": "compliance",
+     "role": "required",
+     "asserted_at": "2026-04-04",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H22.3",
+     "pred": "delivery_on_time",
+     "asserter": "operations",
+     "role": "supporting",
+     "asserted_at": "2026-04-04",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    }
+   ],
+   "later": null
+  },
+  {
+   "code": "S11",
+   "vendor": "edge",
+   "top": {
+    "id": "H23",
+    "asserted_at": "2026-03-12",
+    "valid_from": "2026-01-01",
+    "valid_to": "2026-12-31"
+   },
+   "members": [
+    {
+     "id": "H23.1",
+     "pred": "insurance_valid",
+     "asserter": "risk",
+     "role": "required",
+     "asserted_at": "2026-03-11",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H23.2",
+     "pred": "quality_audited",
+     "asserter": "compliance",
+     "role": "required",
+     "asserted_at": "2026-03-11",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H23.3",
+     "pred": "delivery_on_time",
+     "asserter": "operations",
+     "role": "supporting",
+     "asserted_at": "2026-03-11",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    }
+   ],
+   "later": {
+    "id": "H23.4",
+    "target": "H23.3",
+    "asserted_at": "2026-08-10",
+    "valid_from": "2026-08-10"
+   }
+  },
+  {
+   "code": "S12",
+   "vendor": "fern",
+   "top": {
+    "id": "H24",
+    "asserted_at": "2026-03-20",
+    "valid_from": "2026-01-01",
+    "valid_to": "2026-10-31"
+   },
+   "members": [
+    {
+     "id": "H24.1",
+     "pred": "insurance_valid",
+     "asserter": "risk",
+     "role": "required",
+     "asserted_at": "2026-03-19",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H24.2",
+     "pred": "quality_audited",
+     "asserter": "compliance",
+     "role": "required",
+     "asserted_at": "2026-03-19",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H24.3",
+     "pred": "delivery_on_time",
+     "asserter": "operations",
+     "role": "supporting",
+     "asserted_at": "2026-03-19",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    }
+   ],
+   "later": null
+  },
+  {
+   "code": "S13",
+   "vendor": "fern",
+   "top": {
+    "id": "H25",
+    "asserted_at": "2026-02-20",
+    "valid_from": "2026-01-01",
+    "valid_to": "2026-12-31"
+   },
+   "members": [
+    {
+     "id": "H25.1",
+     "pred": "insurance_valid",
+     "asserter": "risk",
+     "role": "required",
+     "asserted_at": "2026-02-19",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H25.2",
+     "pred": "quality_audited",
+     "asserter": "compliance",
+     "role": "required",
+     "asserted_at": "2026-02-19",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H25.3",
+     "pred": "delivery_on_time",
+     "asserter": "operations",
+     "role": "supporting",
+     "asserted_at": "2026-02-19",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    }
+   ],
+   "later": {
+    "id": "H25.4",
+    "target": "H25.1",
+    "asserted_at": "2026-08-10",
+    "valid_from": "2026-08-10"
+   }
+  },
+  {
+   "code": "S14",
+   "vendor": "acme",
+   "top": {
+    "id": "H26",
+    "asserted_at": "2026-03-12",
+    "valid_from": "2026-01-01",
+    "valid_to": "2026-12-31"
+   },
+   "members": [
+    {
+     "id": "H26.1",
+     "pred": "insurance_valid",
+     "asserter": "risk",
+     "role": "required",
+     "asserted_at": "2026-03-11",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H26.2",
+     "pred": "quality_audited",
+     "asserter": "compliance",
+     "role": "required",
+     "asserted_at": "2026-03-11",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H26.3",
+     "pred": "delivery_on_time",
+     "asserter": "operations",
+     "role": "supporting",
+     "asserted_at": "2026-03-11",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    }
+   ],
+   "later": null
+  },
+  {
+   "code": "S15",
+   "vendor": "acme",
+   "top": {
+    "id": "H27",
+    "asserted_at": "2026-03-20",
+    "valid_from": "2026-01-01",
+    "valid_to": "2026-10-31"
+   },
+   "members": [
+    {
+     "id": "H27.1",
+     "pred": "insurance_valid",
+     "asserter": "risk",
+     "role": "required",
+     "asserted_at": "2026-03-19",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H27.2",
+     "pred": "quality_audited",
+     "asserter": "compliance",
+     "role": "required",
+     "asserted_at": "2026-03-19",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H27.3",
+     "pred": "delivery_on_time",
+     "asserter": "operations",
+     "role": "supporting",
+     "asserted_at": "2026-03-19",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    }
+   ],
+   "later": {
+    "id": "H27.4",
+    "target": "H27.3",
+    "asserted_at": "2026-07-01",
+    "valid_from": "2026-07-01"
+   }
+  },
+  {
+   "code": "S16",
+   "vendor": "bolt",
+   "top": {
+    "id": "H28",
+    "asserted_at": "2026-02-05",
+    "valid_from": "2026-01-01",
+    "valid_to": null
+   },
+   "members": [
+    {
+     "id": "H28.1",
+     "pred": "insurance_valid",
+     "asserter": "risk",
+     "role": "required",
+     "asserted_at": "2026-02-04",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H28.2",
+     "pred": "quality_audited",
+     "asserter": "compliance",
+     "role": "required",
+     "asserted_at": "2026-02-04",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H28.3",
+     "pred": "delivery_on_time",
+     "asserter": "operations",
+     "role": "supporting",
+     "asserted_at": "2026-02-04",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    }
+   ],
+   "later": null
+  },
+  {
+   "code": "S17",
+   "vendor": "bolt",
+   "top": {
+    "id": "H29",
+    "asserted_at": "2026-02-20",
+    "valid_from": "2026-01-01",
+    "valid_to": "2026-10-31"
+   },
+   "members": [
+    {
+     "id": "H29.1",
+     "pred": "insurance_valid",
+     "asserter": "risk",
+     "role": "required",
+     "asserted_at": "2026-02-19",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H29.2",
+     "pred": "quality_audited",
+     "asserter": "compliance",
+     "role": "required",
+     "asserted_at": "2026-02-19",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    },
+    {
+     "id": "H29.3",
+     "pred": "delivery_on_time",
+     "asserter": "operations",
+     "role": "supporting",
+     "asserted_at": "2026-02-19",
+     "valid_from": "2026-01-01",
+     "valid_to": null
+    }
+   ],
+   "later": {
+    "id": "H29.4",
+    "target": "H29.3",
+    "asserted_at": "2026-08-10",
+    "valid_from": "2026-08-10"
+   }
+  }
+ ],
+ "claim_disputes": [
+  {
+   "code": "X01",
+   "vendor": "bolt",
+   "pred": "export_licensed",
+   "superiority": true,
+   "yes": {
+    "id": "H1.1",
+    "asserter": "legal"
+   },
+   "no": {
+    "id": "H1.2",
+    "asserter": "compliance"
+   }
+  },
+  {
+   "code": "X02",
+   "vendor": "fern",
+   "pred": "data_protection_ok",
+   "superiority": false,
+   "yes": {
+    "id": "H2.1",
+    "asserter": "compliance"
+   },
+   "no": {
+    "id": "H2.2",
+    "asserter": "legal"
+   }
+  },
+  {
+   "code": "X03",
+   "vendor": "bolt",
+   "pred": "export_licensed",
+   "superiority": true,
+   "yes": {
+    "id": "H3.1",
+    "asserter": "compliance"
+   },
+   "no": {
+    "id": "H3.2",
+    "asserter": "legal"
+   }
+  },
+  {
+   "code": "X04",
+   "vendor": "edge",
+   "pred": "data_protection_ok",
+   "superiority": false,
+   "yes": {
+    "id": "H4.1",
+    "asserter": "legal"
+   },
+   "no": {
+    "id": "H4.2",
+    "asserter": "compliance"
+   }
+  },
+  {
+   "code": "X05",
+   "vendor": "bolt",
+   "pred": "export_licensed",
+   "superiority": true,
+   "yes": {
+    "id": "H5.1",
+    "asserter": "legal"
+   },
+   "no": {
+    "id": "H5.2",
+    "asserter": "compliance"
+   }
+  },
+  {
+   "code": "X06",
+   "vendor": "edge",
+   "pred": "data_protection_ok",
+   "superiority": false,
+   "yes": {
+    "id": "H6.1",
+    "asserter": "compliance"
+   },
+   "no": {
+    "id": "H6.2",
+    "asserter": "legal"
+   }
+  },
+  {
+   "code": "X07",
+   "vendor": "cog",
+   "pred": "export_licensed",
+   "superiority": true,
+   "yes": {
+    "id": "H7.1",
+    "asserter": "compliance"
+   },
+   "no": {
+    "id": "H7.2",
+    "asserter": "legal"
+   }
+  },
+  {
+   "code": "X08",
+   "vendor": "edge",
+   "pred": "data_protection_ok",
+   "superiority": false,
+   "yes": {
+    "id": "H8.1",
+    "asserter": "compliance"
+   },
+   "no": {
+    "id": "H8.2",
+    "asserter": "legal"
+   }
+  },
+  {
+   "code": "X09",
+   "vendor": "fern",
+   "pred": "export_licensed",
+   "superiority": true,
+   "yes": {
+    "id": "H9.1",
+    "asserter": "compliance"
+   },
+   "no": {
+    "id": "H9.2",
+    "asserter": "legal"
+   }
+  },
+  {
+   "code": "X10",
+   "vendor": "dyne",
+   "pred": "data_protection_ok",
+   "superiority": false,
+   "yes": {
+    "id": "H10.1",
+    "asserter": "compliance"
+   },
+   "no": {
+    "id": "H10.2",
+    "asserter": "legal"
+   }
+  },
+  {
+   "code": "X11",
+   "vendor": "fern",
+   "pred": "export_licensed",
+   "superiority": true,
+   "yes": {
+    "id": "H11.1",
+    "asserter": "legal"
+   },
+   "no": {
+    "id": "H11.2",
+    "asserter": "compliance"
+   }
+  },
+  {
+   "code": "X12",
+   "vendor": "edge",
+   "pred": "data_protection_ok",
+   "superiority": false,
+   "yes": {
+    "id": "H12.1",
+    "asserter": "compliance"
+   },
+   "no": {
+    "id": "H12.2",
+    "asserter": "legal"
+   }
+  }
+ ],
+ "superiority": {
+  "id": "G001",
+  "pred": "export_licensed",
+  "order": [
+   "legal",
+   "compliance"
+  ]
+ },
+ "report": {
+  "rules": 200,
+  "claims": 115,
+  "generated_rules": 175,
+  "generated_claims": 101,
+  "interactions": 40,
+  "density_per_100": 20.0,
+  "distractor_share": 0.3,
+  "questions": 277,
+  "union_all": [
+   {
+    "concept": "request",
+    "columns": [
+     "category",
+     "id"
+    ],
+    "constants": [
+     "category=capital",
+     "category=software"
+    ],
+    "rules": [
+     "R112",
+     "R311"
+    ],
+    "predicates": [
+     "approved",
+     "approved_count",
+     "approved_total",
+     "po_issued"
+    ],
+    "generated": false
+   }
+  ]
+ }
+}

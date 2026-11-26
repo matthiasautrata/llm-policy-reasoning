@@ -1,0 +1,2688 @@
+{
+ "B001": {
+  "core": [
+   "G036"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B002": {
+  "core": [
+   "G036",
+   "G037"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B003": {
+  "core": [
+   "G037"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B004": {
+  "core": [
+   "G036",
+   "G037"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B005": {
+  "core": [
+   "G038"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B006": {
+  "core": [
+   "G038",
+   "G040"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B007": {
+  "core": [
+   "G039"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B008": {
+  "core": [
+   "G040"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B009": {
+  "core": [
+   "G041"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B010": {
+  "core": [
+   "G041",
+   "G042",
+   "G043"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B011": {
+  "core": [
+   "G042"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B012": {
+  "core": [
+   "G041",
+   "G042",
+   "G043"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B013": {
+  "core": [
+   "G043"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B014": {
+  "core": [
+   "G041",
+   "G042",
+   "G043"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B015": {
+  "core": [
+   "G044"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B016": {
+  "core": [
+   "G044"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B017": {
+  "core": [
+   "G045"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B018": {
+  "core": [
+   "G045"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B019": {
+  "core": [
+   "G046"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B020": {
+  "core": [
+   "G046",
+   "G047"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B021": {
+  "core": [
+   "G047"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B022": {
+  "core": [
+   "G046",
+   "G047"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B023": {
+  "core": [
+   "G048",
+   "G050"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B024": {
+  "core": [
+   "G048",
+   "G050"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B025": {
+  "core": [
+   "G048",
+   "G050"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B026": {
+  "core": [
+   "G050"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B027": {
+  "core": [
+   "G051"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B028": {
+  "core": [
+   "G051",
+   "G052"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B029": {
+  "core": [
+   "G052"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B030": {
+  "core": [
+   "G051",
+   "G052"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B031": {
+  "core": [
+   "G053"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B032": {
+  "core": [
+   "G053"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B033": {
+  "core": [
+   "G053"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B034": {
+  "core": [
+   "G053"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B035": {
+  "core": [
+   "G055"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B036": {
+  "core": [
+   "G055",
+   "G056"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B037": {
+  "core": [
+   "G056"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B038": {
+  "core": [
+   "G055",
+   "G056"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B039": {
+  "core": [
+   "G057"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B040": {
+  "core": [
+   "G057",
+   "G059"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B041": {
+  "core": [
+   "G057",
+   "G059"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B042": {
+  "core": [
+   "G059"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B043": {
+  "core": [
+   "G060"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B044": {
+  "core": [
+   "G060",
+   "G061"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B045": {
+  "core": [
+   "G061"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B046": {
+  "core": [
+   "G060",
+   "G061"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B047": {
+  "core": [
+   "G062"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B048": {
+  "core": [
+   "G062"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B049": {
+  "core": [
+   "G063"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B050": {
+  "core": [
+   "G063"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B051": {
+  "core": [
+   "G064"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B052": {
+  "core": [
+   "G064",
+   "G065",
+   "G066"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B053": {
+  "core": [
+   "G065"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B054": {
+  "core": [
+   "G064",
+   "G065",
+   "G066"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B055": {
+  "core": [
+   "G066"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B056": {
+  "core": [
+   "G064",
+   "G065",
+   "G066"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B057": {
+  "core": [
+   "G067"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B058": {
+  "core": [
+   "G067",
+   "G069"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B059": {
+  "core": [
+   "G068"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B060": {
+  "core": [
+   "G069"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B061": {
+  "core": [
+   "G070"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B062": {
+  "core": [
+   "G070",
+   "G071",
+   "G072"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B063": {
+  "core": [
+   "G071"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B064": {
+  "core": [
+   "G070",
+   "G071",
+   "G072"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B065": {
+  "core": [
+   "G072"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B066": {
+  "core": [
+   "G070",
+   "G071",
+   "G072"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B067": {
+  "core": [
+   "G073"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B068": {
+  "core": [
+   "G073"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B069": {
+  "core": [
+   "G073"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B070": {
+  "core": [
+   "G074"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B071": {
+  "core": [
+   "G075"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B072": {
+  "core": [
+   "G075",
+   "G076"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B073": {
+  "core": [
+   "G076"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B074": {
+  "core": [
+   "G075",
+   "G076"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B075": {
+  "core": [
+   "G078"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B076": {
+  "core": [
+   "G077",
+   "G079"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B077": {
+  "core": [
+   "G077",
+   "G079"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B078": {
+  "core": [
+   "G079"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B079": {
+  "core": [
+   "G080"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B080": {
+  "core": [
+   "G080",
+   "G081",
+   "G082"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B081": {
+  "core": [
+   "G081"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B082": {
+  "core": [
+   "G080",
+   "G081",
+   "G082"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B083": {
+  "core": [
+   "G082"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B084": {
+  "core": [
+   "G080",
+   "G081",
+   "G082"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B085": {
+  "core": [
+   "G083"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B086": {
+  "core": [
+   "G083"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B087": {
+  "core": [
+   "G084"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B088": {
+  "core": [
+   "G084"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B089": {
+  "core": [
+   "G085"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B090": {
+  "core": [
+   "G085",
+   "G086",
+   "G087"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B091": {
+  "core": [
+   "G086"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B092": {
+  "core": [
+   "G085",
+   "G086",
+   "G087"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B093": {
+  "core": [
+   "G087"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B094": {
+  "core": [
+   "G085",
+   "G086",
+   "G087"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B095": {
+  "core": [
+   "G088"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B096": {
+  "core": [
+   "G088",
+   "G090"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B097": {
+  "core": [
+   "G089"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B098": {
+  "core": [
+   "G090"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B099": {
+  "core": [
+   "G091"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B100": {
+  "core": [
+   "G091",
+   "G092"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B101": {
+  "core": [
+   "G092"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B102": {
+  "core": [
+   "G091",
+   "G092"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B103": {
+  "core": [
+   "G093"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B104": {
+  "core": [
+   "G093"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B105": {
+  "core": [
+   "G093"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B106": {
+  "core": [
+   "G094"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B107": {
+  "core": [
+   "G095"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B108": {
+  "core": [
+   "G095",
+   "G096",
+   "G097"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B109": {
+  "core": [
+   "G096"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B110": {
+  "core": [
+   "G095",
+   "G096",
+   "G097"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B111": {
+  "core": [
+   "G097"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B112": {
+  "core": [
+   "G095",
+   "G096",
+   "G097"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B113": {
+  "core": [
+   "G098"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B114": {
+  "core": [
+   "G098",
+   "G099"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B115": {
+  "core": [
+   "G099"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B116": {
+  "core": [
+   "G098",
+   "G099"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B117": {
+  "core": [
+   "G100"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B118": {
+  "core": [
+   "G100"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B119": {
+  "core": [
+   "G101"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B120": {
+  "core": [
+   "G101",
+   "G102",
+   "G103"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B121": {
+  "core": [
+   "G102"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B122": {
+  "core": [
+   "G101",
+   "G102",
+   "G103"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B123": {
+  "core": [
+   "G103"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B124": {
+  "core": [
+   "G101",
+   "G102",
+   "G103"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B125": {
+  "core": [
+   "G104"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B126": {
+  "core": [
+   "G104",
+   "G105",
+   "G106"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B127": {
+  "core": [
+   "G105"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B128": {
+  "core": [
+   "G104",
+   "G105",
+   "G106"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B129": {
+  "core": [
+   "G106"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B130": {
+  "core": [
+   "G104",
+   "G105",
+   "G106"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B131": {
+  "core": [
+   "G107"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B132": {
+  "core": [
+   "G107"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B133": {
+  "core": [
+   "G108"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B134": {
+  "core": [
+   "G108",
+   "G109"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B135": {
+  "core": [
+   "G109"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B136": {
+  "core": [
+   "G108",
+   "G109"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B137": {
+  "core": [
+   "G110"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B138": {
+  "core": [
+   "G110"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B139": {
+  "core": [
+   "G111"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B140": {
+  "core": [
+   "G111",
+   "G112",
+   "G113"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B141": {
+  "core": [
+   "G112"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B142": {
+  "core": [
+   "G111",
+   "G112",
+   "G113"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B143": {
+  "core": [
+   "G113"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B144": {
+  "core": [
+   "G111",
+   "G112",
+   "G113"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B145": {
+  "core": [
+   "G114"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B146": {
+  "core": [
+   "G114",
+   "G115"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B147": {
+  "core": [
+   "G115"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B148": {
+  "core": [
+   "G114",
+   "G115"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B149": {
+  "core": [
+   "G116"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B150": {
+  "core": [
+   "G116"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B151": {
+  "core": [
+   "G117"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B152": {
+  "core": [
+   "G117",
+   "G118",
+   "G119"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B153": {
+  "core": [
+   "G118"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B154": {
+  "core": [
+   "G117",
+   "G118",
+   "G119"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B155": {
+  "core": [
+   "G119"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B156": {
+  "core": [
+   "G117",
+   "G118",
+   "G119"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B157": {
+  "core": [
+   "G120"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B158": {
+  "core": [
+   "G120",
+   "G121",
+   "G122"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B159": {
+  "core": [
+   "G121"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B160": {
+  "core": [
+   "G120",
+   "G121",
+   "G122"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B161": {
+  "core": [
+   "G122"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B162": {
+  "core": [
+   "G120",
+   "G121",
+   "G122"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B163": {
+  "core": [
+   "G123"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B164": {
+  "core": [
+   "G123"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B165": {
+  "core": [
+   "G002"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B166": {
+  "core": [
+   "G002",
+   "G003"
+  ],
+  "qualifier": null,
+  "sides": [
+   [
+    "G002"
+   ],
+   [
+    "G003"
+   ]
+  ],
+  "status": "CONFLICT",
+  "value": null
+ },
+ "B167": {
+  "core": [
+   "G002"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B168": {
+  "core": [
+   "G004"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B169": {
+  "core": [
+   "G004"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B170": {
+  "core": [
+   "G004"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B171": {
+  "core": [
+   "G006"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B172": {
+  "core": [
+   "G007"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B173": {
+  "core": [
+   "G006"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B174": {
+  "core": [
+   "G008"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B175": {
+  "core": [
+   "G008",
+   "G009"
+  ],
+  "qualifier": null,
+  "sides": [
+   [
+    "G008"
+   ],
+   [
+    "G009"
+   ]
+  ],
+  "status": "CONFLICT",
+  "value": null
+ },
+ "B176": {
+  "core": [
+   "G008"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B177": {
+  "core": [
+   "G010"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B178": {
+  "core": [
+   "G010"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B179": {
+  "core": [
+   "G010"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B180": {
+  "core": [
+   "G012"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B181": {
+  "core": [
+   "G013"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B182": {
+  "core": [
+   "G012"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B183": {
+  "core": [
+   "G014"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B184": {
+  "core": [
+   "G014",
+   "G015"
+  ],
+  "qualifier": null,
+  "sides": [
+   [
+    "G014"
+   ],
+   [
+    "G015"
+   ]
+  ],
+  "status": "CONFLICT",
+  "value": null
+ },
+ "B185": {
+  "core": [
+   "G014"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B186": {
+  "core": [
+   "G016"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B187": {
+  "core": [
+   "G016"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B188": {
+  "core": [
+   "G016"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B189": {
+  "core": [
+   "G018"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B190": {
+  "core": [
+   "G019"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B191": {
+  "core": [
+   "G018"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B192": {
+  "core": [
+   "G020"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B193": {
+  "core": [
+   "G020",
+   "G021"
+  ],
+  "qualifier": null,
+  "sides": [
+   [
+    "G020"
+   ],
+   [
+    "G021"
+   ]
+  ],
+  "status": "CONFLICT",
+  "value": null
+ },
+ "B194": {
+  "core": [
+   "G020"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B195": {
+  "core": [
+   "G022"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B196": {
+  "core": [
+   "G022"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B197": {
+  "core": [
+   "G022"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B198": {
+  "core": [
+   "G024"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B199": {
+  "core": [
+   "G025"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B200": {
+  "core": [
+   "G024"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B201": {
+  "core": [
+   "G026"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B202": {
+  "core": [
+   "G026",
+   "G027"
+  ],
+  "qualifier": null,
+  "sides": [
+   [
+    "G026"
+   ],
+   [
+    "G027"
+   ]
+  ],
+  "status": "CONFLICT",
+  "value": null
+ },
+ "B203": {
+  "core": [
+   "G026"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B204": {
+  "core": [
+   "G028"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B205": {
+  "core": [
+   "G028"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B206": {
+  "core": [
+   "G028"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B207": {
+  "core": [
+   "G030"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B208": {
+  "core": [
+   "G031"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B209": {
+  "core": [
+   "G030"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B210": {
+  "core": [
+   "G032"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B211": {
+  "core": [
+   "G032",
+   "G033"
+  ],
+  "qualifier": null,
+  "sides": [
+   [
+    "G032"
+   ],
+   [
+    "G033"
+   ]
+  ],
+  "status": "CONFLICT",
+  "value": null
+ },
+ "B212": {
+  "core": [
+   "G032"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B213": {
+  "core": [
+   "G034"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B214": {
+  "core": [
+   "G034"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B215": {
+  "core": [
+   "G034"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B216": {
+  "core": [
+   "G124"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B217": {
+  "core": [
+   "G124"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B218": {
+  "core": [
+   "G125"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B219": {
+  "core": [
+   "G125"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B220": {
+  "core": [
+   "G126"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B221": {
+  "core": [
+   "G126"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B222": {
+  "core": [
+   "G127"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B223": {
+  "core": [
+   "G127"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B224": {
+  "core": [
+   "G128"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B225": {
+  "core": [
+   "G128"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B226": {
+  "core": [
+   "G129"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B227": {
+  "core": [
+   "G129"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B228": {
+  "core": [
+   "H13",
+   "H13.3",
+   "H13.4"
+  ],
+  "defeater": null,
+  "qualifier": [
+   "H13.3"
+  ],
+  "standing": "holds_with_qualifier"
+ },
+ "B229": {
+  "core": [
+   "H13"
+  ],
+  "defeater": null,
+  "qualifier": [],
+  "standing": "holds"
+ },
+ "B230": {
+  "core": [
+   "H14"
+  ],
+  "defeater": null,
+  "qualifier": [],
+  "standing": "holds"
+ },
+ "B231": {
+  "core": [
+   "H15",
+   "H15.3",
+   "H15.4"
+  ],
+  "defeater": null,
+  "qualifier": [
+   "H15.3"
+  ],
+  "standing": "holds_with_qualifier"
+ },
+ "B232": {
+  "core": [
+   "H15"
+  ],
+  "defeater": null,
+  "qualifier": [],
+  "standing": "holds"
+ },
+ "B233": {
+  "core": [
+   "H16"
+  ],
+  "defeater": null,
+  "qualifier": [],
+  "standing": "holds"
+ },
+ "B234": {
+  "core": [
+   "H17",
+   "H17.1",
+   "H17.4"
+  ],
+  "defeater": "H17.4",
+  "qualifier": [],
+  "standing": "rebutted"
+ },
+ "B235": {
+  "core": [
+   "H17"
+  ],
+  "defeater": null,
+  "qualifier": [],
+  "standing": "holds"
+ },
+ "B236": {
+  "core": [
+   "H18"
+  ],
+  "defeater": null,
+  "qualifier": [],
+  "standing": "holds"
+ },
+ "B237": {
+  "core": [
+   "H19",
+   "H19.3",
+   "H19.4"
+  ],
+  "defeater": null,
+  "qualifier": [
+   "H19.3"
+  ],
+  "standing": "holds_with_qualifier"
+ },
+ "B238": {
+  "core": [
+   "H19"
+  ],
+  "defeater": null,
+  "qualifier": [],
+  "standing": "holds"
+ },
+ "B239": {
+  "core": [
+   "H20"
+  ],
+  "defeater": null,
+  "qualifier": [],
+  "standing": "holds"
+ },
+ "B240": {
+  "core": [
+   "H21",
+   "H21.1",
+   "H21.4"
+  ],
+  "defeater": "H21.4",
+  "qualifier": [],
+  "standing": "rebutted"
+ },
+ "B241": {
+  "core": [
+   "H21"
+  ],
+  "defeater": null,
+  "qualifier": [],
+  "standing": "holds"
+ },
+ "B242": {
+  "core": [
+   "H22"
+  ],
+  "defeater": null,
+  "qualifier": [],
+  "standing": "holds"
+ },
+ "B243": {
+  "core": [
+   "H23",
+   "H23.3",
+   "H23.4"
+  ],
+  "defeater": null,
+  "qualifier": [
+   "H23.3"
+  ],
+  "standing": "holds_with_qualifier"
+ },
+ "B244": {
+  "core": [
+   "H23"
+  ],
+  "defeater": null,
+  "qualifier": [],
+  "standing": "holds"
+ },
+ "B245": {
+  "core": [
+   "H24"
+  ],
+  "defeater": null,
+  "qualifier": [],
+  "standing": "holds"
+ },
+ "B246": {
+  "core": [
+   "H25",
+   "H25.1",
+   "H25.4"
+  ],
+  "defeater": "H25.4",
+  "qualifier": [],
+  "standing": "rebutted"
+ },
+ "B247": {
+  "core": [
+   "H25"
+  ],
+  "defeater": null,
+  "qualifier": [],
+  "standing": "holds"
+ },
+ "B248": {
+  "core": [
+   "H26"
+  ],
+  "defeater": null,
+  "qualifier": [],
+  "standing": "holds"
+ },
+ "B249": {
+  "core": [
+   "H27",
+   "H27.3",
+   "H27.4"
+  ],
+  "defeater": null,
+  "qualifier": [
+   "H27.3"
+  ],
+  "standing": "holds_with_qualifier"
+ },
+ "B250": {
+  "core": [
+   "H27"
+  ],
+  "defeater": null,
+  "qualifier": [],
+  "standing": "holds"
+ },
+ "B251": {
+  "core": [
+   "H28"
+  ],
+  "defeater": null,
+  "qualifier": [],
+  "standing": "holds"
+ },
+ "B252": {
+  "core": [
+   "H29",
+   "H29.3",
+   "H29.4"
+  ],
+  "defeater": null,
+  "qualifier": [
+   "H29.3"
+  ],
+  "standing": "holds_with_qualifier"
+ },
+ "B253": {
+  "core": [
+   "H29"
+  ],
+  "defeater": null,
+  "qualifier": [],
+  "standing": "holds"
+ },
+ "B254": {
+  "core": [
+   "H1.1"
+  ],
+  "defeater": null,
+  "qualifier": [],
+  "standing": "holds"
+ },
+ "B255": {
+  "core": [
+   "H1.1"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B256": {
+  "core": [
+   "H2.1",
+   "H2.2"
+  ],
+  "defeater": null,
+  "qualifier": [],
+  "standing": "contested"
+ },
+ "B257": {
+  "core": [
+   "H2.1",
+   "H2.2"
+  ],
+  "qualifier": null,
+  "sides": [
+   [
+    "H2.1"
+   ],
+   [
+    "H2.2"
+   ]
+  ],
+  "status": "CONFLICT",
+  "value": null
+ },
+ "B258": {
+  "core": [
+   "H3.1",
+   "H3.2"
+  ],
+  "defeater": "H3.2",
+  "qualifier": [],
+  "standing": "rebutted"
+ },
+ "B259": {
+  "core": [
+   "H3.2"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B260": {
+  "core": [
+   "H4.1",
+   "H4.2"
+  ],
+  "defeater": null,
+  "qualifier": [],
+  "standing": "contested"
+ },
+ "B261": {
+  "core": [
+   "H4.1",
+   "H4.2"
+  ],
+  "qualifier": null,
+  "sides": [
+   [
+    "H4.1"
+   ],
+   [
+    "H4.2"
+   ]
+  ],
+  "status": "CONFLICT",
+  "value": null
+ },
+ "B262": {
+  "core": [
+   "H5.1"
+  ],
+  "defeater": null,
+  "qualifier": [],
+  "standing": "holds"
+ },
+ "B263": {
+  "core": [
+   "H5.1"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B264": {
+  "core": [
+   "H6.1",
+   "H6.2"
+  ],
+  "defeater": null,
+  "qualifier": [],
+  "standing": "contested"
+ },
+ "B265": {
+  "core": [
+   "H6.1",
+   "H6.2"
+  ],
+  "qualifier": null,
+  "sides": [
+   [
+    "H6.1"
+   ],
+   [
+    "H6.2"
+   ]
+  ],
+  "status": "CONFLICT",
+  "value": null
+ },
+ "B266": {
+  "core": [
+   "H7.1",
+   "H7.2"
+  ],
+  "defeater": "H7.2",
+  "qualifier": [],
+  "standing": "rebutted"
+ },
+ "B267": {
+  "core": [
+   "H7.2"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B268": {
+  "core": [
+   "H8.1",
+   "H8.2"
+  ],
+  "defeater": null,
+  "qualifier": [],
+  "standing": "contested"
+ },
+ "B269": {
+  "core": [
+   "H8.1",
+   "H8.2"
+  ],
+  "qualifier": null,
+  "sides": [
+   [
+    "H8.1"
+   ],
+   [
+    "H8.2"
+   ]
+  ],
+  "status": "CONFLICT",
+  "value": null
+ },
+ "B270": {
+  "core": [
+   "H9.1",
+   "H9.2"
+  ],
+  "defeater": "H9.2",
+  "qualifier": [],
+  "standing": "rebutted"
+ },
+ "B271": {
+  "core": [
+   "H9.2"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B272": {
+  "core": [
+   "H10.1",
+   "H10.2"
+  ],
+  "defeater": null,
+  "qualifier": [],
+  "standing": "contested"
+ },
+ "B273": {
+  "core": [
+   "H10.1",
+   "H10.2"
+  ],
+  "qualifier": null,
+  "sides": [
+   [
+    "H10.1"
+   ],
+   [
+    "H10.2"
+   ]
+  ],
+  "status": "CONFLICT",
+  "value": null
+ },
+ "B274": {
+  "core": [
+   "H11.1"
+  ],
+  "defeater": null,
+  "qualifier": [],
+  "standing": "holds"
+ },
+ "B275": {
+  "core": [
+   "H11.1"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B276": {
+  "core": [
+   "H12.1",
+   "H12.2"
+  ],
+  "defeater": null,
+  "qualifier": [],
+  "standing": "contested"
+ },
+ "B277": {
+  "core": [
+   "H12.1",
+   "H12.2"
+  ],
+  "qualifier": null,
+  "sides": [
+   [
+    "H12.1"
+   ],
+   [
+    "H12.2"
+   ]
+  ],
+  "status": "CONFLICT",
+  "value": null
+ }
+}
