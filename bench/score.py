@@ -424,9 +424,13 @@ def report(recs, jpath, gradedir, jpath2=None, results=None):
     jg, jg2 = judged(jpath), judged(jpath2)
     L = []
     cells = collections.defaultdict(lambda: collections.Counter())
+    redone = {json.dumps(B.cell(r)) for r in recs if not r["error"]}
     for r in recs:
         k = (arm(r), r["model"], r["n"], group(r["item"]))
         c = cells[k]
+        if r["error"] and json.dumps(B.cell(r)) in redone:   # superseded by its re-run (§3d.3): its cost only
+            c["cost"] += r["cost"]; c["superseded"] += 1
+            continue
         c["empty"] += sum(1 for x in r["turns"] if (x.get("forced_final") or not x.get("tool_limit"))   # pre-§1.4 records:
                           and not (x["content"] or "").strip())                                     # limit turns not final
         c["cost"] += r["cost"]; c["tokens"] += r["prompt_tokens"] + r["completion_tokens"]; c["seconds"] += r["seconds"]
@@ -457,7 +461,7 @@ def report(recs, jpath, gradedir, jpath2=None, results=None):
                 c["cite"] += got; c["cite_n"] += n
             if r["arm"] == "T":
                 g, n = inlining(r); c["inl"] += g; c["sql"] += n; c["inl_sessions"] += g > 0
-    L.append("| arm | model | N | items | manager correct (strict; tolerant sides) | status | qualifier | sides strict / tolerant (CONFLICT keys) | silent | analyst checks reported / naive / computed / absent / unconfirmed | gold covered / missed / wrong | refs cited | T inlining (sessions; SQL) | cost | $ per correct manager | $ per covered reason | empty replies | errors |")
+    L.append("| arm | model | N | items | manager correct (strict; tolerant sides) | status | qualifier | sides strict / tolerant (CONFLICT keys) | silent | analyst checks reported / naive / computed / absent / unconfirmed | gold covered / missed / wrong | refs cited | T inlining (sessions; SQL) | cost | $ per correct manager | $ per covered reason | empty replies | errors (+ superseded by a re-run) |")
     L.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
     for k in sorted(cells):
         c = cells[k]
@@ -468,7 +472,7 @@ def report(recs, jpath, gradedir, jpath2=None, results=None):
         L.append(f"| {k[0]} | {k[1].split('/')[-1]} | {k[2]} | {k[3]} | {c['m_correct']}/{c['m']}; {c['m_tol']} | {c['m_status']}/{c['m']} | "
                  f"{c['m_qual']}/{c['m_qual_n']} | {c['m_sides']} / {c['m_sides_tol']} of {c['m_con']} | {c['m_silent']} | {c['k_reported']} / {c['k_naive']} / {c['k_computed']} / {c['k_absent']} / {c['k_unconfirmed']} "
                  f"(judge {c['k_judge']}) | {c['gr_covered']} / {c['gr_missed']} / {c['gr_wrong']} ({c['a_judged']}/{c['a']} judged{g2}) | "
-                 f"{c['cite']}/{c['cite_n']} | {inl} | {c['cost']:.4f} | {per_m} | {per_a} | {c['empty']} | {c['errors']} |")
+                 f"{c['cite']}/{c['cite_n']} | {inl} | {c['cost']:.4f} | {per_m} | {per_a} | {c['empty']} | {c['errors']}" + (f" (+{c['superseded']})" if c["superseded"] else "") + " |")
     kt = k_table(recs)
     if kt:
         L.append("\n" + kt)
