@@ -330,16 +330,16 @@ Same items, scoring and judge as §3b′ (family F01–F16 and A4, 3 repetitions
 - A4: G is wrong on GR7 (precedence; contested where no superior rule holds) and GR8 (the chain is contested, not false) in 6 of 6 gradings. T covers GR7 in 4 of 6, and GR8 in 1 of 6 (missed 3, wrong 2). F covers nothing.
 - Numeric checks reported, judge-confirmed: G 14, T 15, F 0 (of 15).
 
-**A second model (§3c.4 and §3d.1, replication).** GLM 5.3, N 200, arms G, G+ and T. Family: 3 repetitions, $1.82. A4: 1 repetition only, $0.408, judge $0.044. Self-agreement 0.90, kappa 0.74.
+**A second model (§3c.4 and §3d.1, replication).** GLM 5.3, N 200, arms G, G+ and T. Family: 3 repetitions, $1.82. A4: 3 repetitions, $1.28, judge $0.130. Self-agreement 0.97, kappa 0.91.
 
-| arm | correct; tolerant | qualifier (of 42) | sides strict (of 9) | by k: 1 / 2–3 / 4–5 / 6+ | true / absence / contested (of 15 / 15 / 9) | A4 covered / missed / wrong (of 10) | $ per correct |
+| arm | correct; tolerant | qualifier (of 42) | sides strict (of 9) | by k: 1 / 2–3 / 4–5 / 6+ | true / absence / contested (of 15 / 15 / 9) | A4 covered / missed / wrong (of 30) | $ per correct |
 |---|---|---|---|---|---|---|---|
-| G | 25; 27 | 27 | 3 | 9, 6, 8, 2 | 13, 0, 3 | 6 / 0 / 4 (8 / 0 / 2) | 0.026 |
-| G+ | 21; 23 | 27 | 2 | 9, 6, 6, 0 | 10, 0, 2 | 7 / 0 / 3 (7 / 0 / 3) | 0.032 |
-| T | 40; 40 | 42 | 9 | 11, 12, 8, 9 | 12, 11, 9 | 9 / 0 / 1 (8 / 1 / 1) | 0.012 |
+| G | 25; 27 | 27 | 3 | 9, 6, 8, 2 | 13, 0, 3 | 17 / 0 / 13 (19 / 0 / 11) | 0.026 |
+| G+ | 21; 23 | 27 | 2 | 9, 6, 6, 0 | 10, 0, 2 | 23 / 0 / 7 (23 / 0 / 7) | 0.032 |
+| T | 40; 40 | 42 | 9 | 11, 12, 8, 9 | 12, 11, 9 | 28 / 1 / 1 (27 / 2 / 1) | 0.012 |
 
 - The pattern is DeepSeek's. G and G+ never qualify absence and lose contested sides. T qualifies every key and has every contested side.
-- GLM's T is weaker than DeepSeek's on true keys (12 of 15) and at k 4–5. G is wrong on GR2 and GR7 in A4 in both judgings; T only on GR7. With one A4 session per arm this is a signal.
+- GLM's T is weaker than DeepSeek's on true keys (12 of 15) and at k 4–5. In A4, G and G+ are wrong on GR7 in 6 of 6 gradings, and on GR2 in 6 and 4 of 6. G is also wrong on GR8 and GR10 (the chain and its count under U03) in 4 of 6. T is wrong on GR7 in 2 of 6, and misses GR2 in 3. Numeric checks reported, judge-confirmed: T 15, G 11, G+ 11 (of 15). Unlike DeepSeek, G+ does better than G here (23 against 17 covered), though none of its functions covers the families.
 - Per correct family answer GLM costs about 9× DeepSeek for T ($0.012 against $0.0013) and 15× for G ($0.026 against $0.0017); T is the cheapest arm with either model.
 
 **Rules as a lookup tool (§3d.2, confirmatory; outcomes recorded before the run).** G-tools has G's material without the rules and claims sections. It looks them up with T's `rules` tool, which evaluates nothing, and applies them itself with `sql`. DeepSeek, N 200. Cost: $0.148, judge $0.068. Self-agreement 0.90, kappa 0.67.
@@ -378,7 +378,7 @@ Each N fills different strata: d 1 occurs only at N 50, and d 4+ only at N 200. 
 | §3c.2 G-q, G+-q | F01–F16 | DeepSeek; 200 | 3 | confirmatory (outcomes recorded before) |
 | §3d.2 G-tools | F01–F16, A4 | DeepSeek; 200 | 3 | confirmatory (outcomes recorded before) |
 | §3c.3 | F01–F16, A4 | DeepSeek; 100 | 3 | replication |
-| §3c.4, §3d.1 | F01–F16; A4 | GLM 5.3; 200 | 3; A4 1 | replication |
+| §3c.4, §3d.1 | F01–F16; A4 | GLM 5.3; 200 | 3 | replication |
 
 **Main result.** Across two models and three N, the rule arms do not differ on values. They differ on closure:
 - a "no" that rests on absence is qualified by T in 13 of 15 (DeepSeek N 200), 6 of 6 (N 100) and 11 of 15 (GLM), and by G, G+, G-q, G+-q and G-tools in 0 of every count;
@@ -405,7 +405,6 @@ F answers almost nothing without the rules, which shows what the material contri
 6. The generator (§3b′). Interactions now grow with N, after §3b found programmes independent. §3b is exploratory for this reason.
 
 **Open:**
-- GLM A4 has 1 repetition of the planned 3;
 - every confirmatory comparison uses one generator;
 - the judge is one model, not yet checked against hand grading (`bench/grading/grades.json`).
 
