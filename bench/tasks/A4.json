@@ -97,7 +97,7 @@
     },
     {
      "id": "GR6",
-     "text": "1 capitalisation policy covers capital requests (K01: finance capitalises from 20,000 (G009), tax expenses under 60,000 (G010)); they conclude the same thing, so every rule whose body holds for a request takes part, not one policy",
+     "text": "1 capitalisation policy covers capital requests (K01: finance capitalises from 20,000 (G009), tax expenses under 60,000 (G010)); its two rules both take part: a request in both ranges has a rule on each side, not one owner's answer",
      "refs": [
       "G009",
       "G010"
@@ -139,6 +139,7 @@
    "checks": [
     {
      "id": "A4.K1",
+     "subject": "r000228",
      "gr": [
       "GR1"
      ],
@@ -152,6 +153,7 @@
     },
     {
      "id": "A4.K2",
+     "subject": "r000010",
      "gr": [
       "GR1"
      ],
@@ -169,6 +171,7 @@
     },
     {
      "id": "A4.K3",
+     "subject": "r000010",
      "gr": [
       "GR1"
      ],
@@ -183,6 +186,7 @@
     },
     {
      "id": "A4.K4",
+     "subject": "r000027",
      "gr": [
       "GR3",
       "GR4"
@@ -198,6 +202,7 @@
     },
     {
      "id": "A4.K5",
+     "subject": "r000098",
      "gr": [
       "GR5"
      ],
@@ -212,6 +217,7 @@
     },
     {
      "id": "A4.K6",
+     "subject": "cog",
      "gr": [
       "GR4",
       "GR5"
@@ -231,6 +237,7 @@
     },
     {
      "id": "A4.K7",
+     "subject": "r000059",
      "gr": [
       "GR6",
       "GR7"
@@ -246,6 +253,7 @@
     },
     {
      "id": "A4.K8",
+     "subject": "r000002",
      "gr": [
       "GR6",
       "GR7"
@@ -261,6 +269,7 @@
     },
     {
      "id": "A4.K9",
+     "subject": "r099787",
      "gr": [
       "GR8"
      ],
@@ -274,6 +283,7 @@
     },
     {
      "id": "A4.K10",
+     "subject": "r000075",
      "gr": [
       "GR8"
      ],
@@ -287,6 +297,7 @@
     },
     {
      "id": "A4.K11",
+     "subject": "r000092",
      "gr": [
       "GR8"
      ],
@@ -300,6 +311,7 @@
     },
     {
      "id": "A4.K12",
+     "subject": "U02",
      "gr": [
       "GR9"
      ],
@@ -318,6 +330,7 @@
     },
     {
      "id": "A4.K13",
+     "subject": "U02",
      "gr": [
       "GR9"
      ],
@@ -473,6 +486,7 @@
    "checks": [
     {
      "id": "A4.K1",
+     "subject": "r000228",
      "gr": [
       "GR1"
      ],
@@ -486,6 +500,7 @@
     },
     {
      "id": "A4.K2",
+     "subject": "r000010",
      "gr": [
       "GR1"
      ],
@@ -503,6 +518,7 @@
     },
     {
      "id": "A4.K3",
+     "subject": "r000010",
      "gr": [
       "GR1"
      ],
@@ -517,6 +533,7 @@
     },
     {
      "id": "A4.K4",
+     "subject": "r000027",
      "gr": [
       "GR3",
       "GR4"
@@ -532,6 +549,7 @@
     },
     {
      "id": "A4.K5",
+     "subject": "r000098",
      "gr": [
       "GR5"
      ],
@@ -546,6 +564,7 @@
     },
     {
      "id": "A4.K6",
+     "subject": "cog",
      "gr": [
       "GR4",
       "GR5"
@@ -565,6 +584,7 @@
     },
     {
      "id": "A4.K7",
+     "subject": "r000059",
      "gr": [
       "GR6",
       "GR7"
@@ -580,6 +600,7 @@
     },
     {
      "id": "A4.K8",
+     "subject": "r000002",
      "gr": [
       "GR6",
       "GR7"
@@ -595,6 +616,7 @@
     },
     {
      "id": "A4.K9",
+     "subject": "r099787",
      "gr": [
       "GR8"
      ],
@@ -608,6 +630,7 @@
     },
     {
      "id": "A4.K10",
+     "subject": "r000075",
      "gr": [
       "GR8"
      ],
@@ -621,6 +644,7 @@
     },
     {
      "id": "A4.K11",
+     "subject": "r000092",
      "gr": [
       "GR9"
      ],
@@ -634,6 +658,7 @@
     },
     {
      "id": "A4.K12",
+     "subject": "U03",
      "gr": [
       "GR10"
      ],
@@ -652,6 +677,7 @@
     },
     {
      "id": "A4.K13",
+     "subject": "U03",
      "gr": [
       "GR10"
      ],
@@ -817,6 +843,7 @@
    "checks": [
     {
      "id": "A4.K1",
+     "subject": "r000228",
      "gr": [
       "GR1"
      ],
@@ -830,6 +857,7 @@
     },
     {
      "id": "A4.K2",
+     "subject": "r000010",
      "gr": [
       "GR1"
      ],
@@ -847,6 +875,7 @@
     },
     {
      "id": "A4.K3",
+     "subject": "r000010",
      "gr": [
       "GR1"
      ],
@@ -861,6 +890,7 @@
     },
     {
      "id": "A4.K4",
+     "subject": "r000027",
      "gr": [
       "GR3",
       "GR4"
@@ -876,6 +906,7 @@
     },
     {
      "id": "A4.K5",
+     "subject": "r000098",
      "gr": [
       "GR5"
      ],
@@ -890,6 +921,7 @@
     },
     {
      "id": "A4.K6",
+     "subject": "cog",
      "gr": [
       "GR4",
       "GR5"
@@ -909,6 +941,7 @@
     },
     {
      "id": "A4.K7",
+     "subject": "r000059",
      "gr": [
       "GR6",
       "GR7"
@@ -924,6 +957,7 @@
     },
     {
      "id": "A4.K8",
+     "subject": "r000002",
      "gr": [
       "GR6",
       "GR7"
@@ -939,6 +973,7 @@
     },
     {
      "id": "A4.K9",
+     "subject": "r099787",
      "gr": [
       "GR8"
      ],
@@ -952,6 +987,7 @@
     },
     {
      "id": "A4.K10",
+     "subject": "r000075",
      "gr": [
       "GR8"
      ],
@@ -965,6 +1001,7 @@
     },
     {
      "id": "A4.K11",
+     "subject": "r000092",
      "gr": [
       "GR9"
      ],
@@ -978,6 +1015,7 @@
     },
     {
      "id": "A4.K12",
+     "subject": "U04",
      "gr": [
       "GR10"
      ],
@@ -996,6 +1034,7 @@
     },
     {
      "id": "A4.K13",
+     "subject": "U04",
      "gr": [
       "GR10"
      ],

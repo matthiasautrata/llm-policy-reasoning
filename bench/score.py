@@ -11,7 +11,9 @@ reported side holding ids of two key sides: extra ids allowed, sides not merged 
 and defeater; for a term, its status and candidates. correct = status, value, strict sides and qualifier
 (benchmark-design §2; PLAN-v3-bench-full §3b′); "tolerant" is the same with tolerant sides.
 Analyst: each check is searched for mechanically when its value is a number or an id: "reported" (in that turn's
-reply), "naive" (only the known wrong value is), "computed" (only in that turn's tool results), "absent". Gold
+reply, in a block or under a heading that names the check's subject where the task gives one), "naive" (only the
+known wrong value is), "computed" (only in that turn's tool results), "absent"; a reported or naive grade the
+judge's grade of that check contradicts is counted "unconfirmed" (PLAN-v3-bench-full §3c.1). Gold
 reasons are graded by the judge (bench/judge_rubric.md; an OpenAI model via the Batch API, a family not under test) as covered / missed / wrong; the
 mechanical checks are also graded by it, which gives a mechanical-vs-judge agreement for free. Rule ids cited
 per gold reason are counted mechanically.
@@ -148,7 +150,7 @@ def patterns(v):
     return None
 
 
-CONTESTED = re.compile(r"contest|conflict|disputed", re.I)
+CONTESTED = re.compile(r"contest|conflict|disputed|undecided", re.I)
 
 
 def contested(v):
@@ -157,6 +159,28 @@ def contested(v):
 
 def found(pats, text):
     return bool(pats) and any(p.search(text) for p in pats)
+
+
+HEADING = re.compile(r"^\s*#")
+
+
+def answering(pats, text, subject):
+    """the lines where a value answers its check (§3c.1): the check's subject is named in the value's block (a run
+    of non-blank lines: a table, a list, a paragraph) or in the nearest heading above it; no subject: any line"""
+    lines = text.splitlines()
+    hits = [i for i, l in enumerate(lines) if found(pats, l)]
+    if not subject:
+        return hits
+    s = re.compile(rf"(?<![\w]){re.escape(subject)}(?![\w])")
+    def near(i):
+        lo = hi = i
+        while lo > 0 and lines[lo - 1].strip(): lo -= 1
+        while hi + 1 < len(lines) and lines[hi + 1].strip(): hi += 1
+        if any(s.search(l) for l in lines[lo:hi + 1]):
+            return True
+        h = next((l for l in reversed(lines[:lo]) if HEADING.search(l)), "")
+        return bool(s.search(h))
+    return [i for i in hits if near(i)]
 
 
 def score_checks(rec):
@@ -172,16 +196,27 @@ def score_checks(rec):
         if pe is None:
             out[c["id"]] = "judge"
             continue
-        s = text.get(c["turn"], "")
-        got = found(pe, s)
-        if got and contested(k["value"]):     # a contested value counts only on a line that says so (rubric)
-            got = any(found(pe, line) and CONTESTED.search(line) for line in s.splitlines())
-            if not got:
+        s, sub = text.get(c["turn"], ""), c.get("subject")
+        at = answering(pe, s, sub)
+        if at and contested(k["value"]):      # a contested value counts only on a line that says so (rubric)
+            lines = s.splitlines()
+            if not any(CONTESTED.search(lines[i]) for i in at):
                 out[c["id"]] = "naive"         # given as a plain figure: the rubric's "contested result as yes or no"
                 continue
-        out[c["id"]] = ("reported" if got else "naive" if found(pn, s) else
+        out[c["id"]] = ("reported" if at else "naive" if pn and answering(pn, s, sub) else
                         "computed" if found(pe, tools[c["turn"]]) else "absent")
     return out
+
+
+MECH = {"reported": "reported", "naive": "wrong"}
+
+
+def confirmed(mech, j):
+    """a mechanical "reported" or "naive" counts only where the judge's grade of that check agrees (§3c.1): a
+    number in the text may stand for something else (an amount equal to the limit, a zero row count); without a
+    judging, the mechanical grade stands"""
+    jc = {x["id"]: x["grade"] for x in (j or {}).get("checks", [])}
+    return {k: "unconfirmed" if v in MECH and k in jc and jc[k] != MECH[v] else v for k, v in mech.items()}
 
 
 def cited(rec):
@@ -226,7 +261,7 @@ def stub_judge(rec):
     """grades from the mechanical checks; every reason covered (tests only)"""
     mech = score_checks(rec)
     o = {"status": "graded", "reasons": [{"id": g["id"], "grade": "covered", "evidence": ""} for g in B.item(rec["item"], rec["n"])["gold"]],
-         "checks": [{"id": k, "grade": {"reported": "reported", "naive": "wrong"}.get(v, "absent")} for k, v in mech.items()]}
+         "checks": [{"id": k, "grade": MECH.get(v, "absent")} for k, v in mech.items()]}
     return {"content": json.dumps(o), "cost": 0.0, "model_served": "stub:judge", "provider": "stub",
             "prompt_tokens": 0, "completion_tokens": 0, "seconds": 0.0}
 
@@ -410,9 +445,9 @@ def report(recs, jpath, gradedir, jpath2=None, results=None):
             c["m_cost"] += r["cost"]
         else:
             c["a"] += 1; c["a_cost"] += r["cost"]
-            for v in score_checks(r).values():
-                c["k_" + v] += 1
             j = jg.get(json.dumps(B.cell(r)))
+            for v in confirmed(score_checks(r), j).values():
+                c["k_" + v] += 1
             for x in (j or {}).get("reasons", []):
                 c["gr_" + x["grade"]] += 1
             for x in (jg2.get(json.dumps(B.cell(r))) or {}).get("reasons", []):
@@ -422,7 +457,7 @@ def report(recs, jpath, gradedir, jpath2=None, results=None):
                 c["cite"] += got; c["cite_n"] += n
             if r["arm"] == "T":
                 g, n = inlining(r); c["inl"] += g; c["sql"] += n; c["inl_sessions"] += g > 0
-    L.append("| arm | model | N | items | manager correct (strict; tolerant sides) | status | qualifier | sides strict / tolerant (CONFLICT keys) | silent | analyst checks reported / naive / computed / absent | gold covered / missed / wrong | refs cited | T inlining (sessions; SQL) | cost | $ per correct manager | $ per covered reason | empty replies | errors |")
+    L.append("| arm | model | N | items | manager correct (strict; tolerant sides) | status | qualifier | sides strict / tolerant (CONFLICT keys) | silent | analyst checks reported / naive / computed / absent / unconfirmed | gold covered / missed / wrong | refs cited | T inlining (sessions; SQL) | cost | $ per correct manager | $ per covered reason | empty replies | errors |")
     L.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
     for k in sorted(cells):
         c = cells[k]
@@ -431,7 +466,7 @@ def report(recs, jpath, gradedir, jpath2=None, results=None):
         inl = f"{c['inl_sessions']}; {c['inl']}/{c['sql']}" if k[0] == "T" else "–"
         g2 = f"; 2nd {c['gr2_covered']} / {c['gr2_missed']} / {c['gr2_wrong']}" if jg2 else ""
         L.append(f"| {k[0]} | {k[1].split('/')[-1]} | {k[2]} | {k[3]} | {c['m_correct']}/{c['m']}; {c['m_tol']} | {c['m_status']}/{c['m']} | "
-                 f"{c['m_qual']}/{c['m_qual_n']} | {c['m_sides']} / {c['m_sides_tol']} of {c['m_con']} | {c['m_silent']} | {c['k_reported']} / {c['k_naive']} / {c['k_computed']} / {c['k_absent']} "
+                 f"{c['m_qual']}/{c['m_qual_n']} | {c['m_sides']} / {c['m_sides_tol']} of {c['m_con']} | {c['m_silent']} | {c['k_reported']} / {c['k_naive']} / {c['k_computed']} / {c['k_absent']} / {c['k_unconfirmed']} "
                  f"(judge {c['k_judge']}) | {c['gr_covered']} / {c['gr_missed']} / {c['gr_wrong']} ({c['a_judged']}/{c['a']} judged{g2}) | "
                  f"{c['cite']}/{c['cite_n']} | {inl} | {c['cost']:.4f} | {per_m} | {per_a} | {c['empty']} | {c['errors']} |")
     kt = k_table(recs)
@@ -449,7 +484,7 @@ def report(recs, jpath, gradedir, jpath2=None, results=None):
             for cid, v in score_checks(r).items():
                 if v != "judge" and cid in jc:
                     tot += 1
-                    agree += {"reported": "reported", "naive": "wrong"}.get(v, "absent") == jc[cid]
+                    agree += MECH.get(v, "absent") == jc[cid]
     if tot:
         L.append(f"\nMechanical checks vs judge: {agree}/{tot} agree.")
     sa = self_agreement(jg, jg2) if jg2 else None

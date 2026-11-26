@@ -151,8 +151,10 @@ def a4(n, picks):
         dict(id="GR5", text=f"Exception to the exception {ctrw}: an emergency request from {ven} within the limit is cleared even "
                             f"without the vendor check; it prevails over {excw}, so {r4} is cleared",
              refs=[ctrw, excw], turns=[2]),
-        dict(id="GR6", text=f"{len(ds)} capitalisation polic{'y covers' if len(ds) == 1 else 'ies cover'} {cat} requests ({pol}); "
-                            f"they conclude the same thing, so every rule whose body holds for a request takes part, not one policy",
+        dict(id="GR6", text=(f"1 capitalisation policy covers {cat} requests ({pol}); its two rules both take part: a request "
+                             f"in both ranges has a rule on each side, not one owner's answer") if len(ds) == 1 else
+                            (f"{len(ds)} capitalisation policies cover {cat} requests ({pol}); they conclude the same thing, "
+                             f"so every rule whose body holds for a request takes part, not one policy"),
              refs=[x for d in ds for x in (d["for"]["id"], d["against"]["id"])], turns=[3]),
         dict(id="GR7", text=("Stated precedence: " + "; ".join(f"{a} ({side[a][0]} {side[a][1]}) prevails over {b}"
                                                                  + (f" ({side[b][0]} {side[b][1]})" if b in side else "") for a, b in sup)
@@ -177,22 +179,22 @@ def a4(n, picks):
                      refs=[um["base"]["id"]], turns=[4]))
     D = lambda *g: ["decide", *g]
     checks = [
-        dict(id="A4.K1", gr=["GR1"], turn=1, component=f"limit governing {r1}", call=["programme_limit", code, r1]),
-        dict(id="A4.K2", gr=["GR1"], turn=1, component=f"limit governing {r2}", call=["programme_limit", code, r2],
+        dict(id="A4.K1", subject=r1, gr=["GR1"], turn=1, component=f"limit governing {r1}", call=["programme_limit", code, r1]),
+        dict(id="A4.K2", subject=r2, gr=["GR1"], turn=1, component=f"limit governing {r2}", call=["programme_limit", code, r2],
              **({"naive": ["programme_limit_first", code]} if last["limit"] != lim0 else {})),
-        dict(id="A4.K3", gr=["GR1"], turn=1, component=f"{r2} within the {code} limit", call=D("programme_limit_ok", code, r2)),
-        dict(id="A4.K4", gr=["GR3", "GR4"], turn=2, component=f"clearance of {r3} under {code}", call=D("programme_cleared", code, r3)),
-        dict(id="A4.K5", gr=["GR5"], turn=2, component=f"clearance of {r4} under {code}", call=D("programme_cleared", code, r4)),
-        dict(id="A4.K6", gr=["GR4", "GR5"], turn=2, component=f"{cat} requests from {ven} cleared under {code}",
+        dict(id="A4.K3", subject=r2, gr=["GR1"], turn=1, component=f"{r2} within the {code} limit", call=D("programme_limit_ok", code, r2)),
+        dict(id="A4.K4", subject=r3, gr=["GR3", "GR4"], turn=2, component=f"clearance of {r3} under {code}", call=D("programme_cleared", code, r3)),
+        dict(id="A4.K5", subject=r4, gr=["GR5"], turn=2, component=f"clearance of {r4} under {code}", call=D("programme_cleared", code, r4)),
+        dict(id="A4.K6", subject=ven, gr=["GR4", "GR5"], turn=2, component=f"{cat} requests from {ven} cleared under {code}",
              call=["cleared_count", code, ven], naive=["cleared_count_no_exception", code, ven]),
-        dict(id="A4.K7", gr=["GR6", "GR7"], turn=3, component=f"{r5} capitalised", call=D("capitalised", cat, r5)),
-        dict(id="A4.K8", gr=["GR6", "GR7"], turn=3, component=f"{r6} capitalised", call=D("capitalised", cat, r6)),
-        dict(id="A4.K9", gr=["GR8"], turn=4, component=f"clearance of {r7} under {um['code']}", call=D(um["pred"], r7)),
-        dict(id="A4.K10", gr=["GR8"], turn=4, component=f"clearance of {r8} under {um['code']}", call=D(um["pred"], r8)),
-        dict(id="A4.K11", gr=["GR9" if ex else "GR8"], turn=4, component=f"clearance of {r9} under {um['code']}", call=D(um["pred"], r9)),
-        dict(id="A4.K12", gr=[gold[-1]["id"]], turn=4, component=f"{cat} requests cleared under {um['code']}",
+        dict(id="A4.K7", subject=r5, gr=["GR6", "GR7"], turn=3, component=f"{r5} capitalised", call=D("capitalised", cat, r5)),
+        dict(id="A4.K8", subject=r6, gr=["GR6", "GR7"], turn=3, component=f"{r6} capitalised", call=D("capitalised", cat, r6)),
+        dict(id="A4.K9", subject=r7, gr=["GR8"], turn=4, component=f"clearance of {r7} under {um['code']}", call=D(um["pred"], r7)),
+        dict(id="A4.K10", subject=r8, gr=["GR8"], turn=4, component=f"clearance of {r8} under {um['code']}", call=D(um["pred"], r8)),
+        dict(id="A4.K11", subject=r9, gr=["GR9" if ex else "GR8"], turn=4, component=f"clearance of {r9} under {um['code']}", call=D(um["pred"], r9)),
+        dict(id="A4.K12", subject=um["code"], gr=[gold[-1]["id"]], turn=4, component=f"{cat} requests cleared under {um['code']}",
              call=["chain_count", um["pred"], "cleared"], naive=["chain_count", "programme_cleared", "cleared"]),
-        dict(id="A4.K13", gr=[gold[-1]["id"]], turn=4, component=f"{cat} requests whose clearance under {um['code']} is contested",
+        dict(id="A4.K13", subject=um["code"], gr=[gold[-1]["id"]], turn=4, component=f"{cat} requests whose clearance under {um['code']} is contested",
              call=["chain_count", um["pred"], "contested"]),
     ]
     return dict(turns=turns, gold=gold, checks=checks)

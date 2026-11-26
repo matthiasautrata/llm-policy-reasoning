@@ -70,7 +70,7 @@ Batch 1 tests only the core slice: no question or task needs a generated rule, s
 
 STOP: report whether accuracy or gold coverage now moves with N or k, by arm.
 
-## 3b′ Re-score, floor arm, interacting rules (proposed 2026-11-26 after an external review; needs Matthias's go)
+## 3b′ Re-score, floor arm, interacting rules (approved and run 2026-11-26)
 
 §3b's first run: family questions flat (71/72), k only 1–3; programmes do not interact. An external review of batch 1 found scoring defects that hide a real difference (the qualifier) and inflate another (sides). Batch 1 and §3b are **exploratory**; this step makes the next run confirmatory.
 
@@ -92,13 +92,38 @@ Parked (Matthias, 2026-11-26): a drift arm with defects only in G's material is 
 
 Run 1–3 at N 50 and 200 first (all arms plus F). STOP: report by arm, N, k and dispute count.
 
-## 3c Batch 2
+## 3c After §3b′ (Matthias's go, 2026-11-26)
 
-- **Batch 2** (after §3a and §3b, with the new items included): N = 50 and 100 (repetition 1), then repetition 2 at all N, resumable, within the cap minus a reserve for §4.
+§3b′ result (exploratory → strong signal; one model, one generator, 3 repetitions): T flat across k (11–12 of 12 at every k, N 200); G falls with k and disputes, and the loss is closure (qualifier, dispute sides), not values. STOP after each step.
 
-STOP after batch 2: results, cost, and the reassessment.
+1. **Fix the two defects and re-score (cents):**
+   - A4 GR6's expected answer at N 50, where only one dispute exists: word it for a single dispute (the generator), then re-judge A4 both passes. No new arm calls.
+   - The numeric check: credit a value only where it answers its check (the check's subject named near the number, or the judge's grade), not any occurrence of the number. Re-score §3b′. Report what changed.
+2. **Robustness check on the qualifier (about $0.15).** G's material states the absence principle, but only rules with `:closed_over` carry the tag "answers over known facts only", while every "no" with no live supporter is qualified; G may read the tags as the full list. Variant arms G-q and G+-q: the same material plus one sentence in the task instructions: "For every no, say whether it rests only on not finding something in the data." Family questions, N 200, 3 repetitions. **Written before the run:** if G-q's qualifier rate stays near G's, the closure result stands; if it rises to T's, the finding is "closure needs explicit prompting on every answer; the engine provides it by construction", and RESULTS says so.
+3. **Complete the curve (about $0.40):** N 100, family questions and A4, all arms including F, 3 repetitions.
+4. **Second family (about $0.50–1.00):** GLM, family questions at N 200, arms G, G+ and T, 3 repetitions. Same scoring; report beside DeepSeek.
+5. **Write-up:** RESULTS current state with all of the above, exploratory and confirmatory runs labelled as such, every post-hoc change listed with its reason (forced final answer, T's design tools, id resolution, gold-reason rewrites, scoring fixes). Then stop: the paper is next.
 
-## 4 Later: other models
+Budget: OpenRouter about $7.9 left; these steps about $1.2–1.7.
+
+## 3d After §3c (Matthias, 2026-11-26; added while §3c runs; do not disturb §3c)
+
+**Arms frozen from here.** No further change to any arm's tools, prompts or material. Ideas that would change an arm go to the next version (first in line: an effective-precedence summary in T's `rules`, which would target A4 GR7 and is therefore deferred).
+
+1. **GLM on A4,** N 200, arms G, G+ and T, 3 repetitions (about $0.50), beside §3c.4's family questions. Same scoring and judging.
+2. **Arm G-tools: navigation without evaluation.** G's task instructions and schema docs, plus `rules` (lookup by term, predicate, asset or id) and `sql`; no `decide`, `why`, `why_not` or `summary`. Family questions and A4, N 200, DeepSeek, 3 repetitions (about $0.20). **Written before the run:** G-tools near T means the gain is finding the right rules (a rule index suffices); G-tools near G means the gain is exact evaluation (the engine is needed); in between, report the split.
+3. **Reporting, no calls:**
+   - Item counts per k and d stratum at every N; say which strata are empty or thin (N 50 has no k 6+; N 200 has no d 1 or 2–3) and whether N 100 fills them.
+   - G+ framed as "curated trusted functions do not cover new policy families", since `gplus.py` covers five slice predicates only; not as trusted functions failing where they apply.
+   - Inspect T's A4 turns that inlined a rule in SQL or hit the call limit: was it enumerating in SQL instead of using `summary`? Report, do not fix.
+   - Check why `score.py` reports one error for F at N 200 on the family questions after the re-run: a superseded record counted, or a cell not re-run.
+   - If G-q closes the qualifier gap (§3c.2), RESULTS states that the selective "answers over known facts only" tags nudged G to treat untagged rules as closed-world.
+
+STOP: report, then the write-up of §3c.5 includes these results.
+
+Later, before the paper (separate study): the shared authoring-defect experiment (the same defects in both arms' sources; detection measured), for claim C4.
+
+## 4 Later: other models (GLM on family questions is now §3c.4)
 
 After the DeepSeek run, Matthias decides on a second family. Candidates: GLM, Ling Flash 3.1, Hy4 Flash. Selection by OpenRouter's Models and Benchmarks APIs, re-ranked by our cost per cell against the agentic index, then one A1 session per candidate on G and T at N = 25. Local column (gpt-oss:20b) likewise later: manager questions at all N; analyst tasks only at N = 25, or at 128k context if it fits in memory.
 
@@ -141,3 +166,4 @@ After the DeepSeek run, Matthias decides on a second family. Candidates: GLM, Li
 - 2026-11-26 — §3b′ run scope, set before the run: items F01–F16 and A4 at N 50 and 200; manager arms G, G+, T, F; analyst arms G, T, F (G+ stays manager-only, as decided); 3 repetitions on all of them (item 5), so 384 manager cells and 18 A4 sessions, every session judged twice. The core items M01–M31 and A1–A3 are not re-run, since they have no interaction that grows with N. Budget: §3b′ sets none; estimated before the run at $1.88 plus the judge at $0.20, from the pilot calibration, which overstated batch 1 by 2.2× and §3b by 3.9×, so about $0.5–0.9 is expected. A live run refuses an estimate above its budget, so the run's cap is `--budget 2`, and the judge's is 2, since its worst-case reservation needs headroom.
 - 2026-11-26 — §3b′ item 4 expected outcomes, written before the run. (a) If G stays flat as k and d grow, the report says that complete markdown holds at this depth with this model, and does not claim a T advantage. (b) T's expected robust difference is closure: correct status and qualifier on contested and qualified keys (CONFLICT; false by absence, CLOSED), most visible in strata k ≥ 4 and d ≥ 1 at N 200. (c) A difference in accuracy alone (true or false values on uncontested keys) is not expected. (d) F is expected to fail the rule-dependent items, which shows what the material adds. It should pass only limits answerable from data alone, which is none here, since limits are in the rules.
 - 2026-11-26 — §3b′ run into `bench/results/b3c.jsonl` (`--budget 2`, 4 workers): 402 cells, $0.674 (estimate $1.88). One cell (F, N 200, F03, rep 1) failed the truncation check at 8.8 characters per reported token, after large SQL results; resuming re-ran it with no other change. Judged twice ($0.085 and $0.255), self-agreement 0.95 (kappa 0.91). Two defects were found and not fixed (the run is scored as is). First, A4's GR6 at N 50 is ill-posed with a single dispute ("1 policy … they conclude the same thing"); gen_items should word it for one dispute. Second, the mechanical numeric check (a number found in the text) gives false "reported" for F, which prints 8,000 or 0 for other reasons; the judge disagrees on those. Results in RESULTS ("Interacting rules and the floor arm"). STOP here, as the plan says.
+- 2026-11-26 — §3c.1 done. GR6 is worded for one dispute in gen_items (only N 50's text changes; keys unchanged). All 18 A4 sessions were re-judged twice into `b3c.rejudge-medium.jsonl` and `.2.jsonl` ($0.257 each, the cap reserved at `--budget 2`). N 100 and 200 had unchanged prompts, so those grades are a re-run of the judge; re-judging all 18 keeps one file per judging. Numeric check, in two parts. (1) Every A4 check names a `subject`: the request, the vendor (K6) or the last chain level (K12, K13). A number counts only in a block (a table, list or paragraph) or under a heading that names it. A1–A3 checks have no subject and score as before. "Undecided" now counts as saying "contested", as A4's turn 4 asks. A per-line version first lost 8 of G's and T's true reports, which sit in tables, so it was dropped. (2) Subject proximity alone changed no grade against the judge: F's 8,000 is r000228's amount (equal to its limit) and its 0 is a row count, both next to the subject. A reported or naive grade is therefore counted "unconfirmed" where the judge's grade of that check contradicts it, the plan's second option. Effect: F's reported checks fall from 7 and 3 to 0 and 0, G at N 50 from 14 to 13, T unchanged. GR6 at N 50 goes from T 1/6 covered to 4/6 and G 1/6 to 0/6. The old grade files remain the record of this comparison.
