@@ -343,6 +343,33 @@ def absent(R, g, v, closed):
     raise AssertionError(f"absence of a false {p} not reasoned in the reference")
 
 
+def summary(R, q):
+    """summary op (PLAN-v3-bench-full §2): the status of each instance of [p ?r] over a request domain, from the same
+    per-request functions as the decide keys. Domains: a list of ids, or the pending requests of a subtree."""
+    p, (var,) = q["goal"][0], [x for x in q["goal"][1:] if isinstance(x, str) and x.startswith("?")]
+    dom = q["filters"][var]
+    if isinstance(dom, list):
+        rs = sorted(dom)
+    else:
+        assert dom["concept"] == "request_in_subtree" and dom["filters"].get("status") == "pending", dom
+        rs = _pending(R, dom["filters"]["root"])
+    def status(r):                                 # -> (proven | refuted | contested, root or None)
+        if p in ("approved", "po_issued"):         # R316: po_issued follows approved, contested through it
+            st, v, sides = R.approved(r)
+            return ("contested", (["approved", r], sides)) if st == "CONFLICT" else ("proven" if v else "refuted", None)
+        v = {"vendor_cleared": lambda r: R.vendor_cleared(r)[0], "cap_breach": R.cap_breach, "denied": R.denied}[p](r)
+        return ("proven" if v else "refuted"), None
+    res = {r: status(r) for r in rs}
+    roots = {}
+    for st, root in res.values():
+        if root: roots[json.dumps(root)] = roots.get(json.dumps(root), 0) + 1
+    rl = sorted(({"goal": json.loads(g)[0], "sides": json.loads(g)[1], "instances": n} for g, n in roots.items()),
+                key=lambda x: (-x["instances"], json.dumps(x["goal"])))
+    by = {s: [r for r in rs if res[r][0] == s] for s in ("proven", "refuted", "contested")}
+    return dict(status="ANSWER", instances=len(rs), counts={s: len(v) for s, v in by.items()},
+                contested_roots=rl[:20], contested_roots_total=len(rl), sample={s: v[:10] for s, v in by.items()})
+
+
 def answer1(R, q):
     k, g, d = q["kind"], q.get("goal"), q.get("as_of") or R.today
     A = lambda v, core: dict(status="ANSWER", value=v, sides=None, core=core)
@@ -357,6 +384,8 @@ def answer1(R, q):
         return R.resolve_term(q["text"])
     if k == "claim":
         return R.standing(q["claim"], d)
+    if k == "summary":
+        return summary(R, q)
     p = g[0]
     if k == "why_not":
         assert p == "approved"

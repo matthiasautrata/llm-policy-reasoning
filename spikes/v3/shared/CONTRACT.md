@@ -30,6 +30,8 @@ the op) and `"sql_log"`: the SQL statements the op issued, each `{"concept", "sq
 | `decide` | `goal` (EDN text), `as_of`? | `{status, value, sides, why: [node], owners: [..], qualifier}` |
 | `why_not` | `goal`, `as_of`? | `{status, value, why_not: [node]}` |
 | `claims` | `asset`, `as_of`? | `{claims: [{id, standing, defeater, qualifier, sides, subclaims: [...]}]}` |
+| `rules` | `about` (predicate, `term:` id, concept, asset, or goal pattern) | `{status, about, predicates, concepts, rules: [item], read_by: [{id, head}], conflicts: [{predicate, sides}]}` |
+| `summary` | `goal` (EDN text, open), `filters`? (domains), `sample`? (default 10), `as_of`? | `{status, goal, as_of, instances, counts, contested_roots, contested_roots_total, sample}` |
 | `add` | `edn` (EDN text: a vector of rule / claim records) | `{added: [ids]}` |
 | `with_hypothesis` | `add`? (EDN text), `withhold`? ([ids]), `ops` | `{results: [<result>, ...]}`; state afterwards is unchanged |
 
@@ -57,6 +59,39 @@ Claims are stored flat and linked by id (PLAN-v3-integrity §1.1). In the `claim
 `subclaims` are its active linked members: `:depends_on` members first (`role` `"required"`), then
 `:supports` members (`role` `"supporting"`). The top-level list (and `describe`) holds the claims about the
 asset that no active claim links to; withholding a parent therefore lists its members at top level.
+
+## Design ops: `rules` and `summary` (PLAN-v3-bench-full §2)
+
+`rules` is structural: it reads the loaded rule base (active rules and claims) and evaluates nothing.
+`about` resolves to predicates and concepts: a predicate some active rule or claim mentions; `term:X` for
+predicate X; a concept by name or id, or the concept a term is bound to (`:concept`); an asset (claim
+`:about`), giving its active claims and their assertions' predicates; an EDN goal pattern
+(`[:capitalised "K01" ?a]`), its predicate narrowed to the records whose head (or read literal) unifies
+with the pattern. Nothing resolved: `UNDERDETERMINED` for a `term:` id or a known term's pattern, else
+`OUT_OF_SCOPE`. Items are the rules and claims with a role towards it:
+`concludes` (positive head), `attacks` (`:neg` head, defeater, incompatible), `reads` (a body literal,
+under `not` or an aggregate, uses the predicate or fetches the concept), `ranks` (a superiority rule
+whose `:pred` it is), `about` (a claim about the asset). For an asset only its own claims are listed,
+not every claim on the same predicates. Rules whose only role is `reads` go to `read_by` as id and head;
+the others are items. An item holds `id, kind, head` (EDN text), `roles, owner, class,
+doc, recorded_at, superior_to, inferior_to` (`[{id, source}]`, source `explicit | strict | authority:<id>
+| later`), `depends_on` (`{predicates, concepts}`; for a claim `{claims}`), and where present `pred,
+order, completeness, closed_over`; a claim also `about, asserted_by, asserted_at, valid_from, valid_to,
+backing, modal, supports`. Null and empty fields are omitted. `conflicts` are the root conflicts the
+engine knows of: pairs of a supporter and a rival attacker of the predicate (complement, functional
+rival, or incompatible) with no superiority either way, both listed. They are structural: the conflict arises
+wherever both bodies hold, which may be nowhere in the data.
+
+`summary` evaluates the goal on each of its instances. The domain of each variable comes from the goal
+itself (its candidates, as `decide` enumerates them) or from `filters`, a map from a variable (`"?r"`) to
+a list of values or `{concept, filters?, column?}` (rows of that concept, column default `id`). The
+instances are the cartesian product of the given domains; each is decided as a goal with the remaining
+variables open (proven: a binding exists; none: refuted). A goal whose candidates need fetch filters
+bound answers `ERROR` naming the concept, the keys and an example domain. A domain fetch that is
+truncated, or more than 20,000 instances, is an `ERROR`. `counts` is `{proven, refuted, contested}`.
+`contested_roots` (at most 20, by instances descending) are `{goal, sides, instances}`: the conflicts the
+contested instances rest on. `sample` holds the first `sample` sorted bindings per status: a value for
+one variable, else `{"?v": value}`.
 
 ## Integrity gate and errors (PLAN-v3-integrity §2–§3)
 

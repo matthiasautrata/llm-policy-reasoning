@@ -242,6 +242,8 @@ How spike v3 (System A: rules and claims as data, a defeasible engine, a bounded
 **Findings reversed.**
 - The pilot's analyst grades and hand-grading export are withdrawn: crippled by the empty replies at the call limit (PLAN-v3-bench-full §1.4).
 
+**After the phase (PLAN-v3-bench-full §2, 2026-11-26).** The pilot's T had evaluation-only tools (`decide`, `why`, `why_not`, `describe`, `resolve_term`); on A2 at N 200 it made 238 `decide` calls and hit the limit. T gained `rules` and `summary` after the pilot. Fairness note: this change is made after the pilot. It is legitimate only because it addresses a capability gap any real deployment has (navigating the rule base), not the gold reasons, and because it is frozen before the full run. The pilot's T is reported as `T-eval` beside the new T; "evaluation-only tools are not enough for design work" is itself a finding.
+
 ## Platform lessons (platforms dropped, lessons kept)
 
 - **V3b, Clojure · Datahike · Malli.**

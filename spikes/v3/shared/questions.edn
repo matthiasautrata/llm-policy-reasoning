@@ -66,6 +66,16 @@
          {:id :CQ2 :about \"entity:employee\" :assertion [:complete \"employee\"] :asserted_by :hr :asserted_at #inst \"2026-11-25\" :valid_from #inst \"2026-01-01\" :valid_to #inst \"2026-12-31\" :recorded_at #inst \"2026-11-25\" :backing \"probe: §14 derived coverage\" :qualifier \"certainly\"}
          {:id :CQ3 :about \"hier:ancestors_or_self\" :assertion [:complete \"ancestors_or_self\"] :asserted_by :finance :asserted_at #inst \"2026-11-25\" :valid_from #inst \"2026-01-01\" :valid_to #inst \"2026-12-31\" :recorded_at #inst \"2026-11-25\" :backing \"probe: §14 derived coverage\" :qualifier \"certainly\"}]"}
   :text "PROGRESS 14: the same without cost_centre declared complete (cap_breach uncovered: qualified)"}
+ {:id :Q56 :kind :summary :goal [:approved ?r] :filters {"?r" {:concept "request_in_subtree" :filters {:root "cc0049" :status "pending"}}}
+  :text "bench-full §2: approval status of every pending request of the cc0049 subtree (one contested, R312 vs R314)"}
+ {:id :Q57 :kind :summary :goal [:po_issued ?r] :filters {"?r" {:concept "request_in_subtree" :filters {:root "cc0049" :status "pending"}}}
+  :text "bench-full §2: purchase orders over cc0049 (contested downstream of approved: the root is the approved instance)"}
+ {:id :Q58 :kind :summary :goal [:vendor_cleared ?r] :filters {"?r" {:concept "request_in_subtree" :filters {:root "cc0049" :status "pending"}}}
+  :text "bench-full §2: vendor clearance over cc0049 (R307 in the extension defeats R306)"}
+ {:id :Q59 :kind :summary :goal [:cap_breach ?r] :filters {"?r" {:concept "request_in_subtree" :filters {:root "cc0009" :status "pending"}}}
+  :text "bench-full §2: cap breaches over the cc0009 subtree"}
+ {:id :Q60 :kind :summary :goal [:po_issued ?r] :filters {"?r" ["r000001" "r000005" "r000006"]}
+  :text "bench-full §2: a list domain: one contested, one proven, one refuted"}
  {:id :Q30 :state :acyclic :kind :decide :goal [:blacklisted "fern"] :text "Y1: is fern blacklisted (risk says yes, compliance says no)?"}
  {:id :Q32 :state :acyclic :kind :decide :goal [:preferred "acme"] :text "Y2 control: is acme (never suspended) preferred?"}
  {:id :Q34 :state :acyclic :kind :decide :goal [:watchlisted "cog"] :text "Y4: is cog watchlisted (risk prevails over compliance)?"}

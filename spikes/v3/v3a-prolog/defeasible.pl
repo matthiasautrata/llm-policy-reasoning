@@ -28,7 +28,7 @@
     gate missed (INTEGRITY_GATE=off) hits the re-entry guard.
 */
 :- module(defeasible, [eval3/3, body3/5, candidates/3, status/3, hydrate/4, set_agg_sample/1, value3/2, contested_info/5, load_file/1, add_records/3, retract_source/1, evaluate/3, prove/3, body/3, lit/3,
-                       sup/3, in_force/3, active/1, clear_memo/0, pred_of/2,
+                       sup/3, rival/3, in_force/3, active/1, clear_memo/0, pred_of/2,
                        state_token/1, with_state/2, memo/5, clear_fetched/0,
                        fetch_rows/5, cmp_lit/1, ev/2, ids_of/2, derived_lit/1,
                        rule/5, claim/10, claim_link/3, top_claim/2, functional/2, concept/2, term/2, today/1, withheld/1, slice/1, asset/2, src/2]).

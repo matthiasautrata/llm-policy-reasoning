@@ -195,6 +195,18 @@ With one SQL form per concept, the rule index and the status-only memo (proofs r
 - What the numbers say: about 1.2 ms per pending member at every level from L2 up, and the evaluator is about 94 % of the time (SQL 7.3 of 132 s at the root). Only taking the per-member evaluator out of the loop would meet the bar.
 - No probe query is run and no SQL generator is built as an execution path. Compiling rules to SQL may return later as an *answer* ("here is the SQL that implements the rule, and the rules it rests on"), to be decided in the benchmark design.
 
+## Design ops for the benchmark (PLAN-v3-bench-full §2, 2026-11-26)
+
+Two ops (`CONTRACT.md`, Design ops) are T's design tools:
+- `rules` lists the rule base around a predicate, term, concept, asset or goal pattern, with no evaluation.
+- `summary` gives the status counts of an open goal over a domain, its contested roots and a sample.
+
+The reference keys `summary` (Q56–Q60, five new keys in `keys.json`, `changed` unchanged at Q07 Q14); `rules` is structural and is checked against the slice by `bench/selftest.py`, not keyed. At N 200, `summary` over the 425 pending requests of cc0049 takes about 0.8 s; `rules` on a predicate with 34 concluding rules is 12.8k characters, over the 12k tool-result cap, so it narrows to a goal pattern (`[:capitalised "K01" ?a]`, 0.8k).
+
+**Fairness note.** This change is made after the pilot. It is legitimate only because it addresses a capability gap any real deployment has (navigating the rule base), not the gold reasons, and because it is frozen before the full run. Both T versions are reported: `T-eval` (the pilot's evaluation-only tools) and `T` (with `rules` and `summary`; records carry `config.t_tools`). "Evaluation-only tools are not enough for design work" is itself a finding.
+
+The call limit is the same for every arm; `score.py` reports the cells and turns that reach it as their own outcome, by arm (pilot: 21 of 108 turns).
+
 ## Built vs native
 
 - **Native in SWI-Prolog:**

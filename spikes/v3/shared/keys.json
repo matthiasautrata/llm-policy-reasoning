@@ -1132,6 +1132,232 @@
    "sides": null,
    "status": "ANSWER",
    "value": false
+  },
+  "Q56": {
+   "contested_roots": [
+    {
+     "goal": [
+      "approved",
+      "r085616"
+     ],
+     "instances": 1,
+     "sides": [
+      [
+       "R312"
+      ],
+      [
+       "R314"
+      ]
+     ]
+    }
+   ],
+   "contested_roots_total": 1,
+   "counts": {
+    "contested": 1,
+    "proven": 88,
+    "refuted": 336
+   },
+   "instances": 425,
+   "sample": {
+    "contested": [
+     "r085616"
+    ],
+    "proven": [
+     "r000508",
+     "r001711",
+     "r004024",
+     "r004741",
+     "r005667",
+     "r006352",
+     "r007938",
+     "r009632",
+     "r009935",
+     "r010748"
+    ],
+    "refuted": [
+     "r000659",
+     "r000917",
+     "r001173",
+     "r001405",
+     "r001972",
+     "r002063",
+     "r002354",
+     "r002791",
+     "r003029",
+     "r004103"
+    ]
+   },
+   "status": "ANSWER"
+  },
+  "Q57": {
+   "contested_roots": [
+    {
+     "goal": [
+      "approved",
+      "r085616"
+     ],
+     "instances": 1,
+     "sides": [
+      [
+       "R312"
+      ],
+      [
+       "R314"
+      ]
+     ]
+    }
+   ],
+   "contested_roots_total": 1,
+   "counts": {
+    "contested": 1,
+    "proven": 88,
+    "refuted": 336
+   },
+   "instances": 425,
+   "sample": {
+    "contested": [
+     "r085616"
+    ],
+    "proven": [
+     "r000508",
+     "r001711",
+     "r004024",
+     "r004741",
+     "r005667",
+     "r006352",
+     "r007938",
+     "r009632",
+     "r009935",
+     "r010748"
+    ],
+    "refuted": [
+     "r000659",
+     "r000917",
+     "r001173",
+     "r001405",
+     "r001972",
+     "r002063",
+     "r002354",
+     "r002791",
+     "r003029",
+     "r004103"
+    ]
+   },
+   "status": "ANSWER"
+  },
+  "Q58": {
+   "contested_roots": [],
+   "contested_roots_total": 0,
+   "counts": {
+    "contested": 0,
+    "proven": 336,
+    "refuted": 89
+   },
+   "instances": 425,
+   "sample": {
+    "contested": [],
+    "proven": [
+     "r000508",
+     "r000659",
+     "r000917",
+     "r001405",
+     "r001711",
+     "r001972",
+     "r002791",
+     "r003029",
+     "r004254",
+     "r004332"
+    ],
+    "refuted": [
+     "r001173",
+     "r002063",
+     "r002354",
+     "r004024",
+     "r004103",
+     "r005037",
+     "r006284",
+     "r006497",
+     "r007738",
+     "r008010"
+    ]
+   },
+   "status": "ANSWER"
+  },
+  "Q59": {
+   "contested_roots": [],
+   "contested_roots_total": 0,
+   "counts": {
+    "contested": 0,
+    "proven": 1865,
+    "refuted": 503
+   },
+   "instances": 2368,
+   "sample": {
+    "contested": [],
+    "proven": [
+     "r000077",
+     "r000081",
+     "r000304",
+     "r000502",
+     "r000503",
+     "r000521",
+     "r000524",
+     "r000531",
+     "r000555",
+     "r000557"
+    ],
+    "refuted": [
+     "r000432",
+     "r000508",
+     "r000767",
+     "r000911",
+     "r001458",
+     "r001711",
+     "r001831",
+     "r001936",
+     "r001997",
+     "r002232"
+    ]
+   },
+   "status": "ANSWER"
+  },
+  "Q60": {
+   "contested_roots": [
+    {
+     "goal": [
+      "approved",
+      "r000001"
+     ],
+     "instances": 1,
+     "sides": [
+      [
+       "R312"
+      ],
+      [
+       "R314"
+      ]
+     ]
+    }
+   ],
+   "contested_roots_total": 1,
+   "counts": {
+    "contested": 1,
+    "proven": 1,
+    "refuted": 1
+   },
+   "instances": 3,
+   "sample": {
+    "contested": [
+     "r000001"
+    ],
+    "proven": [
+     "r000005"
+    ],
+    "refuted": [
+     "r000006"
+    ]
+   },
+   "status": "ANSWER"
   }
  },
  "changed": [
@@ -1985,6 +2211,232 @@
    "sides": null,
    "status": "ANSWER",
    "value": false
+  },
+  "Q56": {
+   "contested_roots": [
+    {
+     "goal": [
+      "approved",
+      "r085616"
+     ],
+     "instances": 1,
+     "sides": [
+      [
+       "R312"
+      ],
+      [
+       "R314"
+      ]
+     ]
+    }
+   ],
+   "contested_roots_total": 1,
+   "counts": {
+    "contested": 1,
+    "proven": 88,
+    "refuted": 336
+   },
+   "instances": 425,
+   "sample": {
+    "contested": [
+     "r085616"
+    ],
+    "proven": [
+     "r000508",
+     "r001711",
+     "r004024",
+     "r004741",
+     "r005667",
+     "r006352",
+     "r007938",
+     "r009632",
+     "r009935",
+     "r010748"
+    ],
+    "refuted": [
+     "r000659",
+     "r000917",
+     "r001173",
+     "r001405",
+     "r001972",
+     "r002063",
+     "r002354",
+     "r002791",
+     "r003029",
+     "r004103"
+    ]
+   },
+   "status": "ANSWER"
+  },
+  "Q57": {
+   "contested_roots": [
+    {
+     "goal": [
+      "approved",
+      "r085616"
+     ],
+     "instances": 1,
+     "sides": [
+      [
+       "R312"
+      ],
+      [
+       "R314"
+      ]
+     ]
+    }
+   ],
+   "contested_roots_total": 1,
+   "counts": {
+    "contested": 1,
+    "proven": 88,
+    "refuted": 336
+   },
+   "instances": 425,
+   "sample": {
+    "contested": [
+     "r085616"
+    ],
+    "proven": [
+     "r000508",
+     "r001711",
+     "r004024",
+     "r004741",
+     "r005667",
+     "r006352",
+     "r007938",
+     "r009632",
+     "r009935",
+     "r010748"
+    ],
+    "refuted": [
+     "r000659",
+     "r000917",
+     "r001173",
+     "r001405",
+     "r001972",
+     "r002063",
+     "r002354",
+     "r002791",
+     "r003029",
+     "r004103"
+    ]
+   },
+   "status": "ANSWER"
+  },
+  "Q58": {
+   "contested_roots": [],
+   "contested_roots_total": 0,
+   "counts": {
+    "contested": 0,
+    "proven": 336,
+    "refuted": 89
+   },
+   "instances": 425,
+   "sample": {
+    "contested": [],
+    "proven": [
+     "r000508",
+     "r000659",
+     "r000917",
+     "r001405",
+     "r001711",
+     "r001972",
+     "r002791",
+     "r003029",
+     "r004254",
+     "r004332"
+    ],
+    "refuted": [
+     "r001173",
+     "r002063",
+     "r002354",
+     "r004024",
+     "r004103",
+     "r005037",
+     "r006284",
+     "r006497",
+     "r007738",
+     "r008010"
+    ]
+   },
+   "status": "ANSWER"
+  },
+  "Q59": {
+   "contested_roots": [],
+   "contested_roots_total": 0,
+   "counts": {
+    "contested": 0,
+    "proven": 1865,
+    "refuted": 503
+   },
+   "instances": 2368,
+   "sample": {
+    "contested": [],
+    "proven": [
+     "r000077",
+     "r000081",
+     "r000304",
+     "r000502",
+     "r000503",
+     "r000521",
+     "r000524",
+     "r000531",
+     "r000555",
+     "r000557"
+    ],
+    "refuted": [
+     "r000432",
+     "r000508",
+     "r000767",
+     "r000911",
+     "r001458",
+     "r001711",
+     "r001831",
+     "r001936",
+     "r001997",
+     "r002232"
+    ]
+   },
+   "status": "ANSWER"
+  },
+  "Q60": {
+   "contested_roots": [
+    {
+     "goal": [
+      "approved",
+      "r000001"
+     ],
+     "instances": 1,
+     "sides": [
+      [
+       "R312"
+      ],
+      [
+       "R314"
+      ]
+     ]
+    }
+   ],
+   "contested_roots_total": 1,
+   "counts": {
+    "contested": 1,
+    "proven": 1,
+    "refuted": 1
+   },
+   "instances": 3,
+   "sample": {
+    "contested": [
+     "r000001"
+    ],
+    "proven": [
+     "r000005"
+    ],
+    "refuted": [
+     "r000006"
+    ]
+   },
+   "status": "ANSWER"
   }
  }
 }

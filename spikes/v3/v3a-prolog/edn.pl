@@ -12,7 +12,7 @@
     #inst "2026-..."  string "2026-09-15" (date part)
     ; comment , whitespace
 */
-:- module(edn, [edn_read_file/2, edn_parse/2, edn_vars/2, mget/3, mget/4]).
+:- module(edn, [edn_read_file/2, edn_parse/2, edn_vars/2, edn_vars/4, mget/3, mget/4]).
 :- use_module(library(dcg/basics)).
 
 edn_read_file(File, T) :-

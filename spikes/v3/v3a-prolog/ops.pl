@@ -1,5 +1,5 @@
 /*  V3a System A surface (CONTRACT.md): run_op(+OpJSON, -ResultJSON).
-    decide, why_not, claims, resolve_term, describe, fetch, add, with_hypothesis.
+    decide, why_not, claims, resolve_term, describe, fetch, rules, summary, add, with_hypothesis.
 */
 :- module(ops, [run_op/2, load_files_json/1, set_hyp_mode/1, run_concurrent/2, memo_test/1]).
 :- use_module(edn).
@@ -264,6 +264,198 @@ asset_meta(A, column, Doc, null) :-
 do_op("fetch", Op, _{concept:C, filters:Op.filters, rows:Rows, sql:Sql, params:Ps, row_count:N, truncated:Tr}) :- !,
     atom_string(C, Op.concept), dict_pairs(Op.filters, _, F),
     fetch_rows(C, F, Rows, Info, _), length(Rows, N), Sql = Info.sql, Ps = Info.params, Tr = Info.truncated.
+
+% ------------------------------------------------------------------ design: rules, summary (PLAN-v3-bench-full §2)
+
+%!  rules: the active rules and claims that conclude, attack, read or rank what `about` names (a predicate, a
+%   term, a concept, an asset, or a goal pattern that narrows a predicate to the records whose literal can meet
+%   it), from the loaded rule base alone (no evaluation). Rules that only read it are listed as id and head. conflicts: the opposing
+%   pairs (a supporter and an attacker of the same predicate whose heads can meet) with no superiority either
+%   way; each is a root conflict wherever both bodies hold (decide / summary find the instances).
+do_op("rules", Op, R) :- !,
+    (   sub_string(Op.about, 0, _, _, "[")         % a goal pattern: only the records whose literal can meet it
+    ->  edn_parse(Op.about, G0), edn_vars(G0, G, [], _), pred_of(G, P0),
+        ( known_pred(P0) -> Ps = [P0] ; Ps = [] ), Cs = [], Cl = []
+    ;   about(Op.about, Ps, Cs, Cl), G = _ ),
+    (   Ps == [], Cs == [], Cl == []
+    ->  (   nonvar(G) -> pred_of(G, P1), scope(P1, St)
+        ;   sub_string(Op.about, 0, _, _, "term:") -> St = "UNDERDETERMINED" ; St = "OUT_OF_SCOPE" ),
+        R = _{status:St, about:Op.about, predicates:[], concepts:[], rules:[], read_by:[], conflicts:[]}
+    ;   findall(Id-Role, ( member(P, Ps), role(P, Id, Role), meets(G, Id, Role) ), IR1),
+        findall(Id-reads, ( member(C, Cs), rule(Id, _, _, B, _), active(Id), body_lit(B, [fetch, C|_]) ), IR2),
+        findall(Id-about, member(Id, Cl), IR3),
+        append([IR1, IR2, IR3], IR4),
+        (   Cl == [] -> IR0 = IR4                     % an asset: its own claims, not every claim on their predicates
+        ;   exclude([Id-_]>>( claim(Id, _, _, _, _, _, _, _, _, _), \+ memberchk(Id, Cl) ), IR4, IR0) ),
+        sort(IR0, IR), group_pairs_by_key(IR, Groups),
+        partition([_-Rs]>>( Rs == [reads] ), Groups, RG, MG),     % rules that only read it: id and head
+        maplist(item, MG, Items),
+        findall(_{id:Id, head:Hd}, ( member(Id-_, RG), rule(Id, _, H, _, _), edn_text(H, Hd) ), RB),
+        pairs_keys(IR, Kept),
+        findall(_{predicate:P, sides:[[X], [Y]]}, ( member(P, Ps), unresolved(P, X, Y), memberchk(X, Kept), memberchk(Y, Kept) ), Cf),
+        R = _{status:"ANSWER", about:Op.about, predicates:Ps, concepts:Cs, rules:Items, read_by:RB, conflicts:Cf} ).
+
+%   about(+Text, -Preds, -Concepts, -Claims): a predicate or concept by name; a term by id (its predicate of the
+%   same name, its bound concept); a concept by id; an asset by id (the claims about it and their predicates).
+about(A, Ps, Cs, Cl) :-
+    ( sub_string(A, 0, _, _, "term:") -> sub_string(A, 5, _, 0, N) ; N = A ),
+    atom_string(P0, N),
+    findall(P0, mentioned(P0), P1),
+    findall(C, ( concept(C, M), ( C == P0 ; mget(id, M, A) ; term(A, TM), mget(concept, TM, CI), mget(id, M, CI) ) ), C1),
+    findall(Id, ( claim(Id, _, _, _, _, _, A, _, _, _), active(Id) ), Cl0), sort(Cl0, Cl),
+    findall(P, ( member(Id, Cl), claim(Id, As, _, _, _, _, _, _, _, _), pred_of(As, P) ), P2),
+    append(P1, P2, Ps0), sort(Ps0, Ps), sort(C1, Cs).
+
+mentioned(P) :- once(( rule(Id, _, H, B, M), active(Id),
+                       ( H \== none, pred_of(H, P) ; body_lit(B, L), derived_lit(L), pred_of(L, P) ; mget(pred, M, P) )
+                     ; claim(Id, A, _, _, _, _, _, _, _, _), active(Id), pred_of(A, P) )).
+
+%   role(+P, -Id, -Role): concludes (a strict / defeasible rule or a claim with a positive P head), attacks (a
+%   negative head, a defeater, an incompatibility declared on P), reads (P in the body), ranks (a superiority rule on P).
+role(P, Id, Role) :-
+    rule(Id, K, H, B, M), active(Id),
+    (   K == superiority -> mget(pred, M, P), Role = ranks
+    ;   H \== none, pred_of(H, P), head_role(K, H, Role)
+    ;   body_lit(B, L), derived_lit(L), pred_of(L, P), Role = reads ).
+role(P, Id, Role) :-
+    claim(Id, A, _, _, _, _, _, _, _, _), active(Id), pred_of(A, P), ( A = [neg, _] -> Role = attacks ; Role = concludes ).
+
+%   meets(?Pattern, +Id, +Role): the record's literal for that role unifies with the pattern (always, if unbound).
+meets(G, _, _) :- var(G), !.
+meets(_, _, ranks) :- !.
+meets(G, Id, reads) :- !, rule(Id, _, _, B, _), body_lit(B, L), ( L = [neg, X] -> true ; X = L ), \+ X \= G, !.
+meets(G, Id, _) :- ( rule(Id, _, H, _, _) ; claim(Id, H, _, _, _, _, _, _, _, _) ), !, ( H = [neg, X] -> true ; X = H ), \+ X \= G.
+
+head_role(K, H, Role) :- ( H = [neg, _] ; memberchk(K, [defeater, incompatible]) ), !, Role = attacks.
+head_role(_, _, concludes).
+
+%   Every literal of a body, inside [:not] and aggregates too.
+body_lit(B, L) :- member(X, B), ( X = [not, Y] -> body_lit([Y], L) ; X = [agg, _, _, B2, _] -> body_lit(B2, L) ; L = X ).
+
+item(Id-Roles, I) :-
+    (   rule(Id, K, H, B, M)
+    ->  findall(Q, ( body_lit(B, L), derived_lit(L), pred_of(L, Q) ), Q0), sort(Q0, Qs),
+        findall(C, body_lit(B, [fetch, C|_]), C0), sort(C0, Cs),
+        ( H == none -> Hd = null ; edn_text(H, Hd) ),
+        I0 = _{id:Id, kind:K, head:Hd, recorded_at:Rec, depends_on:_{predicates:Qs, concepts:Cs}},
+        mget(recorded_at, M, Rec, null),
+        ( K == superiority -> mget(pred, M, Pr), mget(order, M, O), I1 = I0.put(_{pred:Pr, order:O}) ; I1 = I0 ),
+        foldl(meta_field(M), [completeness, closed_over], I1, I2)
+    ;   claim(Id, A, By, At, F, T, About, _, _, M),
+        edn_text(A, Hd), mget(depends_on, M, Dp, []), mget(supports, M, Su, []), mget(qualifier, M, Q, null),
+        mget(backing, M, Bk, null),
+        I2 = _{id:Id, kind:claim, head:Hd, about:About, asserted_by:By, asserted_at:At, valid_from:F, valid_to:T,
+               recorded_at:Rec, backing:Bk, modal:Q, depends_on:_{claims:Dp}, supports:Su},
+        mget(recorded_at, M, Rec, null) ),
+    mget(owner, M, Ow, null), mget(class, M, Cl, null), mget(doc, M, Doc, null),
+    findall(_{id:L, source:S}, ( opponent(Id, L), sup(Id, L, S) ), Sup0), sort(Sup0, Sup),
+    findall(_{id:W, source:S}, ( opponent(Id, W), sup(W, Id, S) ), Inf0), sort(Inf0, Inf),
+    I3 = I2.put(_{roles:Roles, owner:Ow, class:Cl, doc:Doc, superior_to:Sup, inferior_to:Inf}),
+    compact(I3, I).
+
+%   Fields that are null or empty are left out.
+compact(D0, D) :-
+    dict_pairs(D0, T, Ps0),
+    findall(K-V, ( member(K-V0, Ps0), ( is_dict(V0) -> compact(V0, V), dict_pairs(V, _, [_|_]) ; V = V0 ), V \== null, V \== [] ), Ps),
+    dict_pairs(D, T, Ps).
+
+meta_field(M, K, I0, I) :- ( mget(K, M, V), V \== null -> I = I0.put(K, V) ; I = I0 ).
+
+%   opposes(?X, ?Y, ?P): X supports a P head that Y's head can attack (complement, a functional rival, or an
+%   incompatibility declared on that head).
+opposes(X, Y, P) :-
+    supporter(X, HX), pred_of(HX, P),
+    (   rival(HX, R, Diff), attacker_head(Y, HY), \+ HY \= R, copy_term(R-Diff, HY-D2), may_differ(D2)
+    ;   rule(Y, incompatible, HY, _, _), active(Y), \+ HY \= HX ),
+    X \== Y.
+
+supporter(Id, H) :- rule(Id, K, H, _, _), memberchk(K, [strict, defeasible]), active(Id).
+supporter(Id, H) :- claim(Id, H, _, _, _, _, _, _, _, _), active(Id).
+attacker_head(Id, H) :- rule(Id, K, H, _, _), memberchk(K, [strict, defeasible, defeater]), active(Id).
+attacker_head(Id, H) :- claim(Id, H, _, _, _, _, _, _, _, _), active(Id).
+
+may_differ(true).
+may_differ(diff(V, V2)) :- \+ V == V2.
+
+opponent(Id, O) :- ( opposes(Id, O, _) ; opposes(O, Id, _) ), Id \== O.
+
+unresolved(P, X, Y) :-
+    setof(A-B, ( opposes(X0, Y0, P), msort([X0, Y0], [A, B]) ), Pairs), member(X-Y, Pairs),
+    \+ sup(X, Y, _), \+ sup(Y, X, _).
+
+%   EDN text of a stored literal (variables printed ?a, ?b, ...).
+edn_text(T, S) :- copy_term(T, T1), numbervars(T1, 0, _), with_output_to(string(S), wedn(T1)).
+wedn('$VAR'(N)) :- !, C is 0'a + N mod 26, K is N // 26, ( K =:= 0 -> format("?~c", [C]) ; format("?~c~w", [C, K]) ).
+wedn(L) :- is_list(L), !, write('['), wedn_seq(L), write(']').
+wedn(map(Ps)) :- !, write('{'), foldl([K-V, Sep0, ' ']>>( write(Sep0), wedn(K), write(' '), wedn(V) ), Ps, '', _), write('}').
+wedn(X) :- string(X), !, json_write(current_output, X).
+wedn(X) :- atom(X), !, format(":~w", [X]).
+wedn(X) :- write(X).
+wedn_seq([]).
+wedn_seq([X|Xs]) :- wedn(X), forall(member(Y, Xs), ( write(' '), wedn(Y) )).
+
+%!  summary: the status of every instance of an open goal. filters gives a variable's domain, either a list of
+%   values or {concept, filters, column} (a fetch; column defaults to id); the instances are the goal's ground
+%   candidates under each binding of the domains (a binding with none is one refuted instance).
+do_op("summary", Op, R) :- !,
+    as_of(Op, D), edn_parse(Op.goal, G0), edn_vars(G0, G, [], Ns0), reverse(Ns0, Ns),
+    ( get_dict(filters, Op, F), F \== null -> dict_pairs(F, _, Ds) ; Ds = [] ),
+    ( get_dict(sample, Op, K) -> true ; K = 10 ),
+    pred_of(G, P),
+    (   \+ known_pred(P) -> scope(P, St), R = _{status:St, goal:Op.goal, as_of:D}
+    ;   catch(summary(G, Ns, Ds, D, K, R0), error(fetch_unbound(C, Fs), _), unbound_error(C, Fs, Ns, R0)),
+        R = R0.put(_{goal:Op.goal, as_of:D}) ).
+
+unbound_error(C, Fs, Ns, _{status:"ERROR", error:Msg}) :-
+    pairs_keys(Ns, Vs), atomic_list_concat(Vs, ', ', VT), pairs_keys(Fs, Ks),
+    format(string(Msg), "the goal's instances cannot be enumerated: ~w needs ~w bound; give a domain in filters for one of ~w, e.g. {\"?r\": {\"concept\": \"request_in_subtree\", \"filters\": {\"root\": \"cc0049\", \"status\": \"pending\"}}}", [C, Ks, VT]).
+
+summary_limit(20000).
+
+summary(G, Ns, Ds, D, K, R) :-
+    maplist(domain(Ns), Ds, DVs),
+    foldl([_-Vs, N0, N]>>( length(Vs, L), N is N0 * L ), DVs, 1, Size), summary_limit(Max),
+    (   Size > Max -> throw(error(summary_too_large(Size, Max), _)) ; true ),
+    pairs_values(Ns, Vars),
+    findall(Vars-V-G, ( bind(DVs), instance(G, D, V) ), Is),
+    aggregate_all(count, member(_-proven-_, Is), NP), aggregate_all(count, member(_-refuted-_, Is), NR),
+    aggregate_all(count, member(_-contested-_, Is), NC), length(Is, N),
+    findall(Gr-S, ( member(_-contested-Gi, Is), inst_roots(Gi, D, Rts), member(Gr-S, Rts) ), RS0),
+    msort(RS0, RS1), clumped(RS1, RC),
+    findall(_{goal:Gr, sides:S, instances:C}, ( member((Gr-S)-C, RC) ), Roots0),
+    sort(instances, @>=, Roots0, Roots1), length(Roots1, NRoots), take(20, Roots1, Roots),
+    maplist([St, St-Smp]>>( findall(B, ( member(Vs-St-_, Is), binding_of(Ns, Vs, B) ), Bs0), sort(Bs0, Bs), take(K, Bs, Smp) ),
+            [proven, refuted, contested], Samples),
+    dict_pairs(Sample, _, Samples),
+    R = _{status:"ANSWER", instances:N, counts:_{proven:NP, refuted:NR, contested:NC}, contested_roots:Roots,
+          contested_roots_total:NRoots, sample:Sample}.
+
+domain(Ns, Name-Spec, Var-Vals) :-
+    (   memberchk(Name-Var, Ns) -> true ; throw(error(domain_error(goal_variable, Name), _)) ),
+    (   is_list(Spec) -> Vals = Spec
+    ;   atom_string(C, Spec.concept), ( get_dict(filters, Spec, FD) -> dict_pairs(FD, _, F) ; F = [] ),
+        ( get_dict(column, Spec, Col0) -> atom_string(Col, Col0) ; Col = id ),
+        fetch_rows(C, F, Rows, Info, _),
+        (   Info.truncated == true -> throw(error(domain_truncated(C), _)) ; true ),
+        findall(V, ( member(Row, Rows), get_dict(Col, Row, V) ), Vs0), sort(Vs0, Vals) ).
+
+bind([]).
+bind([V-Vals|DVs]) :- member(V, Vals), bind(DVs).
+
+instance(G, D, V) :- ground(G), !, status(G, D, E), value3(E, V).
+instance(G, D, V) :- candidates(G, D, Gs), ( Gs == [] -> V = refuted ; member(G, Gs), status(G, D, E), value3(E, V) ).
+
+%   The root conflicts behind a contested instance, as Goal-Sides.
+inst_roots(G, D, Rts) :-
+    status(G, D, E),
+    (   E = blocked(S, A) -> ids_of(S, I1), ids_of(A, I2), sort([I1, I2], Sd), Rts = [G-Sd]
+    ;   contested_info(G, D, _, _, Ro), findall(X-Sd, member(X-Sd-_, Ro), Rts) ).
+
+binding_of([_-_], [V], B) :- !, ( var(V) -> B = null ; B = V ).
+binding_of(Ns, Vs, B) :- pairs_keys(Ns, Ks), maplist([X, Y]>>( var(X) -> Y = null ; Y = X ), Vs, Ys),
+    pairs_keys_values(Ps, Ks, Ys), dict_pairs(B, _, Ps).
+
+take(K, L, T) :- length(L, N), M is min(K, N), length(T, M), append(T, _, L).
 
 % ------------------------------------------------------------------ extension, hypotheses
 

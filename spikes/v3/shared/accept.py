@@ -54,6 +54,8 @@ def op_for(q):
         return {"op": "fetch", "concept": q["concept"], "filters": q["filters"]}
     if k == "resolve_term":
         return {"op": "resolve_term", "text": q["text"]}
+    if k == "summary":
+        return {"op": "summary", "goal": edn(q["goal"]), "filters": q["filters"], **({"as_of": q["as_of"]} if q.get("as_of") else {})}
     if k == "claim":
         return {"op": "claims", "asset": q["asset"], **({"as_of": q["as_of"]} if q.get("as_of") else {})}
     o = {"op": "decide" if k == "decide" else "why_not", "goal": edn(q["goal"]), **({"as_of": q["as_of"]} if q.get("as_of") else {})}
@@ -115,6 +117,8 @@ def answer_fields(q, r):
         return {"status": r.get("status"), "candidates": sorted(c["term"] for c in r.get("candidates") or [])}
     if k == "claim":
         return {"standing": r.get("standing"), "defeater": r.get("defeater"), "qualifier": sorted(r.get("qualifier") or [])}
+    if k == "summary":
+        return {f: r.get(f) for f in ("status", "instances", "counts", "contested_roots", "contested_roots_total", "sample")}
     v = r.get("value")
     out = {"status": r.get("status"), "value": sorted(v) if isinstance(v, list) else v,
            "sides": sorted(sorted(s) for s in r["sides"]) if r.get("sides") else None}
@@ -139,7 +143,7 @@ def check_question(q, key, r, env, as_of_default):
     if q["kind"] == "why_not":
         want["sides"], got["sides"] = None, None
     for f in got:
-        w = sorted(want[f]) if isinstance(want[f], list) and f != "sides" else want[f]
+        w = sorted(want[f]) if isinstance(want[f], list) and f not in ("sides", "contested_roots") else want[f]
         if got[f] != w:
             errs.append(f"{f}: got {str(got[f])[:200]}, want {str(w)[:200]}")
     as_of = q.get("as_of") or as_of_default

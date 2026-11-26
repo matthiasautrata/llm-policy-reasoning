@@ -502,7 +502,8 @@ def check(S, rules, claims, questions, declared=None):
         g = q.get("goal")
         if not g: continue
         p, a, _ = atom(g)
-        bp = frozenset(i for i, x in enumerate(a) if not vars_of(x))
+        dom = set(q.get("filters") or {}) if q.get("kind") == "summary" else set()   # a summary domain binds its variable
+        bp = frozenset(i for i, x in enumerate(a) if not vars_of(x) - dom)
         if not M.is_safe(p, bp):
             unbound.append(([q["id"]], f"{q['id']}: goal {p} called with bound {sorted(bp)}, modes {modes.get(p)}"))
     viol += [V("unbound-call", m, msg) for m, msg in unbound]
