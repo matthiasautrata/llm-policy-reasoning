@@ -174,6 +174,21 @@ How spike v3 (System A: rules and claims as data, a defeasible engine, a bounded
 - "The memo is the cost": reversed by attribution (DuckDB batches first, then the memo, both fixed).
 - The §5 proposal (compile aggregate bodies to SQL as an execution path) was not adopted: Matthias scoped the system to questions about the data, and the root became a documented residual (`PLAN-v3-sqlform.md`).
 
+### 9 One SQL form per concept (2026-11-25; 8f97c23..73e4014, tag `spike-v3-sqlform`)
+
+**Question.** Can each concept have a single SQL text for single and batched fetches, removing `:batch_sql` (a second text that must agree with the first, an IR-002 risk)? And what is the scope for large aggregates? `PLAN-v3-sqlform.md` (at the tag) holds every Decision.
+
+**Decisions and why.**
+- Scope (Matthias): the system answers questions about the data, not big-data queries. The root aggregate is a documented residual; no probe query and no SQL generator as an execution path. Compiling rules to SQL may return as an answer, to be decided in the benchmark design.
+- One form: each required parameter `$p` is written `IN ($p)` and `p` is an output column, so a single key is a set of one. All six parametrised concepts took it naturally. `sql.register` rejects any other shape (engine-local, not an IR). `flush()` keeps a `UNION ALL` of single-key statements where more than one filter column varies.
+- A nonexistent centre now gives no row for `booked_total` and `pending_exposure` (was one row of 0), as for the other concepts; no key asks about one.
+
+**Findings kept.**
+- Keys byte-identical. Root 4.6 → 2.8 GB and 110 → 108 s; L1 1.0 GB → 419 MB; L2 173 MB; bench peak 175 → 162 MB.
+
+**Findings reversed.**
+- PROGRESS question 17 (two SQL texts that must agree) withdrawn: one text remains.
+
 ## Platform lessons (platforms dropped, lessons kept)
 
 - **V3b, Clojure · Datahike · Malli.**

@@ -227,7 +227,8 @@ With one SQL form per concept, the rule index and the status-only memo (proofs r
 3. **A builtin after a contested binding hides the contest** if it refutes the solution (`SEMANTICS.md`, Known limitation). No slice body has one.
 4. **Propagation's cost on a dispute-heavy base is unmeasured.** The slice now has five questions downstream of two root conflicts (C3/C4, R312/R314), not a dispute-heavy base.
 5. **Rule classes are not deontic** (PROGRESS question 10). `:class` records a rule's inferential role, not whether it grants a permission, obligation or prohibition.
-6. **Not done:** search for `resolve_term` (Lucene, HNSW). Plain matching over normalised terms and synonyms passes check 6.
+6. **`flush()` batches as `UNION ALL` when more than one filter column varies**, the shape behind the earlier memory blow-up (HISTORY phase 8). No slice rule produces it on a hot path; the bench generator reports any base that would (PLAN-v3-bench §0).
+7. **Not done:** search for `resolve_term` (Lucene, HNSW). Plain matching over normalised terms and synonyms passes check 6.
 
 ## Fallback
 
