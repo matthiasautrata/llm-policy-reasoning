@@ -1,8 +1,8 @@
 """Score arm records (PLAN-v3-bench §6): manager answers against the keys, analyst sessions by checks and judge.
 
-  .venv/bin/python bench/score.py bench/results/pilot.jsonl [--report bench/results/pilot.md]
-  .venv/bin/python bench/score.py bench/results/pilot.jsonl --judge --budget 2.00   # submit the Batch; again to collect
-  .venv/bin/python bench/score.py bench/results/pilot.jsonl --export bench/grading     # 10 sessions for hand grading
+  .venv/bin/python bench/score.py bench/results/b1.jsonl [--report bench/results/b1.md]
+  .venv/bin/python bench/score.py bench/results/b1.jsonl --judge --budget 2.00   # submit the Batch; again to collect
+  .venv/bin/python bench/score.py bench/results/b1.jsonl --export bench/grading     # 10 sessions for hand grading
 
 Manager (mechanical), per question: status; value for ANSWER (lists as sets, a one-element list as its element);
 sides for CONFLICT (as a set of id sets); qualifier (the "qualified" flag against the key's qualifier); for a claim,
@@ -207,7 +207,8 @@ def stub_judge(rec):
 
 
 JUDGE_MAX_TOKENS = 16000     # a reasoning judge spends part of it before the JSON
-JUDGE_REASONING = "low"      # without reasoning_effort gpt-6.2-sol does not reason (decided 2026-11-26)
+JUDGE_REASONING = "medium"   # without reasoning_effort gpt-6.2-sol does not reason; low barely does (HISTORY 11;
+                             # medium chosen by Matthias 2026-11-26)
 
 
 def _write(out, rec):
@@ -341,7 +342,8 @@ def report(recs, jpath, gradedir):
     for r in recs:
         k = (r["arm"], r["model"], r["n"])
         c = cells[k]
-        c["empty"] += sum(1 for x in r["turns"] if not x.get("tool_limit") and not (x["content"] or "").strip())
+        c["empty"] += sum(1 for x in r["turns"] if (x.get("forced_final") or not x.get("tool_limit"))   # pre-§1.4 records:
+                          and not (x["content"] or "").strip())                                     # limit turns not final
         c["cost"] += r["cost"]; c["tokens"] += r["prompt_tokens"] + r["completion_tokens"]; c["seconds"] += r["seconds"]
         if r["error"]:
             c["errors"] += 1
@@ -410,14 +412,14 @@ def main():
     ap.add_argument("--judge-model", default=B.JUDGE)
     ap.add_argument("--judge-out")
     ap.add_argument("--judge-reasoning", default=JUDGE_REASONING, choices=["low", "medium", "high", "xhigh"],
-                    help="reasoning_effort; other than the default, the grades go to <results>.judge-<effort>.jsonl")
+                    help="reasoning_effort; grades go to <results>.judge-<effort>.jsonl (low: <results>.judge.jsonl, as the pilot)")
     ap.add_argument("--budget", type=float, default=2.0, help="USD cap on the judge's spend (OpenAI credits; its files only)")
     ap.add_argument("--export")
     ap.add_argument("--grading", default=str(ROOT / "bench/grading"))
     ap.add_argument("--report")
     a = ap.parse_args()
     recs = load(a.results)
-    tag = "" if a.judge_reasoning == JUDGE_REASONING else f"-{a.judge_reasoning}"
+    tag = "" if a.judge_reasoning == "low" else f"-{a.judge_reasoning}"
     jpath = a.judge_out or str(pathlib.Path(a.results).with_suffix(f".judge{tag}.jsonl"))
     if a.judge:
         r = judge(recs, jpath, a.judge_model, a.budget, a.judge_reasoning)

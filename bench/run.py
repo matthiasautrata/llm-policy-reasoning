@@ -1,7 +1,7 @@
-"""Arm runner for the v3 benchmark (PLAN-v3-bench §5, §7; PLAN-v3-bench-run §1, §2). One JSONL record per cell; resumable; budget-capped.
+"""Arm runner for the v3 benchmark (PLAN-v3-bench §5, §7; HISTORY phase 11; PLAN-v3-bench-full §1). One JSONL record per cell; resumable; budget-capped.
 
-  .venv/bin/python bench/run.py --estimate                       # pilot and full-design cost estimate, no calls
-  .venv/bin/python bench/run.py --pilot --out bench/results/pilot.jsonl --budget 3.00   # PLAN-v3-bench-run §5
+  .venv/bin/python bench/run.py --models deepseek/deepseek-v4.1-flash --n 25 200 --analyst-arms G G+ T --estimate
+  .venv/bin/python bench/run.py --models deepseek/deepseek-v4.1-flash --n 25 200 --out bench/results/b1.jsonl --budget 3
   .venv/bin/python bench/run.py --arms T --models stub:key --n 25 --items M01 A1 --out /tmp/x.jsonl
 
 A cell is (kind, arm, model, N, item, rep): an analyst session (A1-A3, four scripted turns) or a manager
@@ -18,23 +18,30 @@ Models: an OpenRouter id (deepseek/deepseek-v4.1-flash), or openai@<id>, or olla
 --context set and recorded; never mixed into the paid results).
 
 Budget: --budget caps the summed cost of --out and of every --also file (the judge's records), earlier runs
-included. Before every model call the call's maximum cost (prompt from its size at 3 characters per token, plus
-max_tokens of completion, at list price) is reserved under a lock and settled with the charged cost after, so
-concurrent cells cannot overshoot. A model without a known price is refused. A call that fails keeps its
-reservation as its cost (marked cost_estimated). A cell stopped by the budget is recorded with error "budget".
+included. Prices come from OpenRouter's endpoints list at start (load_prices; recorded in config.prices with the
+fetch time): per field the highest over the endpoints the quantization filter admits ("reserve") and the lowest
+("typical"). Before every model call the call's maximum cost (prompt from its size at RESERVE_CHARS characters per
+token, plus max_tokens of completion, at the reserve price) is reserved under a lock and settled with the charged
+cost after, so concurrent cells cannot overshoot. A model without a priced endpoint is refused. A live run first
+estimates its cells from the pilot (calibrate) and refuses, before any call, if that exceeds the remaining budget.
+A call that fails keeps its reservation as its cost (marked cost_estimated). A cell stopped by the budget is recorded with error "budget".
 Every other exception in a cell is recorded with its type, message and traceback, and with the cost spent so far.
 Cells with an error are run again on resume; cells without are not.
 
 Truncation: a call whose reported prompt tokens are fewer than its characters / TRUNC_CHARS, or (ollama) that
 fills the context, fails the cell with error "truncated".
 
-Clients that make no calls (tests, PLAN-v3-bench-run §1): stub:key answers with the oracle's keys (manager JSON;
+Clients that make no calls (tests): stub:key answers with the oracle's keys (manager JSON;
 analyst figures in the text), stub:tool calls one tool first, stub:abstain answers UNDERDETERMINED;
 fake:<usd>[:<mode>] is stub:tool charging <usd> per call and sleeping 20 ms, with modes raise (on the second
 call), badargs (tool arguments not JSON), nofunc (a tool call without "function"), notools (a reply without a
-"tool_calls" field), trunc (reports 10 prompt tokens), empty (an empty final reply).
+"tool_calls" field), trunc (reports 10 prompt tokens), empty (an empty final reply), loop (calls a tool whenever
+tools are allowed).
+Call limit: a turn that has made ROUNDS calls with tools is closed by one more call with tool_choice "none" and
+FINAL_NOW (answer from what was found, say what was not checked); the turn is marked tool_limit and forced_final,
+and that call forced (PLAN-v3-bench-full §1.4). Before that fix every turn at the limit ended empty.
 A turn whose final reply is empty is marked "empty" (score.py counts it as an empty reply): recorded, not retried,
-not an error (seen on gpt-oss:20b, PLAN-v3-bench-run §3).
+not an error (seen on gpt-oss:20b, HISTORY phase 11).
 """
 import argparse, concurrent.futures as cf, datetime, decimal, json, pathlib, re, shlex, subprocess, sys, threading, time, traceback
 
@@ -54,15 +61,15 @@ ARMS = ["G", "G+", "T"]
 NS = [25, 50, 100, 200]
 TASKS = ["A1", "A2", "A3"]
 ANALYST_ARMS = ["G", "T"]      # G+ targets manager questions (Matthias, 2026-11-26)
-PILOT = {"models": ["deepseek/deepseek-v4.1-flash"], "n": [25, 200],
-         "items": TASKS + ["M01", "M03", "M08", "M13", "M16", "M17", "M19", "M21", "M46", "M50"]}
-# USD per token, OpenRouter public model list fetched 2026-11-25 (prompt, completion, cache read)
-PRICE = {"deepseek/deepseek-v4.1-flash": (1.4e-7, 4.2e-7, 4.2e-9),
-         "z-ai/glm-5.3": (6.99e-8, 1.4e-6, 6.89e-8)}
+PRICES = {}             # OpenRouter model -> fetched prices (load_prices), recorded in each record's config
+CALIB = BENCH / "results" / "pilot.jsonl.gz"                 # the estimate's tokens and calls per cell (HISTORY 11)
+JUDGE_CALIB = BENCH / "results" / "pilot.judge-medium.jsonl.gz"
 SQL_ROWS, SQL_SECONDS, RESULT_CHARS = 200, 30, 12000
 TRUNC_CHARS = 8          # characters per reported prompt token above which a prompt counts as cut (tokenizers give 3-5)
-RESERVE_CHARS = 3        # characters per token when reserving a call's maximum prompt cost (an upper bound)
-ROUNDS = {"manager": 8, "analyst": 12}      # model calls per turn; the last reply stands if the limit is hit
+RESERVE_CHARS = 2.5      # characters per token when reserving a call's maximum prompt cost (pilot minimum 2.80)
+ROUNDS = {"manager": 8, "analyst": 12}      # model calls with tools per turn, the same for every arm
+FINAL_NOW = ("You have reached the limit of tool calls for this turn. Answer now from what you found, in the form "
+             "asked for, without further tool calls, and say what you could not check.")
 
 MANAGER = """\
 Answer the manager's question. Check against the data with the tools; do not guess figures. End your reply with \
@@ -331,15 +338,15 @@ def stub_client(model, item, arm):
 
     def reply(msgs):
         if "turns" in item:
-            keys, t = task_keys(item["id"]), sum(m["role"] == "user" for m in msgs)
+            keys, t = task_keys(item["id"]), sum(m["role"] == "user" and m["content"] != FINAL_NOW for m in msgs)
             figs = [f"{c['component']}: {json.dumps(keys[c['id']]['value'])}" for c in item["checks"] if c["turn"] == t]
             return "Design.\n" + "\n".join(figs) if mode != "abstain" else "I cannot design this."
         o = key_answer(manager_key(item)) if mode != "abstain" else {"status": "UNDERDETERMINED", "value": None}
         return "Answer.\n```json\n" + json.dumps(o) + "\n```"
 
-    def call(m, msgs, tools):
+    def call(m, msgs, tools, tool_choice=None):
         last = msgs[-1]
-        tool_turn = mode in ("tool",) and last["role"] == "user"
+        tool_turn = tool_choice != "none" and (fault == "loop" or (mode == "tool" and last["role"] == "user"))
         turn["n"] += 1
         if model.startswith("fake:"):
             time.sleep(0.02)
@@ -374,15 +381,36 @@ def endpoint_of(model):
     return "openrouter", model
 
 
-def price(model):
-    """USD per token (prompt, completion, cache read); KeyError for a model without a known price."""
+def load_prices(models, quantization):
+    """For each OpenRouter model, from its endpoints list now: the highest price per field over the endpoints the
+    quantization filter admits ("reserve", the budget's upper bound, since routing may fall back to any of them)
+    and the lowest ("typical", sort by price tries it first; the estimate's). Refuses a model with no such endpoint."""
+    for model in models:
+        e, m = endpoint_of(model)
+        if e != "openrouter" or model.startswith(("stub:", "fake:")) or model in PRICES:
+            continue
+        eps = [x for x in openrouter.endpoint_prices(m) if quantization == "any" or x["quantization"] == quantization]
+        eps = [x for x in eps if x["prompt"] is not None and x["completion"] is not None]
+        if not eps:
+            raise SystemExit(f"no {quantization} endpoint with a price for {m}")
+        cache = lambda x: x["cache_read"] if x["cache_read"] is not None else x["prompt"]
+        fields = lambda x: (x["prompt"], x["completion"], cache(x))
+        PRICES[model] = {"reserve": tuple(max(fields(x)[i] for x in eps) for i in range(3)),
+                         "typical": tuple(min(fields(x)[i] for x in eps) for i in range(3)),
+                         "endpoints": len(eps), "quantization": quantization,
+                         "fetched": time.strftime("%Y-%m-%dT%H:%M:%S")}
+    return {m: PRICES[m] for m in models if m in PRICES}
+
+
+def price(model, which="reserve"):
+    """USD per token (prompt, completion, cache read). KeyError for a model without a known price, so it is refused."""
     e, m = endpoint_of(model)
     if model.startswith("stub:") or e == "ollama":
         return (0.0, 0.0, 0.0)
     if e == "openai":
         i, o, c = openrouter.OPENAI_PRICE[m]
         return (i, o, c)
-    return PRICE[m]
+    return PRICES[model][which]
 
 
 def max_cost(model, msgs, tools, max_tokens):
@@ -395,9 +423,10 @@ def max_cost(model, msgs, tools, max_tokens):
 
 
 def live_client(config):
-    def call(model, msgs, tools):
+    def call(model, msgs, tools, tool_choice=None):
         e, m = endpoint_of(model)
         kw = {k: config[k] for k in ("temperature", "max_tokens")}
+        kw["tool_choice"] = tool_choice
         if e == "openrouter":
             kw["provider"] = config.get("provider")
         return openrouter.chat(m, msgs, tools=tools, endpoint=e, **kw)
@@ -463,30 +492,36 @@ def failure(e):
 
 def session(client, model, arm, n, kind, item, budget, max_tokens, context=None):
     """Run one cell. -> record fields. Raises nothing: a budget stop, a truncation or any exception is recorded,
-    with every call made so far and its cost."""
+    with every call made so far and its cost. A turn that reaches ROUNDS is closed by one more call with tools
+    forbidden and FINAL_NOW (forced_final), the same for every arm."""
     msgs, tools, calls, tlog, turns, err, extra = [], [], [], [], [], None, {}
+
+    def ask(t, tool_choice=None):
+        held = budget.reserve(max_cost(model, msgs, tools, max_tokens))
+        try:
+            res = client(model, msgs, tools, tool_choice)
+            res["cost"] = call_cost(res, model)
+        except BaseException:
+            budget.settle(held, held)           # cost unknown: count the reservation
+            calls.append({"turn": t, "cost": held, "cost_estimated": True, "prompt_tokens": None,
+                          "completion_tokens": None, "seconds": None, "tool_calls": 0})
+            raise
+        budget.settle(held, res["cost"])
+        calls.append(dict({k: res.get(k) for k in CALL_FIELDS}, turn=t, tool_calls=len(res.get("tool_calls") or []),
+                          sent_chars=len(json.dumps(msgs)) + len(json.dumps(tools)), **({"forced": True} if tool_choice else {})))
+        cut = truncation(res, msgs, tools, context)
+        if cut:
+            raise Truncated(cut)
+        return res
+
     try:
         msgs.append({"role": "system", "content": system_prompt(arm, n, kind)})
         tools = tools_for(arm)
         for t, text in enumerate(user_turns(item), 1):
             msgs.append({"role": "user", "content": text})
             for i in range(ROUNDS[kind]):
-                held = budget.reserve(max_cost(model, msgs, tools, max_tokens))
-                try:
-                    res = client(model, msgs, tools)
-                    res["cost"] = call_cost(res, model)
-                except BaseException:
-                    budget.settle(held, held)           # cost unknown: count the reservation
-                    calls.append({"turn": t, "cost": held, "cost_estimated": True, "prompt_tokens": None,
-                                  "completion_tokens": None, "seconds": None, "tool_calls": 0})
-                    raise
-                budget.settle(held, res["cost"])
+                res = ask(t)
                 tcs = res.get("tool_calls") or []
-                calls.append(dict({k: res.get(k) for k in CALL_FIELDS}, turn=t, tool_calls=len(tcs),
-                                  sent_chars=len(json.dumps(msgs)) + len(json.dumps(tools))))
-                cut = truncation(res, msgs, tools, context)
-                if cut:
-                    raise Truncated(cut)
                 msgs.append(res.get("message") or {"role": "assistant", "content": res["content"]})
                 if not tcs:
                     break
@@ -494,8 +529,13 @@ def session(client, model, arm, n, kind, item, budget, max_tokens, context=None)
                     out, log = execute(arm, n, tc["function"]["name"], tc["function"].get("arguments"))
                     tlog.append(dict(log, turn=t, call=len(calls)))
                     msgs.append({"role": "tool", "tool_call_id": tc["id"], "content": out})
+            limit = bool(tcs)
+            if limit:
+                msgs.append({"role": "user", "content": FINAL_NOW})
+                res = ask(t, "none")
+                msgs.append({"role": "assistant", "content": res["content"]})   # any tool call it still makes is dropped
             turns.append({"turn": t, "content": res["content"], "reasoning": res.get("reasoning") or "",
-                          "tool_limit": bool(tcs), "empty": not tcs and not (res["content"] or "").strip()})
+                          "tool_limit": limit, "forced_final": limit, "empty": not (res["content"] or "").strip()})
     except BudgetStop as e:
         err = "budget"
         print(f"  {e}", flush=True)
@@ -526,68 +566,88 @@ def spent_in(*paths):
     return s
 
 
-# ---------------------------------------------------------------- estimate (PLAN §7: before any call)
+# ---------------------------------------------------------------- estimate (before any call; PLAN-v3-bench-full §1.3)
 
-# Assumptions, stated where they are used: model calls per manager question and per analyst turn, tokens each
-# call adds to the context (tool results and replies), completion tokens per call (v2: 1.39M over 792 calls).
-EST = {"calls": {("manager", "G"): 3, ("manager", "G+"): 3, ("manager", "T"): 4,
-                 ("analyst", "G"): 4, ("analyst", "G+"): 4, ("analyst", "T"): 5},
-       "grow": 1500, "completion": 1750, "judge_prompt": 14000, "judge_completion": 6000}
-
-
-def estimate_cell(model, arm, n, kind, cached=False):
-    sys_tok = (len(system_prompt(arm, n, kind)) + len(json.dumps(tools_for(arm)))) // 4
-    per_turn, turns = EST["calls"][(kind, arm)], (4 if kind == "analyst" else 1)
-    k = per_turn * turns
-    prompt = sum(sys_tok + i * EST["grow"] for i in range(k))
-    p = price(model)
-    cost_prompt = (sys_tok * p[2] * k + (prompt - sys_tok * k) * p[0]) if cached else prompt * p[0]
-    return k, prompt, k * EST["completion"], cost_prompt + k * EST["completion"] * p[1]
+def _read(path):
+    import gzip
+    with (gzip.open(path, "rt") if str(path).endswith(".gz") else open(path)) as f:
+        return [json.loads(l) for l in f if l.strip()]
 
 
-def estimate(models, arms, ns, reps, cached=False, ids=None, analyst_arms=ANALYST_ARMS):
-    its = [i for i in items() if not ids or i in ids]
-    per, tot = {}, {"calls": 0, "prompt": 0, "completion": 0, "usd": 0.0, "cells": 0, "judge_usd": 0.0}
-    jp = [x / 2 for x in price(JUDGE)]      # Batch tier
-    for model in models:
-        for arm in arms:
-            for n in ns:
-                for kind in ("analyst", "manager"):
-                    if kind == "analyst" and arm not in analyst_arms:
-                        continue
-                    m = len([i for i in its if i.startswith("A" if kind == "analyst" else "M")])
-                    k, pr, co, usd = estimate_cell(model, arm, n, kind, cached)
-                    per[(model, arm, n, kind)] = (m * reps, usd)
-                    tot["calls"] += k * m * reps; tot["prompt"] += pr * m * reps
-                    tot["completion"] += co * m * reps; tot["usd"] += usd * m * reps; tot["cells"] += m * reps
-                    if kind == "analyst":
-                        tot["judge_usd"] += m * reps * (EST["judge_prompt"] * jp[0] + EST["judge_completion"] * jp[1])
-    return per, tot
+def calibrate(path=CALIB, judge=JUDGE_CALIB):
+    """Per (kind, arm, N) of the pilot, the mean per cell of: calls, uncached prompt, cached prompt and completion
+    tokens, and turns at the call limit (each now costs one more forced call, of the cell's mean size). Also the
+    ratio of the pilot's charged cost to its tokens at the model's current typical price (routing does not always
+    reach the cheapest endpoint) and the judge's mean cost per analyst session."""
+    recs = [r for r in _read(path) if not r.get("error")]
+    cal = {}
+    for r in recs:
+        c = cal.setdefault((r["kind"], r["arm"], r["n"]), [0, 0, 0, 0, 0, 0])
+        cached = sum(x.get("cached_tokens") or 0 for x in r["calls"])
+        for k, v in enumerate((len(r["calls"]), sum(x["prompt_tokens"] or 0 for x in r["calls"]) - cached, cached,
+                               sum(x["completion_tokens"] or 0 for x in r["calls"]),
+                               sum(1 for t in r["turns"] if t.get("tool_limit")), 1)):
+            c[k] += v
+    per = {}
+    for key, (k, u, ca, co, lim, m) in cal.items():
+        per[key] = {"calls": (k + lim) / m, "uncached": u / m * (1 + lim / k), "cached": ca / m * (1 + lim / k),
+                    "completion": co / m * (1 + lim / k)}
+    model = recs[0]["model"]
+    load_prices([model], recs[0]["config"]["provider"]["quantizations"][0])
+    p = price(model, "typical")
+    tok = sum(tok_cost(r_tokens(r), p) for r in recs)
+    j = [x for x in _read(judge) if not x.get("error")]
+    return {"cells": per, "model": model, "factor": sum(r["cost"] for r in recs) / tok,
+            "judge_session": sum(x["cost"] for x in j) / len(j), "source": str(pathlib.Path(path).relative_to(ROOT))}
 
 
-def print_estimate(models, arms, ids=None, analyst_arms=ANALYST_ARMS):
-    print("Assumptions:", json.dumps({f"{k[0]}/{k[1]}": v for k, v in EST["calls"].items()}),
-          f"calls per question or turn; +{EST['grow']} context tokens per call; {EST['completion']} completion tokens "
-          f"per call; judge {EST['judge_prompt']}+{EST['judge_completion']} tokens per analyst session. Prices: OpenRouter "
-          "list 2026-11-25.")
-    print("\nPilot cells (one repetition), USD per cell, no caching:")
-    per, _ = estimate(models, arms, [25, 200], 1, ids=ids, analyst_arms=analyst_arms)
-    print(f"  {'model':30} {'arm':3} {'N':>4} {'analyst':>9} {'manager':>9}")
-    for model in models:
-        for arm in arms:
-            for n in (25, 200):
-                an = per.get((model, arm, n, "analyst"))
-                print(f"  {model:30} {arm:3} {n:4} {f'{an[1]:9.4f}' if an else '        –'} {per[(model, arm, n, 'manager')][1]:9.4f}")
-    out = {}
-    for label, ns, reps in (("pilot (N 25, 200; 1 rep)", [25, 200], 1), ("full, 1 rep (N 25-200)", NS, 1),
-                            ("full, 3 reps (N 25-200)", NS, 3)):
-        for cached in (False, True):
-            _, t = estimate(models, arms, ns, reps, cached, ids, analyst_arms)
-            out[(label, cached)] = t
-            print(f"{label:26} {'cached system prompt' if cached else 'no caching':21} cells {t['cells']:4}  calls "
-                  f"{t['calls']:5}  prompt {t['prompt'] / 1e6:6.2f}M  completion {t['completion'] / 1e6:5.2f}M  "
-                  f"OpenRouter ${t['usd']:.2f}; judge (OpenAI Batch) ${t['judge_usd']:.2f}")
-    return out
+def r_tokens(r):
+    cached = sum(x.get("cached_tokens") or 0 for x in r["calls"])
+    return {"uncached": sum(x["prompt_tokens"] or 0 for x in r["calls"]) - cached, "cached": cached,
+            "completion": sum(x["completion_tokens"] or 0 for x in r["calls"])}
+
+
+def tok_cost(t, p):
+    return t["uncached"] * p[0] + t["completion"] * p[1] + t["cached"] * p[2]
+
+
+def cell_tokens(cal, kind, arm, n):
+    """The pilot's mean cell; G+ analyst uses G's; N between pilot sizes interpolated linearly in N."""
+    arm = "G" if (kind, arm) == ("analyst", "G+") else arm
+    ns = sorted(m for (k, a, m) in cal["cells"] if (k, a) == (kind, arm))
+    lo = max([m for m in ns if m <= n] or ns[:1]); hi = min([m for m in ns if m >= n] or ns[-1:])
+    a, b = cal["cells"][(kind, arm, lo)], cal["cells"][(kind, arm, hi)]
+    w = 0 if hi == lo else (n - lo) / (hi - lo)
+    return {f: a[f] + w * (b[f] - a[f]) for f in a}
+
+
+def estimate(jobs, cal=None):
+    """USD for these jobs: pilot tokens at each model's typical price times the pilot's factor; judge per analyst
+    session. Assumes the tokens transfer to other models and to T with its design tools (both untested)."""
+    cal = cal or calibrate()
+    by, tot = {}, {"cells": 0, "calls": 0.0, "usd": 0.0, "judge_usd": 0.0}
+    for j in jobs:
+        t = cell_tokens(cal, j["kind"], j["arm"], j["n"])
+        usd = 0.0 if j["model"].startswith(("stub:", "fake:")) else tok_cost(t, price(j["model"], "typical")) * cal["factor"]
+        k = (j["model"], j["kind"], j["arm"])
+        b = by.setdefault(k, [0, 0.0]); b[0] += 1; b[1] += usd
+        tot["cells"] += 1; tot["calls"] += t["calls"]; tot["usd"] += usd
+        tot["judge_usd"] += cal["judge_session"] if j["kind"] == "analyst" else 0.0
+    return by, tot
+
+
+def print_estimate(jobs):
+    cal = calibrate()
+    by, t = estimate(jobs, cal)
+    print(f"Estimate from {cal['source']} (model {cal['model']}): pilot tokens per cell at the current typical "
+          f"(cheapest fp8) price x {cal['factor']:.2f} (pilot charged / typical); forced final calls added; judge "
+          f"${cal['judge_session']:.4f} per analyst session (medium). Assumes the tokens transfer to other models "
+          "and to T with its design tools.")
+    for (m, kind, arm), (c, usd) in sorted(by.items()):
+        print(f"  {m:30} {kind:8} {arm:3} cells {c:4}  ${usd:.4f}")
+    print(f"total: cells {t['cells']}  calls {t['calls']:.0f}  OpenRouter ${t['usd']:.2f}; judge (OpenAI Batch) "
+          f"${t['judge_usd']:.2f}")
+    return t
 
 
 # ---------------------------------------------------------------- main
@@ -595,8 +655,7 @@ def print_estimate(models, arms, ids=None, analyst_arms=ANALYST_ARMS):
 def main():
     openrouter.load_env()                 # first: refuses a .env that git does not ignore
     ap = argparse.ArgumentParser()
-    ap.add_argument("--estimate", action="store_true", help="print the cost estimate and exit; no calls")
-    ap.add_argument("--pilot", action="store_true", help="the pilot cells (PILOT; PLAN-v3-bench-run §5)")
+    ap.add_argument("--estimate", action="store_true", help="print the cost estimate of the selected cells and exit")
     ap.add_argument("--arms", nargs="+", default=ARMS, choices=ARMS)
     ap.add_argument("--analyst-arms", nargs="+", default=ANALYST_ARMS, choices=ARMS, help="arms for analyst tasks")
     ap.add_argument("--models", nargs="+", default=MODELS)
@@ -612,26 +671,18 @@ def main():
     ap.add_argument("--quantization", default="fp8", help="provider quantization filter; 'any' to disable")
     ap.add_argument("--context", type=int, default=65536, help="ollama context length (recorded; checked per call)")
     a = ap.parse_args()
-    if a.pilot:
-        a.models, a.n, a.items, a.reps = PILOT["models"], PILOT["n"], PILOT["items"], 1
     live = [m for m in a.models if not m.startswith(("stub:", "fake:"))]
-    if a.estimate or (a.pilot and live):
-        est = print_estimate(live or MODELS, a.arms, a.items, a.analyst_arms)
-        if a.estimate:
-            return
-        if est[("pilot (N 25, 200; 1 rep)", False)]["usd"] > a.budget:
-            print(f"\npilot estimate exceeds the budget ${a.budget:.2f}: stopping before any call")
-            sys.exit(2)
-    if not a.out:
+    prices = load_prices(live, a.quantization)            # refuses a model without a priced endpoint
+    if not a.out and not a.estimate:
         ap.error("--out is required to run")
-    out = pathlib.Path(a.out)
+    out = pathlib.Path(a.out or "/dev/null")
     out.parent.mkdir(parents=True, exist_ok=True)
     done = set()
     if out.exists():
         done = {cell(r) for r in map(json.loads, out.read_text().splitlines()) if not r.get("error")}
     budget = Budget(a.budget, spent_in(out, *a.also))
     provider = None if a.quantization == "any" else {"quantizations": [a.quantization], "sort": "price"}
-    config = {"temperature": a.temperature, "max_tokens": a.max_tokens, "provider": provider}
+    config = {"temperature": a.temperature, "max_tokens": a.max_tokens, "provider": provider, "prices": prices}
     if any(endpoint_of(m)[0] == "ollama" for m in a.models):
         config["context"] = a.context
     its = items()
@@ -647,6 +698,13 @@ def main():
                         base = {"bench": "v3", "kind": kind, "arm": arm, "model": model, "n": n, "item": iid, "rep": rep}
                         if cell(base) not in done:
                             jobs.append(base)
+    if a.estimate or live:
+        est = print_estimate(jobs)
+        if a.estimate:
+            return
+        if est["usd"] > a.budget - budget.spent:
+            print(f"estimate ${est['usd']:.2f} exceeds the remaining budget ${a.budget - budget.spent:.2f}: no call made")
+            sys.exit(2)
     print(f"{len(done)} cells done, {len(jobs)} to run; spent ${budget.spent:.4f} of ${a.budget:.2f}", flush=True)
     if budget.spent >= a.budget:
         print("budget already reached"); sys.exit(1)

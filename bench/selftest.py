@@ -1,4 +1,4 @@
-"""Harness self-test, no API calls (PLAN-v3-bench §8, PLAN-v3-bench-run §1, §2). Green before every paid step.
+"""Harness self-test, no API calls (PLAN-v3-bench §8, HISTORY phase 11, PLAN-v3-bench-full §1). Green before every paid step.
 
   .venv/bin/python bench/selftest.py
 
@@ -9,10 +9,14 @@
    traceback recorded, the failed call's reservation counted); a tool call without "function"; tool arguments
    that are not JSON (returned to the model, the session goes on); a reply without "tool_calls" (taken as final);
    a reply reporting far fewer prompt tokens than were sent ("truncated"); an empty final reply (flagged, counted).
+   Call limit: a client that always calls tools still ends every turn with a non-empty reply, made by one call
+   with tools forbidden (forced_final; PLAN-v3-bench-full §1.4).
 4. Keys: .env is git-ignored; the loader refuses a file git does not ignore or others can read, loads the
    values, and leaves variables already set alone.
 5. Endpoints: the OpenRouter body is v2's; OpenAI's has no OpenRouter fields; a Batch output line parses into the
-   same record fields at half price.
+   same record fields at half price; tool_choice is sent only with tools. Prices: the reserve price is the highest
+   and the typical the lowest over the endpoints the quantization filter admits; a model without one is refused;
+   the estimate is calibrated from the pilot (G+ analyst as G, N interpolated).
 6. Scoring: the key stub scores every manager question, mechanical check and consistency pair as correct; the
    abstaining stub does not. The stub judge writes parseable grades and the export runs.
 """
@@ -67,7 +71,45 @@ def main():
     assert p.returncode == 0 and "| empty replies |" in p.stdout and "| 1 | 0 |" in p.stdout, p.stdout + p.stderr
     print("faults: ok (raise, nofunc, badargs, notools, trunc recorded with their cost; empty reply flagged and counted)")
 
+    import run as R
+    p, recs = cells(d, "loop", "fake:0.01:loop", ["M01", "A1"], 2, arms=("G", "G+", "T"))
+    assert p.returncode == 0 and len(recs) == 5 and not any(r["error"] for r in recs), p.stdout + p.stderr
+    for r in recs:
+        k = R.ROUNDS[r["kind"]]
+        assert all(t["forced_final"] and t["tool_limit"] and t["content"].strip() and not t["empty"] for t in r["turns"]), r["turns"]
+        assert len(r["turns"]) == (4 if r["kind"] == "analyst" else 1) and len(r["calls"]) == len(r["turns"]) * (k + 1)
+        assert [c.get("forced", False) for c in r["calls"]] == ([False] * k + [True]) * len(r["turns"])
+        assert r["kind"] == "analyst" or r["answer"], r.get("answer")
+    print("call limit: ok (a client that always calls tools ends every turn with a forced, non-empty final reply)")
+
     from harness import openrouter as o, openai_batch as ob
+    real = o.endpoint_prices
+    o.endpoint_prices = lambda m: [
+        {"provider": "a", "quantization": "fp8", "prompt": 1e-7, "completion": 4e-7, "cache_read": None},
+        {"provider": "b", "quantization": "fp8", "prompt": 3e-7, "completion": 2e-7, "cache_read": 1e-8},
+        {"provider": "c", "quantization": "fp4", "prompt": 9e-6, "completion": 9e-6, "cache_read": 9e-6}] if m == "x/y" else []
+    try:
+        R.PRICES.clear()
+        pr = R.load_prices(["x/y"], "fp8")["x/y"]
+        assert pr["reserve"] == (3e-7, 4e-7, 1e-7) and pr["typical"] == (1e-7, 2e-7, 1e-8) and pr["endpoints"] == 2, pr
+        try:
+            R.load_prices(["x/none"], "fp8"); raise AssertionError("priced a model without endpoints")
+        except SystemExit as e:
+            assert "no fp8 endpoint" in str(e)
+        R.PRICES["deepseek/deepseek-v4.1-flash"] = dict(pr)        # calibrate() prices the pilot model
+        jobs = [{"model": "x/y", "kind": k, "arm": a, "n": n} for k, a in (("manager", "G"), ("analyst", "G+"))
+                for n in (25, 50, 200)]
+        by, tot = R.estimate(jobs)
+        cal = R.calibrate()
+        c = lambda k, a, n: R.cell_tokens(cal, k, a, n)["calls"]
+        assert c("analyst", "G+", 25) == c("analyst", "G", 25), "G+ analyst uses G's figures"
+        assert min(c("manager", "G", 25), c("manager", "G", 200)) <= c("manager", "G", 50) <= max(
+            c("manager", "G", 25), c("manager", "G", 200)), "N 50 interpolated"
+        assert tot["cells"] == 6 and tot["usd"] > 0 and tot["judge_usd"] > 0, tot
+    finally:
+        o.endpoint_prices = real; R.PRICES.clear()
+    print(f"prices and estimate: ok (reserve = max, typical = min over fp8 endpoints; unpriced model refused; "
+          f"pilot-calibrated estimate ${tot['usd']:.4f} for 6 cells)")
     import os
     assert subprocess.run(["git", "check-ignore", "-q", o.ENV_FILE], cwd=ROOT).returncode == 0, ".env not git-ignored"
     env = ROOT / "results" / "selftest-env.jsonl"          # a path git ignores (results/*.jsonl)
@@ -94,11 +136,14 @@ def main():
     msgs = [{"role": "user", "content": "x"}]
     assert o.body("m", msgs, temperature=1.0, max_tokens=10, provider={"q": 1}) == {
         "model": "m", "messages": msgs, "temperature": 1.0, "max_tokens": 10, "usage": {"include": True}, "provider": {"q": 1}}
+    t = [{"type": "function", "function": {"name": "f"}}]
+    assert o.body("m", msgs, temperature=1.0, max_tokens=10, tools=t, tool_choice="none")["tool_choice"] == "none"
+    assert "tool_choice" not in o.body("m", msgs, temperature=1.0, max_tokens=10, tool_choice="none")
     b = o.body("gpt-6.2-sol", msgs, temperature=None, max_tokens=10, provider={"q": 1}, endpoint="openai")
     assert b == {"model": "gpt-6.2-sol", "messages": msgs, "max_completion_tokens": 10}, b
     import score as S
     jl = json.loads(ob.lines([("j0", msgs)], "gpt-6.2-sol", S.JUDGE_MAX_TOKENS, S.JUDGE_REASONING))
-    assert jl["url"] == "/v1/chat/completions" and jl["body"]["reasoning_effort"] == "low" and "tools" not in jl["body"], jl
+    assert jl["url"] == "/v1/chat/completions" and jl["body"]["reasoning_effort"] == "medium" and "tools" not in jl["body"], jl
     line = {"custom_id": "j0000", "response": {"status_code": 200, "body": {
         "model": "gpt-6.2-sol-2026-10-01", "choices": [{"message": {"role": "assistant", "content": '{"status":"graded"}'},
                                                        "finish_reason": "stop"}],
@@ -106,7 +151,7 @@ def main():
     res = ob.parse_line(line)["j0000"]
     assert abs(res["cost"] - (2.0 + 1.0) / 2) < 1e-9 and res["provider"] == "openai", res
     assert "error" in ob.parse_line({"custom_id": "j1", "response": {"status_code": 400, "body": {"error": "bad"}}})["j1"]
-    print("endpoints: ok (OpenRouter body unchanged, OpenAI body, Batch line at half price)")
+    print("endpoints: ok (OpenRouter body unchanged, tool_choice with tools only, OpenAI body, Batch line at half price)")
 
     for model, want in (("stub:key", True), ("stub:abstain", False)):
         out = d / f"{model.split(':')[1]}.jsonl"

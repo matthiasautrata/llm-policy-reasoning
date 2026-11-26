@@ -5,7 +5,7 @@ comes from OPENROUTER_API_KEY or OPENAI_API_KEY (none for ollama), set in the en
 git-ignored .env at the repo root (load_env; the environment wins), and is never logged. No identifying headers
 are sent. Cost: OpenRouter's charged cost; OpenAI's from tokens and OPENAI_PRICE; ollama 0.
 Every call returns what the run record needs: content, reasoning text, served model and provider,
-token counts, cost and wall time. With tools (OpenAI-style definitions), the
+token counts, cost and wall time. With tools (OpenAI-style definitions; tool_choice "none" forbids calling them), the
 assistant message is returned as sent ("message", to append to the conversation) with its "tool_calls".
 """
 import json, os, random, re, time, urllib.error, urllib.request
@@ -49,7 +49,8 @@ def load_env(path=ENV_FILE):
                 os.environ.setdefault(k.strip(), v.strip().strip("'\""))
 
 
-def body(model, messages, *, temperature, max_tokens, reasoning=None, provider=None, tools=None, endpoint="openrouter"):
+def body(model, messages, *, temperature, max_tokens, reasoning=None, provider=None, tools=None, tool_choice=None,
+         endpoint="openrouter"):
     """The request body for an endpoint (also one line of an OpenAI Batch file)."""
     if endpoint == "openai":
         b = {"model": model, "messages": messages, "max_completion_tokens": max_tokens}
@@ -63,12 +64,26 @@ def body(model, messages, *, temperature, max_tokens, reasoning=None, provider=N
             b["usage"] = {"include": True}
     if tools:
         b["tools"] = tools
+        if tool_choice is not None:
+            b["tool_choice"] = tool_choice
     if endpoint == "openrouter":
         if reasoning is not None:
             b["reasoning"] = reasoning
         if provider is not None:
             b["provider"] = provider
     return b
+
+
+def endpoint_prices(model, timeout=30):
+    """OpenRouter's public endpoints list for a model (no key) -> [{provider, quantization, prompt, completion,
+    cache_read}], USD per token (cache_read None where not listed)."""
+    url = f"https://openrouter.ai/api/v1/models/{model}/endpoints"
+    with urllib.request.urlopen(urllib.request.Request(url, headers={"Accept": "application/json"}), timeout=timeout) as r:
+        eps = json.loads(r.read())["data"]["endpoints"]
+    f = lambda v: float(v) if v not in (None, "") else None
+    return [{"provider": e.get("provider_name"), "quantization": e.get("quantization"), "prompt": f(e["pricing"].get("prompt")),
+             "completion": f(e["pricing"].get("completion")), "cache_read": f(e["pricing"].get("input_cache_read"))}
+            for e in eps]
 
 
 def openai_cost(model, prompt, completion, cached, batch=False):
@@ -79,10 +94,10 @@ def openai_cost(model, prompt, completion, cached, batch=False):
     return usd / 2 if batch else usd
 
 
-def chat(model, messages, *, temperature, max_tokens, reasoning=None, provider=None, tools=None, timeout=300, tries=5,
-         endpoint="openrouter"):
+def chat(model, messages, *, temperature, max_tokens, reasoning=None, provider=None, tools=None, tool_choice=None,
+         timeout=300, tries=5, endpoint="openrouter"):
     b = body(model, messages, temperature=temperature, max_tokens=max_tokens, reasoning=reasoning, provider=provider,
-             tools=tools, endpoint=endpoint)
+             tools=tools, tool_choice=tool_choice, endpoint=endpoint)
     url, env = ENDPOINTS[endpoint]
     headers = {"Content-Type": "application/json"}
     if env:
