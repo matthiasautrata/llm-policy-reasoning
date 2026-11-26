@@ -74,3 +74,31 @@ The `CLAUDE.md` gate for anything touching `spikes/v3/`, plus: generator determi
 - 2026-11-25, §4, task keys: `reference.py --tasks` computes each check from the hand-written oracle functions (new `TASK` table, `task_keys`). "Known at" filters claims by `asserted_at`, not `recorded_at`, because every claim was recorded on 2026-09-14/15, so a recording-time view would be empty before then. A1.K4 (cc0049) has no naive variant, since the own-cap and ancestor counts are equal there. GR3 is checked on cc0009 (A1.K15: 1,865 vs 1,824). A2.K5 is 0: no pending request lacks an approver, so "nobody can approve" must come out as none, over known facts. The engine was run on the same goals as a cross-check and agrees wherever it answers.
 - 2026-11-25, §4, manager questions: there are 31, and the keys stay in `keys.json` under the slice id. Excluded: Q11, Q48, Q54 and Q55 (hypotheses, which need `with_hypothesis`, not among T's tools), and Q24 and Q25 (root-level totals). Only slice questions are asked. The generated families' questions (`bases/N*.questions.json`) stay engine checks, so for managers the growing base acts as load and distraction.
 - 2026-11-25, §5, client: `harness/openrouter.py` takes optional OpenAI-style `tools` and returns the assistant message as sent (`message`, with `tool_calls` and `reasoning_details`) so the arms can continue a tool conversation. Without tools the request body is unchanged, so v2 records are unaffected (`make verify` passes).
+- 2026-11-25, §5, arms (`bench/run.py`): one session per manager question and one four-turn session per analyst task. Each session has at most 8 (manager) or 12 (analyst, per turn) tool rounds. G gets `material/N*.md` in the system prompt. G+ gets the same, plus a note and its five functions as tools. T gets the material's data-model section and a goal vocabulary derived from the base's rule heads and `modes.edn` (predicates, argument modes, claim-asserted predicates, assets). It does not get the glossary or the rules, since the engine holds them and T is told not to re-derive them in SQL.
+- 2026-11-25, §5, T's tools map onto CLI ops: `why` is `decide` with its why tree (the CLI has no `why` op); `decide` returns no tree; `describe` merges `describe` with the asset's claim standings at `as_of`; `resolve_term` and `why_not` pass through. `sql_log` and `ms` are stripped before the model sees a result. Tool calls are logged in the runner where they execute (name, args, seconds, size, error, result).
+- 2026-11-25, §5, the `sql` tool: one read-only DuckDB connection with external access disabled and the configuration locked. `read_csv`, `COPY`, `SET` and `CREATE` were checked as refused. Limits: 200 rows, 30 s, 12,000 characters. Errors go back to the model as data.
+- 2026-11-25, §5, manager answers end with one JSON object (status, value, sides, qualified, standing, defeater, term, candidates, rules), read with v2's `_last_json`. Sampling is as in v2: temperature 1.0, 16,000 max tokens, fp8 providers sorted by price.
+- 2026-11-25, §6, scoring (`bench/score.py`, `bench/judge_rubric.md`). Manager answers are scored mechanically against the keys: lists compare as sets, a one-element list counts as its element, and sides compare as sets of id sets. Analyst checks with a number or id value are searched for in the turn's reply: reported, naive, computed (only in the tool results) or absent. Gold reasons and the other checks are graded by the Sonnet judge (temperature 0) against the rubric. Its grades of the mechanical checks give a mechanical-vs-judge agreement. The other measures:
+  - consistency: four pairs of questions whose answers must agree, e.g. M01/M02 through cc0009's cap;
+  - silent interpretation: UNDERDETERMINED, or a term with several readings, answered as decided;
+  - inlining: T's own SQL over the governed tables or recursive CTEs;
+  - cost per correct manager answer and per covered reason.
+
+  `--export` writes 10 sessions to `bench/grading/`, round robin over arm × N, blind (cells in `index.json`); judge agreement is reported as kappa once `grades.json` is filled.
+- 2026-11-25, §7, estimate before any call (`bench/run.py --estimate`):
+  - Assumptions: per question or turn, 3 calls for G and G+ and 4 for T (manager), 4 and 5 (analyst); context grows 1,500 tokens per call; 1,750 completion tokens per call (v2's mean); the judge takes 14,000 + 2,000 tokens per session; OpenRouter list prices of 2026-11-25.
+  - **The pilot as specified (408 cells) is $7.56 ($5.83 arms + $1.73 judge), or $6.37 if DeepSeek's prompt cache holds the system prompt. This exceeds $3, so no call was made, and the run stops here and reports (§7).**
+  - The manager questions are the larger part (about $3.4: 31 sessions per arm and N, each re-sending the material). GLM's cost is mostly completion, so caching does not lower it.
+  - Full design: $14.74 for 1 repetition at N 25–200, and $44.22 for 3 repetitions.
+  - Cheaper pilots, all arms at N 25 and 200, with the judge:
+
+    | pilot | cost |
+    |---|---|
+    | DeepSeek only | $3.46 |
+    | GLM only | $4.10 |
+    | both models, A1–A3 and 10 manager questions | $5.24 |
+    | DeepSeek, A1–A3 and 10 manager questions (M01 M03 M08 M13 M16 M17 M19 M21 M46 M50: every status, the claim-free and claim-dependent paths, one consistency pair) | $2.50 ($1.85 cached) |
+- 2026-11-25, §8, `bench/selftest.py`, no API calls:
+  - a fake client charging $0.01 per call under a $0.03 cap stops with exit 1, records `budget`, and spends no more than the cap;
+  - the key stub scores 186/186 manager answers, 156/156 mechanical checks and every consistency pair; the abstaining stub does not (6/186, 0/156).
+  - `check_bases.py` and `render_md.py` pass unchanged. `spikes/v3/` is untouched by §5–§8, so the CLAUDE.md gate does not apply.

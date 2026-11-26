@@ -59,3 +59,17 @@ Every turn adds one sentence naming the example (cc0049, its parent cc0009, e077
 The values do not depend on N, because generated rules never conclude a slice predicate.
 
 `questions/manager.json` holds the slice questions rephrased as a manager would ask, with department scope. It has 31 questions. The keys stay in `spikes/v3/shared/keys.json` (extended), under the slice id. The file lists the six excluded questions and why: four hypothesis questions and two root-level totals.
+
+## Arms, scoring and pilot (§5–§8)
+
+```
+.venv/bin/python bench/run.py --estimate [--models ...] [--items ...]   # cost estimate, no calls
+.venv/bin/python bench/run.py --pilot --out bench/results/pilot.jsonl --budget 3.00   # refuses if the estimate exceeds $3
+.venv/bin/python bench/score.py bench/results/pilot.jsonl --judge --budget 3.00      # judge, budget shared with the arms
+.venv/bin/python bench/score.py bench/results/pilot.jsonl --export bench/grading     # 10 sessions for hand grading
+.venv/bin/python bench/selftest.py                                                   # budget stop and scoring, no calls
+```
+
+`run.py` runs the arms G, G+ and T on DeepSeek and GLM through `harness/openrouter.py`. It writes one resumable JSONL record per cell, holding every call (model, provider, tokens, cost, time) and every tool call as executed. The budget is checked before each model call. `stub:key`, `stub:tool`, `stub:abstain` and `fake:<usd>` stand in for models in tests. `score.py` scores the manager answers against the keys and the analyst checks mechanically. It grades gold reasons with the judge (`judge_rubric.md`) and reports consistency, silent interpretation, inlining and cost per correct answer.
+
+Pilot status (2026-11-25): **not run**. The estimate is $7.56, above the plan's $3 stop. The plan's Decisions hold the figures and the cheaper variants.
