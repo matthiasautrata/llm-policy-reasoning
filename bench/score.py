@@ -388,6 +388,7 @@ def load(path):
 
 
 def main():
+    openai_batch.openrouter.load_env()                 # first: refuses a .env that git does not ignore
     ap = argparse.ArgumentParser()
     ap.add_argument("results")
     ap.add_argument("--judge", action="store_true")

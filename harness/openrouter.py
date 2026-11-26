@@ -1,7 +1,8 @@
 """Minimal chat client for OpenAI-compatible endpoints (standard library only).
 
 Endpoints: "openrouter" (the default; v2's request body unchanged), "openai" and "ollama" (local). The API key
-comes from OPENROUTER_API_KEY or OPENAI_API_KEY (none for ollama) and is never logged. No identifying headers
+comes from OPENROUTER_API_KEY or OPENAI_API_KEY (none for ollama), set in the environment or in the
+git-ignored .env at the repo root (load_env; the environment wins), and is never logged. No identifying headers
 are sent. Cost: OpenRouter's charged cost; OpenAI's from tokens and OPENAI_PRICE; ollama 0.
 Every call returns what the run record needs: content, reasoning text, served model and provider,
 token counts, cost and wall time. With tools (OpenAI-style definitions), the
@@ -24,6 +25,28 @@ RETRY = {408, 409, 425, 429, 500, 502, 503, 504, 520, 522, 524, 529}
 
 class CallError(Exception):
     pass
+
+
+ENV_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
+
+
+def load_env(path=ENV_FILE):
+    """Read KEY=VALUE lines from the repo's .env into os.environ; variables already set win.
+
+    Refuses (CallError) unless git ignores the file and only its owner can read it. No value is ever put in a
+    message, log or record."""
+    if not os.path.exists(path):
+        return
+    import subprocess
+    if subprocess.run(["git", "check-ignore", "-q", path], cwd=os.path.dirname(path), capture_output=True).returncode != 0:
+        raise CallError(f"{path} is not git-ignored; refusing to read it")
+    if os.stat(path).st_mode & 0o077:
+        raise CallError(f"{path} is readable by group or others; run chmod 600 {path}")
+    with open(path) as f:
+        for line in f:
+            k, sep, v = line.strip().partition("=")
+            if sep and k and not k.startswith("#") and v.strip():
+                os.environ.setdefault(k.strip(), v.strip().strip("'\""))
 
 
 def body(model, messages, *, temperature, max_tokens, reasoning=None, provider=None, tools=None, endpoint="openrouter"):
@@ -63,6 +86,7 @@ def chat(model, messages, *, temperature, max_tokens, reasoning=None, provider=N
     url, env = ENDPOINTS[endpoint]
     headers = {"Content-Type": "application/json"}
     if env:
+        load_env()
         key = os.environ.get(env)
         if not key:
             raise CallError(f"{env} is not set")

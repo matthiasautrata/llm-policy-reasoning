@@ -10,3 +10,5 @@ results/*.jsonl
 spikes/v3/shared/slice.duckdb*
 spikes/v3/**/.cpcache/
 spikes/v3/**/target/
+# API keys (PLAN-v3-bench-run §2.4); filled in by hand, never committed
+.env

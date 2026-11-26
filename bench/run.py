@@ -591,6 +591,7 @@ def print_estimate(models, arms, ids=None, analyst_arms=ANALYST_ARMS):
 # ---------------------------------------------------------------- main
 
 def main():
+    openrouter.load_env()                 # first: refuses a .env that git does not ignore
     ap = argparse.ArgumentParser()
     ap.add_argument("--estimate", action="store_true", help="print the cost estimate and exit; no calls")
     ap.add_argument("--pilot", action="store_true", help="the pilot cells (PILOT; PLAN-v3-bench-run §5)")

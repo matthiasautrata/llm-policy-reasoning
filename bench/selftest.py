@@ -9,9 +9,11 @@
    traceback recorded, the failed call's reservation counted); a tool call without "function"; tool arguments
    that are not JSON (returned to the model, the session goes on); a reply without "tool_calls" (taken as final);
    a reply reporting far fewer prompt tokens than were sent ("truncated").
-4. Endpoints: the OpenRouter body is v2's; OpenAI's has no OpenRouter fields; a Batch output line parses into the
+4. Keys: .env is git-ignored; the loader refuses a file git does not ignore or others can read, loads the
+   values, and leaves variables already set alone.
+5. Endpoints: the OpenRouter body is v2's; OpenAI's has no OpenRouter fields; a Batch output line parses into the
    same record fields at half price.
-5. Scoring: the key stub scores every manager question, mechanical check and consistency pair as correct; the
+6. Scoring: the key stub scores every manager question, mechanical check and consistency pair as correct; the
    abstaining stub does not. The stub judge writes parseable grades and the export runs.
 """
 import json, pathlib, subprocess, sys, tempfile
@@ -62,6 +64,29 @@ def main():
     print("faults: ok (raise, nofunc, badargs, notools, trunc recorded with their cost)")
 
     from harness import openrouter as o, openai_batch as ob
+    import os
+    assert subprocess.run(["git", "check-ignore", "-q", o.ENV_FILE], cwd=ROOT).returncode == 0, ".env not git-ignored"
+    env = ROOT / "results" / "selftest-env.jsonl"          # a path git ignores (results/*.jsonl)
+    try:
+        env.write_text("# c\nSELFTEST_A=one\nSELFTEST_B='two'\nSELFTEST_C=\n")
+        env.chmod(0o644)
+        try:
+            o.load_env(str(env)); raise AssertionError("loaded a group-readable file")
+        except o.CallError as e:
+            assert "chmod 600" in str(e) and "one" not in str(e)
+        env.chmod(0o600)
+        os.environ["SELFTEST_B"] = "set"
+        o.load_env(str(env))
+        assert (os.environ["SELFTEST_A"], os.environ["SELFTEST_B"], "SELFTEST_C" in os.environ) == ("one", "set", False)
+        loose = pathlib.Path(tempfile.mkdtemp()) / ".env"
+        loose.write_text("X=1\n"); loose.chmod(0o600)
+        try:
+            o.load_env(str(loose)); raise AssertionError("loaded a file git does not ignore")
+        except o.CallError as e:
+            assert "not git-ignored" in str(e)
+    finally:
+        env.unlink(missing_ok=True)
+    print("keys: ok (.env ignored; unignored or readable files refused; environment wins)")
     msgs = [{"role": "user", "content": "x"}]
     assert o.body("m", msgs, temperature=1.0, max_tokens=10, provider={"q": 1}) == {
         "model": "m", "messages": msgs, "temperature": 1.0, "max_tokens": 10, "usage": {"include": True}, "provider": {"q": 1}}

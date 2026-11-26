@@ -1,6 +1,6 @@
 """OpenAI Batch API (standard library only): submit chat-completion requests as one batch, collect the results.
 
-The key comes from OPENAI_API_KEY and is never logged. Each result line is parsed with openrouter.parse(...,
+The key comes from OPENAI_API_KEY (environment, or .env via openrouter.load_env) and is never logged. Each result line is parsed with openrouter.parse(...,
 "openai", batch=True), so its record has the same fields as a synchronous call and its cost is the Batch price
 (half of Standard, openrouter.OPENAI_PRICE).
 """
@@ -12,6 +12,7 @@ API = "https://api.openai.com/v1"
 
 
 def _req(method, path, data=None, ctype="application/json", raw=False, timeout=120):
+    openrouter.load_env()
     key = os.environ.get("OPENAI_API_KEY")
     if not key:
         raise openrouter.CallError("OPENAI_API_KEY is not set")
