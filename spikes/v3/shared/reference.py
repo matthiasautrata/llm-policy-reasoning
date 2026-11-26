@@ -863,7 +863,7 @@ TASK = {
     "vendor_status": lambda R, a, d: next((s for v, s, f, t in R.vstat if v == a[0] and f <= d <= t), None),
     "claim_standing": lambda R, a, d: {k: v for k, v in R.standing(a[0], d).items() if k in ("standing", "defeater", "qualifier")},
     # on a generated base (Bench; a task with by_n, PLAN-v3-bench-full §3b)
-    "decide": lambda R, a, d: {k: v for k, v in R.decide(list(a)).items() if k in ("status", "value", "sides")},
+    "decide": lambda R, a, d: {k: v for k, v in R.decide(list(a)).items() if k in ("status", "value", "sides", "core", "qualifier")},
     "programme_limit": lambda R, a, d: next(v["limit"] for v in R.prog[a[0]]["versions"]
                                             if v["valid_from"] <= R.req[a[1]]["date"] <= v["valid_to"]),
     "programme_limit_first": lambda R, a, d: R.prog[a[0]]["versions"][0]["limit"],   # naive: one limit all year

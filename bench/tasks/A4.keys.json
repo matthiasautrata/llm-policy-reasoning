@@ -5,6 +5,17 @@
   },
   "A4.K10": {
    "value": {
+    "core": [
+     "G002",
+     "G004",
+     "G007",
+     "G008",
+     "G009",
+     "G012",
+     "G014",
+     "R305"
+    ],
+    "qualifier": null,
     "sides": null,
     "status": "ANSWER",
     "value": true
@@ -12,6 +23,13 @@
   },
   "A4.K11": {
    "value": {
+    "core": [
+     "G002",
+     "G004",
+     "G011",
+     "R305"
+    ],
+    "qualifier": null,
     "sides": null,
     "status": "ANSWER",
     "value": true
@@ -30,6 +48,10 @@
   },
   "A4.K3": {
    "value": {
+    "core": [
+     "G003"
+    ],
+    "qualifier": null,
     "sides": null,
     "status": "ANSWER",
     "value": true
@@ -37,6 +59,10 @@
   },
   "A4.K4": {
    "value": {
+    "core": [
+     "G005"
+    ],
+    "qualifier": null,
     "sides": null,
     "status": "ANSWER",
     "value": false
@@ -44,6 +70,11 @@
   },
   "A4.K5": {
    "value": {
+    "core": [
+     "G003",
+     "G006"
+    ],
+    "qualifier": null,
     "sides": null,
     "status": "ANSWER",
     "value": true
@@ -55,6 +86,10 @@
   },
   "A4.K7": {
    "value": {
+    "core": [
+     "G014"
+    ],
+    "qualifier": null,
     "sides": null,
     "status": "ANSWER",
     "value": true
@@ -62,6 +97,11 @@
   },
   "A4.K8": {
    "value": {
+    "core": [
+     "G012",
+     "G014"
+    ],
+    "qualifier": null,
     "sides": null,
     "status": "ANSWER",
     "value": true
@@ -69,6 +109,17 @@
   },
   "A4.K9": {
    "value": {
+    "core": [
+     "G003",
+     "G004",
+     "G007",
+     "G008",
+     "G009",
+     "G012",
+     "G014",
+     "R305"
+    ],
+    "qualifier": null,
     "sides": null,
     "status": "ANSWER",
     "value": true
@@ -81,6 +132,18 @@
   },
   "A4.K10": {
    "value": {
+    "core": [
+     "G008",
+     "G009",
+     "G012",
+     "G015",
+     "G017",
+     "G019",
+     "G020",
+     "G021",
+     "G022"
+    ],
+    "qualifier": null,
     "sides": [
      [
       "G015",
@@ -99,6 +162,13 @@
   },
   "A4.K11": {
    "value": {
+    "core": [
+     "G002",
+     "G004",
+     "G014",
+     "R305"
+    ],
+    "qualifier": null,
     "sides": null,
     "status": "ANSWER",
     "value": true
@@ -117,6 +187,10 @@
   },
   "A4.K3": {
    "value": {
+    "core": [
+     "G003"
+    ],
+    "qualifier": null,
     "sides": null,
     "status": "ANSWER",
     "value": true
@@ -124,6 +198,10 @@
   },
   "A4.K4": {
    "value": {
+    "core": [
+     "G005"
+    ],
+    "qualifier": null,
     "sides": null,
     "status": "ANSWER",
     "value": false
@@ -131,6 +209,11 @@
   },
   "A4.K5": {
    "value": {
+    "core": [
+     "G003",
+     "G006"
+    ],
+    "qualifier": null,
     "sides": null,
     "status": "ANSWER",
     "value": true
@@ -142,6 +225,13 @@
   },
   "A4.K7": {
    "value": {
+    "core": [
+     "G017",
+     "G020",
+     "G021",
+     "G022"
+    ],
+    "qualifier": null,
     "sides": [
      [
       "G017",
@@ -158,6 +248,13 @@
   },
   "A4.K8": {
    "value": {
+    "core": [
+     "G015",
+     "G017",
+     "G019",
+     "G021"
+    ],
+    "qualifier": null,
     "sides": null,
     "status": "ANSWER",
     "value": true
@@ -165,6 +262,20 @@
   },
   "A4.K9": {
    "value": {
+    "core": [
+     "G003",
+     "G004",
+     "G007",
+     "G008",
+     "G009",
+     "G012",
+     "G015",
+     "G017",
+     "G019",
+     "G021",
+     "R305"
+    ],
+    "qualifier": null,
     "sides": null,
     "status": "ANSWER",
     "value": true
@@ -177,6 +288,12 @@
   },
   "A4.K10": {
    "value": {
+    "core": [
+     "G008",
+     "G009",
+     "G010"
+    ],
+    "qualifier": null,
     "sides": [
      [
       "G009"
@@ -191,6 +308,10 @@
   },
   "A4.K11": {
    "value": {
+    "core": [
+     "G008"
+    ],
+    "qualifier": "total over known facts in declared scope",
     "sides": null,
     "status": "ANSWER",
     "value": false
@@ -209,6 +330,10 @@
   },
   "A4.K3": {
    "value": {
+    "core": [
+     "G003"
+    ],
+    "qualifier": null,
     "sides": null,
     "status": "ANSWER",
     "value": true
@@ -216,6 +341,10 @@
   },
   "A4.K4": {
    "value": {
+    "core": [
+     "G005"
+    ],
+    "qualifier": null,
     "sides": null,
     "status": "ANSWER",
     "value": false
@@ -223,6 +352,11 @@
   },
   "A4.K5": {
    "value": {
+    "core": [
+     "G003",
+     "G006"
+    ],
+    "qualifier": null,
     "sides": null,
     "status": "ANSWER",
     "value": true
@@ -234,6 +368,10 @@
   },
   "A4.K7": {
    "value": {
+    "core": [
+     "G009"
+    ],
+    "qualifier": "total over known facts in declared scope",
     "sides": null,
     "status": "ANSWER",
     "value": false
@@ -241,6 +379,10 @@
   },
   "A4.K8": {
    "value": {
+    "core": [
+     "G009"
+    ],
+    "qualifier": null,
     "sides": null,
     "status": "ANSWER",
     "value": true
@@ -248,6 +390,12 @@
   },
   "A4.K9": {
    "value": {
+    "core": [
+     "G008",
+     "G009",
+     "G010"
+    ],
+    "qualifier": null,
     "sides": [
      [
       "G009"

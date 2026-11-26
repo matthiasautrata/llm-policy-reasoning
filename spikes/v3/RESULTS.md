@@ -290,7 +290,7 @@ By the key's outcome, correct, at N 50 / N 200. Each cell reads 15/15 for true, 
 
 | arm | N 50 (of 27) | N 200 (of 30) | numeric checks reported, judge-confirmed (of 15) |
 |---|---|---|---|
-| F | 4 / 7 / 16 (0 / 3 / 24) | 5 / 10 / 15 (0 / 5 / 25) | 0 and 0 |
+| F | 0 / 11 / 16 (0 / 3 / 24) | 0 / 15 / 15 (0 / 5 / 25) | 0 and 0 |
 | G | 14 / 0 / 13 (14 / 0 / 13) | 23 / 2 / 5 (25 / 0 / 5) | 13 and 15 |
 | T | 25 / 0 / 2 (25 / 0 / 2) | 28 / 0 / 2 (25 / 0 / 5) | 15 and 15 |
 
@@ -320,14 +320,14 @@ Same items, scoring and judge as §3b′ (family F01–F16 and A4, 3 repetitions
 
 | arm | correct; tolerant | qualifier (of 42) | sides strict (of 6) | by k: 1 / 2–3 / 4–5 / 6+ | A4 covered / missed / wrong (of 30): keys where they decide (judge) | manager cells at the limit |
 |---|---|---|---|---|---|---|
-| F | 3; 3 | 34 | 0 | 0, 3, 0, 0 | 1 / 15 / 14 (0 / 11 / 19) | 24 |
+| F | 3; 3 | 34 | 0 | 0, 3, 0, 0 | 0 / 16 / 14 (0 / 11 / 19) | 24 |
 | G | 40; 41 | 36 | 5 | 9, 8, 14, 9 | 21 / 0 / 9 (20 / 0 / 10) | 0 |
 | G+ | 39; 40 | 36 | 4 | 8, 7, 15, 9 | – | 0 |
 | T | 47; 47 | 42 | 6 | 11, 12, 15, 9 | 25 / 3 / 2 (26 / 2 / 2) | 1 |
 
 - G scores higher at N 100 than at N 50 or 200. This is the item mix, not an effect of N. N 100 has 2 absence items (6 cells) against 5 at N 200, and its disputes reach d 2–3 rather than d 4+ (strata below).
 - The absence result holds: G is 0 of 6 on false by absence, T 6 of 6. On contested keys G is 5 of 6, T 6 of 6. On true keys G is 26 of 27.
-- A4: at N 100 no capitalisation key is contested, so GR7 and GR8 are not tested by keys and keep the judge's grades: G wrong on both in 6 of 6 gradings, T covering GR7 in 4 of 6 and GR8 in 1 of 6 (missed 3, wrong 2). With keys where they decide and the judge elsewhere (GR2, GR7, GR8, GR10), G and T cover 21 and 25 of 30, F 1 (judge alone: 20, 26, 0).
+- A4: at N 100 no capitalisation key is contested, so GR7 and GR8 are not tested by keys and keep the judge's grades: G wrong on both in 6 of 6 gradings, T covering GR7 in 4 of 6 and GR8 in 1 of 6 (missed 3, wrong 2). With keys where they decide and the judge elsewhere (GR2, GR7, GR8, GR10), G and T cover 21 and 25 of 30, F 0 (judge alone: 20, 26, 0).
 - Numeric checks reported, judge-confirmed: G 14, T 15, F 0 (of 15).
 
 **A second model (§3c.4 and §3d.1, replication).** GLM 5.3, N 200, arms G, G+ and T. Family: 3 repetitions, $1.82. A4: 3 repetitions, $1.28, judge $0.130. Self-agreement 0.97, kappa 0.91.
@@ -388,18 +388,26 @@ Keys against the judge, per reason and both judgings, by arm. A pair is one keys
 | run | arm | pairs | agree |
 |---|---|---|---|
 | batch 1 (A1, A2) | G / G+ / T | 56 / 56 / 56 | 0.59 / 0.89 / 0.68 |
-| §3b′ (A4, N 50, 200) | F / G / T | 82 / 64 / 54 | 0.50 / 0.88 / 0.91 |
+| §3b′ (A4, N 50, 200) | F / G / T | 78 / 64 / 54 | 0.47 / 0.88 / 0.91 |
 | N 100 | F / G / T | 24 / 34 / 26 | 0.58 / 0.94 / 0.92 |
 | G-tools | G-tools | 36 | 0.69 |
 | GLM | G / G+ / T | 52 / 44 / 40 | 0.67 / 0.64 / 0.95 |
 
 I read every disagreement. They fall into four kinds:
-1. **Right answer, rejected explanation; keys credit it and the judge does not.** This covers all 18 of F's covered|wrong pairs in §3b′. F has no rules, gets K4, K5 and K11 right, and explains them with invented gates ("the emergency flag has no rule attached"). GLM's G and G+ give a per-policy view or say that "across policies nothing prevails" (false: G017 prevails over G016) and still report the contest with its sides. In A1, GR9 is credited because the snapshot cost centre coincides with the dated one for e077.
+1. **Right answer, rejected explanation; keys credit it and the judge does not.** F has no rules, gets K4, K5 and K11 right, and explains them with invented gates ("the emergency flag has no rule attached"). Before the cited-core rule (below) these were F's 18 covered|wrong pairs in §3b′; they now read as uncited, so missed|wrong. GLM's G and G+ give a per-policy view or say that "across policies nothing prevails" (false: G017 prevails over G016) and still report the contest with its sides. In A1, GR9 is credited because the snapshot cost centre coincides with the dated one for e077.
 2. **The judge misreads a correct explanation.** DeepSeek G (one session) and T (two), and G-tools (three), write that G020 defeats G017 and that G021 survives. That is the stated precedence and the oracle's sides, and the judge grades it wrong.
 3. **Stated in words without the key's value; the judge credits it and the keys do not.** Batch 1's missed|covered pairs are a rule restated without its number, and A4 GR8 is the U04 contest given without all its sides (partial, so missed). These are definitional: the keys ask for the answer, the judge for the reason.
 4. **Reader limits; the keys under-call.** A wrong count other than the naive one reads as not reported: GLM G's "0 undecided" against 3,692 is graded missed, not wrong. A rule stated only in general, with no per-subject answer, reads as absent (GLM G, session 3: "capitalised iff amount ≥ 45,000"). Unclear readings fall back to the judge: K11 at N 200 in most rule-arm sessions, where "cleared" and "not cleared" are both said of r000092 at different levels.
 
-**Validity finding.** The judge is reliable (self-agreement 0.90–0.97) but does not measure the same thing as the keys. On a mapped reason it grades the stated rule; the keys grade the answers the rule produces. Where the arm has the rules and explains them (DeepSeek G and T on A4), the two agree on 0.88–0.94 of pairs, and most remaining differences are judge errors of kind 2. Where answers and explanations come apart (F, GLM's G and G+, A1's coincident cost centre), agreement falls to 0.50–0.68. Neither instrument alone grades "the reason is covered". The arm comparison on answers (keys) keeps T ahead of G at N 200 for both models (DeepSeek 28 against 23 covered, GLM 29 against 16). The comparison on explanations (judge) is the one in which the GR7 claims were made. Those claims are replaced above.
+**Validity finding.** The judge is reliable (self-agreement 0.90–0.97) but does not measure the same thing as the keys. On a mapped reason it grades the stated rule; the keys grade the answers the rule produces. Where the arm has the rules and explains them (DeepSeek G and T on A4), the two agree on 0.88–0.94 of pairs, and most remaining differences are judge errors of kind 2. Where answers and explanations come apart (F, GLM's G and G+, A1's coincident cost centre), agreement falls to 0.47–0.68. Neither instrument alone grades "the reason is covered". The arm comparison on answers (keys) keeps T ahead of G at N 200 for both models (DeepSeek 28 against 23 covered, GLM 29 against 16). The comparison on explanations (judge) is the one in which the GR7 claims were made. Those claims are replaced above.
+
+**F's covered grades, read by hand (2026-11-26).** All of F's keyed covered grades in A4 (§3b′ N 50: 4, N 200: 5; N 100: 1) were coincidences, not covered reasons:
+- K6 (cog's count, 524) at N 50 was read from a table row headed by cc0008, whose cell happens to be 524. A table row headed by another id now answers for that id, not for the check's subject (`bench/score.py`, `answering`).
+- K4 (r000027 not cleared), K5 (r000098 cleared) and K11 (r000092 cleared) carry the right verdict for a reason F does not have: r000027 is "not cleared" because it is cancelled and over budget, not by G005; r000098 is cleared "on every gate (emergency flag, but that gates nothing)", not by G006. A decide key now keeps the oracle's core and qualifier (`reference.py`, task op; `bench/tasks/A4.keys.json` gains `core` and `qualifier`, no value changed). A verdict counts as reported only if its block cites a rule of the core, or, for a key resting on absence (core CLOSED), says it rests on absence. Otherwise it is uncited and grades as missed.
+
+After the change F covers no reason by keys at any N (N 50: 0 / 11 / 16; N 100: 0 / 16 / 14; N 200: 0 / 15 / 15). No other arm's reason totals change. GLM G+ loses one reported decide check (r000002: the right verdict without a core rule id in its block, a reader limit), which changes none of its reasons. Mechanical checks against the judge: §3b′ 157 of 234 (was 165), N 100 87 of 117 (85), GLM 87 of 117 (88).
+
+**$ per covered reason**, split by who graded it (keyed; judge-graded), is the session cost over the covered reasons of that kind. In A4 at N 200, DeepSeek: G 0.0030; 0.0057, T 0.0023; 0.0083, G-tools 0.0034; 0.0050 (N 100: G 0.0022; 0.0094, T 0.0047; 0.0043). GLM: G 0.0280; – (no judge-graded reason covered), G+ 0.0221; 0.0625, T 0.0228; 0.0507. F has none. The two halves are not comparable across arms, because which reasons the keys decide depends on N and on the reading (unclear readings fall back to the judge); the full split is in the reports.
 
 ## State of the benchmark (PLAN-v3-bench-full §3c.5, 2026-11-26)
 
@@ -437,11 +445,12 @@ F answers almost nothing without the rules, which shows what the material contri
    - numeric checks name a subject and need the judge's confirmation (§3c.1; F's coincidental 8,000 and 0);
    - failed records superseded by a re-run count in cost only (§3d.3);
    - gold reasons graded from keys where keys decide them, the judge elsewhere and on unclear readings (§3e.1; the judge had graded explanations, which on GR7 it misread).
+   - a keyed verdict counts only with a rule of its core (or the absence it rests on) in its block, and a table row answers for its own id (§3e.1; F's coincidental covered grades).
 6. The generator (§3b′). Interactions now grow with N, after §3b found programmes independent. §3b is exploratory for this reason.
 
 **Open:**
 - every confirmatory comparison uses one generator;
-- the judge is one model, not yet checked against hand grading (`bench/grading/grades.json`); against keys it agrees on 0.50–0.95 of reason grades by arm (§3e.1), and its errors on GR7 were found by reading;
+- the judge is one model, not yet checked against hand grading (`bench/grading/grades.json`); against keys it agrees on 0.47–0.95 of reason grades by arm (§3e.1), and its errors on GR7 were found by reading;
 - keys read answers, not explanations, and a wrong count other than the naive one reads as not reported (§3e.1).
 
 ## Built vs native

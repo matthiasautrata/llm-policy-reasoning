@@ -11,11 +11,13 @@ reported side holding ids of two key sides: extra ids allowed, sides not merged 
 and defeater; for a term, its status and candidates. correct = status, value, strict sides and qualifier
 (benchmark-design §2; PLAN-v3-bench-full §3b′); "tolerant" is the same with tolerant sides.
 Analyst: each check is searched for mechanically when its value is a number or an id: "reported" (in that turn's
-reply, in a block or under a heading that names the check's subject where the task gives one), "naive" (only the
+reply, in a block or under a heading that names the check's subject where the task gives one, not in a table row
+headed by another id), "naive" (only the
 known wrong value is), "computed" (only in that turn's tool results), "absent"; a reported or naive grade the
 judge's grade of that check contradicts is counted "unconfirmed" (PLAN-v3-bench-full §3c.1). A decide check with a
 vocabulary ("says") is read from the subject's own line, table cell or section: "reported", "wrong", "partial"
-(contested without every side id), "unclear" (both values, none wrong) or "absent".
+(contested without every side id), "uncited" (the key's value without a rule of its core in the block, or the
+absence a closed key rests on), "unclear" (both values, none wrong) or "absent".
 Gold reasons (PLAN-v3-bench-full §3e.1): a reason with keys ("decided_by") is graded from them, never from the judge:
 covered when every one is reported, wrong when one is wrong or naive, missed otherwise; the judge's grade stands
 where the reader is unclear, where its keys are unreadable (claim standings, small counts), where it says something
@@ -179,6 +181,9 @@ def answering(pats, text, subject):
         return hits
     s = re.compile(rf"(?<![\w]){re.escape(subject)}(?![\w])")
     def near(i):
+        row = cells(MARKUP.sub("", lines[i])) if lines[i].lstrip().startswith("|") else []
+        if row and ENTITY.fullmatch(row[0]) and not s.search(row[0]):
+            return False               # a table row headed by another id answers for that id (§3e.1, F's 524)
         lo = hi = i
         while lo > 0 and lines[lo - 1].strip(): lo -= 1
         while hi + 1 < len(lines) and lines[hi + 1].strip(): hi += 1
@@ -189,6 +194,8 @@ def answering(pats, text, subject):
     return [i for i in hits if near(i)]
 
 
+ENTITY = re.compile(r"[a-z]{1,3}\d{3,}")      # a request, cost centre or employee id, as in patterns()
+ABSENCE = re.compile(r"absen|over known facts|nothing (?:supports|proves)|no (?:rule|supporter)", re.I)
 NOT_CONTESTED = re.compile(r"\b(?:no|not|un|without|non)[\s-]*(?:in\s+)?(?:contest|conflict|disput)\w*|\bconflict-free\b", re.I)
 CONTEST = re.compile(CONTESTED.pattern + r"|unresolved", re.I)
 CELL_YES, CELL_NO = re.compile(r"(?:yes|true)\b", re.I), re.compile(r"(?:no|false)\b", re.I)
@@ -272,8 +279,9 @@ def polarity(seg, header, says):
 
 def read_decide(text, subject, others, says, key):
     """§3e.1: a decide check's answer read from the subject's parts of the reply. ANSWER: reported when only the
-    key's value is stated, wrong when only the other value or contested is, unclear when both are, absent when
-    neither. CONFLICT: reported when a part says contested and every id of the key's sides is in its block,
+    key's value is stated with its reason (a rule of the key's core in the part's block, or for a key closed over
+    the known facts its absence), uncited when stated without, wrong when only the other value or contested is,
+    unclear when both are, absent when neither. CONFLICT: reported when a part says contested and every id of the key's sides is in its block,
     partial when it says contested without them (under-reported, not misreported), wrong when it gives only a
     plain value, absent when it says nothing."""
     segs, lines = segments(text, subject, others)
@@ -285,8 +293,13 @@ def read_decide(text, subject, others, says, key):
             return "reported" if any(want <= set(IDS.findall("\n".join(lines[lo:hi + 1]))) for lo, hi in con) else "partial"
         return "wrong" if any(p for p, _ in said) else "absent"
     exp = "true" if key.get("value") is True else "false"
-    pos = any(exp in p for p, _ in said)
+    pos = [b for p, b in said if exp in p]
     neg = any(p - {exp} for p, _ in said)
+    if pos and not neg and "core" in key:       # the verdict counts with its reason: a rule of the key's core in
+        ids = set(key["core"]) - {"CLOSED"}      # the block, or the absence a closed key rests on (§3e.1)
+        text = ["\n".join(lines[lo:hi + 1]) for lo, hi in pos]
+        if not any(ids & set(IDS.findall(t)) or key.get("qualifier") and ABSENCE.search(t) for t in text):
+            return "uncited"
     return "unclear" if pos and neg else "reported" if pos else "wrong" if neg else "absent"
 
 
@@ -674,6 +687,7 @@ def report(recs, jpath, gradedir, jpath2=None, results=None):
             for g, (v, kind) in reasons(r, j, mech).items():
                 if v:
                     c["rs_" + v] += 1
+                    c[f"rs_{v}_{'keys' if kind == 'keys' else 'judge'}"] += 1
                 c["rs_" + kind] += 1
             for x in (jg2.get(json.dumps(B.cell(r))) or {}).get("reasons", []):
                 c["gr2_" + x["grade"]] += 1
@@ -682,17 +696,17 @@ def report(recs, jpath, gradedir, jpath2=None, results=None):
                 c["cite"] += got; c["cite_n"] += n
             if r["arm"] == "T":
                 g, n = inlining(r); c["inl"] += g; c["sql"] += n; c["inl_sessions"] += g > 0
-    L.append("| arm | model | N | items | manager correct (strict; tolerant sides) | status | qualifier | sides strict / tolerant (CONFLICT keys) | silent | analyst checks reported / naive / computed / absent / unconfirmed; decide answers wrong / partial / unclear | gold covered / missed / wrong (judge) | gold covered / missed / wrong (keys where they decide; reasons by keys + fallback + judge only) | refs cited | T inlining (sessions; SQL) | cost | $ per correct manager | $ per covered reason | empty replies | errors (+ superseded by a re-run) |")
+    L.append("| arm | model | N | items | manager correct (strict; tolerant sides) | status | qualifier | sides strict / tolerant (CONFLICT keys) | silent | analyst checks reported / naive / computed / absent / unconfirmed; decide answers wrong / partial / uncited / unclear | gold covered / missed / wrong (judge) | gold covered / missed / wrong (keys where they decide; reasons by keys + fallback + judge only) | refs cited | T inlining (sessions; SQL) | cost | $ per correct manager | $ per covered reason (all; keyed; judge-graded) | empty replies | errors (+ superseded by a re-run) |")
     L.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
     for k in sorted(cells):
         c = cells[k]
         per_m = f"{c['m_cost'] / c['m_correct']:.4f}" if c["m_correct"] else "–"
-        per_a = f"{c['a_cost'] / c['rs_covered']:.4f}" if c["rs_covered"] else "–"
+        per_a = "; ".join(f"{c['a_cost'] / c[x]:.4f}" if c[x] else "–" for x in ("rs_covered", "rs_covered_keys", "rs_covered_judge"))
         inl = f"{c['inl_sessions']}; {c['inl']}/{c['sql']}" if k[0] == "T" else "–"
         g2 = f"; 2nd {c['gr2_covered']} / {c['gr2_missed']} / {c['gr2_wrong']}" if jg2 else ""
         L.append(f"| {k[0]} | {k[1].split('/')[-1]} | {k[2]} | {k[3]} | {c['m_correct']}/{c['m']}; {c['m_tol']} | {c['m_status']}/{c['m']} | "
                  f"{c['m_qual']}/{c['m_qual_n']} | {c['m_sides']} / {c['m_sides_tol']} of {c['m_con']} | {c['m_silent']} | {c['k_reported']} / {c['k_naive']} / {c['k_computed']} / {c['k_absent']} / {c['k_unconfirmed']}; "
-                 f"{c['k_wrong']} / {c['k_partial']} / {c['k_unclear']} (judge {c['k_judge']}) | {c['gr_covered']} / {c['gr_missed']} / {c['gr_wrong']} ({c['a_judged']}/{c['a']} judged{g2}) | "
+                 f"{c['k_wrong']} / {c['k_partial']} / {c['k_uncited']} / {c['k_unclear']} (judge {c['k_judge']}) | {c['gr_covered']} / {c['gr_missed']} / {c['gr_wrong']} ({c['a_judged']}/{c['a']} judged{g2}) | "
                  f"{c['rs_covered']} / {c['rs_missed']} / {c['rs_wrong']} ({c['rs_keys']} + {c['rs_fallback']} + {c['rs_judge']}) | "
                  f"{c['cite']}/{c['cite_n']} | {inl} | {c['cost']:.4f} | {per_m} | {per_a} | {c['empty']} | {c['errors']}" + (f" (+{c['superseded']})" if c["superseded"] else "") + " |")
     L.append("\n" + reason_tables(recs, jg, jg2))
