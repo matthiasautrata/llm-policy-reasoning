@@ -2,7 +2,8 @@
 
 The API key comes from OPENROUTER_API_KEY and is never logged. No identifying headers are sent.
 Every call returns what the run record needs: content, reasoning text, served model and provider,
-token counts, the exact cost OpenRouter charged, and wall time.
+token counts, the exact cost OpenRouter charged, and wall time. With tools (OpenAI-style definitions), the
+assistant message is returned as sent ("message", to append to the conversation) with its "tool_calls".
 """
 import json, os, random, time, urllib.error, urllib.request
 
@@ -14,9 +15,11 @@ class CallError(Exception):
     pass
 
 
-def chat(model, messages, *, temperature, max_tokens, reasoning=None, provider=None, timeout=300, tries=5):
+def chat(model, messages, *, temperature, max_tokens, reasoning=None, provider=None, tools=None, timeout=300, tries=5):
     body = {"model": model, "messages": messages, "temperature": temperature, "max_tokens": max_tokens,
             "usage": {"include": True}}
+    if tools:
+        body["tools"] = tools
     if reasoning is not None:
         body["reasoning"] = reasoning
     if provider is not None:
@@ -60,6 +63,8 @@ def chat(model, messages, *, temperature, max_tokens, reasoning=None, provider=N
                     "cost": u.get("cost"),
                     "seconds": round(time.time() - t0, 3),
                     "attempts": attempt + 1,
+                    "tool_calls": m.get("tool_calls") or [],
+                    "message": {k: v for k, v in m.items() if k in ("role", "content", "tool_calls", "reasoning_details")},
                 }
         time.sleep(min(60, 2 ** attempt + random.random()))
     raise CallError(f"gave up after {tries} attempts: {last}")
