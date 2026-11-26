@@ -207,29 +207,33 @@ The reference keys `summary` (Q56–Q60, five new keys in `keys.json`, `changed`
 
 The call limit is the same for every arm; `score.py` reports the cells and turns that reach it as their own outcome, by arm (pilot: 21 of 108 turns).
 
-## Benchmark batch 1 (PLAN-v3-bench-full §3, 2026-11-26)
+## Benchmark batch 1 (PLAN-v3-bench-full §3, §3a, 2026-11-26)
 
-DeepSeek v4.1 Flash, N 25 and 200, repetition 1, arms G, G+ and T on all 31 manager questions and A1–A3, judge `gpt-6.2-sol` at medium. 204 cells, no errors, no empty replies; $0.536 OpenRouter (estimate $1.20), judge $0.295 (estimate $0.20; one judge reply was invalid JSON and was graded again). Results: `bench/results/b1.jsonl.gz`, grades `b1.judge-medium.jsonl.gz`. One repetition: a signal, not a result.
+DeepSeek v4.1 Flash, N 25 and 200, repetition 1, arms G, G+ and T on all 31 manager questions and A1–A3, judge `gpt-6.2-sol` at medium. 204 cells, no errors, no empty replies. Results: `bench/results/b1.jsonl.gz`, grades `b1.judge-medium.jsonl.gz`. One repetition: a signal, not a result.
 
-| arm | N | manager correct | gold reasons covered / missed / wrong (A1–A3, 34) | turns at the call limit (manager; analyst) |
-|---|---|---|---|---|
-| G | 25 | 27/31 | 30 / 0 / 4 | 2/31; 2/12 |
-| G | 200 | 25/31 | 30 / 0 / 4 | 4/31; 2/12 |
-| G+ | 25 | 28/31 | 29 / 0 / 5 | 1/31; 2/12 |
-| G+ | 200 | 28/31 | 28 / 2 / 4 | 1/31; 2/12 |
-| T | 25 | 30/31 | 25 / 3 / 6 | 2/31; 2/12 |
-| T | 200 | 28/31 | 23 / 2 / 9 | 1/31; 2/12 |
+§3a revised three gold reasons after the first judging (A1 GR2, A2 GR9 and GR12; `bench/tasks/A1.json`, `A2.json`), added rule and claim ids to T's `rules` and `describe`, re-ran T's two A1 cells (the only analyst cells where T asked for a record by id) and re-judged all 18 analyst sessions. The superseded T cells and grades are in `b1.pre3a.jsonl.gz` and `b1.judge-medium.pre3a.jsonl.gz`. Cost: $0.536 for the batch (estimate $1.20), $0.047 for the re-run; judge $0.295 and then $0.281 (estimate $0.20).
 
-Against the pilot (same model; the pilot's 10 manager questions, gold reasons judged at medium):
+| arm | N | manager correct | gold reasons covered / missed / wrong (A1–A3, 34) | before §3a | turns at the call limit (manager; analyst) |
+|---|---|---|---|---|---|
+| G | 25 | 27/31 | 28 / 1 / 5 | 30 / 0 / 4 | 2/31; 2/12 |
+| G | 200 | 25/31 | 30 / 1 / 3 | 30 / 0 / 4 | 4/31; 2/12 |
+| G+ | 25 | 28/31 | 29 / 1 / 4 | 29 / 0 / 5 | 1/31; 2/12 |
+| G+ | 200 | 28/31 | 30 / 2 / 2 | 28 / 2 / 4 | 1/31; 2/12 |
+| T | 25 | 30/31 | 27 / 1 / 6 | 25 / 3 / 6 | 2/31; 2/12 |
+| T | 200 | 28/31 | 29 / 1 / 4 | 23 / 2 / 9 | 1/31; 2/12 |
+
+Against the pilot (same model; the pilot's 10 manager questions, gold reasons judged at medium before §3a):
 
 | arm | manager N 25 / 200 (of 10) | gold covered N 25 / 200 |
 |---|---|---|
 | G, pilot → batch 1 | 5 / 6 → 7 / 6 | 26 / 23 → 30 / 30 |
 | T-eval (pilot) → T | 7 / 8 → 10 / 8 | 25 / 18 → 25 / 23 |
 
+- Judge noise: of the 162 grades whose session and reason text did not change, 7 flipped between the two judgings (4 %). Differences of one or two reasons per cell are within it.
+- Every gold reason is now covered by some arm at some N. Before §3a, A2 GR9 and GR12 were wrong in all six cells: they asked for a historical approver chain, which the data cannot give (`emp.manager` is undated). Revised, they are covered in 3 and 2 cells.
+- T's gap on analyst gold reasons closed: 27 and 29 against G's 28 and 30. Half of it is the revised texts; the A1 re-run adds the rest (A1 at N 200: 7 by-id calls, all answered, where before 3 returned OUT_OF_SCOPE; GR2, GR5, GR7 and GR11 now covered, GR9 lost).
 - The forced final answer (§1.4) changed G most: every turn at the limit now has a reply, and G's A1 at N 200 went from 7/13 to 13/13. The pilot's "G degrades at N 200" does not recur in batch 1.
-- T uses the design tools (321 `rules`, 141 `summary` calls; none over the result cap). A2 at N 200: 12 `decide` calls instead of 238, gold 3/12 → 8/12. A1 GR6 and GR10 (vendor exceptions, mid-year transfer), missed by T-eval at both N, are covered at both N.
-- T leads on manager questions and trails G on analyst gold reasons (25 and 23 against 30 and 30). Its misses are spread (A1 GR2, GR11; A2 GR6, GR9, GR12; A3 GR6).
+- T uses the design tools (319 `rules`, 121 `summary` calls; none over the result cap). A2 at N 200: 12 `decide` calls instead of 238.
 - Every arm reaches the analyst call limit in 2 of 12 turns; manager turns at the limit are mostly wrong for G (0/6 correct) and mostly right for G+ and T (4/5).
 
 ## Built vs native

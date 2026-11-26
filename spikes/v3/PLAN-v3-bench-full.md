@@ -44,7 +44,35 @@ STOP: report the ops, the tool descriptions, and the gate.
 The benchmark runs on DeepSeek first; other models come after (§4). The re-pilot is folded into the full run, so nothing is paid twice:
 
 - **Batch 1:** DeepSeek, N = 25 and 200, repetition 1, all arms (G+ on the analyst tasks too), all 31 manager questions and A1–A3. Judge at medium. STOP: report, compare with the pilot (T with and without the design tools), and recompute the rest. If batch 1 shows a defect that invalidates cells, fix it, mark those cells for re-run, and say so; otherwise continue.
-- **Batch 2:** N = 50 and 100 (repetition 1), then repetition 2 at all N, resumable, within the cap minus a reserve for §4.
+- **Amendment after batch 1 (Matthias, 2026-11-26): do §3a and §3b before batch 2.**
+
+## 3a Fixes from batch 1 (cents)
+
+Batch 1 findings: G covers 30/34 gold reasons at both N, so the rule count does not bite; two gold reasons are graded wrong for every arm at every N; T could not open claim C10 by id.
+
+1. **Gold reasons** (task data and the Tolaria design note `warrant-layer/benchmark-design.md` together):
+   - A2 GR9 and GR12 ask for the reporting chain as of the request date, which the data cannot give (reporting lines are not dated). Rewrite both as caveats: the design must state that the approver chain reflects the current org chart, and keep limits and vendor status as of the request date.
+   - A1 GR2: from "never sum headroom across centres" to "headroom is not additive into a budget: a sum over centres is bounded by their ancestors' caps, and over overlapping subtrees it double-counts".
+   - Check every other reason that no arm covers at any N in batch 1 the same way: is it satisfiable from the data and tools? List the result.
+2. **T tool gap:** `describe` and `rules` accept a rule or claim id (claims by id, with standing at `as_of`). Give `domain_truncated` a readable message. Engine and contract change, gate as usual.
+3. **Re-judge** batch 1 with the rewritten reasons (judge only, no new arm calls). Re-run T's analyst cells at N 25 and 200 only if fix 2 can change them (T asked for a claim by id in that cell); list which.
+
+STOP: report the re-judged table and which cells were re-run.
+
+## 3b Make the rule count bite (about $1)
+
+Batch 1 tests only the core slice: no question or task needs a generated rule, so growth in N is distraction only. The hypothesis is about rules that interact and must be honoured (k × interaction).
+
+1. **Manager questions on the generated families,** for each N ≥ 50: a fixed number per N (propose 12), sampled from `bases/N*.questions.json` stratified by pattern (dated limit version, exception, counter-exception, owner dispute with and without superiority, claim tree), phrased as a manager would ask. Record k (rules and claims on the proof path) per question. Keys from the existing family oracle.
+2. **Analyst task A4** on one generated programme present at every N ≥ 50: dated limit versions, the clearance exception and counter-exception, an owner dispute, claims about it. Gold reasons derived from the family's structure, with mechanical checks wherever the oracle gives a value. If the generator makes programmes independent of each other, so that a programme's interactions do not grow with N, say so and propose how density can reach the task programme (more disputes, superiority and exceptions touching it as N grows); do not change the bases without Matthias's go.
+3. N 25 has no generated families: the family questions and A4 start at N 50. The core-slice questions stay at every N as the baseline.
+4. Run the new items at N 50 and 200 first, DeepSeek, all arms, repetition 1.
+
+STOP: report whether accuracy or gold coverage now moves with N or k, by arm.
+
+## 3c Batch 2
+
+- **Batch 2** (after §3a and §3b, with the new items included): N = 50 and 100 (repetition 1), then repetition 2 at all N, resumable, within the cap minus a reserve for §4.
 
 STOP after batch 2: results, cost, and the reassessment.
 
@@ -68,3 +96,7 @@ After the DeepSeek run, Matthias decides on a second family. Candidates: GLM, Li
 - 2026-11-26 — Matthias confirmed the IR-006 scope note (a summary variable with a domain counts as bound).
 - 2026-11-26 — Live check of §1.4's `tool_choice: "none"` (Matthias: "yes, try"; $0.008). Five T sessions on M01 at N 25, each one normal call that made 1–3 tool calls, then FINAL_NOW with tools forbidden. DeepSeek v4.1 Flash (served by Baidu, 3 of 3) and GLM 5.3 (Novita, 2 of 2): no tool calls, finish `stop`, 468–879 characters, all giving the key total 3,715,000. Only those providers were tested; the fp8 filter can route to others.
 - 2026-11-26 — §3 batch 1 run as planned into `bench/results/b1.jsonl` (`--budget 3`): 204 cells, no errors, $0.536 (estimate $1.20, so the calibration overestimates by about 2.2×); judge $0.295 at medium (estimate $0.20). One judge reply (G+ A1 N 200) was invalid JSON (`;` between strings) and was graded again by rerunning `--judge`. No defect invalidates a cell; nothing is marked for re-run. One cosmetic defect, not fixed (the tools are frozen): `summary` with a domain whose fetch is truncated returns ERROR with "Unknown error term: domain_truncated(request)" instead of a message (2 calls). Batch 2 goes into the same file (resumable; rep 2 adds cells). Its estimate is $3.66 + judge $0.60; scaled by batch 1's ratios, about $1.65 + $0.90.
+- 2026-11-26 — §3a.1 gold reasons: A1 GR2, A2 GR9 and GR12 replaced with Matthias's texts (verbatim from the notes vault), `source` noting the revision. The other reasons checked against batch 1's six analyst cells (G, G+, T at N 25 and 200): every one is covered in at least one cell (e.g. A3 GR8, wrong for G and G+, covered by T), so none other is unsatisfiable and none was changed.
+- 2026-11-26 — §3a.2: `rules`, `describe` and `claims` resolve an active rule or claim id (`R203`, `C10`). `rules` gives that record as the only item, the predicates it concludes, attacks or ranks (a claim: its assertion's), and the root conflicts it is a side of; `describe` adds the item as `record` (kind the rule's, or `claim`); `claims` gives that claim's standing on `as_of`. An id is tried last in `rules` and `describe`, so an asset, predicate or concept with the same text wins (none exists). `domain_truncated` now prints "the domain <concept> has more rows than the fetch limit …; narrow it with its filters … or give a list of values". No key changed (the ops are not keyed); gate green. T's `rules` and `describe` descriptions name the ids; `config.t_tools` is unchanged (same tool names), so the T version is told apart by `ts` (re-run cells after 2026-11-26T11:19).
+- 2026-11-26 — §3a.3 re-run: T asked for a record by id in both analyst A1 cells (N 25: `rules C10`; N 200: `rules R203`, `rules C10`, `describe C10`; all OUT_OF_SCOPE before). Both were moved to `b1.pre3a.jsonl` and re-run into `b1.jsonl` ($0.047, `--also` so the budget counts both); the new cells make 3 and 7 by-id calls, all answered. No other analyst cell asked by id. Two manager cells did (M14 N 200: `rules C1`, `rules C6`; M21 N 200: `rules C10`), not re-run, as §3a limits re-runs to analyst cells. M14 is correct; M21 is wrong (status right, value wrong), so the id fix might change it.
+- 2026-11-26 — §3a.3 re-judge: the old grades moved to `b1.judge-medium.pre3a.jsonl` (with their batch markers), and all 18 analyst sessions graded again into `b1.judge-medium.jsonl` ($0.281, no unparsed reply). The pre-§3a T cells and grades are kept, as RESULTS compares with them. 7 of the 162 grades whose session and text did not change flipped, the judge's run-to-run noise.

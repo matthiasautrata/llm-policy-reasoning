@@ -1,7 +1,7 @@
 {
  "id": "A1",
  "title": "cost-centre spend dashboard",
- "source": "notes warrant-layer/benchmark-design.md §1, A1 (2026-11-25)",
+ "source": "notes warrant-layer/benchmark-design.md §1, A1 (2026-11-25); GR2 revised 2026-11-26 after batch 1",
  "output": "Per turn, a design: the components, the rules each rests on, the SQL per component, and caveats.",
  "turns": [
   {"n": 1, "text": "Build a dashboard so cost-centre managers can see their spend against their cap and the pipeline of pending requests.",
@@ -15,7 +15,7 @@
  ],
  "gold": [
   {"id": "GR1", "text": "Booked total rolls up over the subtree; it is semi-additive across the hierarchy: never add a parent's and its children's totals", "refs": ["R104", "IR-004", "IR-007"], "turns": [1, 2]},
-  {"id": "GR2", "text": "Headroom is cap minus booked total and non-additive: never sum headroom across centres", "refs": ["R105"], "turns": [2]},
+  {"id": "GR2", "text": "Headroom is cap minus booked total and is not additive into a budget: a sum over centres is bounded by their ancestors' caps, and over overlapping subtrees it double-counts", "refs": ["R105"], "turns": [2]},
   {"id": "GR3", "text": "A request can breach a parent's cap while its own centre still has headroom: the cap check runs against the requester's centre and every ancestor", "refs": ["R106", "R304"], "turns": [1]},
   {"id": "GR4", "text": "\"Committed spend\" is not defined: finance has not decided whether pending requests count. Show both readings or refuse the label; do not pick one silently", "refs": ["term:committed_spend"], "turns": [3]},
   {"id": "GR5", "text": "The approval limit that governs a request is the version valid on the request date, not today's", "refs": ["R202", "R203"], "turns": [1, 4]},
