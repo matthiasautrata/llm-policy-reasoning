@@ -244,6 +244,195 @@ How spike v3 (System A: rules and claims as data, a defeasible engine, a bounded
 
 **After the phase (PLAN-v3-bench-full §2, 2026-11-26).** The pilot's T had evaluation-only tools (`decide`, `why`, `why_not`, `describe`, `resolve_term`); on A2 at N 200 it made 238 `decide` calls and hit the limit. T gained `rules` and `summary` after the pilot. Fairness note: this change is made after the pilot. It is legitimate only because it addresses a capability gap any real deployment has (navigating the rule base), not the gold reasons, and because it is frozen before the full run. The pilot's T is reported as `T-eval` beside the new T; "evaluation-only tools are not enough for design work" is itself a finding.
 
+Phases 12–21 executed `PLAN-v3-bench-full.md` (2026-11-26; b660842..b3b6a35, **tag `spike-v3-benchmark`**). The plan, with every Decision, is at the tag: `git show spike-v3-benchmark:spikes/v3/PLAN-v3-bench-full.md`. RESULTS holds the confirmatory runs; the exploratory tables below are kept only here.
+
+### 12 Fixes from the pilot (2026-11-26; b660842..7dfbceb)
+
+**Question.** Make the pilot's defects impossible before paying for the full run: empty replies at the call limit, a dated price table, a reserve below the shortest prompts, an uncalibrated estimate.
+
+**Decisions and why.**
+- Forced final answer: a turn at the call limit makes one more call with `tool_choice: none`, so it is scored rather than left empty (the pilot had 20 empty replies of 21 limited turns). Checked live for $0.008 on DeepSeek (Baidu) and GLM (Novita): no tool calls, the key total in every reply.
+- Prices are fetched from OpenRouter's endpoints list at the start of every run: per field the highest admitted endpoint reserves, the lowest is typical; recorded in `config.prices`. A fetch failure stops the run.
+- `RESERVE_CHARS` 2.5, below the pilot's lowest 2.80 characters per token.
+- The estimate reads the pilot's tokens and calls per cell at run time, times 2.69 (the pilot's charged over typical cost, because routing did not always take the cheapest endpoint). Every live run refuses before any call when its estimate exceeds what is left of `--budget`.
+- Judge default medium (Matthias).
+
+**Findings kept.** The pilot recount: 20 of 21 limited turns ended empty, one with 144 characters; turn 1 hit the limit in 9 of 12 analyst sessions.
+
+**Findings reversed.** None.
+
+### 13 T's design tools (2026-11-26; ce14965..c41b492)
+
+**Question.** The pilot's T could only evaluate (238 `decide` calls on A2 at N 200). Give it a way to navigate the rule base without touching the gold reasons.
+
+**Decisions and why.**
+- `rules` lists the rule base around a predicate, term, concept, asset or goal pattern, with structural conflicts (a supporter and a rival attacker with no superiority either way), without evaluating. A goal pattern narrows a predicate with 34–35 concluding rules under the 12k tool-result cap.
+- `summary` gives status counts of an open goal over a domain, contested roots and a sample. Open goals over requests need a domain (`filters`), since the request concept needs its id.
+- The reference keys `summary` (Q56–Q60, five new keys; `changed` still Q07 Q14); `rules` is a projection, checked in `bench/selftest.py`.
+- IR-006 scope note: a `summary` variable with a domain counts as bound (confirmed by Matthias; not a new check).
+- Fairness note (also in RESULTS and phase 11): made after the pilot, legitimate because it closes a gap any deployment has and is frozen before the full run. Records carry `config.t_tools`; the pilot's T is reported as `T-eval`.
+- The call limit is the same for every arm; `score.py` reports cells and turns at the limit as their own outcome.
+
+**Findings kept.** `summary` over the 425 pending requests of cc0049 at N 200 takes about 0.8 s.
+
+**Findings reversed.** None.
+
+### 14 Batch 1 (2026-11-26; 19a42c9)
+
+**Question.** First full DeepSeek run on the core items: does T beat G on the 31 manager questions and A1–A3, and does N 200 hurt G?
+
+**Decisions and why.** DeepSeek v4.1 Flash, N 25 and 200, one repetition, arms G, G+, T, judge `gpt-6.2-sol` at medium. `--budget 3`. One invalid judge reply was graded again. One cosmetic defect left (frozen tools): a truncated `summary` domain printed "Unknown error term".
+
+**Findings kept.** 204 cells, no errors, $0.536 (estimate $1.20: the calibration overstates about 2.2×); judge $0.295. Scored as §3b′ defines correct (qualifier included; strict and tolerant sides); "without qualifier" is the score before it. After §3a (phase 15):
+
+| arm | N | manager correct, strict; tolerant | without qualifier | qualifier (of 25 decide) | gold reasons covered / missed / wrong (A1–A3, 34) | before §3a | turns at the call limit (manager; analyst) |
+|---|---|---|---|---|---|---|---|
+| G | 25 | 21; 23 | 27 | 18 | 28 / 1 / 5 | 30 / 0 / 4 | 2/31; 2/12 |
+| G | 200 | 19; 20 | 25 | 18 | 30 / 1 / 3 | 30 / 0 / 4 | 4/31; 2/12 |
+| G+ | 25 | 22; 23 | 28 | 19 | 29 / 1 / 4 | 29 / 0 / 5 | 1/31; 2/12 |
+| G+ | 200 | 23; 25 | 28 | 20 | 30 / 2 / 2 | 28 / 2 / 4 | 1/31; 2/12 |
+| T | 25 | 29; 29 | 30 | 24 | 27 / 1 / 6 | 25 / 3 / 6 | 2/31; 2/12 |
+| T | 200 | 28; 28 | 29 | 24 | 29 / 1 / 4 | 23 / 2 / 9 | 1/31; 2/12 |
+
+Against the pilot (the pilot's 10 manager questions; gold reasons judged at medium before §3a):
+
+| arm | manager N 25 / 200 (of 10) | gold covered N 25 / 200 |
+|---|---|---|
+| G, pilot → batch 1 | 5 / 6 → 7 / 6 | 26 / 23 → 30 / 30 |
+| T-eval (pilot) → T | 7 / 8 → 10 / 8 | 25 / 18 → 25 / 23 |
+
+- The qualifier is where the arms differ: G and G+ miss it in 5–7 of 25 (almost all under-qualified), T in 1. Strict sides lose G and G+ every CONFLICT key at N 25, T none.
+- The forced final answer changed G most (A1 at N 200: 7/13 → 13/13). The pilot's "G degrades at N 200" did not recur.
+- T uses the design tools (319 `rules`, 121 `summary`; A2 at N 200: 12 `decide` calls instead of 238).
+- Graded from keys where keys decide (phase 20), T covers 28 and 29 analyst reasons, G 29 and 26.
+
+**Findings reversed.** "G degrades at N 200" (pilot) by the forced final answer. Batch 1 is exploratory: one repetition, and no interaction grows with N on the core items.
+
+### 15 Fixes from batch 1, §3a (2026-11-26; abc1eb8..eda22de)
+
+**Question.** Fix what batch 1 exposed: unsatisfiable gold reasons, and T asking for records by id and getting OUT_OF_SCOPE.
+
+**Decisions and why.**
+- A1 GR2, A2 GR9 and GR12 replaced with Matthias's texts: they asked for a dated approver chain, which the data cannot give (`emp.manager` is undated). Every other reason is covered by some cell, so none other was changed.
+- `rules`, `describe` and `claims` resolve a rule or claim id; `domain_truncated` gets a readable message. No key changed.
+- The four T cells that had asked by id were re-run (A1 at N 25 and 200, $0.047; then M14 and M21 at N 200 on Matthias's word, $0.001). M21 went from wrong to right, so T at N 200 is 29/31 on the core questions. The superseded cells and grades are kept in `b1.pre3a.jsonl.gz` and `b1.judge-medium.pre3a.jsonl.gz`.
+- All 18 analyst sessions re-judged ($0.281).
+
+**Findings kept.** Judge noise: 7 of 162 unchanged grades flipped between judgings (4 %), so a difference of one or two reasons per cell is within it. T's analyst gap closed: 27 and 29 against G's 28 and 30.
+
+**Findings reversed.** None.
+
+### 16 Rule count on the generated families, §3b (2026-11-26; 5c1262f..185ac23)
+
+**Question.** Make the rule count bite: family questions and an analyst task (A4) on the generated bases, where N should add interacting rules.
+
+**Decisions and why.**
+- `bench/gen_items.py` writes F01–F12 and A4 per N ≥ 50 (`by_n`); an id names the same slot at every N. A4 on P01, the only programme at every N ≥ 50.
+- A stale generated file was found and fixed at its generator: `A1.keys.json` had K5 as `proven_part`; reference.py now writes `value`, reproducing the committed keys.
+- Every analyst session is judged twice, and the report gives the judge's self-agreement (Matthias); batch 1 was judged a second time too ($0.283; 198/204, kappa 0.90).
+- A run's cap must cover workers × the per-call reserve plus what is spent: 3 cells were refused by reservations at 6 workers and resumed at 2.
+
+**Findings kept.** 78 cells, $0.110; judge $0.075 and $0.033, self-agreement 60/60.
+
+| arm | N | family correct (of 12) | without qualifier | qualifier (of 10) | correct at k = 1 / 2 / 3 | A4 gold covered / missed / wrong | A4 numbers reported (of 3) |
+|---|---|---|---|---|---|---|---|
+| G | 50 | 8 | 11 | 7 | 7/7, 0/3, 1/2 | 8 / 0 / 1 (of 9) | 3 |
+| G | 200 | 10 | 12 | 8 | 8/9, 1/2, 1/1 | 8 / 0 / 3 (of 11) | 3 |
+| G+ | 50 | 9 | 12 | 7 | 7/7, 1/3, 1/2 | 8 / 0 / 1 | 3 |
+| G+ | 200 | 10 | 12 | 8 | 8/9, 1/2, 1/1 | 8 / 0 / 3 | 3 |
+| T | 50 | 11 | 12 | 9 | 7/7, 2/3, 2/2 | 8 / 0 / 1 | 3 |
+| T | 200 | 12 | 12 | 10 | 9/9, 2/2, 1/1 | 11 / 0 / 0 | 3 |
+
+- **The generator made programmes independent.** Disputes, superiority and exceptions each read one programme or category, and none touched P01; k stayed 1–3, so N added distraction, not interaction. Without the qualifier, 71 of 72 family answers were right.
+- With the qualifier, T 23 of 24, G and G+ 18 and 19; their misses at k ≥ 2 were unqualified "no"s and missing limit versions. On A4 at N 200, GR6 (a request under K01 is contested) separated the arms: G and G+ gave a plain answer in 3 of 4 sessions.
+
+**Findings reversed.** The run itself: §3b is exploratory, because the generator was changed in §3b′ so that interactions grow with N. It is not re-scored by keys (its task has no subject per check).
+
+### 17 Re-score, interacting rules and the floor arm, §3b′ (2026-11-26; 35b176d..76c7777)
+
+**Question.** The first confirmatory comparison: a generator whose interactions grow with N, items stratified by proof depth k and dispute count d, a floor arm, three repetitions, and expected outcomes recorded before the run.
+
+**Decisions and why.**
+- Re-score: correct = status, value, sides and qualifier. Every decide and why_not key states its qualifier (only Q16 changed: its "not approved" rests on absence); a key without one raises. Sides strict (equal sets) and tolerant (each key side inside one reported side). Batch 1 and §3b re-scored.
+- Gate: `check_bases.py` point 4 compares every committed `tasks/A*.keys.json` with `reference.task_keys`.
+- Generator: P01 (capital, three dated limit versions, an exception and its counter) is seeded apart from N; N adds disputes over capital (round(N/50), with superiority across disputes) and sub-programme chain levels (U01–U02 at N 50, U01–U04 at N 200), each level its own predicate (declared in `modes.edn`) so the per-predicate cycle check holds.
+- Oracle: `BenchProp` in `reference.py`, a team-defeat `Prop` over the ground rules a request instantiates, built from params, not the EDN. 750 random checks against the engine, 0 mismatches.
+- Engine fix in `why.pl`: a live supporter of a goal refuted by defeat now gets its `defeated_by` node (B234 had explained G009 as "absent" and never named G010).
+- 16 family questions per N, 4 per k stratum (1, 2–3, 4–5, 6+), one per outcome where possible; A4 asks about the same nine requests at every N, picked at N 200, with a chain turn.
+- Floor arm F: the data model and `sql`, no rules, at N 50 and 200 (the families start at N 50).
+- Run scope and expected outcomes (a)–(d) fixed in the plan before the run; `--budget 2`.
+
+**Findings kept.** k reaches 6–9 at N 200 only through contested keys (a proven chain path is rare). The run (402 cells, $0.674, judge self-agreement 0.95, kappa 0.91) is the first confirmatory result and stays in RESULTS.
+
+**Findings reversed.** Two defects found after the run were fixed in phase 18: A4 GR6 was ill-posed at N 50 with one dispute, and the mechanical numeric check credited F for numbers it printed for other reasons.
+
+### 18 Variants, N 100 and a second model, §3c (2026-11-26; 9049f69..a4ddc3f)
+
+**Question.** Rule out the obvious explanations of §3b′ (the prompt; N), and replicate on a second model.
+
+**Decisions and why.**
+- §3c.1: GR6 worded for one dispute; A4 re-judged twice (`b3c.rejudge-medium*.jsonl.gz`; the first judging `b3c.judge-medium*.jsonl.gz` stays as the record of the change: GR6 at N 50 went from T 1/6 to 4/6 and G 1/6 to 0/6). A numeric check counts only in a block or under a heading naming its subject, and only where the judge's grade of that check agrees; F's reported checks fell from 7 and 3 to 0. A per-line reader was tried and dropped (it lost true reports in tables).
+- Variant arms run only when named: G-q and G+-q add one sentence asking whether each "no" rests on absence; G-tools has G's material without rules and claims, T's `rules` tool and `sql`.
+- Matthias chose §3c.2–4 then §3d, reported once.
+
+**Findings kept.**
+- G-q (§3c.2, $0.093): the sentence changes nothing (0 of 15 absence keys qualified). The model reads "rests only on not finding something" as a missing record, never as a rule over known facts.
+- N 100 (§3c.3, $0.327): G scores higher there; this is the item mix (fewer absence items, disputes at d 2–3), not N.
+- GLM 5.3 (§3c.4, $1.82): the DeepSeek pattern. The estimate gate overstated GLM about 4.5×, so the run went one repetition at a time.
+
+**Findings reversed.** None.
+
+### 19 Arms frozen: GLM A4, G-tools, strata (2026-11-26; 7a8e634, d1548d4, a4ddc3f, 606f694)
+
+**Question.** §3d: does a rule lookup without an evaluator close the gap; does GLM's A4 agree; how do the strata differ by N.
+
+**Decisions and why.**
+- Arms frozen before these runs; outcomes for G-tools recorded before its run.
+- GLM A4 at one repetition first ($0.408, against a gate estimate of $5.44), repetitions 2–3 on Matthias's go ($0.872).
+- A failed record superseded by its re-run counts in cost only, shown as (+n) (d1548d4): F's "error" at N 200 was a truncation-check failure re-run on resume.
+
+**Findings kept.** G-tools ($0.148) scores with G (27 of 48 against G 25, T 46), so the engine, not the lookup, is what T gains. The strata table by N (RESULTS). Spend for §3c.2–§3d: OpenRouter about $3.67, judge about $0.37.
+
+**Findings reversed.** None.
+
+### 20 Judge validity: gold reasons graded from keys, §3e.1 (2026-11-26; 970b012..cc6707e)
+
+**Question.** The judge grades explanations. Grade gold reasons from the oracle's keys wherever keys decide them, and measure how far the judge agrees.
+
+**Decisions and why.**
+- `decided_by` inverts each check's `gr`, minus labels (Matthias). Reasons with no key keep the judge's grade ("no keys"); reasons claiming a contest where no key is contested at that N keep it as "untested".
+- A scoped prose reader (Matthias) reads a decide verdict only from the subject's own line, cell or section; an unclear reading falls back to the judge, counted.
+- F's ten keyed covered grades were read by hand (Matthias) and were all coincidences. Two reader rules followed: a table row headed by another id answers for that id; a verdict counts only if its block cites a rule of the oracle's core (or, for a CLOSED core, states absence). The task op in `reference.py` keeps `core` and `qualifier`; `A4.keys.json` gains them, with no value changed.
+- "$ per covered reason" reported three ways (all; keyed; judge-graded) (Matthias).
+
+**Findings kept.** The judge is self-consistent (0.90–0.97) but agrees with the keys on 0.47–0.95 of reason grades by arm; it grades the stated rule, the keys the answers. F covers no reason by keys at any N.
+
+**Findings reversed.** "T too misreads GR7" (the judge, §3b′): T's explanations state the precedence correctly (G020 over G017) and the judge marked them wrong; graded from keys, T reports r000059 as contested with both sides in 3 of 3 sessions. The judge's "G wrong on GR7 in 6 of 6" at N 50 is about G's general rule, not a reported answer, and GR7 is untested by keys there.
+
+### 21 A stronger model, §3e.2 and §3f (2026-11-26; 8752c3b..b3b6a35)
+
+**Question.** Does the closure result hold for a stronger model, and at its highest effort?
+
+**Decisions and why.**
+- Model choice before any call (OpenAI pricing and deprecations pages, read 2026-11-26): gpt-6.2-astra estimated at $29 for 3 repetitions against $19.8 combined, so gpt-6.2-sol ($7.3 estimate), on `openai@`, effort medium, `--budget 16`. It is also the judge's model; these runs are scored mechanically, so no conflict.
+- `run.py --reasoning` and `--calibrate` (estimate from §3b′'s tokens; the routing factor applies to OpenRouter only).
+- Chat Completions refused function tools with reasoning effort (HTTP 400, uncharged), so OpenAI calls with tools go through the Responses API, stateless, with the encrypted reasoning passed back and a prompt cache key (Matthias: option 1).
+- §3e.2: 9 cells hit the 1M TPM rate limit at 6 workers and were re-run at 2.
+- §3f.1: a call refused with an HTTP error status on every attempt costs $0 (`CallError.refused`); `run.cost_of()` applies the rule to older records, so b3e is re-stated without editing it ($1.25, the amount charged, against $3.34 booked).
+- §3f: cap $12.75 (the credit less §3e.2's charge, less $2); a check cell showed effort high served with 0 reasoning tokens, so T fit and was run too.
+
+**Findings kept.** Medium $1.25, high $1.51 (336 calls, all served at high). At both efforts G and G-q qualify absence in 0 of 15 with the value right in 15 of 15, T in 15 of 15; correct 26, 25 and 48 of 48 at both. Reasoning tokens per cell rose from 28 / 21 / 10 to 110 / 105 / 60. About $13.2 of the OpenAI credit remains on the plan's figure.
+
+**Findings reversed.** None. "Maximum effort" was read as high, the runner's highest setting (checked against OpenAI's docs in the wrap-up).
+
+**Post-hoc changes, with their reasons.** Every change made after seeing results:
+1. Forced final answer (phase 12): a limited turn is scored rather than left empty.
+2. T's design tools `rules` and `summary` (phase 13): evaluation-only tools could not navigate the rule base; the pilot's T is reported as `T-eval`.
+3. Id resolution in `rules`, `describe` and `claims` (phase 15): T asked for records by id and got OUT_OF_SCOPE; four cells re-run.
+4. Gold-reason rewrites: A1 GR2, A2 GR9 and GR12 (phase 15, unsatisfiable); A4 GR6 (phase 18, ill-posed for one dispute).
+5. Scoring: qualifier in correct, every decide key stating one (phase 17); strict and tolerant sides (17); numeric checks by subject and judge-confirmed (18); superseded failed records in cost only (19); gold reasons from keys where keys decide (20); a keyed verdict needs a core rule in its block, and a table row answers for its own id (20); refused calls cost nothing (21).
+6. The generator (phase 17): interactions grow with N, after §3b found programmes independent.
+
 ## Platform lessons (platforms dropped, lessons kept)
 
 - **V3b, Clojure · Datahike · Malli.**

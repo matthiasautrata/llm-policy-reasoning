@@ -10,9 +10,13 @@ Does notation matter, and when is an engine needed? Written decisions mattered, 
 
 Which layer (L0–L3) does a question need, in which representation and mode? H1 and H5 confirmed, H2 qualified, H3 wins on contradiction, H4 falsified; $8.11 for 8,878 records. Record: `paper/v2/`, `REWORK.md` (plan and Decisions, M0–M7), `results/`.
 
-## v3 spike — System A (2026-11-24..; fcd9480..; tags `spike-v3-five-platforms`, `spike-v3-housekeeping`)
+## v3 spike — System A and the benchmark (2026-11-24..26; fcd9480..; tags `spike-v3-five-platforms` … `spike-v3-benchmark`)
 
-Rules and claims as data, a defeasible engine over bounded SQL fetch; five platforms explored, Python + Prolog chosen. Record: `spikes/v3/HISTORY.md`.
+Rules and claims as data, a defeasible engine (SWI-Prolog via janus) over bounded SQL fetch, an independent Python oracle and a shared integrity gate; five platforms explored, Python + Prolog chosen. Then a benchmark of an LLM with the rules as markdown (G and variants) against the same LLM with the engine as tools (T), on generated rule bases of 25–200 rules, three models.
+
+Main result: the arms do not differ on values but on closure. T qualifies a "no" that rests on absence and gives complete sides for contested keys; G never qualifies absence (0 of every count, three models, effort up to high), even when asked to, and with a rule lookup but no evaluator.
+
+Tags: `spike-v3-five-platforms`, `spike-v3-housekeeping`, `spike-v3-preconditions`, `spike-v3-memory`, `spike-v3-sqlform`, `spike-v3-bench`, `spike-v3-bench-run`, `spike-v3-benchmark`. Record: `spikes/v3/HISTORY.md` (phases 1–21); current state: `spikes/v3/RESULTS.md`.
 
 ## Repo inventory (2026-11-25; tag `spike-v3-housekeeping`)
 
