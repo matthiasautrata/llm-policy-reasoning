@@ -5,8 +5,11 @@
   .venv/bin/python bench/score.py bench/results/b1.jsonl --export bench/grading     # 10 sessions for hand grading
 
 Manager (mechanical), per question: status; value for ANSWER (lists as sets, a one-element list as its element);
-sides for CONFLICT (as a set of id sets); qualifier (the "qualified" flag against the key's qualifier); for a claim,
-standing and defeater; for a term, its status and candidates. correct = status, value and sides.
+sides for CONFLICT, strict (the same set of id sets) and tolerant (each key side inside its own reported side, no
+reported side holding ids of two key sides: extra ids allowed, sides not merged or swapped); qualifier (the
+"qualified" flag against the key's qualifier, which every decide key states, null when none); for a claim, standing
+and defeater; for a term, its status and candidates. correct = status, value, strict sides and qualifier
+(benchmark-design §2; PLAN-v3-bench-full §3b′); "tolerant" is the same with tolerant sides.
 Analyst: each check is searched for mechanically when its value is a number or an id: "reported" (in that turn's
 reply), "naive" (only the known wrong value is), "computed" (only in that turn's tool results), "absent". Gold
 reasons are graded by the judge (bench/judge_rubric.md; an OpenAI model via the Batch API, a family not under test) as covered / missed / wrong; the
@@ -60,25 +63,44 @@ def sides(x):
     return {frozenset(str(i).strip() for i in s) for s in x} if isinstance(x, list) and all(isinstance(s, list) for s in x) else None
 
 
+def sides_tolerant(got, want):
+    """each key side inside one reported side, a different one per key side, no reported side holding ids of two key sides"""
+    g, w = sides(got), sides(want)
+    if g is None or w is None:
+        return g == w
+    home = {}
+    for s in w:
+        hit = [x for x in g if s <= x]
+        if len(hit) != 1 or hit[0] in home.values():
+            return False
+        home[s] = hit[0]
+    return all(not (home[s] & o) for s in w for o in w if o != s)
+
+
 def score_manager(rec):
     key, a = B.manager_key(B.item(rec["item"], rec["n"])), rec.get("answer") or {}
     o = {"parsed": bool(a)}
     if "standing" in key:
         o.update(type="claim", status_ok=a.get("standing") == key["standing"],
                  value_ok=(a.get("defeater") or None) == key["defeater"])
-        o["correct"] = o["status_ok"] and o["value_ok"]
+        o["correct"] = o["tolerant"] = o["status_ok"] and o["value_ok"]
     elif "candidates" in key:
         want = {c.split(":", 1)[1].replace("_", " ") for c in key["candidates"]}
         got = {str(c).strip().lower().replace("_", " ") for c in a.get("candidates") or []}
         o.update(type="term", status_ok=a.get("term") == key["status"], value_ok=got == want)
-        o["correct"] = o["status_ok"] and o["value_ok"]
+        o["correct"] = o["tolerant"] = o["status_ok"] and o["value_ok"]
     else:
+        if "qualifier" not in key:           # a missing field is never read as "not qualified" (§3b′)
+            raise KeyError(f"key of {rec['item']} at N {rec['n']} states no qualifier")
         st = str(a.get("status", "")).upper()
+        con = key["status"] == "CONFLICT"
         o.update(type="decide", status_ok=st == key["status"],
                  value_ok=key["status"] != "ANSWER" or norm(a.get("value")) == norm(key.get("value")),
-                 sides_ok=key["status"] != "CONFLICT" or sides(a.get("sides")) == sides(key["sides"]),
-                 qualifier_ok=bool(a.get("qualified")) == (key.get("qualifier") is not None))
-        o["correct"] = o["status_ok"] and o["value_ok"] and o["sides_ok"]
+                 sides_ok=not con or sides(a.get("sides")) == sides(key["sides"]),
+                 sides_tol=not con or sides_tolerant(a.get("sides"), key["sides"]),
+                 qualifier_ok=bool(a.get("qualified")) == (key["qualifier"] is not None))
+        o["correct"] = o["status_ok"] and o["value_ok"] and o["sides_ok"] and o["qualifier_ok"]
+        o["tolerant"] = o["status_ok"] and o["value_ok"] and o["sides_tol"] and o["qualifier_ok"]
         o["silent"] = key["status"] in ("UNDERDETERMINED",) and st == "ANSWER"
     if o["type"] == "term":
         o["silent"] = key["status"] == "several" and a.get("term") == "concept"
@@ -357,7 +379,13 @@ def group(iid):
     return "family" if iid.startswith("F") else "A4" if iid == "A4" else "core"
 
 
-def report(recs, jpath, gradedir, jpath2=None):
+def grades_files(results, *also):
+    """every grades file of a results file (<stem>.judge*.jsonl beside it), and any given elsewhere"""
+    fs = set(map(str, pathlib.Path(results).parent.glob(pathlib.Path(results).stem + ".judge*.jsonl"))) if results else set()
+    return sorted(fs | {str(f) for f in also if f and pathlib.Path(f).exists()})
+
+
+def report(recs, jpath, gradedir, jpath2=None, results=None):
     jg, jg2 = judged(jpath), judged(jpath2)
     L = []
     cells = collections.defaultdict(lambda: collections.Counter())
@@ -372,10 +400,13 @@ def report(recs, jpath, gradedir, jpath2=None):
             continue
         if r["kind"] == "manager":
             s = score_manager(r)
-            c["m"] += 1; c["m_correct"] += s["correct"]; c["m_status"] += s["status_ok"]; c["m_parsed"] += s["parsed"]
+            c["m"] += 1; c["m_correct"] += s["correct"]; c["m_tol"] += s["tolerant"]; c["m_status"] += s["status_ok"]
+            c["m_parsed"] += s["parsed"]
             c["m_silent"] += s.get("silent", False)
             if s["type"] == "decide":
                 c["m_qual"] += s["qualifier_ok"]; c["m_qual_n"] += 1
+                if B.manager_key(B.item(r["item"], r["n"]))["status"] == "CONFLICT":
+                    c["m_con"] += 1; c["m_sides"] += s["sides_ok"]; c["m_sides_tol"] += s["sides_tol"]
             c["m_cost"] += r["cost"]
         else:
             c["a"] += 1; c["a_cost"] += r["cost"]
@@ -391,16 +422,16 @@ def report(recs, jpath, gradedir, jpath2=None):
                 c["cite"] += got; c["cite_n"] += n
             if r["arm"] == "T":
                 g, n = inlining(r); c["inl"] += g; c["sql"] += n; c["inl_sessions"] += g > 0
-    L.append("| arm | model | N | items | manager correct | status | qualifier | silent | analyst checks reported / naive / computed / absent | gold covered / missed / wrong | refs cited | T inlining (sessions; SQL) | cost | $ per correct manager | $ per covered reason | empty replies | errors |")
-    L.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
+    L.append("| arm | model | N | items | manager correct (strict; tolerant sides) | status | qualifier | sides strict / tolerant (CONFLICT keys) | silent | analyst checks reported / naive / computed / absent | gold covered / missed / wrong | refs cited | T inlining (sessions; SQL) | cost | $ per correct manager | $ per covered reason | empty replies | errors |")
+    L.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
     for k in sorted(cells):
         c = cells[k]
         per_m = f"{c['m_cost'] / c['m_correct']:.4f}" if c["m_correct"] else "–"
         per_a = f"{c['a_cost'] / c['gr_covered']:.4f}" if c["gr_covered"] else "–"
         inl = f"{c['inl_sessions']}; {c['inl']}/{c['sql']}" if k[0] == "T" else "–"
         g2 = f"; 2nd {c['gr2_covered']} / {c['gr2_missed']} / {c['gr2_wrong']}" if jg2 else ""
-        L.append(f"| {k[0]} | {k[1].split('/')[-1]} | {k[2]} | {k[3]} | {c['m_correct']}/{c['m']} | {c['m_status']}/{c['m']} | "
-                 f"{c['m_qual']}/{c['m_qual_n']} | {c['m_silent']} | {c['k_reported']} / {c['k_naive']} / {c['k_computed']} / {c['k_absent']} "
+        L.append(f"| {k[0]} | {k[1].split('/')[-1]} | {k[2]} | {k[3]} | {c['m_correct']}/{c['m']}; {c['m_tol']} | {c['m_status']}/{c['m']} | "
+                 f"{c['m_qual']}/{c['m_qual_n']} | {c['m_sides']} / {c['m_sides_tol']} of {c['m_con']} | {c['m_silent']} | {c['k_reported']} / {c['k_naive']} / {c['k_computed']} / {c['k_absent']} "
                  f"(judge {c['k_judge']}) | {c['gr_covered']} / {c['gr_missed']} / {c['gr_wrong']} ({c['a_judged']}/{c['a']} judged{g2}) | "
                  f"{c['cite']}/{c['cite_n']} | {inl} | {c['cost']:.4f} | {per_m} | {per_a} | {c['empty']} | {c['errors']} |")
     kt = k_table(recs)
@@ -428,8 +459,10 @@ def report(recs, jpath, gradedir, jpath2=None):
     ag = agreement(gradedir, jg) if gradedir else None
     L.append(f"\nJudge vs hand grading: {ag['agreement']:.2f} agreement, kappa {ag['kappa']:.2f} over {ag['n']} reasons."
              if ag else "\nJudge vs hand grading: not graded yet (bench/grading/grades.json).")
+    gf = grades_files(results, jpath, jpath2)
     L.append(f"\nTotal cost of the arms: ${sum(r['cost'] for r in recs):.4f} over {len(recs)} cells; judge "
-             f"${B.spent_in(jpath) if jpath else 0:.4f} (OpenAI Batch).")
+             f"${sum(B.spent_in(f) for f in gf):.4f} (OpenAI Batch) over every grades file: "
+             + (", ".join(f"{pathlib.Path(f).name} ${B.spent_in(f):.4f}" for f in gf) or "none") + ".")
     return "\n".join(L)
 
 
@@ -440,19 +473,19 @@ def arm(r):
 
 def k_table(recs):
     """family questions (§3b): manager correct by k, the rules and claims on the key's proof path"""
-    c = collections.defaultdict(lambda: [0, 0])
+    c = collections.defaultdict(lambda: [0, 0, 0])
     for r in recs:
         if r["kind"] == "manager" and not r["error"] and group(r["item"]) == "family":
             x = c[(arm(r), r["model"], r["n"], B.item(r["item"], r["n"])["k"])]
-            x[0] += score_manager(r)["correct"]; x[1] += 1
+            s = score_manager(r); x[0] += s["correct"]; x[1] += 1; x[2] += s["tolerant"]
     if not c:
         return ""
     ks = sorted({k[3] for k in c})
-    L = ["Family questions, manager correct by k (rules and claims on the proof path):", "",
+    L = ["Family questions, manager correct by k (rules and claims on the proof path), strict; tolerant sides:", "",
          "| arm | model | N | " + " | ".join(f"k = {k}" for k in ks) + " |", "|---|---|---|" + "---|" * len(ks)]
     for a, m, n in sorted({k[:3] for k in c}):
         L.append(f"| {a} | {m.split('/')[-1]} | {n} | " + " | ".join(
-            (lambda x: f"{x[0]}/{x[1]}" if x[1] else "–")(c.get((a, m, n, k), [0, 0])) for k in ks) + " |")
+            (lambda x: f"{x[0]}/{x[1]}; {x[2]}" if x[1] else "–")(c.get((a, m, n, k), [0, 0, 0])) for k in ks) + " |")
     return "\n".join(L)
 
 
@@ -506,7 +539,7 @@ def main():
         export(recs, a.export)
         return
     j2 = a.judge_second or (str(pathlib.Path(jpath).with_suffix(".2.jsonl")) if pathlib.Path(jpath).with_suffix(".2.jsonl").exists() else None)
-    txt = report(recs, jpath, a.grading, j2)
+    txt = report(recs, jpath, a.grading, j2, a.results)
     print(txt)
     if a.report:
         pathlib.Path(a.report).write_text(txt + "\n")

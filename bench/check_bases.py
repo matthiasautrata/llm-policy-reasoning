@@ -3,6 +3,7 @@
   1 the base passes the integrity gate (shared/integrity.py), its questions the mode check
   2 every base question matches its key (bench/bases/N*.keys.json, from reference.py --bench), with the proof checks of accept.py
   3 every slice question still matches keys.json (extended state): generated rules read slice predicates, never conclude them
+  4 every committed task key file (bench/tasks/A*.keys.json) equals what reference.py --tasks regenerates (§3b′)
 
   .venv/bin/python bench/check_bases.py [--cli spikes/v3/v3a-prolog/cli] [--n 50 200] [--skip-slice]
 """
@@ -58,6 +59,11 @@ def main():
     fails = []
     for s in stems:
         fails += check(s.with_suffix(""), a.cli, not a.skip_slice)
+    for t in sorted((ROOT / "bench/tasks").glob("A*.json")):
+        if t.name.endswith(".keys.json"): continue
+        k = t.with_suffix(".keys.json")
+        if not k.exists() or json.loads(k.read_text()) != json.loads(json.dumps(reference.task_keys(t))):
+            fails.append(f"{k.relative_to(ROOT)}: differs from reference.py --tasks {t.relative_to(ROOT)} (regenerate it)")
     for f in fails: print("FAIL", f)
     print("PASS" if not fails else f"{len(fails)} failures")
     sys.exit(1 if fails else 0)

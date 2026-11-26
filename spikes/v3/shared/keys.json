@@ -474,6 +474,7 @@
      "r000006"
     ]
    ],
+   "qualifier": "total over known facts in declared scope",
    "status": "ANSWER",
    "value": false
   },
@@ -1553,6 +1554,7 @@
      "r000006"
     ]
    ],
+   "qualifier": "total over known facts in declared scope",
    "status": "ANSWER",
    "value": false
   },

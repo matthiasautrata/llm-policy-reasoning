@@ -70,6 +70,28 @@ Batch 1 tests only the core slice: no question or task needs a generated rule, s
 
 STOP: report whether accuracy or gold coverage now moves with N or k, by arm.
 
+## 3b′ Re-score, floor arm, interacting rules (proposed 2026-11-26 after an external review; needs Matthias's go)
+
+§3b's first run: family questions flat (71/72), k only 1–3; programmes do not interact. An external review of batch 1 found scoring defects that hide a real difference (the qualifier) and inflate another (sides). Batch 1 and §3b are **exploratory**; this step makes the next run confirmatory.
+
+1. **Re-score, no new calls.**
+   - Manager `correct` includes the qualifier, as `benchmark-design.md` §2 specified (status, value, sides, qualifier); `score.py` had dropped it. Report the qualifier also as its own column.
+   - Every decide key states `qualifier` explicitly (null when none); a missing field must never be read as "not qualified" (Q16 / M16).
+   - Sides: report strict (exact) and tolerant (each key side contained in one reported side, sides not merged or swapped). The prompt never asked for minimal ids, so strict alone is not fair to G.
+   - Re-score batch 1 and §3b; RESULTS gets the qualifier column.
+2. **Floor arm F**, at N 25 and 200: the data and the schema docs only, no rules material, `sql` tool. It gives the scale: what the material adds at all.
+3. **Interacting rules, the mass of the next run** (Matthias agrees: rules overlap and interact, in markdown as in Prolog).
+   - Generator: disputes weighted toward P01's category, growing with N; chained exceptions reading P01's clearance or limit, so k reaches about 6–8 at N 200; superiority between disputes over one category; P01 seeded separately, so A4 has the same items at every N.
+   - G's material renders the same interacting rules (completeness check passes): both arms get the same, correct rules.
+   - Extend A4 into the main design task with dispute count and k as the varied factors, same items across N; family questions as manager items, stratified by k.
+4. **Expected outcomes, written before the run:** G flat under interaction → report that complete markdown holds at this depth with this model; T's expected robust difference is closure (contested and qualified answers); a difference on accuracy alone is not expected.
+5. **Repetitions:** at least 3, on **all** items, or on a subset chosen by a stated property before the run (e.g. items whose key is contested or qualified), never by which items discriminated in batch 1 (that would select on the outcome).
+6. **Hygiene:** gate check that committed task keys equal regenerated keys; `score.py`'s judge-cost line sums every grades file.
+
+Parked (Matthias, 2026-11-26): a drift arm with defects only in G's material is unfair (perfect rules against erroneous instructions). A fair version would put the same authoring defects into both arms' sources and measure detection: G consumes them silently, T's gate rejects or flags them at load.
+
+Run 1–3 at N 50 and 200 first (all arms plus F). STOP: report by arm, N, k and dispute count.
+
 ## 3c Batch 2
 
 - **Batch 2** (after §3a and §3b, with the new items included): N = 50 and 100 (repetition 1), then repetition 2 at all N, resumable, within the cap minus a reserve for §4.
@@ -107,3 +129,5 @@ After the DeepSeek run, Matthias decides on a second family. Candidates: GLM, Li
 - 2026-11-26 — §3b found and fixed a stale generated file: `bench/tasks/A1.keys.json` (committed in 491a024) has `A1.K5` as `{status, value}`, while reference.py has written `{status, proven_part}` since that commit. Scoring reads `value` (a `proven_part` key would leave K5 uncheckable), so the generator was changed to `value`; regenerating now reproduces the committed keys exactly, and batch 1's scoring is unchanged.
 - 2026-11-26 — §3b second judging (Matthias: "judge each analyst session twice and report the agreement"): a second independent Batch-API judging of every analyst session into `<results>.judge-medium.2.jsonl`; the report shows both coverages and the self-agreement (share and kappa over reasons). Batch 1's 18 sessions are judged a second time too ($0.28 estimate, the plan's option), so that the final results have two judgings throughout.
 - 2026-11-26 — §3b run into `bench/results/b3b.jsonl` (`--budget 1`): 78 cells, $0.110 (estimate $0.43). At 6 workers the budget's reservations (a G analyst call at N 200 reserves up to $0.21 at the reserve price) held $0.76 while $0.04 was spent, so 3 cells were refused before any call. They were resumed at `--workers 2`, and the refusal records stay in the file (score.py's errors column counts them). Judged twice, $0.075 and $0.033, with self-agreement 60/60 (kappa 1.00). Batch 1's second judging: $0.283, 198/204 (kappa 0.90). The judge's `--budget` 0.6 was too low for its own worst-case reservation ($1.69 for 18 sessions), so it ran with 2 as batch 1 had. score.py's "judge $" line counts the first grades file only. Results in RESULTS ("Rule count on the generated families").
+- 2026-11-26 — §3b′ item 1 re-score (no calls). reference.py now states `qualifier` in every decide and why_not key (None when none). keys.json changes for one key only: Q16 (a why_not, base and extended) gains `"qualifier": "total over known facts in declared scope"`, because its "not approved" rests on absence; before, the field was missing and score.py read it as "not qualified" (M16). The summary keys Q56–Q60 are not manager items and stay without it. accept.py compares only the fields the engine returns, so check 1 is unaffected. score.py: correct = status, value, sides and qualifier; a decide key without `qualifier` raises. Tolerant sides: each key side is contained in exactly one reported side, no two key sides share one, and no reported side mixes ids of two key sides (extra ids are allowed); strict is equality. Batch 1 and §3b are re-scored in RESULTS, the earlier score kept as "without qualifier"; both runs stay exploratory (one repetition).
+- 2026-11-26 — §3b′ item 6 hygiene: check_bases.py point 4 compares every committed `bench/tasks/A*.keys.json` with `reference.task_keys` (A1–A4 equal); score.py's judge-cost line sums every `<results>.judge*.jsonl` (b1: $0.859 over three files; b3b: $0.107).

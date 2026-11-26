@@ -213,14 +213,16 @@ DeepSeek v4.1 Flash, N 25 and 200, repetition 1, arms G, G+ and T on all 31 mana
 
 §3a revised three gold reasons after the first judging (A1 GR2, A2 GR9 and GR12; `bench/tasks/A1.json`, `A2.json`), added rule and claim ids to T's `rules` and `describe`, re-ran the four T cells that had asked for a record by id (A1 at N 25 and 200; M14 and M21 at N 200, M21 wrong before, right after) and re-judged all 18 analyst sessions. The superseded T cells and grades are in `b1.pre3a.jsonl.gz` and `b1.judge-medium.pre3a.jsonl.gz`. Cost: $0.536 for the batch (estimate $1.20), $0.048 for the re-runs; judge $0.295 and then $0.281 (estimate $0.20).
 
-| arm | N | manager correct | gold reasons covered / missed / wrong (A1–A3, 34) | before §3a | turns at the call limit (manager; analyst) |
-|---|---|---|---|---|---|
-| G | 25 | 27/31 | 28 / 1 / 5 | 30 / 0 / 4 | 2/31; 2/12 |
-| G | 200 | 25/31 | 30 / 1 / 3 | 30 / 0 / 4 | 4/31; 2/12 |
-| G+ | 25 | 28/31 | 29 / 1 / 4 | 29 / 0 / 5 | 1/31; 2/12 |
-| G+ | 200 | 28/31 | 30 / 2 / 2 | 28 / 2 / 4 | 1/31; 2/12 |
-| T | 25 | 30/31 | 27 / 1 / 6 | 25 / 3 / 6 | 2/31; 2/12 |
-| T | 200 | 29/31 | 29 / 1 / 4 | 23 / 2 / 9 | 1/31; 2/12 |
+Manager correct is scored as §3b′ defines it: status, value, sides and qualifier, every decide key stating its qualifier. Sides are given strict (the same id sets) and tolerant (each key side inside its own reported side, extra ids allowed); 3 of the 31 keys are CONFLICT. "Without qualifier" is the score before §3b′, kept for comparison.
+
+| arm | N | manager correct, strict; tolerant | without qualifier | qualifier (of 25 decide) | gold reasons covered / missed / wrong (A1–A3, 34) | before §3a | turns at the call limit (manager; analyst) |
+|---|---|---|---|---|---|---|---|
+| G | 25 | 21; 23 | 27 | 18 | 28 / 1 / 5 | 30 / 0 / 4 | 2/31; 2/12 |
+| G | 200 | 19; 20 | 25 | 18 | 30 / 1 / 3 | 30 / 0 / 4 | 4/31; 2/12 |
+| G+ | 25 | 22; 23 | 28 | 19 | 29 / 1 / 4 | 29 / 0 / 5 | 1/31; 2/12 |
+| G+ | 200 | 23; 25 | 28 | 20 | 30 / 2 / 2 | 28 / 2 / 4 | 1/31; 2/12 |
+| T | 25 | 29; 29 | 30 | 24 | 27 / 1 / 6 | 25 / 3 / 6 | 2/31; 2/12 |
+| T | 200 | 28; 28 | 29 | 24 | 29 / 1 / 4 | 23 / 2 / 9 | 1/31; 2/12 |
 
 Against the pilot (same model; the pilot's 10 manager questions, gold reasons judged at medium before §3a):
 
@@ -229,6 +231,7 @@ Against the pilot (same model; the pilot's 10 manager questions, gold reasons ju
 | G, pilot → batch 1 | 5 / 6 → 7 / 6 | 26 / 23 → 30 / 30 |
 | T-eval (pilot) → T | 7 / 8 → 10 / 8 | 25 / 18 → 25 / 23 |
 
+- The qualifier is where the arms differ on manager questions: G and G+ miss it in 5–7 of 25 (almost all under-qualified: a "no" or a total over the known facts given as plain), T in 1. Strict sides lose G and G+ every CONFLICT key at N 25 (0 of 3; tolerant 1–2), T none. Before §3b′ the qualifier was not part of correct, and M16's key (Q16, a why_not) stated none and was read as "not qualified"; it is qualified, and only T at N 200 says so.
 - Judge noise: of the 162 grades whose session and reason text did not change, 7 flipped between the two judgings (4 %). Differences of one or two reasons per cell are within it.
 - Every gold reason is now covered by some arm at some N. Before §3a, A2 GR9 and GR12 were wrong in all six cells: they asked for a historical approver chain, which the data cannot give (`emp.manager` is undated). Revised, they are covered in 3 and 2 cells.
 - T's gap on analyst gold reasons closed: 27 and 29 against G's 28 and 30. Half of it is the revised texts; the A1 re-run adds the rest (A1 at N 200: 7 by-id calls, all answered, where before 3 returned OUT_OF_SCOPE; GR2, GR5, GR7 and GR11 now covered, GR9 lost).
@@ -238,18 +241,20 @@ Against the pilot (same model; the pilot's 10 manager questions, gold reasons ju
 
 ## Rule count on the generated families (PLAN-v3-bench-full §3b, 2026-11-26)
 
-DeepSeek v4.1 Flash, N 50 and 200, repetition 1, arms G, G+ and T, on the family questions F01–F12 and the analyst task A4 (`bench/questions/family.json`, `bench/tasks/A4.json`, one variant per N). 78 cells, no failed cell, $0.110. Three cells were refused by the budget's worst-case reservations at 6 workers before any call; they were run on resume at 2 workers, and their refusal records stay in the file. Judge `gpt-6.2-sol` at medium, twice: $0.075 and $0.033. Results: `bench/results/b3b.jsonl.gz`, grades `b3b.judge-medium.jsonl.gz` and `.2.jsonl.gz`. One repetition: a signal, not a result.
+DeepSeek v4.1 Flash, N 50 and 200, repetition 1, arms G, G+ and T, on the family questions F01–F12 and the analyst task A4 (`bench/questions/family.json`, `bench/tasks/A4.json`, one variant per N). 78 cells, no failed cell, $0.110. Three cells were refused by the budget's worst-case reservations at 6 workers before any call; they were run on resume at 2 workers, and their refusal records stay in the file. Judge `gpt-6.2-sol` at medium, twice: $0.075 and $0.033 (score.py's judge line sums every grades file since §3b′). Results: `bench/results/b3b.jsonl.gz`, grades `b3b.judge-medium.jsonl.gz` and `.2.jsonl.gz`. One repetition: a signal, not a result.
 
-| arm | N | family correct (of 12) | qualifier | k = 1 / 2 / 3 | A4 gold covered / missed / wrong | A4 numbers reported (of 3) |
-|---|---|---|---|---|---|---|
-| G | 50 | 11 | 7/10 | 7/7, 2/3, 2/2 | 8 / 0 / 1 (of 9) | 3 |
-| G | 200 | 12 | 8/10 | 9/9, 2/2, 1/1 | 8 / 0 / 3 (of 11) | 3 |
-| G+ | 50 | 12 | 7/10 | 7/7, 3/3, 2/2 | 8 / 0 / 1 | 3 |
-| G+ | 200 | 12 | 8/10 | 9/9, 2/2, 1/1 | 8 / 0 / 3 | 3 |
-| T | 50 | 12 | 9/10 | 7/7, 3/3, 2/2 | 8 / 0 / 1 | 3 |
-| T | 200 | 12 | 10/10 | 9/9, 2/2, 1/1 | 11 / 0 / 0 | 3 |
+Scored as in batch 1 (§3b′: qualifier in correct; strict and tolerant sides agree on every family question here).
 
-- Manager accuracy moves with neither N nor k: 71 of 72 are correct. k is only 1–3, because the generator keeps programmes independent (PLAN-v3-bench-full Decisions, §3b finding): what N adds is distraction, not interaction. G's only miss (F07 at N 50) answers an owner dispute without superiority as a plain yes or no rather than contested. The qualifier misses (G and G+ on F02, F04, F06 and F08) leave out the limit version or the conflict note while the answer is right; T misses one.
+| arm | N | family correct (of 12) | without qualifier | qualifier (of 10) | correct at k = 1 / 2 / 3 | A4 gold covered / missed / wrong | A4 numbers reported (of 3) |
+|---|---|---|---|---|---|---|---|
+| G | 50 | 8 | 11 | 7 | 7/7, 0/3, 1/2 | 8 / 0 / 1 (of 9) | 3 |
+| G | 200 | 10 | 12 | 8 | 8/9, 1/2, 1/1 | 8 / 0 / 3 (of 11) | 3 |
+| G+ | 50 | 9 | 12 | 7 | 7/7, 1/3, 1/2 | 8 / 0 / 1 | 3 |
+| G+ | 200 | 10 | 12 | 8 | 8/9, 1/2, 1/1 | 8 / 0 / 3 | 3 |
+| T | 50 | 11 | 12 | 9 | 7/7, 2/3, 2/2 | 8 / 0 / 1 | 3 |
+| T | 200 | 12 | 12 | 10 | 9/9, 2/2, 1/1 | 11 / 0 / 0 | 3 |
+
+- Manager accuracy does not move with N (k only reaches 3). With the qualifier, T is 23 of 24 and G and G+ 18 and 19; their misses are at k ≥ 2 (dated limit versions and clearance, unqualified "no"s). Without it, 71 of 72 were correct. k is only 1–3, because the generator keeps programmes independent (PLAN-v3-bench-full Decisions, §3b finding): what N adds is distraction, not interaction. Without the qualifier, G's only miss (F07 at N 50) answers an owner dispute without superiority as a plain yes or no rather than contested. The qualifier misses (G and G+ on F02, F04, F06 and F08) leave out the limit version or the conflict note while the answer is right; T misses one.
 - A4 does not separate the arms at N 50 (8 of 9 each). At N 200, G and G+ each have 3 wrong reasons and T has none. The reason that separates them is GR6: under K01 (no superiority) a request is contested, and G and G+ answer "expensed" or "not capitalised" in 3 of 4 sessions, while T reports the conflict in both. GR2 (a request outside P01's category is outside the limit: false, not unknown) is wrong for G at both N and for G+ at N 200; they answer null or "not covered". All three numeric checks are reported in all six sessions; none gives the naive limit or the count without the exception. N 200's variant has two more reasons (on claims), so the comparison across N is not on the same items.
 - The judge agrees with itself: 60 of 60 grades on §3b, kappa 1.00; 198 of 204 on batch 1's 18 sessions judged a second time, kappa 0.90 (second judging $0.283). Batch 1's two judgings give G 28 and 26 at N 25, and 30 and 28 at N 200, against 28 at both N in the table above; the other arms differ by at most one reason. Mechanical checks and the judge agree 24 of 24 on §3b.
 

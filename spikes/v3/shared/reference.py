@@ -12,7 +12,7 @@ reference is not System A and may hold the rows).
 
 Key shape per question:
   decide        {status, value, sides, core, qualifier}        sides: sorted list of sorted id lists, or null
-  why_not       {status, value, failed, core}         failed: literals that must be shown as failed
+  why_not       {status, value, failed, core, qualifier}   failed: literals that must be shown as failed
   claim         {standing, defeater, qualifier, core}
   resolve_term  {status, candidates}
   fetch         {value, row_count, core}             (Q24, Q25: the integer-cast regressions, pending exposure and booked total of the root)
@@ -247,9 +247,10 @@ CLOSED = "total over known facts in declared scope"
 
 
 def answer(R, q):
-    """The key for question q (plain dict) in reference R; every decide key holds the qualifier."""
+    """The key for question q (plain dict) in reference R; every decide and why_not key states the qualifier
+    (None when there is none: a missing field must never be read as not qualified, PLAN-v3-bench-full §3b′)."""
     k = answer1(R, q)
-    if q["kind"] == "decide":
+    if q["kind"] in ("decide", "why_not"):
         k["qualifier"] = qualifier(R, q, k)
     return k
 

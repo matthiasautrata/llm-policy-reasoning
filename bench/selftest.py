@@ -184,6 +184,21 @@ def main():
     assert "error" in ob.parse_line({"custom_id": "j1", "response": {"status_code": 400, "body": {"error": "bad"}}})["j1"]
     print("endpoints: ok (OpenRouter body unchanged, tool_choice with tools only, OpenAI body, Batch line at half price)")
 
+    T = S.sides_tolerant                                # §3b′: strict and tolerant sides
+    assert T([["R1", "C2"], ["R3"]], [["R1"], ["R3"]]) and not T([["R1", "R3"]], [["R1"], ["R3"]])   # extra ids; merged
+    assert not T([["R1"], ["R1"]], [["R1"], ["R3"]]) and not T([["R1", "R3"], ["R3"]], [["R1"], ["R3"]])  # one home; mixed
+    assert T([["R3"], ["R1"]], [["R1"], ["R3"]]) and S.sides([["R3"], ["R1"]]) == S.sides([["R1"], ["R3"]])  # order free
+    rec = {"item": "M01", "n": 25, "answer": {"status": "ANSWER"}}
+    real = S.B.manager_key
+    S.B.manager_key = lambda q: {"status": "ANSWER", "value": 1}         # a key without "qualifier" must not score
+    try:
+        S.score_manager(rec); raise AssertionError("a key without qualifier was scored")
+    except KeyError:
+        pass
+    finally:
+        S.B.manager_key = real
+    print("sides strict / tolerant, qualifier stated in every key: ok")
+
     for model, want in (("stub:key", True), ("stub:abstain", False)):
         out = d / f"{model.split(':')[1]}.jsonl"
         p = run("bench/run.py", "--models", model, "--n", "25", "200", "--out", str(out), "--budget", "1")
