@@ -1,6 +1,6 @@
 # v3 benchmark (PLAN-v3-bench)
 
-Built 2026-11-25 on branch spike/v3. The design is in `spikes/v3/PLAN-v3-bench.md` and `notes/warrant-layer/benchmark-design.md`. The engine is reached only through `spikes/v3/v3a-prolog/cli`.
+Built 2026-11-25 on branch spike/v3. The design is in `notes/warrant-layer/benchmark-design.md`; the build plan is HISTORY phase 10 (`PLAN-v3-bench.md` at tag `spike-v3-bench`), the current plan `spikes/v3/PLAN-v3-bench-run.md`. The engine is reached only through `spikes/v3/v3a-prolog/cli`.
 
 From the repo root:
 
@@ -72,4 +72,4 @@ The values do not depend on N, because generated rules never conclude a slice pr
 
 `run.py` runs the arms G, G+ and T on DeepSeek and GLM through `harness/openrouter.py`. It writes one resumable JSONL record per cell, holding every call (model, provider, tokens, cost, time) and every tool call as executed. The budget is checked before each model call. `stub:key`, `stub:tool`, `stub:abstain` and `fake:<usd>` stand in for models in tests. `score.py` scores the manager answers against the keys and the analyst checks mechanically. It grades gold reasons with the judge (`judge_rubric.md`) and reports consistency, silent interpretation, inlining and cost per correct answer.
 
-Pilot status (2026-11-25): **not run**. The estimate is $7.56, above the plan's $3 stop. The plan's Decisions hold the figures and the cheaper variants.
+Pilot status (2026-11-25): **not run**. The estimate is $7.56, above the plan's $3 stop. The figures and the cheaper variants are in `PLAN-v3-bench.md` (tag `spike-v3-bench`); the pilot is now `PLAN-v3-bench-run.md` §5.

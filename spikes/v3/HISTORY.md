@@ -189,6 +189,25 @@ How spike v3 (System A: rules and claims as data, a defeasible engine, a bounded
 **Findings reversed.**
 - PROGRESS question 17 (two SQL texts that must agree) withdrawn: one text remains.
 
+### 10 Benchmark build (2026-11-25; 4f84166..f00ad11, tag `spike-v3-bench`)
+
+**Question.** Build the benchmark of `notes/warrant-layer/benchmark-design.md`: rule bases that grow with N, markdown for arm G, trusted functions for G+, analyst and manager tasks with oracle keys, the arms, scoring and a pilot under $3. `PLAN-v3-bench.md` (at the tag) holds every Decision; `bench/README.md` describes the current state.
+
+**Decisions and why.**
+- R311 stays at 10,000 (Matthias): at 1,000 no request qualifies and the slice's one auto-approval conflict vanishes.
+- N counts rules only; generated families have their own predicates and read slice predicates, never conclude them, so every slice key holds at every N (checked on every base).
+- The oracle implements each generator family by hand from its parameters, never from the EDN.
+- G+'s SQL is written by hand from the rule docs (a rule-to-SQL compiler would be a second engine), checked against the oracle on every instance.
+- Analyst turns name a worked example (cc0049, cc0009, e077, bolt, cog) so designs can be checked mechanically.
+- 31 manager questions; hypotheses and root totals excluded.
+- T gets the data model and a goal vocabulary derived from the base, not the rules; `why` is `decide` with its tree.
+
+**Findings kept.**
+- Bases N = 25/50/100/200 pass the gate and their keys; generation is deterministic; the markdown holds every id (about 5k to 22k tokens).
+- Pilot estimate: $7.56 for the plan's pilot (both models, all 31 manager questions), above the $3 stop, so no call was made. The DeepSeek-only pilot on A1–A3 and ten manager questions is $2.50. The full design is $14.74 per repetition.
+
+**Findings reversed.** None.
+
 ## Platform lessons (platforms dropped, lessons kept)
 
 - **V3b, Clojure · Datahike · Malli.**

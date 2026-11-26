@@ -8,7 +8,8 @@ Newest first. `HISTORY.md` holds the earlier phases. `RESULTS.md` describes the 
 - [x] Inventory executed, Postgres retired, benchmark preconditions, PROGRESS 11–15 (2026-11-25; HISTORY phase 7, tag `spike-v3-preconditions`).
 - [x] Memory and aggregate cost (2026-11-25; HISTORY phase 8, tag `spike-v3-memory`).
 - [x] One SQL form per concept; scope: the system answers questions about the data, the root aggregate is a documented residual (2026-11-25; HISTORY phase 9, tag `spike-v3-sqlform`).
-- [ ] Benchmark build and pilot (`PLAN-v3-bench.md`).
+- [x] Benchmark build; pilot estimate over $3, not run (2026-11-25; HISTORY phase 10, tag `spike-v3-bench`).
+- [ ] Benchmark hardening, endpoints, smoke tests, pilot (`PLAN-v3-bench-run.md`).
 
 ## Questions for Matthias
 
