@@ -23,7 +23,7 @@ Every tool runs here and is logged here (name, args, seconds, result size, error
 output. Every model call records model, provider, tokens, cost and time, as v2.
 
 Models: an OpenRouter id (deepseek/deepseek-v4.1-flash), or openai@<id>, or ollama@<tag> (local, $0, with
---context set and recorded; never mixed into the paid results).
+--context set and recorded; never mixed into the paid results). --reasoning sets the effort, recorded in config.
 
 Budget: --budget caps the summed cost of --out and of every --also file (the judge's records), earlier runs
 included. Prices come from OpenRouter's endpoints list at start (load_prices; recorded in config.prices with the
@@ -514,6 +514,8 @@ def live_client(config):
         kw["tool_choice"] = tool_choice
         if e == "openrouter":
             kw["provider"] = config.get("provider")
+        if config.get("reasoning"):                    # effort: OpenAI's reasoning_effort, OpenRouter's reasoning.effort
+            kw["reasoning"] = config["reasoning"] if e == "openai" else {"effort": config["reasoning"]}
         return openrouter.chat(m, msgs, tools=tools, endpoint=e, **kw)
     return call
 
@@ -715,7 +717,8 @@ def estimate(jobs, cal=None):
     by, tot = {}, {"cells": 0, "calls": 0.0, "usd": 0.0, "judge_usd": 0.0}
     for j in jobs:
         t = cell_tokens(cal, j["kind"], j["arm"], j["n"])
-        usd = 0.0 if j["model"].startswith(("stub:", "fake:")) else tok_cost(t, price(j["model"], "typical")) * cal["factor"]
+        f = cal["factor"] if endpoint_of(j["model"])[0] == "openrouter" else 1.0   # routing factor; OpenAI bills list price
+        usd = 0.0 if j["model"].startswith(("stub:", "fake:")) else tok_cost(t, price(j["model"], "typical")) * f
         k = (j["model"], j["kind"], j["arm"])
         b = by.setdefault(k, [0, 0.0]); b[0] += 1; b[1] += usd
         tot["cells"] += 1; tot["calls"] += t["calls"]; tot["usd"] += usd
@@ -723,16 +726,16 @@ def estimate(jobs, cal=None):
     return by, tot
 
 
-def print_estimate(jobs):
-    cal = calibrate()
+def print_estimate(jobs, path=CALIB):
+    cal = calibrate(path)
     by, t = estimate(jobs, cal)
-    print(f"Estimate from {cal['source']} (model {cal['model']}): pilot tokens per cell at the current typical "
-          f"(cheapest fp8) price x {cal['factor']:.2f} (pilot charged / typical); forced final calls added; judge "
+    print(f"Estimate from {cal['source']} (model {cal['model']}): its tokens per cell at the current typical "
+          f"(cheapest fp8) price x {cal['factor']:.2f} (calibration run charged / typical; OpenRouter models only); forced final calls added; judge "
           f"${cal['judge_session']:.4f} per analyst session (medium). Assumes the tokens transfer to other models "
           "and to T with its design tools.")
     for (m, kind, arm), (c, usd) in sorted(by.items()):
         print(f"  {m:30} {kind:8} {arm:3} cells {c:4}  ${usd:.4f}")
-    print(f"total: cells {t['cells']}  calls {t['calls']:.0f}  OpenRouter ${t['usd']:.2f}; judge (OpenAI Batch) "
+    print(f"total: cells {t['cells']}  calls {t['calls']:.0f}  models ${t['usd']:.2f}; judge (OpenAI Batch) "
           f"${t['judge_usd']:.2f}")
     return t
 
@@ -757,6 +760,8 @@ def main():
     ap.add_argument("--max-tokens", type=int, default=16000)
     ap.add_argument("--quantization", default="fp8", help="provider quantization filter; 'any' to disable")
     ap.add_argument("--context", type=int, default=65536, help="ollama context length (recorded; checked per call)")
+    ap.add_argument("--calibrate", default=str(CALIB), help="run whose tokens per cell the estimate uses (default: the pilot)")
+    ap.add_argument("--reasoning", choices=["low", "medium", "high"], help="reasoning effort (recorded); default: the endpoint's")
     a = ap.parse_args()
     live = [m for m in a.models if not m.startswith(("stub:", "fake:"))]
     prices = load_prices(live, a.quantization)            # refuses a model without a priced endpoint
@@ -773,6 +778,8 @@ def main():
               "t_tools": list(T_NAMES)}                # PLAN-v3-bench-full §2.3: which T version made the record
     if any(endpoint_of(m)[0] == "ollama" for m in a.models):
         config["context"] = a.context
+    if a.reasoning:
+        config["reasoning"] = a.reasoning
     its = items()
     jobs = []
     for model in a.models:
@@ -790,7 +797,7 @@ def main():
                         if cell(base) not in done:
                             jobs.append(base)
     if a.estimate or live:
-        est = print_estimate(jobs)
+        est = print_estimate(jobs, pathlib.Path(a.calibrate).resolve())
         if a.estimate:
             return
         if est["usd"] > a.budget - budget.spent:
