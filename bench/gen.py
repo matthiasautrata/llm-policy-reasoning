@@ -15,8 +15,19 @@ the oracle never reads the EDN):
   clearance   on a programme:        [:programme_cleared P ?r]   base rule (limit ok and slice vendor check),
               optional exception (defeater on a vendor, superior to the base) and exception to the exception
               (emergency requests from that vendor within the limit, superior to the exception)
-  dispute     owner dispute:         [:capitalised K ?r]  one owner capitalises from an amount, another
-              expenses below a higher amount; without superiority the overlap is a CONFLICT
+  dispute     owner dispute K:       [:capitalised C ?r]  one owner capitalises a category-C request from an amount,
+              another expenses it below a higher amount; without superiority the overlap is a CONFLICT. Every
+              dispute over C concludes the same literal, so disputes over one category meet (team defeat), and a
+              later dispute's rule may be stated to prevail over an earlier one's opposite rule
+  chain       sub-programmes U01..Um of P01 (PLAN-v3-bench-full §3b′): [:uNN_cleared ?r], one predicate per level
+              (the gate's cycle check is per predicate, so a level cannot read its own predicate). U01 clears what
+              P01 clears; U02 what U01 clears and is capitalised (so a contested capitalisation is contested
+              downstream); from U03 on, a defeater blocks emergency requests and an exception to it re-admits an
+              emergency request cleared under P01 up to an amount (reading P01's clearance directly)
+
+P01 is seeded apart from N (its programme, its chain levels and the disputes over its category, each from its
+own seed), so the items on it are the same at every N; N adds levels (m = 1 + log2(N / 25)) and disputes over
+its category (round(N / 50)), which is what makes k and the dispute count grow with N.
   distractor  irrelevant to the tasks: [:perk D ?e] by role, [:centre_tag D ?c] by org unit
   claim tree  [:supplier_qualified S v] with required (insurance_valid, quality_audited) and supporting
               (delivery_on_time) sub-claims; optionally a later claim of the same asserter negates one
@@ -30,7 +41,7 @@ the mode check, or the generator stops. Fetches filter on the key only (constant
 so no generated rule adds a fetch shape that flush() would batch as UNION ALL; the report lists every
 shape that would (PLAN-v3-bench §0).
 """
-import argparse, json, pathlib, random, sys
+import argparse, json, math, pathlib, random, sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SHARED = ROOT / "spikes/v3/shared"
@@ -107,7 +118,12 @@ class Gen:
         self.rnd = random.Random(f"{seed}:{n}:{density}:{distractors}")
         self.rules, self.claims, self.rid, self.cid = [], [], 0, 0
         self.P = dict(seed=seed, n=n, density=density, distractors=distractors,
-                      programmes=[], disputes=[], distractor_rules=[], claim_trees=[], claim_disputes=[], superiority=None)
+                      programmes=[], chain=[], disputes=[], distractor_rules=[], claim_trees=[], claim_disputes=[],
+                      superiority=None, superior=[])
+
+    def fixed(self, tag):
+        """a generator for one P01 item, independent of N"""
+        return random.Random(f"P01:{self.seed}:{tag}")
 
     def next_rule(self):
         self.rid += 1
@@ -117,19 +133,20 @@ class Gen:
         rec = dict(id=Kw(r.pop("id")), kind=Kw(r.pop("kind")), owner=Kw(r.pop("owner")), **{"class": Kw(r.pop("cls"))})
         rec["recorded_at"] = inst("2026-09-14")
         rec.update(r)
+        self.P["superior"] += [[str(rec["id"]), str(s)] for s in r.get("superior-to", [])]   # "Prevails over" in the docs
         self.rules.append(rec)
 
     # programme: dated limit versions, optional clearance with exception and counter-exception
-    def programme(self, clearance=False, exception=False, counter=False):
-        k = len(self.P["programmes"]) + 1
+    def programme(self, clearance=False, exception=False, counter=False, rnd=None, cat=None):
+        k, rnd = len(self.P["programmes"]) + 1, rnd or self.rnd
         code, name = f"P{k:02d}", PROGRAMMES[(k - 1) % len(PROGRAMMES)] + ("" if k <= len(PROGRAMMES) else f" {k}")
-        owner, cat = self.rnd.choice(OWNERS), self.rnd.choice(CATEGORIES)
-        cuts = sorted(self.rnd.sample(SPLITS, self.rnd.choice([1, 2])))
+        owner, cat = rnd.choice(OWNERS), cat or rnd.choice(CATEGORIES)
+        cuts = sorted(rnd.sample(SPLITS, rnd.choice([1, 2])))
         bounds = [YEAR[0]] + cuts
         versions = []
         for i, f in enumerate(bounds):
             t = prev_day(bounds[i + 1]) if i + 1 < len(bounds) else YEAR[1]
-            v = dict(id=self.next_rule(), valid_from=f, valid_to=t, limit=self.rnd.choice(LIMITS))
+            v = dict(id=self.next_rule(), valid_from=f, valid_to=t, limit=rnd.choice(LIMITS))
             versions.append(v)
             self.rule(id=v["id"], kind="strict", owner="procurement", cls="definition",   # IR-002: one owner defines
                       doc=f"Programme {code} ({name}) covers {cat} requests. Version valid from {day(f)} to {day(t)}: "
@@ -148,7 +165,7 @@ class Gen:
                       body=[[Kw("programme_limit_ok"), code, "?r"], [Kw("vendor_cleared"), "?r"]])
             c = dict(base=base, exception=None, counter=None)
             if exception:
-                e, eo, ven = self.next_rule(), self.rnd.choice(EXC_OWNERS), self.rnd.choice(VENDORS)
+                e, eo, ven = self.next_rule(), rnd.choice(EXC_OWNERS), rnd.choice(VENDORS)
                 self.rule(id=e, kind="defeater", owner=eo, cls="exception",
                           doc=f"Exception ({eo}): a request from vendor {ven} is not cleared under programme {code}, "
                               f"whatever the vendor check says. Prevails over {base}.",
@@ -171,26 +188,65 @@ class Gen:
         self.P["programmes"].append(p)
 
     # owner dispute over capitalisation, with or without superiority
-    def dispute(self, superior):
-        k = len(self.P["disputes"]) + 1
-        code, (a, b) = f"K{k:02d}", self.rnd.choice(DISPUTE_OWNERS)
-        cat = self.rnd.choice(["hardware", "capital", "software"])
-        lo = self.rnd.choice([8000, 12000, 20000])
-        hi = self.rnd.choice([x for x in [20000, 30000, 45000, 60000] if x > lo])
+    def dispute(self, superior, cat=None, rnd=None, cross=None):
+        """cross: "for" or "against", this dispute's rule of that side prevails over the opposite rule of the
+        previous dispute over the same category"""
+        k, rnd = len(self.P["disputes"]) + 1, rnd or self.rnd
+        code, (a, b) = f"K{k:02d}", rnd.choice(DISPUTE_OWNERS)
+        cat = cat or rnd.choice([c for c in ["hardware", "capital", "software"] if c != self.cat])
+        lo = rnd.choice([8000, 12000, 20000])
+        hi = rnd.choice([x for x in [20000, 30000, 45000, 60000] if x > lo])
         s, d = self.next_rule(), self.next_rule()
-        pref = lambda me, other: f" Prevails over {other}." if superior == me else ""
+        prev = next((x for x in reversed(self.P["disputes"]) if x["category"] == cat), None) if cross else None
+        over = {"for": [d] if superior == "for" else [], "against": [s] if superior == "against" else []}
+        if prev:
+            over[cross].append(prev["against" if cross == "for" else "for"]["id"])
+        pref = lambda me: f" Prevails over {' and '.join(over[me])}." if over[me] else ""
+        sup = lambda me: {"superior-to": [Kw(x) for x in over[me]]} if over[me] else {}
         self.rule(id=s, kind="defeasible", owner=a, cls="material_inference",
-                  doc=f"Capitalisation policy {code} ({a}): a {cat} request of at least {money(lo)} is capitalised." + pref("for", d),
-                  head=[Kw("capitalised"), code, "?r"],
-                  body=[fetch_req({"category": "?c", "amount": "?a"}), [Kw("="), "?c", cat], [Kw(">="), "?a", lo]],
-                  **({"superior-to": [Kw(d)]} if superior == "for" else {}))
+                  doc=f"Capitalisation policy {code} ({a}): a {cat} request of at least {money(lo)} is capitalised." + pref("for"),
+                  head=[Kw("capitalised"), cat, "?r"],
+                  body=[fetch_req({"category": "?c", "amount": "?a"}), [Kw("="), "?c", cat], [Kw(">="), "?a", lo]], **sup("for"))
         self.rule(id=d, kind="defeater", owner=b, cls="exception",
-                  doc=f"Capitalisation policy {code} ({b}): a {cat} request under {money(hi)} is expensed, not capitalised." + pref("against", s),
-                  head=[Kw("neg"), [Kw("capitalised"), code, "?r"]],
-                  body=[fetch_req({"category": "?c", "amount": "?a"}), [Kw("="), "?c", cat], [Kw("<"), "?a", hi]],
-                  **({"superior-to": [Kw(s)]} if superior == "against" else {}))
-        self.P["disputes"].append(dict(code=code, category=cat, superior=superior,
+                  doc=f"Capitalisation policy {code} ({b}): a {cat} request under {money(hi)} is expensed, not capitalised." + pref("against"),
+                  head=[Kw("neg"), [Kw("capitalised"), cat, "?r"]],
+                  body=[fetch_req({"category": "?c", "amount": "?a"}), [Kw("="), "?c", cat], [Kw("<"), "?a", hi]], **sup("against"))
+        self.P["disputes"].append(dict(code=code, category=cat, superior=superior, p01=cat == self.cat,
+                                       cross=dict(side=cross, over=prev["code"]) if prev else None,
                                        **{"for": dict(id=s, owner=a, min=lo), "against": dict(id=d, owner=b, below=hi)}))
+
+    # a sub-programme level of P01's chain
+    def level(self, j):
+        rnd, P01 = self.fixed(f"U{j}"), self.P["programmes"][0]
+        code, parent = f"U{j:02d}", "P01" if j == 1 else f"U{j - 1:02d}"
+        head = lambda c: [Kw("programme_cleared"), "P01", "?r"] if c == "P01" else [Kw(f"u{c[1:]}_cleared"), "?r"]
+        TERMS[f"u{j:02d}_cleared"] = (f"sub-programme {code} clearance", "procurement",
+                                      f"Clearance under sub-programme {code}, as opposed to clearance under programme P01, "
+                                      f"says a request may be charged to {code}, one level below {parent}.")
+        owner, b = rnd.choice(OWNERS), self.next_rule()
+        cap = j == 2
+        self.rule(id=b, kind="defeasible", owner=owner, cls="material_inference",
+                  doc=f"Sub-programme {code} of programme P01 ({P01['name']}): a request cleared under {parent} is cleared "
+                      f"under {code}" + (" if it is capitalised." if cap else "."),
+                  head=head(code),
+                  body=[head(parent)] + ([[Kw("capitalised"), self.cat, "?r"]] if cap else []))
+        L = dict(code=code, pred=f"u{j:02d}_cleared", parent=parent, base=dict(id=b, owner=owner, capitalised=cap),
+                 exception=None, counter=None)
+        if j >= 3:
+            e, eo, x, mx = self.next_rule(), rnd.choice(EXC_OWNERS), self.next_rule(), rnd.choice([8000, 12000, 20000])
+            self.rule(id=e, kind="defeater", owner=eo, cls="exception",
+                      doc=f"Exception ({eo}): an emergency request is not cleared under sub-programme {code}, whatever "
+                          f"{code}'s other rules say. Prevails over {b}.",
+                      head=[Kw("neg"), head(code)],
+                      body=[fetch_req({"emergency": "?x"}), [Kw("="), "?x", True]], **{"superior-to": [Kw(b)]})
+            self.rule(id=x, kind="defeasible", owner=owner, cls="exception",
+                      doc=f"Exception to the exception: an emergency request of at most {money(mx)} that is cleared under "
+                          f"programme P01 is cleared under sub-programme {code}, whatever {parent} says. Prevails over {e}.",
+                      head=head(code),
+                      body=[fetch_req({"emergency": "?x", "amount": "?a"}), [Kw("="), "?x", True], [Kw("<="), "?a", mx],
+                            head("P01")], **{"superior-to": [Kw(e)]})
+            L["exception"], L["counter"] = dict(id=e, owner=eo), dict(id=x, max=mx)
+        self.P["chain"].append(L)
 
     def distractor(self):
         k = len(self.P["distractor_rules"]) + 1
@@ -265,10 +321,21 @@ class Gen:
         B = self.n - CORE_RULES
         if B <= 0:
             return self
-        want = max(0, round(self.density * self.n / 100) - CORE_INTERACTIONS)
+        # P01, its chain and the disputes over its category: fixed seeds, growing with N (§3b′)
+        self.cat = self.fixed("category").choice(["hardware", "capital", "software"])
+        self.programme(clearance=True, exception=True, counter=True, rnd=self.fixed("P01"), cat=self.cat)
+        for j in range(1, 2 + round(math.log2(self.n / 50)) + 1):
+            self.level(j)
+        sups = [None, "for", "against"]
+        for i in range(round(self.n / 50)):
+            r = self.fixed(f"K{i}")
+            self.dispute(sups[i % 3], cat=self.cat, rnd=r, cross=r.choice(["for", "against"]) if i else None)
+        fixed = (2 + sum(2 for L in self.P["chain"] if L["exception"])
+                 + sum(1 + bool(d["cross"]) for d in self.P["disputes"]))
+        want = max(0, round(self.density * self.n / 100) - CORE_INTERACTIONS - fixed)
         n_claims = round(B * CLAIM_RATIO)
         n_cd = max(1, n_claims // 8)                    # claim disputes, alternating with / without superiority
-        budget = B - round(self.share * B)              # non-distractor rules
+        budget = B - round(self.share * B) - len(self.rules)   # non-distractor rules
         if any(i % 2 == 0 for i in range(n_cd)):        # the authority rule for export_licensed
             sid = self.next_rule()
             self.rule(id=sid, kind="superiority", owner="general_counsel", cls="superiority",
@@ -380,7 +447,22 @@ def questions(g, con):
         lo, hi = d["for"]["min"], d["against"]["below"]
         for cond in (f"amount < {lo}", f"amount >= {lo} AND amount < {hi}", f"amount >= {hi}"):
             r = pick(q(f"SELECT id FROM req WHERE category = ? AND {cond} ORDER BY id LIMIT 50", d["category"]))
-            if r: add("decide", goal=["capitalised", d["code"], r])
+            if r: add("decide", goal=["capitalised", d["category"], r])
+    if g.P["chain"]:                                   # P01's chain: probes through every level (§3b′)
+        p = g.P["programmes"][0]
+        ven, v = p["clearance"]["exception"]["vendor"], max(p["versions"], key=lambda v: v["limit"])
+        cuts = sorted({c for d in g.P["disputes"] if d["p01"] for c in (d["for"]["min"], d["against"]["below"])
+                       if c < v["limit"]})             # one probe per interval between the capitalisation thresholds
+        bands = list(zip([0] + cuts, cuts + [v["limit"] + 1]))
+        conds = [f"NOT emergency AND amount >= {lo} AND amount < {hi}" for lo, hi in bands]
+        conds += ["emergency AND amount <= 8000", "emergency AND amount > 20000"]
+        for cond in conds:
+            r = pick(q(f"SELECT id FROM req WHERE category = ? AND vendor <> ? AND date BETWEEN ? AND ? AND amount <= ? "
+                       f"AND {cond} ORDER BY id LIMIT 50", p["category"], ven, v["valid_from"], v["valid_to"], v["limit"]))
+            if not r: continue
+            add("decide", goal=["capitalised", p["category"], r])
+            for L in g.P["chain"]:
+                add("decide", goal=[L["pred"], r])
     for x in g.P["distractor_rules"][:6]:                # one member and one non-member each
         t, col, val = ("emp", "role", x["role"]) if x["kind"] == "perk" else ("cc", "org_unit", x["org_unit"])
         for op in ("=", "<>"):
@@ -392,7 +474,8 @@ def questions(g, con):
     for c in g.P["claim_disputes"]:
         add("claim", asset=f"vendor:{c['vendor']}", claim=c["yes"]["id"])
         add("decide", goal=[c["pred"], c["code"], c["vendor"]])
-    return Q
+    once = {json.dumps({k: v for k, v in x.items() if k != "id"}): x for x in reversed(Q)}   # one question per goal
+    return [dict(x, id=f"B{i + 1:03d}") for i, x in enumerate(sorted(once.values(), key=lambda x: x["id"]))]
 
 
 # ---------------------------------------------------------------------------- UNION ALL report (RESULTS residual 6)
@@ -458,6 +541,7 @@ def generate(n, seed, density, distractors, out):
     ua = union_all_shapes(rules)
     inter = (sum(1 for p in g.P["programmes"] if p["clearance"] and p["clearance"]["exception"])
              + sum(1 for p in g.P["programmes"] if p["clearance"] and p["clearance"]["counter"])
+             + sum(2 for L in g.P["chain"] if L["exception"]) + sum(bool(d["cross"]) for d in g.P["disputes"])
              + len(g.P["disputes"]) + (1 if g.P["superiority"] else 0) + CORE_INTERACTIONS)
     rep = dict(rules=len(rules), claims=len(claims), generated_rules=len(g.rules), generated_claims=len(g.claims),
                interactions=inter, density_per_100=round(100 * inter / len(rules), 1),

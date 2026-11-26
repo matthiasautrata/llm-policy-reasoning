@@ -5,7 +5,7 @@
   "goal": [
    "programme_limit_ok",
    "P01",
-   "r002343"
+   "r002477"
   ]
  },
  {
@@ -14,7 +14,7 @@
   "goal": [
    "programme_limit_ok",
    "P01",
-   "r000368"
+   "r000465"
   ]
  },
  {
@@ -23,7 +23,7 @@
   "goal": [
    "programme_limit_ok",
    "P01",
-   "r000494"
+   "r000507"
   ]
  },
  {
@@ -32,7 +32,7 @@
   "goal": [
    "programme_limit_ok",
    "P01",
-   "r000182"
+   "r000385"
   ]
  },
  {
@@ -41,7 +41,7 @@
   "goal": [
    "programme_limit_ok",
    "P01",
-   "r001260"
+   "r000155"
   ]
  },
  {
@@ -50,7 +50,7 @@
   "goal": [
    "programme_limit_ok",
    "P01",
-   "r002189"
+   "r001649"
   ]
  },
  {
@@ -59,7 +59,7 @@
   "goal": [
    "programme_cleared",
    "P01",
-   "r002343"
+   "r002477"
   ]
  },
  {
@@ -68,7 +68,7 @@
   "goal": [
    "programme_cleared",
    "P01",
-   "r000368"
+   "r000465"
   ]
  },
  {
@@ -77,7 +77,7 @@
   "goal": [
    "programme_cleared",
    "P01",
-   "r001628"
+   "r001346"
   ]
  },
  {
@@ -86,7 +86,7 @@
   "goal": [
    "programme_cleared",
    "P01",
-   "r007282"
+   "r007478"
   ]
  },
  {
@@ -95,7 +95,7 @@
   "goal": [
    "programme_limit_ok",
    "P02",
-   "r001509"
+   "r001325"
   ]
  },
  {
@@ -104,7 +104,7 @@
   "goal": [
    "programme_limit_ok",
    "P02",
-   "r000063"
+   "r000032"
   ]
  },
  {
@@ -113,7 +113,7 @@
   "goal": [
    "programme_limit_ok",
    "P02",
-   "r000776"
+   "r001030"
   ]
  },
  {
@@ -122,7 +122,7 @@
   "goal": [
    "programme_limit_ok",
    "P02",
-   "r001366"
+   "r000690"
   ]
  },
  {
@@ -131,7 +131,7 @@
   "goal": [
    "programme_limit_ok",
    "P02",
-   "r001919"
+   "r001110"
   ]
  },
  {
@@ -140,7 +140,7 @@
   "goal": [
    "programme_limit_ok",
    "P02",
-   "r000023"
+   "r000011"
   ]
  },
  {
@@ -149,7 +149,7 @@
   "goal": [
    "programme_cleared",
    "P02",
-   "r001509"
+   "r001325"
   ]
  },
  {
@@ -158,7 +158,7 @@
   "goal": [
    "programme_cleared",
    "P02",
-   "r000063"
+   "r000032"
   ]
  },
  {
@@ -167,7 +167,7 @@
   "goal": [
    "programme_cleared",
    "P02",
-   "r000648"
+   "r000843"
   ]
  },
  {
@@ -176,7 +176,7 @@
   "goal": [
    "programme_cleared",
    "P02",
-   "r010763"
+   "r008432"
   ]
  },
  {
@@ -185,7 +185,7 @@
   "goal": [
    "programme_limit_ok",
    "P03",
-   "r000911"
+   "r000425"
   ]
  },
  {
@@ -194,7 +194,7 @@
   "goal": [
    "programme_limit_ok",
    "P03",
-   "r000768"
+   "r000992"
   ]
  },
  {
@@ -203,7 +203,7 @@
   "goal": [
    "programme_limit_ok",
    "P03",
-   "r000382"
+   "r000431"
   ]
  },
  {
@@ -212,7 +212,7 @@
   "goal": [
    "programme_limit_ok",
    "P03",
-   "r000090"
+   "r000036"
   ]
  },
  {
@@ -221,7 +221,7 @@
   "goal": [
    "programme_cleared",
    "P03",
-   "r000911"
+   "r000425"
   ]
  },
  {
@@ -230,7 +230,7 @@
   "goal": [
    "programme_cleared",
    "P03",
-   "r000768"
+   "r000992"
   ]
  },
  {
@@ -239,7 +239,7 @@
   "goal": [
    "programme_cleared",
    "P03",
-   "r000843"
+   "r000743"
   ]
  },
  {
@@ -248,7 +248,7 @@
   "goal": [
    "programme_cleared",
    "P03",
-   "r000666"
+   "r002261"
   ]
  },
  {
@@ -257,7 +257,7 @@
   "goal": [
    "programme_limit_ok",
    "P04",
-   "r000127"
+   "r000552"
   ]
  },
  {
@@ -266,7 +266,7 @@
   "goal": [
    "programme_limit_ok",
    "P04",
-   "r000788"
+   "r000335"
   ]
  },
  {
@@ -275,7 +275,7 @@
   "goal": [
    "programme_limit_ok",
    "P04",
-   "r001879"
+   "r000726"
   ]
  },
  {
@@ -284,7 +284,7 @@
   "goal": [
    "programme_limit_ok",
    "P04",
-   "r000475"
+   "r001516"
   ]
  },
  {
@@ -293,7 +293,7 @@
   "goal": [
    "programme_limit_ok",
    "P04",
-   "r004021"
+   "r001788"
   ]
  },
  {
@@ -302,7 +302,7 @@
   "goal": [
    "programme_limit_ok",
    "P04",
-   "r001910"
+   "r000703"
   ]
  },
  {
@@ -311,7 +311,7 @@
   "goal": [
    "programme_cleared",
    "P04",
-   "r000127"
+   "r000552"
   ]
  },
  {
@@ -320,7 +320,7 @@
   "goal": [
    "programme_cleared",
    "P04",
-   "r000788"
+   "r000335"
   ]
  },
  {
@@ -329,7 +329,7 @@
   "goal": [
    "programme_cleared",
    "P04",
-   "r000640"
+   "r000474"
   ]
  },
  {
@@ -338,7 +338,7 @@
   "goal": [
    "programme_cleared",
    "P04",
-   "r000503"
+   "r001888"
   ]
  },
  {
@@ -347,7 +347,7 @@
   "goal": [
    "programme_limit_ok",
    "P05",
-   "r000856"
+   "r000588"
   ]
  },
  {
@@ -356,7 +356,7 @@
   "goal": [
    "programme_limit_ok",
    "P05",
-   "r000071"
+   "r000267"
   ]
  },
  {
@@ -365,7 +365,7 @@
   "goal": [
    "programme_limit_ok",
    "P05",
-   "r001622"
+   "r000733"
   ]
  },
  {
@@ -374,61 +374,61 @@
   "goal": [
    "programme_limit_ok",
    "P05",
-   "r001046"
+   "r000343"
   ]
  },
  {
   "id": "B043",
   "kind": "decide",
   "goal": [
-   "programme_limit_ok",
+   "programme_cleared",
    "P05",
-   "r004078"
+   "r000588"
   ]
  },
  {
   "id": "B044",
   "kind": "decide",
   "goal": [
-   "programme_limit_ok",
+   "programme_cleared",
    "P05",
-   "r000708"
+   "r000267"
   ]
  },
  {
   "id": "B045",
   "kind": "decide",
   "goal": [
-   "programme_cleared",
-   "P05",
-   "r000856"
+   "programme_limit_ok",
+   "P06",
+   "r000294"
   ]
  },
  {
   "id": "B046",
   "kind": "decide",
   "goal": [
-   "programme_cleared",
-   "P05",
-   "r000071"
+   "programme_limit_ok",
+   "P06",
+   "r000421"
   ]
  },
  {
   "id": "B047",
   "kind": "decide",
   "goal": [
-   "programme_cleared",
-   "P05",
-   "r001425"
+   "programme_limit_ok",
+   "P06",
+   "r001898"
   ]
  },
  {
   "id": "B048",
   "kind": "decide",
   "goal": [
-   "programme_cleared",
-   "P05",
-   "r007535"
+   "programme_limit_ok",
+   "P06",
+   "r000257"
   ]
  },
  {
@@ -437,7 +437,7 @@
   "goal": [
    "programme_limit_ok",
    "P06",
-   "r000449"
+   "r004463"
   ]
  },
  {
@@ -446,7 +446,7 @@
   "goal": [
    "programme_limit_ok",
    "P06",
-   "r000845"
+   "r001111"
   ]
  },
  {
@@ -454,8 +454,8 @@
   "kind": "decide",
   "goal": [
    "programme_limit_ok",
-   "P06",
-   "r000309"
+   "P07",
+   "r000934"
   ]
  },
  {
@@ -463,8 +463,8 @@
   "kind": "decide",
   "goal": [
    "programme_limit_ok",
-   "P06",
-   "r001328"
+   "P07",
+   "r000115"
   ]
  },
  {
@@ -472,8 +472,8 @@
   "kind": "decide",
   "goal": [
    "programme_limit_ok",
-   "P06",
-   "r002292"
+   "P07",
+   "r001751"
   ]
  },
  {
@@ -481,8 +481,8 @@
   "kind": "decide",
   "goal": [
    "programme_limit_ok",
-   "P06",
-   "r000988"
+   "P07",
+   "r000426"
   ]
  },
  {
@@ -491,7 +491,7 @@
   "goal": [
    "programme_limit_ok",
    "P07",
-   "r000249"
+   "r006152"
   ]
  },
  {
@@ -500,7 +500,7 @@
   "goal": [
    "programme_limit_ok",
    "P07",
-   "r001620"
+   "r001797"
   ]
  },
  {
@@ -508,8 +508,8 @@
   "kind": "decide",
   "goal": [
    "programme_limit_ok",
-   "P07",
-   "r000842"
+   "P08",
+   "r000199"
   ]
  },
  {
@@ -517,8 +517,8 @@
   "kind": "decide",
   "goal": [
    "programme_limit_ok",
-   "P07",
-   "r000188"
+   "P08",
+   "r000314"
   ]
  },
  {
@@ -527,7 +527,7 @@
   "goal": [
    "programme_limit_ok",
    "P08",
-   "r000666"
+   "r000408"
   ]
  },
  {
@@ -536,7 +536,7 @@
   "goal": [
    "programme_limit_ok",
    "P08",
-   "r000103"
+   "r001350"
   ]
  },
  {
@@ -545,7 +545,7 @@
   "goal": [
    "programme_limit_ok",
    "P08",
-   "r003361"
+   "r002689"
   ]
  },
  {
@@ -554,25 +554,25 @@
   "goal": [
    "programme_limit_ok",
    "P08",
-   "r001173"
+   "r000988"
   ]
  },
  {
   "id": "B063",
   "kind": "decide",
   "goal": [
-   "programme_cleared",
-   "P08",
-   "r000666"
+   "programme_limit_ok",
+   "P09",
+   "r000004"
   ]
  },
  {
   "id": "B064",
   "kind": "decide",
   "goal": [
-   "programme_cleared",
-   "P08",
-   "r000103"
+   "programme_limit_ok",
+   "P09",
+   "r001620"
   ]
  },
  {
@@ -581,7 +581,7 @@
   "goal": [
    "programme_limit_ok",
    "P09",
-   "r000049"
+   "r001154"
   ]
  },
  {
@@ -590,25 +590,25 @@
   "goal": [
    "programme_limit_ok",
    "P09",
-   "r003247"
+   "r000159"
   ]
  },
  {
   "id": "B067",
   "kind": "decide",
   "goal": [
-   "programme_limit_ok",
-   "P09",
-   "r000127"
+   "capitalised",
+   "capital",
+   "r000110"
   ]
  },
  {
   "id": "B068",
   "kind": "decide",
   "goal": [
-   "programme_limit_ok",
-   "P09",
-   "r000077"
+   "capitalised",
+   "capital",
+   "r000273"
   ]
  },
  {
@@ -616,8 +616,8 @@
   "kind": "decide",
   "goal": [
    "capitalised",
-   "K01",
-   "r000276"
+   "capital",
+   "r000569"
   ]
  },
  {
@@ -625,8 +625,8 @@
   "kind": "decide",
   "goal": [
    "capitalised",
-   "K01",
-   "r000209"
+   "capital",
+   "r000101"
   ]
  },
  {
@@ -634,8 +634,8 @@
   "kind": "decide",
   "goal": [
    "capitalised",
-   "K01",
-   "r000632"
+   "capital",
+   "r000243"
   ]
  },
  {
@@ -643,8 +643,8 @@
   "kind": "decide",
   "goal": [
    "capitalised",
-   "K02",
-   "r000101"
+   "capital",
+   "r000124"
   ]
  },
  {
@@ -652,8 +652,8 @@
   "kind": "decide",
   "goal": [
    "capitalised",
-   "K02",
-   "r000243"
+   "hardware",
+   "r000310"
   ]
  },
  {
@@ -661,8 +661,8 @@
   "kind": "decide",
   "goal": [
    "capitalised",
-   "K02",
-   "r000124"
+   "hardware",
+   "r000208"
   ]
  },
  {
@@ -670,8 +670,8 @@
   "kind": "decide",
   "goal": [
    "capitalised",
-   "K03",
-   "r000163"
+   "hardware",
+   "r000788"
   ]
  },
  {
@@ -679,8 +679,8 @@
   "kind": "decide",
   "goal": [
    "capitalised",
-   "K03",
-   "r000951"
+   "software",
+   "r001325"
   ]
  },
  {
@@ -688,8 +688,8 @@
   "kind": "decide",
   "goal": [
    "capitalised",
-   "K03",
-   "r000342"
+   "software",
+   "r000033"
   ]
  },
  {
@@ -697,8 +697,8 @@
   "kind": "decide",
   "goal": [
    "capitalised",
-   "K04",
-   "r001325"
+   "software",
+   "r000076"
   ]
  },
  {
@@ -706,8 +706,8 @@
   "kind": "decide",
   "goal": [
    "capitalised",
-   "K04",
-   "r000033"
+   "software",
+   "r000401"
   ]
  },
  {
@@ -715,8 +715,8 @@
   "kind": "decide",
   "goal": [
    "capitalised",
-   "K04",
-   "r000076"
+   "software",
+   "r000717"
   ]
  },
  {
@@ -724,8 +724,8 @@
   "kind": "decide",
   "goal": [
    "capitalised",
-   "K05",
-   "r000602"
+   "software",
+   "r000286"
   ]
  },
  {
@@ -733,8 +733,8 @@
   "kind": "decide",
   "goal": [
    "capitalised",
-   "K05",
-   "r000092"
+   "hardware",
+   "r001498"
   ]
  },
  {
@@ -742,8 +742,8 @@
   "kind": "decide",
   "goal": [
    "capitalised",
-   "K05",
-   "r000649"
+   "hardware",
+   "r001085"
   ]
  },
  {
@@ -751,8 +751,8 @@
   "kind": "decide",
   "goal": [
    "capitalised",
-   "K06",
-   "r000652"
+   "hardware",
+   "r000232"
   ]
  },
  {
@@ -760,35 +760,32 @@
   "kind": "decide",
   "goal": [
    "capitalised",
-   "K06",
-   "r000717"
+   "capital",
+   "r003646"
   ]
  },
  {
   "id": "B086",
   "kind": "decide",
   "goal": [
-   "capitalised",
-   "K06",
-   "r000470"
+   "u01_cleared",
+   "r003646"
   ]
  },
  {
   "id": "B087",
   "kind": "decide",
   "goal": [
-   "capitalised",
-   "K07",
-   "r000425"
+   "u02_cleared",
+   "r003646"
   ]
  },
  {
   "id": "B088",
   "kind": "decide",
   "goal": [
-   "capitalised",
-   "K07",
-   "r000482"
+   "u03_cleared",
+   "r003646"
   ]
  },
  {
@@ -796,226 +793,382 @@
   "kind": "decide",
   "goal": [
    "capitalised",
-   "K07",
-   "r000411"
+   "capital",
+   "r003468"
   ]
  },
  {
   "id": "B090",
   "kind": "decide",
   "goal": [
-   "perk",
-   "D01",
-   "e000"
+   "u01_cleared",
+   "r003468"
   ]
  },
  {
   "id": "B091",
   "kind": "decide",
   "goal": [
-   "perk",
-   "D01",
-   "e050"
+   "u02_cleared",
+   "r003468"
   ]
  },
  {
   "id": "B092",
   "kind": "decide",
   "goal": [
-   "centre_tag",
-   "D02",
-   "cc0306"
+   "u03_cleared",
+   "r003468"
   ]
  },
  {
   "id": "B093",
   "kind": "decide",
   "goal": [
-   "centre_tag",
-   "D02",
-   "cc0001"
+   "capitalised",
+   "capital",
+   "r005557"
   ]
  },
  {
   "id": "B094",
   "kind": "decide",
   "goal": [
-   "centre_tag",
-   "D03",
-   "cc0300"
+   "u01_cleared",
+   "r005557"
   ]
  },
  {
   "id": "B095",
   "kind": "decide",
   "goal": [
-   "centre_tag",
-   "D03",
-   "cc0041"
+   "u02_cleared",
+   "r005557"
   ]
  },
  {
   "id": "B096",
   "kind": "decide",
   "goal": [
-   "perk",
-   "D04",
-   "e001"
+   "u03_cleared",
+   "r005557"
   ]
  },
  {
   "id": "B097",
   "kind": "decide",
   "goal": [
-   "perk",
-   "D04",
-   "e011"
+   "capitalised",
+   "capital",
+   "r000723"
   ]
  },
  {
   "id": "B098",
   "kind": "decide",
   "goal": [
-   "perk",
-   "D05",
-   "e007"
+   "u01_cleared",
+   "r000723"
   ]
  },
  {
   "id": "B099",
   "kind": "decide",
   "goal": [
-   "perk",
-   "D05",
-   "e030"
+   "u02_cleared",
+   "r000723"
   ]
  },
  {
   "id": "B100",
   "kind": "decide",
   "goal": [
-   "perk",
-   "D06",
-   "e1022"
+   "u03_cleared",
+   "r000723"
   ]
  },
  {
   "id": "B101",
   "kind": "decide",
   "goal": [
-   "perk",
-   "D06",
-   "e014"
+   "capitalised",
+   "capital",
+   "r011052"
   ]
  },
  {
   "id": "B102",
-  "kind": "claim",
-  "asset": "vendor:bolt",
-  "claim": "H6"
+  "kind": "decide",
+  "goal": [
+   "u01_cleared",
+   "r011052"
+  ]
  },
  {
   "id": "B103",
-  "kind": "claim",
-  "asset": "vendor:bolt",
-  "claim": "H6",
-  "as_of": "2026-08-09"
+  "kind": "decide",
+  "goal": [
+   "u02_cleared",
+   "r011052"
+  ]
  },
  {
   "id": "B104",
-  "kind": "claim",
-  "asset": "vendor:cog",
-  "claim": "H7"
+  "kind": "decide",
+  "goal": [
+   "u03_cleared",
+   "r011052"
+  ]
  },
  {
   "id": "B105",
-  "kind": "claim",
-  "asset": "vendor:dyne",
-  "claim": "H8"
+  "kind": "decide",
+  "goal": [
+   "capitalised",
+   "capital",
+   "r001398"
+  ]
  },
  {
   "id": "B106",
-  "kind": "claim",
-  "asset": "vendor:dyne",
-  "claim": "H8",
-  "as_of": "2026-05-14"
+  "kind": "decide",
+  "goal": [
+   "u01_cleared",
+   "r001398"
+  ]
  },
  {
   "id": "B107",
-  "kind": "claim",
-  "asset": "vendor:acme",
-  "claim": "H9"
+  "kind": "decide",
+  "goal": [
+   "u02_cleared",
+   "r001398"
+  ]
  },
  {
   "id": "B108",
-  "kind": "claim",
-  "asset": "vendor:fern",
-  "claim": "H10"
+  "kind": "decide",
+  "goal": [
+   "u03_cleared",
+   "r001398"
+  ]
  },
  {
   "id": "B109",
-  "kind": "claim",
-  "asset": "vendor:fern",
-  "claim": "H10",
-  "as_of": "2026-05-14"
+  "kind": "decide",
+  "goal": [
+   "perk",
+   "D01",
+   "e10001"
+  ]
  },
  {
   "id": "B110",
-  "kind": "claim",
-  "asset": "vendor:edge",
-  "claim": "H11"
+  "kind": "decide",
+  "goal": [
+   "perk",
+   "D01",
+   "e005"
+  ]
  },
  {
   "id": "B111",
-  "kind": "claim",
-  "asset": "vendor:dyne",
-  "claim": "H12"
+  "kind": "decide",
+  "goal": [
+   "centre_tag",
+   "D02",
+   "cc0041"
+  ]
  },
  {
   "id": "B112",
-  "kind": "claim",
-  "asset": "vendor:dyne",
-  "claim": "H12",
-  "as_of": "2026-06-30"
+  "kind": "decide",
+  "goal": [
+   "centre_tag",
+   "D02",
+   "cc0289"
+  ]
  },
  {
   "id": "B113",
-  "kind": "claim",
-  "asset": "vendor:bolt",
-  "claim": "H1.1"
+  "kind": "decide",
+  "goal": [
+   "centre_tag",
+   "D03",
+   "cc0294"
+  ]
  },
  {
   "id": "B114",
   "kind": "decide",
   "goal": [
-   "export_licensed",
-   "X01",
-   "bolt"
+   "centre_tag",
+   "D03",
+   "cc0027"
   ]
  },
  {
   "id": "B115",
-  "kind": "claim",
-  "asset": "vendor:fern",
-  "claim": "H2.1"
+  "kind": "decide",
+  "goal": [
+   "perk",
+   "D04",
+   "e031"
+  ]
  },
  {
   "id": "B116",
   "kind": "decide",
   "goal": [
-   "data_protection_ok",
-   "X02",
-   "fern"
+   "perk",
+   "D04",
+   "e10011"
   ]
  },
  {
   "id": "B117",
+  "kind": "decide",
+  "goal": [
+   "perk",
+   "D05",
+   "e023"
+  ]
+ },
+ {
+  "id": "B118",
+  "kind": "decide",
+  "goal": [
+   "perk",
+   "D05",
+   "e10022"
+  ]
+ },
+ {
+  "id": "B119",
+  "kind": "decide",
+  "goal": [
+   "centre_tag",
+   "D06",
+   "cc0308"
+  ]
+ },
+ {
+  "id": "B120",
+  "kind": "decide",
+  "goal": [
+   "centre_tag",
+   "D06",
+   "cc0036"
+  ]
+ },
+ {
+  "id": "B121",
+  "kind": "claim",
+  "asset": "vendor:edge",
+  "claim": "H6"
+ },
+ {
+  "id": "B122",
+  "kind": "claim",
+  "asset": "vendor:edge",
+  "claim": "H6",
+  "as_of": "2026-08-09"
+ },
+ {
+  "id": "B123",
+  "kind": "claim",
+  "asset": "vendor:acme",
+  "claim": "H7"
+ },
+ {
+  "id": "B124",
+  "kind": "claim",
+  "asset": "vendor:bolt",
+  "claim": "H8"
+ },
+ {
+  "id": "B125",
+  "kind": "claim",
+  "asset": "vendor:bolt",
+  "claim": "H8",
+  "as_of": "2026-05-14"
+ },
+ {
+  "id": "B126",
+  "kind": "claim",
+  "asset": "vendor:bolt",
+  "claim": "H9"
+ },
+ {
+  "id": "B127",
+  "kind": "claim",
+  "asset": "vendor:dyne",
+  "claim": "H10"
+ },
+ {
+  "id": "B128",
+  "kind": "claim",
+  "asset": "vendor:dyne",
+  "claim": "H10",
+  "as_of": "2026-05-14"
+ },
+ {
+  "id": "B129",
+  "kind": "claim",
+  "asset": "vendor:dyne",
+  "claim": "H11"
+ },
+ {
+  "id": "B130",
+  "kind": "claim",
+  "asset": "vendor:bolt",
+  "claim": "H12"
+ },
+ {
+  "id": "B131",
+  "kind": "claim",
+  "asset": "vendor:bolt",
+  "claim": "H12",
+  "as_of": "2026-05-14"
+ },
+ {
+  "id": "B132",
+  "kind": "claim",
+  "asset": "vendor:edge",
+  "claim": "H1.1"
+ },
+ {
+  "id": "B133",
+  "kind": "decide",
+  "goal": [
+   "export_licensed",
+   "X01",
+   "edge"
+  ]
+ },
+ {
+  "id": "B134",
+  "kind": "claim",
+  "asset": "vendor:edge",
+  "claim": "H2.1"
+ },
+ {
+  "id": "B135",
+  "kind": "decide",
+  "goal": [
+   "data_protection_ok",
+   "X02",
+   "edge"
+  ]
+ },
+ {
+  "id": "B136",
   "kind": "claim",
   "asset": "vendor:edge",
   "claim": "H3.1"
  },
  {
-  "id": "B118",
+  "id": "B137",
   "kind": "decide",
   "goal": [
    "export_licensed",
@@ -1024,33 +1177,33 @@
   ]
  },
  {
-  "id": "B119",
+  "id": "B138",
   "kind": "claim",
-  "asset": "vendor:bolt",
+  "asset": "vendor:fern",
   "claim": "H4.1"
  },
  {
-  "id": "B120",
+  "id": "B139",
   "kind": "decide",
   "goal": [
    "data_protection_ok",
    "X04",
-   "bolt"
+   "fern"
   ]
  },
  {
-  "id": "B121",
+  "id": "B140",
   "kind": "claim",
-  "asset": "vendor:acme",
+  "asset": "vendor:edge",
   "claim": "H5.1"
  },
  {
-  "id": "B122",
+  "id": "B141",
   "kind": "decide",
   "goal": [
    "export_licensed",
    "X05",
-   "acme"
+   "edge"
   ]
  }
 ]

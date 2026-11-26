@@ -24,4 +24,6 @@
  :board_signoff "+"
  :chain_booked "+-"       ; IR-007 fixture RA1
  ;; bench/gen.py families (PLAN-v3-bench §2): instance code free, the entity bound
- :programme_limit_ok "-+" :programme_cleared "-+" :capitalised "-+" :perk "-+" :centre_tag "-+"}
+ :programme_limit_ok "-+" :programme_cleared "-+" :capitalised "-+" :perk "-+" :centre_tag "-+"
+ ;; P01's sub-programme chain (PLAN-v3-bench-full §3b'), one predicate per level: the gate's cycle check is per predicate
+ :u01_cleared "+" :u02_cleared "+" :u03_cleared "+" :u04_cleared "+" :u05_cleared "+" :u06_cleared "+"}

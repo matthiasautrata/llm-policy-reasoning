@@ -702,31 +702,8 @@ class Bench(Ref):
 
     def decide(self, g):
         p, A = g[0], lambda v, core, qual=None: dict(status="ANSWER", value=v, sides=None, core=core, qualifier=qual)
-        if p == "programme_limit_ok":
-            v = self.limit_ok(g[1], g[2])
-            return A(True, [v]) if v else A(False, [x["id"] for x in self.prog[g[1]]["versions"]], CLOSED)
-        if p == "programme_cleared":
-            P, r = g[1], g[2]
-            c, q, ok = self.prog[P]["clearance"], self.req[r], self.limit_ok(P, r)
-            e = c["exception"] and q["vendor"] == c["exception"]["vendor"]          # the exception's body holds
-            x = bool(c["counter"]) and e and q["emergency"] and ok                      # the counter-exception's body holds
-            live = ([c["base"]] if ok and self.vendor_cleared(r)[0] else []) + ([c["counter"]["id"]] if x else [])
-            if not live:
-                return A(False, [c["base"]] + ([c["counter"]["id"]] if c["counter"] else []), CLOSED)
-            if not e:
-                return A(True, live)
-            if x:                                       # the counter-exception beats the exception
-                return A(True, [c["counter"]["id"]])
-            return A(False, [c["exception"]["id"]])     # the exception beats the base rule
-        if p == "capitalised":
-            d, q = self.disp[g[1]], self.req[g[2]]
-            yes = q["category"] == d["category"] and q["amount"] >= d["for"]["min"]
-            no = q["category"] == d["category"] and q["amount"] < d["against"]["below"]
-            s, a = d["for"]["id"], d["against"]["id"]
-            if not yes: return A(False, [s], CLOSED)
-            if not no or d["superior"] == "for": return A(True, [s])
-            if d["superior"] == "against": return A(False, [a])
-            return dict(status="CONFLICT", value=None, sides=[[s], [a]], core=[s, a], qualifier=None)
+        if p in REQUEST_GOALS or p.startswith("u") and p.endswith("_cleared"):
+            return BenchProp(self, g[-1]).answer(g)
         if p in ("perk", "centre_tag"):
             d = self.dist[g[1]]
             hit = self.emp[g[2]]["role"] == d["role"] if p == "perk" else self.unit[g[2]] == d["org_unit"]
@@ -741,6 +718,79 @@ class Bench(Ref):
         if q["kind"] == "claim":
             return self.standing(q["claim"], q.get("as_of") or self.today)
         return self.decide(q["goal"])
+
+
+REQUEST_GOALS = ("programme_limit_ok", "programme_cleared", "capitalised")
+
+
+class BenchProp(Prop):
+    """Ambiguity propagation over the request-level families of a generated base (programme limits and clearance,
+    capitalisation disputes, P01's sub-programme chain), grounded by hand for one request r from params.json,
+    never from the EDN. A ground rule is kept when its fact conditions hold; superiority is params["superior"].
+    vendor_cleared is the slice's (Ref.vendor_cleared), entered as its deciding rule."""
+
+    def __init__(self, B, r):
+        self.R, self.d, self.claims, self.auth, self.memo = B, B.today, {}, {}, {}
+        q, P = B.req[r], B.B
+        em, amt, cat = q["emergency"], q["amount"], q["category"]
+        rules = []                                                   # (id, kind, head, body, facts hold)
+        ok, s, x = B.vendor_cleared(r)
+        if ok: rules.append((s, "defeasible", ["vendor_cleared", r], [], True))
+        if x: rules.append((x, "defeater", ["neg", ["vendor_cleared", r]], [], True))
+        for p in P["programmes"]:
+            c, lim, cl = p["code"], ["programme_limit_ok", p["code"], r], ["programme_cleared", p["code"], r]
+            for v in p["versions"]:
+                rules.append((v["id"], "defeasible", lim, [], cat == p["category"] and v["valid_from"] <= q["date"] <= v["valid_to"]
+                              and amt <= v["limit"]))
+            k = p["clearance"]
+            if not k: continue
+            rules.append((k["base"], "defeasible", cl, [lim, ["vendor_cleared", r]], True))
+            if k["exception"]:
+                ev = q["vendor"] == k["exception"]["vendor"]
+                rules.append((k["exception"]["id"], "defeater", ["neg", cl], [], ev))
+                if k["counter"]:
+                    rules.append((k["counter"]["id"], "defeasible", cl, [lim], ev and em))
+        for d in P["disputes"]:
+            h, here = ["capitalised", d["category"], r], cat == d["category"]
+            rules += [(d["for"]["id"], "defeasible", h, [], here and amt >= d["for"]["min"]),
+                      (d["against"]["id"], "defeater", ["neg", h], [], here and amt < d["against"]["below"])]
+        head = lambda c: ["programme_cleared", "P01", r] if c == "P01" else [f"u{c[1:]}_cleared", r]
+        for L in P.get("chain", []):
+            h = head(L["code"])
+            rules.append((L["base"]["id"], "defeasible", h, [head(L["parent"])]
+                          + ([["capitalised", B.prog["P01"]["category"], r]] if L["base"]["capitalised"] else []), True))
+            if L["exception"]:
+                rules += [(L["exception"]["id"], "defeater", ["neg", h], [], em),
+                          (L["counter"]["id"], "defeasible", h, [head("P01")], em and amt <= L["counter"]["max"])]
+        self.all = [x[:4] for x in rules]
+        self.rules = [x[:4] for x in rules if x[4]]
+        self.over = {tuple(x) for x in P["superior"]}
+
+    def sup(self, t, s):
+        return (t[0], s[0]) in self.over
+
+    def path(self, L):
+        """the rules that prove L: its proven supporters no proven-bodied live attacker overrules, and their body's paths"""
+        A = [a for a in self.attackers(L) if self.live(a) and self.body(a) == PROVEN]
+        out = []
+        for t in self.supporters(L):
+            if self.body(t) == PROVEN and not any(self.sup(a, t) for a in A):
+                out += [t[0]] + [i for b in t[3] if b[0] != "not" for i in self.path(b)]
+        return list(dict.fromkeys(out))
+
+    def answer(self, G):
+        v = self.val(G)
+        if v == PROVEN:
+            return dict(status="ANSWER", value=True, sides=None, core=sorted(set(self.path(G))), qualifier=None)
+        if v == REFUTED:
+            S = [t for t in self.supporters(G) if self.live(t)]
+            if not S:                                                # nothing supports G: closed over the known facts
+                return dict(status="ANSWER", value=False, sides=None, qualifier=CLOSED,
+                            core=sorted({x[0] for x in self.all if x[2] == G and x[1] != "defeater"}))
+            A = [a for a in self.attackers(G) if self.live(a) and self.body(a) == PROVEN and any(self.sup(a, t) for t in S)]
+            return dict(status="ANSWER", value=False, sides=None, core=sorted({a[0] for a in A}), qualifier=None)
+        k = self.conflict({json.dumps(G): G}); k["qualifier"] = None
+        return k
 
 
 def bench_ref(stem):
@@ -819,7 +869,25 @@ TASK = {
     "programme_limit_first": lambda R, a, d: R.prog[a[0]]["versions"][0]["limit"],   # naive: one limit all year
     "cleared_count": lambda R, a, d: _cleared(R, a[0], a[1]),
     "cleared_count_no_exception": lambda R, a, d: _cleared(R, a[0], a[1], naive=True),  # naive: base rule only
+    # P01's sub-programme chain (§3b′): requests of P01's category by their outcome under goal predicate a[0]
+    "chain_count": lambda R, a, d: _chain(R)[a[0]][a[1]],
 }
+
+
+def _chain(R):
+    """{predicate: {"cleared", "contested"}} over the requests of P01's category, for P01 and every chain level"""
+    if not hasattr(R, "_chain_memo"):
+        cat, preds = R.prog["P01"]["category"], ["programme_cleared"] + [L["pred"] for L in R.B["chain"]]
+        out = {p: dict(cleared=0, contested=0) for p in preds}
+        for r, q in R.req.items():
+            if q["category"] != cat: continue
+            X = BenchProp(R, r)
+            for p in preds:
+                v = X.val(["programme_cleared", "P01", r] if p == "programme_cleared" else [p, r])
+                if v == PROVEN: out[p]["cleared"] += 1
+                elif v == CONTESTED: out[p]["contested"] += 1
+        R._chain_memo = out
+    return R._chain_memo
 
 
 def _cleared(R, P, ven, naive=False):

@@ -1,7 +1,7 @@
 {
  "B001": {
   "core": [
-   "G006"
+   "G001"
   ],
   "qualifier": null,
   "sides": null,
@@ -10,9 +10,9 @@
  },
  "B002": {
   "core": [
-   "G006",
-   "G007",
-   "G008"
+   "G001",
+   "G002",
+   "G003"
   ],
   "qualifier": "total over known facts in declared scope",
   "sides": null,
@@ -21,7 +21,7 @@
  },
  "B003": {
   "core": [
-   "G007"
+   "G002"
   ],
   "qualifier": null,
   "sides": null,
@@ -30,9 +30,9 @@
  },
  "B004": {
   "core": [
-   "G006",
-   "G007",
-   "G008"
+   "G001",
+   "G002",
+   "G003"
   ],
   "qualifier": "total over known facts in declared scope",
   "sides": null,
@@ -41,7 +41,7 @@
  },
  "B005": {
   "core": [
-   "G008"
+   "G003"
   ],
   "qualifier": null,
   "sides": null,
@@ -50,9 +50,9 @@
  },
  "B006": {
   "core": [
-   "G006",
-   "G007",
-   "G008"
+   "G001",
+   "G002",
+   "G003"
   ],
   "qualifier": "total over known facts in declared scope",
   "sides": null,
@@ -61,17 +61,18 @@
  },
  "B007": {
   "core": [
-   "G009"
+   "G004",
+   "G006"
   ],
-  "qualifier": null,
+  "qualifier": "total over known facts in declared scope",
   "sides": null,
   "status": "ANSWER",
-  "value": true
+  "value": false
  },
  "B008": {
   "core": [
-   "G009",
-   "G011"
+   "G004",
+   "G006"
   ],
   "qualifier": "total over known facts in declared scope",
   "sides": null,
@@ -80,8 +81,8 @@
  },
  "B009": {
   "core": [
-   "G009",
-   "G011"
+   "G004",
+   "G006"
   ],
   "qualifier": "total over known facts in declared scope",
   "sides": null,
@@ -90,7 +91,8 @@
  },
  "B010": {
   "core": [
-   "G011"
+   "G003",
+   "G006"
   ],
   "qualifier": null,
   "sides": null,
@@ -99,7 +101,7 @@
  },
  "B011": {
   "core": [
-   "G012"
+   "G014"
   ],
   "qualifier": null,
   "sides": null,
@@ -108,9 +110,8 @@
  },
  "B012": {
   "core": [
-   "G012",
-   "G013",
-   "G014"
+   "G014",
+   "G015"
   ],
   "qualifier": "total over known facts in declared scope",
   "sides": null,
@@ -119,7 +120,7 @@
  },
  "B013": {
   "core": [
-   "G013"
+   "G015"
   ],
   "qualifier": null,
   "sides": null,
@@ -128,9 +129,8 @@
  },
  "B014": {
   "core": [
-   "G012",
-   "G013",
-   "G014"
+   "G014",
+   "G015"
   ],
   "qualifier": "total over known facts in declared scope",
   "sides": null,
@@ -139,7 +139,9 @@
  },
  "B015": {
   "core": [
-   "G014"
+   "G014",
+   "G016",
+   "R305"
   ],
   "qualifier": null,
   "sides": null,
@@ -148,9 +150,7 @@
  },
  "B016": {
   "core": [
-   "G012",
-   "G013",
-   "G014"
+   "G016"
   ],
   "qualifier": "total over known facts in declared scope",
   "sides": null,
@@ -159,25 +159,25 @@
  },
  "B017": {
   "core": [
-   "G015"
+   "G017"
   ],
   "qualifier": null,
   "sides": null,
   "status": "ANSWER",
-  "value": true
+  "value": false
  },
  "B018": {
   "core": [
-   "G015"
+   "G017"
   ],
-  "qualifier": "total over known facts in declared scope",
+  "qualifier": null,
   "sides": null,
   "status": "ANSWER",
   "value": false
  },
  "B019": {
   "core": [
-   "G015"
+   "G009"
   ],
   "qualifier": "total over known facts in declared scope",
   "sides": null,
@@ -186,105 +186,121 @@
  },
  "B020": {
   "core": [
-   "G016"
-  ],
-  "qualifier": null,
-  "sides": null,
-  "status": "ANSWER",
-  "value": false
- },
- "B021": {
-  "core": [
-   "G002"
-  ],
-  "qualifier": "total over known facts in declared scope",
-  "sides": null,
-  "status": "ANSWER",
-  "value": false
- },
- "B022": {
-  "core": [
-   "G002",
-   "G003"
+   "G009",
+   "G010"
   ],
   "qualifier": null,
   "sides": [
    [
-    "G002"
+    "G009"
    ],
    [
-    "G003"
+    "G010"
    ]
   ],
   "status": "CONFLICT",
   "value": null
  },
- "B023": {
+ "B021": {
   "core": [
-   "G002"
+   "G009"
   ],
   "qualifier": null,
   "sides": null,
   "status": "ANSWER",
   "value": true
+ },
+ "B022": {
+  "core": [
+   "G012"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B023": {
+  "core": [
+   "G012",
+   "G013"
+  ],
+  "qualifier": null,
+  "sides": [
+   [
+    "G012"
+   ],
+   [
+    "G013"
+   ]
+  ],
+  "status": "CONFLICT",
+  "value": null
  },
  "B024": {
   "core": [
-   "G004"
+   "G012"
   ],
-  "qualifier": "total over known facts in declared scope",
+  "qualifier": null,
   "sides": null,
   "status": "ANSWER",
-  "value": false
+  "value": true
  },
  "B025": {
   "core": [
-   "G004"
-  ],
-  "qualifier": null,
-  "sides": null,
-  "status": "ANSWER",
-  "value": true
- },
- "B026": {
-  "core": [
-   "G004"
-  ],
-  "qualifier": null,
-  "sides": null,
-  "status": "ANSWER",
-  "value": true
- },
- "B027": {
-  "core": [
-   "G017"
-  ],
-  "qualifier": null,
-  "sides": null,
-  "status": "ANSWER",
-  "value": true
- },
- "B028": {
-  "core": [
-   "G017"
+   "G009"
   ],
   "qualifier": "total over known facts in declared scope",
   "sides": null,
   "status": "ANSWER",
   "value": false
  },
- "B029": {
+ "B026": {
   "core": [
-   "G018"
+   "G007"
   ],
-  "qualifier": null,
+  "qualifier": "total over known facts in declared scope",
   "sides": null,
   "status": "ANSWER",
-  "value": true
+  "value": false
+ },
+ "B027": {
+  "core": [
+   "G008"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B028": {
+  "core": [
+   "G009",
+   "G010"
+  ],
+  "qualifier": null,
+  "sides": [
+   [
+    "G009"
+   ],
+   [
+    "G010"
+   ]
+  ],
+  "status": "CONFLICT",
+  "value": null
+ },
+ "B029": {
+  "core": [
+   "G007"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
  },
  "B030": {
   "core": [
-   "G018"
+   "G008"
   ],
   "qualifier": "total over known facts in declared scope",
   "sides": null,
@@ -293,43 +309,57 @@
  },
  "B031": {
   "core": [
-   "G019"
+   "G009"
   ],
-  "qualifier": null,
+  "qualifier": "total over known facts in declared scope",
   "sides": null,
   "status": "ANSWER",
-  "value": true
+  "value": false
  },
  "B032": {
   "core": [
-   "G019"
-  ],
-  "qualifier": "total over known facts in declared scope",
-  "sides": null,
-  "status": "ANSWER",
-  "value": false
- },
- "B033": {
-  "core": [
-   "G020"
+   "G003",
+   "G004",
+   "G007",
+   "R305"
   ],
   "qualifier": null,
   "sides": null,
   "status": "ANSWER",
   "value": true
  },
- "B034": {
+ "B033": {
   "core": [
-   "G020"
+   "G008"
   ],
   "qualifier": "total over known facts in declared scope",
   "sides": null,
   "status": "ANSWER",
   "value": false
  },
+ "B034": {
+  "core": [
+   "G009",
+   "G010"
+  ],
+  "qualifier": null,
+  "sides": [
+   [
+    "G009"
+   ],
+   [
+    "G010"
+   ]
+  ],
+  "status": "CONFLICT",
+  "value": null
+ },
  "B035": {
   "core": [
-   "G021"
+   "G003",
+   "G004",
+   "G007",
+   "R305"
   ],
   "qualifier": null,
   "sides": null,
@@ -337,17 +367,57 @@
   "value": true
  },
  "B036": {
+  "contested": {
+   "[\"u02_cleared\", \"r005335\"]": {
+    "roots": [
+     {
+      "goal": [
+       "capitalised",
+       "capital",
+       "r005335"
+      ],
+      "sides": [
+       [
+        "G009"
+       ],
+       [
+        "G010"
+       ]
+      ]
+     }
+    ],
+    "rules": [
+     "G008"
+    ],
+    "via": [
+     [
+      "capitalised",
+      "capital",
+      "r005335"
+     ]
+    ]
+   }
+  },
   "core": [
-   "G021"
+   "G008",
+   "G009",
+   "G010"
   ],
-  "qualifier": "total over known facts in declared scope",
-  "sides": null,
-  "status": "ANSWER",
-  "value": false
+  "qualifier": null,
+  "sides": [
+   [
+    "G009"
+   ],
+   [
+    "G010"
+   ]
+  ],
+  "status": "CONFLICT",
+  "value": null
  },
  "B037": {
   "core": [
-   "G022"
+   "G018"
   ],
   "qualifier": null,
   "sides": null,
@@ -356,7 +426,7 @@
  },
  "B038": {
   "core": [
-   "G022"
+   "G018"
   ],
   "qualifier": "total over known facts in declared scope",
   "sides": null,
@@ -365,17 +435,105 @@
  },
  "B039": {
   "core": [
-   "H2",
-   "H2.3",
-   "H2.4"
+   "G019"
   ],
-  "defeater": null,
-  "qualifier": [
-   "H2.3"
-  ],
-  "standing": "holds_with_qualifier"
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
  },
  "B040": {
+  "core": [
+   "G019"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B041": {
+  "core": [
+   "G020"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B042": {
+  "core": [
+   "G020"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B043": {
+  "core": [
+   "G021"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B044": {
+  "core": [
+   "G021"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B045": {
+  "core": [
+   "G022"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B046": {
+  "core": [
+   "G022"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B047": {
+  "core": [
+   "G023"
+  ],
+  "qualifier": null,
+  "sides": null,
+  "status": "ANSWER",
+  "value": true
+ },
+ "B048": {
+  "core": [
+   "G023"
+  ],
+  "qualifier": "total over known facts in declared scope",
+  "sides": null,
+  "status": "ANSWER",
+  "value": false
+ },
+ "B049": {
+  "core": [
+   "H2",
+   "H2.1",
+   "H2.4"
+  ],
+  "defeater": "H2.4",
+  "qualifier": [],
+  "standing": "rebutted"
+ },
+ "B050": {
   "core": [
    "H2"
   ],
@@ -383,7 +541,7 @@
   "qualifier": [],
   "standing": "holds"
  },
- "B041": {
+ "B051": {
   "core": [
    "H3"
   ],
@@ -391,7 +549,7 @@
   "qualifier": [],
   "standing": "holds"
  },
- "B042": {
+ "B052": {
   "core": [
    "H4",
    "H4.3",
@@ -403,7 +561,7 @@
   ],
   "standing": "holds_with_qualifier"
  },
- "B043": {
+ "B053": {
   "core": [
    "H4"
   ],
@@ -411,7 +569,7 @@
   "qualifier": [],
   "standing": "holds"
  },
- "B044": {
+ "B054": {
   "core": [
    "H1.1",
    "H1.2"
@@ -420,7 +578,7 @@
   "qualifier": [],
   "standing": "rebutted"
  },
- "B045": {
+ "B055": {
   "core": [
    "H1.2"
   ],

@@ -4,6 +4,8 @@
     a `rule` node with the body literals that held (`children`) and `failed`: the first literal that did
     not (recursively explained for derived literals, a 0-row fetch, a false builtin, a NAF literal whose
     goal is provable), or, when the body held, the `defeated_by` node of the attacker that won (or blocked).
+    A live supporter of a goal refuted by defeat (its body contested, not refuted) also gets the `defeated_by`
+    node: the defeat decided the goal, not the body (a contested literal is not absent).
     In-force claims asserting Goal that were defeated appear as `claim` nodes with a `defeated_by` child.
     Bodies are followed along their first solution (a documented simplification).
 */
@@ -23,8 +25,10 @@ explain_rule(Id, G0, D, E, _{type:rule, id:Id, goal:GJ, children:Kids, failed:F}
     copy_term(G0, G),
     rule(Id, _, G, B, _),
     walk(B, D, [], R),
-    (   R = failed(Done, F0) -> reverse(Done, Kids), F = F0
-    ;   R = ok(Done), reverse(Done, Kids), defeat_node(Id, E, F) ),
+    (   R = ok(Done) -> reverse(Done, Kids), defeat_node(Id, E, F)
+    ;   R = failed(Done, F0), E = defeated(_, Ss, _), memberchk(s(Id, _, _), Ss)
+    ->  reverse(Done, Kids), defeat_node(Id, E, F)
+    ;   R = failed(Done, F0), reverse(Done, Kids), F = F0 ),
     json_safe(G, GJ).
 
 walk([], _, Done, ok(Done)).

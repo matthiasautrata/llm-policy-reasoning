@@ -4,11 +4,13 @@
  "density": 20,
  "distractors": 0.3,
  "programmes": [],
+ "chain": [],
  "disputes": [],
  "distractor_rules": [],
  "claim_trees": [],
  "claim_disputes": [],
  "superiority": null,
+ "superior": [],
  "report": {
   "rules": 25,
   "claims": 14,
