@@ -76,4 +76,6 @@ Each cell is one resumable JSONL record holding every call (model, provider, tok
 
 The judge is `openai@gpt-6.2-sol` through the OpenAI Batch API (`harness/openai_batch.py`, half price), with its own budget (the OpenAI credits); `stub:key`, `stub:tool`, `stub:abstain`, `stub:judge` and `fake:<usd>[:raise|badargs|nofunc|notools|trunc]` stand in for models in tests. `score.py` scores the manager answers against the keys and the analyst checks mechanically. It grades gold reasons with the judge (`judge_rubric.md`) and reports consistency, silent interpretation, inlining and cost per correct answer.
 
+A contested check counts as reported only on a line that also says contested (or conflict, disputed); a plain figure counts as the naive answer. `--judge-reasoning` (default low) sets the judge's `reasoning_effort`; any other level writes `<results>.judge-<effort>.jsonl`, so levels can be compared on the same sessions. Results in `bench/results/` are committed gzipped (`gzip -k -9`; `gunzip -k` before scoring); the plain JSONL and the batch state stay local.
+
 Pilot (`PLAN-v3-bench-run.md` §5): DeepSeek, A1–A3 and ten manager questions, N = 25 and 200, 72 cells; estimate $1.22 OpenRouter ($0.76 with caching) and $0.53 judge. Not run yet.

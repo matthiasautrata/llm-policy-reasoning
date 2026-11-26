@@ -12,3 +12,6 @@ spikes/v3/**/.cpcache/
 spikes/v3/**/target/
 # API keys (PLAN-v3-bench-run §2.4); filled in by hand, never committed
 .env
+# bench results: the committed copy is gzipped (gzip -k -9); batch state is local
+bench/results/*.jsonl
+bench/results/*.batch.json*
