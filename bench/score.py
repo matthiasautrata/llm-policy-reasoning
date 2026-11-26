@@ -796,7 +796,8 @@ def limit_table(recs):
 
 
 def load(path):
-    return [json.loads(l) for l in pathlib.Path(path).read_text().splitlines() if l.strip()]
+    """Records, each with its charged cost (B.cost_of: refused calls cost nothing; PLAN-v3-bench-full §3f.1)."""
+    return [dict(r, cost=B.cost_of(r)) for r in (json.loads(l) for l in pathlib.Path(path).read_text().splitlines() if l.strip())]
 
 
 def main():

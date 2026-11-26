@@ -32,7 +32,9 @@ fetch time): per field the highest over the endpoints the quantization filter ad
 token, plus max_tokens of completion, at the reserve price) is reserved under a lock and settled with the charged
 cost after, so concurrent cells cannot overshoot. A model without a priced endpoint is refused. A live run first
 estimates its cells from the pilot (calibrate) and refuses, before any call, if that exceeds the remaining budget.
-A call that fails keeps its reservation as its cost (marked cost_estimated). A cell stopped by the budget is recorded with error "budget".
+A call the endpoint refused on every attempt (an HTTP error status; CallError.refused) costs nothing and releases
+its reservation (marked refused; PLAN-v3-bench-full §3f.1). Any other failed call keeps its reservation as its cost
+(marked cost_estimated, refused false). cost_of() applies the same rule to records written before the mark. A cell stopped by the budget is recorded with error "budget".
 Every other exception in a cell is recorded with its type, message and traceback, and with the cost spent so far.
 Cells with an error are run again on resume; cells without are not.
 
@@ -42,7 +44,7 @@ fills the context, fails the cell with error "truncated".
 Clients that make no calls (tests): stub:key answers with the oracle's keys (manager JSON;
 analyst figures in the text), stub:tool calls one tool first, stub:abstain answers UNDERDETERMINED;
 fake:<usd>[:<mode>] is stub:tool charging <usd> per call and sleeping 20 ms, with modes raise (on the second
-call), badargs (tool arguments not JSON), nofunc (a tool call without "function"), notools (a reply without a
+call), refuse (the endpoint refuses the second call: CallError refused), badargs (tool arguments not JSON), nofunc (a tool call without "function"), notools (a reply without a
 "tool_calls" field), trunc (reports 10 prompt tokens), empty (an empty final reply), loop (calls a tool whenever
 tools are allowed).
 Call limit: a turn that has made ROUNDS calls with tools is closed by one more call with tool_choice "none" and
@@ -437,6 +439,8 @@ def stub_client(model, item, arm):
             time.sleep(0.02)
         if fault == "raise" and turn["n"] == 2:
             raise ValueError("fake client failure")
+        if fault == "refuse" and turn["n"] == 2:
+            raise openrouter.CallError("gave up after 5 attempts: HTTP 429: fake rate limit", refused=True)
         if tool_turn:
             name = tools[-1 if arm != "T" else 2]["function"]["name"] if tools else "sql"
             args = {"sql": {"query": "SELECT COUNT(*) AS n FROM req"}, "decide": {"goal": '[:headroom "cc0009" ?v]'}}.get(
@@ -588,10 +592,12 @@ def session(client, model, arm, n, kind, item, budget, max_tokens, context=None)
         try:
             res = client(model, msgs, tools, tool_choice)
             res["cost"] = call_cost(res, model)
-        except BaseException:
-            budget.settle(held, held)           # cost unknown: count the reservation
-            calls.append({"turn": t, "cost": held, "cost_estimated": True, "prompt_tokens": None,
-                          "completion_tokens": None, "seconds": None, "tool_calls": 0})
+        except BaseException as e:
+            refused = bool(getattr(e, "refused", False))
+            budget.settle(held, 0.0 if refused else held)       # refused: not charged; else unknown: the reservation
+            calls.append({"turn": t, "cost": 0.0 if refused else held, "refused": refused, "prompt_tokens": None,
+                          "completion_tokens": None, "seconds": None, "tool_calls": 0,
+                          **({} if refused else {"cost_estimated": True})})
             raise
         budget.settle(held, res["cost"])
         calls.append(dict({k: res.get(k) for k in CALL_FIELDS}, turn=t, tool_calls=len(res.get("tool_calls") or []),
@@ -644,12 +650,25 @@ def cell(r):
     return (r["kind"], r["arm"], r["model"], r["n"], r["item"], r["rep"])
 
 
+LEGACY_REFUSED = re.compile(r"CallError: (gave up after \d+ attempts: )?HTTP 4\d\d")
+
+
+def cost_of(rec):
+    """A record's charged cost. Calls marked refused cost 0. In records written before the mark (§3f.1), the failed
+    last call of a cell whose error is an HTTP 4xx refusal is taken as refused: such records kept its reservation."""
+    calls = rec.get("calls")
+    if not calls:
+        return rec.get("cost") or 0.0
+    old = "refused" not in calls[-1] and calls[-1].get("cost_estimated") and LEGACY_REFUSED.match(rec.get("error") or "")
+    return sum(c["cost"] or 0.0 for c in (calls[:-1] if old else calls))
+
+
 def spent_in(*paths):
     s = 0.0
     for p in paths:
         p = pathlib.Path(p)
         if p.exists():
-            s += sum(json.loads(l).get("cost") or 0.0 for l in p.read_text().splitlines() if l.strip())
+            s += sum(cost_of(json.loads(l)) for l in p.read_text().splitlines() if l.strip())
     return s
 
 

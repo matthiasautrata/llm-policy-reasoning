@@ -30,7 +30,12 @@ RETRY = {408, 409, 425, 429, 500, 502, 503, 504, 520, 522, 524, 529}
 
 
 class CallError(Exception):
-    pass
+    """refused: every attempt was answered with an HTTP error status, so the endpoint did no work and charged
+    nothing (PLAN-v3-bench-full §3f.1). Any other failure (timeout, dropped connection, an error in a 200 body)
+    may have been charged."""
+    def __init__(self, msg, refused=False):
+        super().__init__(msg)
+        self.refused = refused
 
 
 ENV_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
@@ -179,7 +184,7 @@ def chat(model, messages, *, temperature, max_tokens, reasoning=None, provider=N
             raise CallError(f"{env} is not set")
         headers["Authorization"] = f"Bearer {key}"
     req = urllib.request.Request(url, data=json.dumps(b).encode(), method="POST", headers=headers)
-    last = None
+    last, refused = None, True
     for attempt in range(tries):
         t0 = time.time()
         try:
@@ -188,12 +193,12 @@ def chat(model, messages, *, temperature, max_tokens, reasoning=None, provider=N
         except urllib.error.HTTPError as e:
             last = f"HTTP {e.code}: {e.read()[:300].decode(errors='replace')}"
             if e.code not in RETRY:
-                raise CallError(last)
+                raise CallError(last, refused)
         except (urllib.error.URLError, TimeoutError, ConnectionError, json.JSONDecodeError) as e:
-            last = f"{type(e).__name__}: {e}"
+            last, refused = f"{type(e).__name__}: {e}", False
         else:
             if d.get("error"):
-                last = f"API error: {json.dumps(d['error'])[:300]}"
+                last, refused = f"API error: {json.dumps(d['error'])[:300]}", False
             elif endpoint == "openai-responses":
                 return parse_responses(d, round(time.time() - t0, 3), attempt + 1)
             elif not d.get("choices"):
@@ -201,7 +206,7 @@ def chat(model, messages, *, temperature, max_tokens, reasoning=None, provider=N
             else:
                 return parse(d, endpoint, round(time.time() - t0, 3), attempt + 1)
         time.sleep(min(60, 2 ** attempt + random.random()))
-    raise CallError(f"gave up after {tries} attempts: {last}")
+    raise CallError(f"gave up after {tries} attempts: {last}", refused)
 
 
 def parse(d, endpoint="openrouter", seconds=None, attempts=1, batch=False):

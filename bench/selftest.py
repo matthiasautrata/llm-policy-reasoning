@@ -8,6 +8,7 @@
 3. Faults, each recorded with its cost and without losing the record: a client that raises (type, message and
    traceback recorded, the failed call's reservation counted); a tool call without "function"; tool arguments
    that are not JSON (returned to the model, the session goes on); a reply without "tool_calls" (taken as final);
+   a call the endpoint refused (no cost, reservation released; PLAN-v3-bench-full §3f.1, also for older records);
    a reply reporting far fewer prompt tokens than were sent ("truncated"); an empty final reply (flagged, counted).
    Call limit: a client that always calls tools still ends every turn with a non-empty reply, made by one call
    with tools forbidden (forced_final; PLAN-v3-bench-full §1.4), and score.py counts such cells by arm (§2.4).
@@ -59,6 +60,12 @@ def main():
     p, (r,) = cells(d, "raise", "fake:0.01:raise", ["M01"], 1)
     assert r["error"].startswith("ValueError: fake client failure") and r["error_type"] == "ValueError"
     assert "Traceback" in r["traceback"] and r["cost"] == 0.02 and r["calls"][-1]["cost_estimated"], r
+    p, (r,) = cells(d, "refuse", "fake:0.01:refuse", ["M01"], 1)
+    assert r["error"].startswith("CallError") and r["cost"] == 0.01 and r["calls"][-1]["refused"], r
+    assert "cost_estimated" not in r["calls"][-1], r
+    import run as B
+    legacy = dict(r, calls=[r["calls"][0], {"turn": 1, "cost": 0.2, "cost_estimated": True}])
+    assert B.cost_of(legacy) == 0.01 and abs(B.cost_of(dict(legacy, error="ValueError: x")) - 0.21) < 1e-12, legacy
     p, (r,) = cells(d, "nofunc", "fake:0.01:nofunc", ["M01"], 1)
     assert r["error"].startswith("KeyError") and r["cost"] == 0.01 and r["traceback"], r
     p, (r,) = cells(d, "badargs", "fake:0.01:badargs", ["M01"], 1)
@@ -71,7 +78,7 @@ def main():
     assert r["error"] is None and r["turns"][0]["empty"], r
     p = run("bench/score.py", str(d / "empty.jsonl"))
     assert p.returncode == 0 and "| empty replies |" in p.stdout and "| 1 | 0 |" in p.stdout, p.stdout + p.stderr
-    print("faults: ok (raise, nofunc, badargs, notools, trunc recorded with their cost; empty reply flagged and counted)")
+    print("faults: ok (raise, refuse (not charged; legacy records too), nofunc, badargs, notools, trunc recorded with their cost; empty reply flagged and counted)")
 
     import run as R
     p, recs = cells(d, "loop", "fake:0.01:loop", ["M01", "A1"], 2, arms=("G", "G+", "T"))
