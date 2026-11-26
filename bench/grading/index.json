@@ -1,0 +1,82 @@
+{
+ "S01": [
+  "analyst",
+  "G",
+  "deepseek/deepseek-v4.1-flash",
+  25,
+  "A1",
+  0
+ ],
+ "S02": [
+  "analyst",
+  "G",
+  "deepseek/deepseek-v4.1-flash",
+  200,
+  "A1",
+  0
+ ],
+ "S03": [
+  "analyst",
+  "T",
+  "deepseek/deepseek-v4.1-flash",
+  25,
+  "A1",
+  0
+ ],
+ "S04": [
+  "analyst",
+  "T",
+  "deepseek/deepseek-v4.1-flash",
+  200,
+  "A1",
+  0
+ ],
+ "S05": [
+  "analyst",
+  "G",
+  "deepseek/deepseek-v4.1-flash",
+  25,
+  "A2",
+  0
+ ],
+ "S06": [
+  "analyst",
+  "G",
+  "deepseek/deepseek-v4.1-flash",
+  200,
+  "A2",
+  0
+ ],
+ "S07": [
+  "analyst",
+  "T",
+  "deepseek/deepseek-v4.1-flash",
+  25,
+  "A2",
+  0
+ ],
+ "S08": [
+  "analyst",
+  "T",
+  "deepseek/deepseek-v4.1-flash",
+  200,
+  "A2",
+  0
+ ],
+ "S09": [
+  "analyst",
+  "G",
+  "deepseek/deepseek-v4.1-flash",
+  25,
+  "A3",
+  0
+ ],
+ "S10": [
+  "analyst",
+  "G",
+  "deepseek/deepseek-v4.1-flash",
+  200,
+  "A3",
+  0
+ ]
+}
