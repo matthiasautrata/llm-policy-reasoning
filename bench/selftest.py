@@ -92,6 +92,9 @@ def main():
         "model": "m", "messages": msgs, "temperature": 1.0, "max_tokens": 10, "usage": {"include": True}, "provider": {"q": 1}}
     b = o.body("gpt-6.2-sol", msgs, temperature=None, max_tokens=10, provider={"q": 1}, endpoint="openai")
     assert b == {"model": "gpt-6.2-sol", "messages": msgs, "max_completion_tokens": 10}, b
+    import score as S
+    jl = json.loads(ob.lines([("j0", msgs)], "gpt-6.2-sol", S.JUDGE_MAX_TOKENS, S.JUDGE_REASONING))
+    assert jl["url"] == "/v1/chat/completions" and jl["body"]["reasoning_effort"] == "low" and "tools" not in jl["body"], jl
     line = {"custom_id": "j0000", "response": {"status_code": 200, "body": {
         "model": "gpt-6.2-sol-2026-10-01", "choices": [{"message": {"role": "assistant", "content": '{"status":"graded"}'},
                                                        "finish_reason": "stop"}],
@@ -101,7 +104,6 @@ def main():
     assert "error" in ob.parse_line({"custom_id": "j1", "response": {"status_code": 400, "body": {"error": "bad"}}})["j1"]
     print("endpoints: ok (OpenRouter body unchanged, OpenAI body, Batch line at half price)")
 
-    import score as S
     for model, want in (("stub:key", True), ("stub:abstain", False)):
         out = d / f"{model.split(':')[1]}.jsonl"
         p = run("bench/run.py", "--models", model, "--n", "25", "200", "--out", str(out), "--budget", "1")

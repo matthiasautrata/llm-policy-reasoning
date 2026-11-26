@@ -194,6 +194,7 @@ def stub_judge(rec):
 
 
 JUDGE_MAX_TOKENS = 16000     # a reasoning judge spends part of it before the JSON
+JUDGE_REASONING = "low"      # without reasoning_effort gpt-6.2-sol does not reason (decided 2026-11-26)
 
 
 def _write(out, rec):
@@ -248,8 +249,8 @@ def judge(recs, out, model, budget):
     if spent + held > budget:
         print(f"judge batch could cost up to ${held:.4f}; with ${spent:.4f} spent that exceeds ${budget:.2f}: not submitted")
         return "budget"
-    b = openai_batch.submit(openai_batch.lines([(c, judge_messages(r)) for c, r in reqs.items()], m, JUDGE_MAX_TOKENS))
-    state.write_text(json.dumps({"id": b["id"], "model": model, "held": held, "submitted": time.strftime("%Y-%m-%dT%H:%M:%S"),
+    b = openai_batch.submit(openai_batch.lines([(c, judge_messages(r)) for c, r in reqs.items()], m, JUDGE_MAX_TOKENS, JUDGE_REASONING))
+    state.write_text(json.dumps({"id": b["id"], "model": model, "reasoning": JUDGE_REASONING, "held": held, "submitted": time.strftime("%Y-%m-%dT%H:%M:%S"),
                                  "requests": {c: json.dumps(B.cell(r)) for c, r in reqs.items()}}, indent=1) + "\n")
     print(f"judge batch {b['id']} submitted: {len(reqs)} sessions, at most ${held:.4f}")
     return "pending"
