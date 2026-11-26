@@ -1,0 +1,39 @@
+{
+ "id": "A3",
+ "title": "vendor-risk view",
+ "source": "notes warrant-layer/benchmark-design.md §1, A3 (2026-11-25)",
+ "output": "Per turn, a design: the components, the rules and claims each rests on, the SQL or lookup per component, and caveats.",
+ "turns": [
+  {"n": 1, "text": "Build a vendor-risk view for procurement: which vendors are fit for use, and why.",
+   "example": "As a worked example, give the standing of fitness for vendors bolt and cog today, and their register status."},
+  {"n": 2, "text": "Why is cog flagged?",
+   "example": "Name the claims involved."},
+  {"n": 3, "text": "Who says so, and since when?",
+   "example": "Give the asserter and the dates for each claim involved."},
+  {"n": 4, "text": "Show what we knew at 2 June 2026.",
+   "example": "Give the standing of fitness for bolt and cog then."}
+ ],
+ "gold": [
+  {"id": "GR1", "text": "Fit for use is procurement's claim, resting on required sub-claims (due diligence, not sanctioned) and a supporting one (price within benchmark)", "refs": ["C1", "C2"], "turns": [1]},
+  {"id": "GR2", "text": "A failing required sub-claim rebuts fitness; a failing supporting one only qualifies it", "refs": ["depends_on", "supports"], "turns": [1, 2]},
+  {"id": "GR3", "text": "Each sub-claim has its own asserter (compliance, risk, finance) and validity; report them per claim, not under procurement", "refs": ["C1.1", "C1.2", "C1.3", "C2.1", "C2.2", "C2.3"], "turns": [3]},
+  {"id": "GR4", "text": "cog: finance's later claim (C7, from 10 May) that the price is not within benchmark supersedes its earlier C2.3 (same asserter, later wins): fitness is qualified from that date", "refs": ["C2.3", "C7"], "turns": [2, 4]},
+  {"id": "GR5", "text": "bolt: risk's later claim (C6, sanctioned, from 1 June) supersedes its earlier C1.2: fitness rebutted from that date", "refs": ["C1.2", "C6"], "turns": [1, 4]},
+  {"id": "GR6", "text": "Later wins only within one asserter; between different asserters a disagreement stays contested unless superiority is stated", "refs": ["superiority"], "turns": [2]},
+  {"id": "GR7", "text": "Validity windows end (C1, C2 to 31 Dec): fitness expires; it is not permanent", "refs": ["valid_to"], "turns": [1]},
+  {"id": "GR8", "text": "\"What we knew at <date>\" (assertion and recording time) differs from \"what held at <date>\" (valid time): two axes, two views", "refs": ["asserted_at", "recorded_at", "valid_from", "valid_to"], "turns": [4]},
+  {"id": "GR9", "text": "Vendor status (register) is distinct from fitness claims: a vendor can be approved in the register yet not fit, and the reverse", "refs": ["term:vendor_status"], "turns": [1]}
+ ],
+ "checks": [
+  {"id": "A3.K1", "gr": ["GR1", "GR5"], "turn": 1, "component": "fitness of bolt today", "call": ["claim_standing", "C1"]},
+  {"id": "A3.K2", "gr": ["GR1", "GR2"], "turn": 1, "component": "fitness of cog today", "call": ["claim_standing", "C2"]},
+  {"id": "A3.K3", "gr": ["GR9"], "turn": 1, "component": "register status of bolt today", "call": ["vendor_status", "bolt"]},
+  {"id": "A3.K4", "gr": ["GR9"], "turn": 1, "component": "register status of cog today", "call": ["vendor_status", "cog"]},
+  {"id": "A3.K5", "gr": ["GR7"], "turn": 1, "component": "fitness of cog on 1 January 2027", "call": ["claim_standing", "C2"], "as_of": "2027-01-01"},
+  {"id": "A3.K6", "gr": ["GR4"], "turn": 2, "component": "cog's price within benchmark today (C2.3)", "call": ["claim_standing", "C2.3"]},
+  {"id": "A3.K7", "gr": ["GR4"], "turn": 4, "component": "fitness of cog on 1 May 2026, before C7", "call": ["claim_standing", "C2"], "as_of": "2026-05-01"},
+  {"id": "A3.K8", "gr": ["GR8"], "turn": 4, "component": "fitness of bolt as known at 2 June 2026 (claims asserted by then)", "call": ["claim_standing", "C1"], "known_at": "2026-06-02"},
+  {"id": "A3.K9", "gr": ["GR5", "GR8"], "turn": 4, "component": "fitness of bolt as it held on 2 June 2026 (valid time, all claims)", "call": ["claim_standing", "C1"], "as_of": "2026-06-02"},
+  {"id": "A3.K10", "gr": ["GR4", "GR8"], "turn": 4, "component": "fitness of cog as known at 2 June 2026", "call": ["claim_standing", "C2"], "known_at": "2026-06-02"}
+ ]
+}

@@ -1,0 +1,61 @@
+{
+ "A1.K1": {
+  "value": 606000
+ },
+ "A1.K10": {
+  "value": 606000
+ },
+ "A1.K11": {
+  "value": 18698000
+ },
+ "A1.K12": {
+  "value": 25000
+ },
+ "A1.K13": {
+  "value": {
+   "sides": null,
+   "status": "ANSWER",
+   "value": "cc0077"
+  }
+ },
+ "A1.K14": {
+  "value": {
+   "sides": null,
+   "status": "ANSWER",
+   "value": "cc0078"
+  }
+ },
+ "A1.K15": {
+  "naive": 1824,
+  "value": 1865
+ },
+ "A1.K2": {
+  "value": 181000
+ },
+ "A1.K3": {
+  "value": 18092000
+ },
+ "A1.K4": {
+  "value": 333
+ },
+ "A1.K5": {
+  "value": {
+   "status": "CONFLICT",
+   "value": 1057000
+  }
+ },
+ "A1.K6": {
+  "value": 29
+ },
+ "A1.K7": {
+  "value": 3715000
+ },
+ "A1.K8": {
+  "naive": 2038000,
+  "value": 1857000
+ },
+ "A1.K9": {
+  "naive": 4321000,
+  "value": 3715000
+ }
+}

@@ -4,6 +4,7 @@ plain Python over the detail data, without any rule interpreter, the concept bin
   python spikes/v3/shared/reference.py               # -> shared/keys.json
   python spikes/v3/shared/reference.py --mutate      # flipped comparisons -> stdout (mutation test)
   python spikes/v3/shared/reference.py --bench bench/bases/N050 ...   # benchmark family keys -> N050.keys.json
+  python spikes/v3/shared/reference.py --tasks bench/tasks/A1.json ... # analyst task components -> A1.keys.json
 
 Reads slice.edn only for constants a reader of the docs would also read (today, claims, terms,
 functional predicates); every rule is a Python function below. Data: a full load of DuckDB (the
@@ -722,10 +723,90 @@ def bench_keys(stem):
     return {q["id"]: R.answer(q) for q in json.loads(stem.with_suffix(".questions.json").read_text())}
 
 
+# ---------------------------------------------------------------------------- analyst task components (PLAN-v3-bench §4)
+# The checkable values of a task's worked example (bench/tasks/A*.json "checks"), from the same hand-written functions
+# as the question keys. Requests count for their requester's centre in the emp table, as in R120 (approved_agg).
+# A "naive" entry is the value a known wrong design produces, so the scorer can tell wrong from missed.
+def _pending(R, c, until=None):
+    sub = set(R.subtree(c))
+    return sorted(r for r, q in R.req.items() if q["status"] == "pending" and R.emp[q["requester"]]["cc"] in sub
+                  and (until is None or q["date"] <= until))
+
+
+def _outcomes(R, c):
+    rs = _pending(R, c)
+    res = {r: R.approved(r) for r in rs}
+    cnt = lambda st, v=None: sum(1 for x in res.values() if x[0] == st and (v is None or x[1] is v))
+    return dict(pending=len(rs), approved=cnt("ANSWER", True), not_approved=cnt("ANSWER", False), contested=cnt("CONFLICT"),
+                auto_approved=sum(1 for r in rs if res[r][0] == "ANSWER" and R.auto_approved(r)))
+
+
+def _reasons(R, c):
+    """reasons per pending request not approved (proven false): several may apply to one request (GR4)"""
+    no = [r for r in _pending(R, c) if R.approved(r) == ("ANSWER", False, None)]
+    why = {r: [k for k, hit in (("no_approver", not R.has_approver(r)), ("cap_breach", R.cap_breach(r)),
+                                ("vendor_not_cleared", not R.vendor_cleared(r)[0]), ("denied", R.denied(r))) if hit] for r in no}
+    out = {k: sum(k in v for v in why.values()) for k in ("no_approver", "cap_breach", "vendor_not_cleared", "denied")}
+    return dict(not_approved=len(no), **out, several_reasons=sum(len(v) > 1 for v in why.values()))
+
+
+def _known(R, d):
+    """the claims asserted on or before d (what was known at d), on a copy of R"""
+    import copy
+    K = copy.copy(R)
+    K.claims = {i: c for i, c in R.claims.items() if iso(c["asserted_at"]) <= d}
+    return K
+
+
+TASK = {
+    "booked_total": lambda R, a, d: R.booked_total(a[0]),
+    "headroom": lambda R, a, d: R.headroom(a[0]),
+    "headroom_sum": lambda R, a, d: sum(R.headroom(c) for c in a),                  # naive: headroom added across centres
+    "pending_exposure": lambda R, a, d: sum(R.req[r]["amount"] for r in _pending(R, a[0])),
+    "booked_plus_pending": lambda R, a, d: R.booked_total(a[0]) + sum(R.req[r]["amount"] for r in _pending(R, a[0])),
+    "selection_booked_total": lambda R, a, d: sum(R.cc[x]["booked"] for x in set().union(*map(R.subtree, a))),
+    "booked_total_sum": lambda R, a, d: sum(R.booked_total(c) for c in a),          # naive: totals added, subtrees overlap
+    "breaching_requests": lambda R, a, d: len(R.breach_in(a[0])),
+    "own_cap_breaching_requests": lambda R, a, d: sum(                              # naive: own centre's cap only
+        1 for r in _pending(R, a[0]) if R.booked_total(R.emp[R.req[r]["requester"]]["cc"]) + R.req[r]["amount"]
+        > R.cc[R.emp[R.req[r]["requester"]]["cc"]]["cap"]),
+    "approved_total": lambda R, a, d: dict(zip(("status", "proven_part"), R.approved_agg(a[0], "sum")[:2])),
+    "request_outcomes": lambda R, a, d: _outcomes(R, a[0]),
+    "not_approved_reasons": lambda R, a, d: _reasons(R, a[0]),
+    "role_limit": lambda R, a, d: R.limit_on(a[0], d),
+    "cost_centre_of": lambda R, a, d: dict(zip(("status", "value", "sides"), R.cost_centre_of(a[0], d)[:3])),
+    "vendor_status": lambda R, a, d: next((s for v, s, f, t in R.vstat if v == a[0] and f <= d <= t), None),
+    "claim_standing": lambda R, a, d: {k: v for k, v in R.standing(a[0], d).items() if k in ("standing", "defeater", "qualifier")},
+}
+
+
+def task_keys(path):
+    """bench/tasks/A*.json -> {check id: {value, naive?}} (as_of: valid time, default today; known_at: only the claims
+    asserted by then; field: one entry of a dict value; naive: the value of the named wrong design)"""
+    S, X, _ = load()
+    R = Ref(S, X)
+    out = {}
+    for k in json.loads(pathlib.Path(path).read_text())["checks"]:
+        RR = _known(R, k["known_at"]) if k.get("known_at") else R
+        d = k.get("as_of") or k.get("known_at") or R.today
+        v = TASK[k["call"][0]](RR, k["call"][1:], d)
+        out[k["id"]] = dict(value=v[k["field"]] if k.get("field") else v)
+        if k.get("naive"):
+            out[k["id"]]["naive"] = TASK[k["naive"][0]](RR, k["naive"][1:], d)
+    return out
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(); ap.add_argument("--mutate", action="store_true")
     ap.add_argument("--bench", nargs="+", metavar="STEM", help="bench bases (e.g. bench/bases/N050) -> STEM.keys.json")
+    ap.add_argument("--tasks", nargs="+", metavar="TASK", help="analyst tasks (bench/tasks/A1.json) -> A1.keys.json")
     a = ap.parse_args()
+    if a.tasks:
+        for t in a.tasks:
+            k = task_keys(t)
+            pathlib.Path(t).with_suffix(".keys.json").write_text(json.dumps(k, indent=1, sort_keys=True) + "\n")
+            print(t, len(k), "keys")
+        sys.exit(0)
     if a.bench:
         for st in a.bench:
             k = bench_keys(st)

@@ -1,0 +1,68 @@
+{
+ "A3.K1": {
+  "value": {
+   "defeater": "C6",
+   "qualifier": [],
+   "standing": "rebutted"
+  }
+ },
+ "A3.K10": {
+  "value": {
+   "defeater": null,
+   "qualifier": [
+    "C2.3"
+   ],
+   "standing": "holds_with_qualifier"
+  }
+ },
+ "A3.K2": {
+  "value": {
+   "defeater": null,
+   "qualifier": [
+    "C2.3"
+   ],
+   "standing": "holds_with_qualifier"
+  }
+ },
+ "A3.K3": {
+  "value": "suspended"
+ },
+ "A3.K4": {
+  "value": "approved"
+ },
+ "A3.K5": {
+  "value": {
+   "defeater": null,
+   "qualifier": [],
+   "standing": "not_in_force"
+  }
+ },
+ "A3.K6": {
+  "value": {
+   "defeater": "C7",
+   "qualifier": [],
+   "standing": "rebutted"
+  }
+ },
+ "A3.K7": {
+  "value": {
+   "defeater": null,
+   "qualifier": [],
+   "standing": "holds"
+  }
+ },
+ "A3.K8": {
+  "value": {
+   "defeater": null,
+   "qualifier": [],
+   "standing": "holds"
+  }
+ },
+ "A3.K9": {
+  "value": {
+   "defeater": "C6",
+   "qualifier": [],
+   "standing": "rebutted"
+  }
+ }
+}

@@ -1,0 +1,50 @@
+{
+ "id": "A1",
+ "title": "cost-centre spend dashboard",
+ "source": "notes warrant-layer/benchmark-design.md §1, A1 (2026-11-25)",
+ "output": "Per turn, a design: the components, the rules each rests on, the SQL per component, and caveats.",
+ "turns": [
+  {"n": 1, "text": "Build a dashboard so cost-centre managers can see their spend against their cap and the pipeline of pending requests.",
+   "example": "As a worked example, give each component's figures for cost centre cc0049."},
+  {"n": 2, "text": "Managers of parent centres want the same view. or filter / select the centres they want to see",
+   "example": "Give the figures for cc0009 (the parent of cc0049), and for a selection of cc0009 and cc0049 together."},
+  {"n": 3, "text": "Can we show committed spend?",
+   "example": "Give the figure for cc0049."},
+  {"n": 4, "text": "Finance wants the view as it stood at the end of July 2026.",
+   "example": "Give the approval limit of a manager and the cost centre of employee e077 as they stood then."}
+ ],
+ "gold": [
+  {"id": "GR1", "text": "Booked total rolls up over the subtree; it is semi-additive across the hierarchy: never add a parent's and its children's totals", "refs": ["R104", "IR-004", "IR-007"], "turns": [1, 2]},
+  {"id": "GR2", "text": "Headroom is cap minus booked total and non-additive: never sum headroom across centres", "refs": ["R105"], "turns": [2]},
+  {"id": "GR3", "text": "A request can breach a parent's cap while its own centre still has headroom: the cap check runs against the requester's centre and every ancestor", "refs": ["R106", "R304"], "turns": [1]},
+  {"id": "GR4", "text": "\"Committed spend\" is not defined: finance has not decided whether pending requests count. Show both readings or refuse the label; do not pick one silently", "refs": ["term:committed_spend"], "turns": [3]},
+  {"id": "GR5", "text": "The approval limit that governs a request is the version valid on the request date, not today's", "refs": ["R202", "R203"], "turns": [1, 4]},
+  {"id": "GR6", "text": "Vendor status is taken on the request date; emergency requests pass despite a suspended vendor", "refs": ["R204", "R305", "R306"], "turns": [1]},
+  {"id": "GR7", "text": "Software requests under 10,000 are approved automatically, without the other checks; show them as their own segment", "refs": ["R311", "R312"], "turns": [1]},
+  {"id": "GR8", "text": "A request both denied and approved is a conflict (R314): show it as contested; it must not be counted in an approved total", "refs": ["R309", "R310", "R314", "R120"], "turns": [1]},
+  {"id": "GR9", "text": "Employee cost centre: hr and finance disagree for e077; finance prevails by R313. Use finance's mapping, and show the dispute where R313 does not apply", "refs": ["C3", "C4", "R313"], "turns": [1, 2]},
+  {"id": "GR10", "text": "A mid-year transfer (e077, cc0077 → cc0078): which centre a request counts for depends on the date", "refs": ["C3", "C4", "C5"], "turns": [4]},
+  {"id": "GR11", "text": "Booked totals are declared complete (C10); pending-pipeline figures rest on known facts only: label them", "refs": ["C10", "IR-005"], "turns": [1]},
+  {"id": "GR12", "text": "All dated policy needs an \"as of\" parameter; a period-end view is not today's view with a filter", "refs": ["R202", "R204", "as_of"], "turns": [4]},
+  {"id": "GR13", "text": "A selection of centres is totalled over the union of their subtrees, not by adding their totals: a parent and its child selected together must not double-count", "refs": ["R104", "IR-007"], "turns": [2]}
+ ],
+ "checks": [
+  {"id": "A1.K1", "gr": ["GR1"], "turn": 1, "component": "booked total of cc0049", "call": ["booked_total", "cc0049"]},
+  {"id": "A1.K2", "gr": ["GR2"], "turn": 1, "component": "headroom of cc0049", "call": ["headroom", "cc0049"]},
+  {"id": "A1.K3", "gr": ["GR11"], "turn": 1, "component": "pending exposure (pipeline) of cc0049", "call": ["pending_exposure", "cc0049"]},
+  {"id": "A1.K4", "gr": ["GR3"], "turn": 1, "component": "pending requests of cc0049 that breach a cap", "call": ["breaching_requests", "cc0049"]},
+  {"id": "A1.K5", "gr": ["GR8"], "turn": 1, "component": "approved total of cc0049", "call": ["approved_total", "cc0049"]},
+  {"id": "A1.K6", "gr": ["GR7"], "turn": 1, "component": "auto-approved requests of cc0049", "call": ["request_outcomes", "cc0049"], "field": "auto_approved"},
+  {"id": "A1.K7", "gr": ["GR1"], "turn": 2, "component": "booked total of cc0009", "call": ["booked_total", "cc0009"]},
+  {"id": "A1.K8", "gr": ["GR2"], "turn": 2, "component": "headroom of cc0009", "call": ["headroom", "cc0009"], "naive": ["headroom_sum", "cc0009", "cc0049"]},
+  {"id": "A1.K9", "gr": ["GR13"], "turn": 2, "component": "booked total of the selection cc0009 + cc0049", "call": ["selection_booked_total", "cc0009", "cc0049"],
+   "naive": ["booked_total_sum", "cc0009", "cc0049"]},
+  {"id": "A1.K15", "gr": ["GR3"], "turn": 2, "component": "pending requests of cc0009 that breach a cap", "call": ["breaching_requests", "cc0009"],
+   "naive": ["own_cap_breaching_requests", "cc0009"]},
+  {"id": "A1.K10", "gr": ["GR4"], "turn": 3, "component": "committed spend of cc0049, reading 1: booked total only", "call": ["booked_total", "cc0049"]},
+  {"id": "A1.K11", "gr": ["GR4"], "turn": 3, "component": "committed spend of cc0049, reading 2: booked total plus pending exposure", "call": ["booked_plus_pending", "cc0049"]},
+  {"id": "A1.K12", "gr": ["GR5", "GR12"], "turn": 4, "component": "approval limit of a manager at the end of July 2026", "call": ["role_limit", "manager"], "as_of": "2026-07-31"},
+  {"id": "A1.K13", "gr": ["GR9", "GR10", "GR12"], "turn": 4, "component": "cost centre of e077 at the end of July 2026", "call": ["cost_centre_of", "e077"], "as_of": "2026-07-31"},
+  {"id": "A1.K14", "gr": ["GR10"], "turn": 4, "component": "cost centre of e077 today", "call": ["cost_centre_of", "e077"]}
+ ]
+}

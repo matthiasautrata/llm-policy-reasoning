@@ -1,0 +1,41 @@
+{
+ "source": "the slice question bank (spikes/v3/shared/questions.edn), rephrased as a manager would ask; department scope (PLAN-v3-bench §4)",
+ "keys": "spikes/v3/shared/keys.json, state \"extended\", under the slice id; never copied here",
+ "excluded": {
+  "Q11 Q48 Q54 Q55": "hypothetical (withhold or add records): with_hypothesis is not among arm T's tools",
+  "Q24 Q25": "root-level totals, out of scope for managers"
+ },
+ "questions": [
+  {"id": "M01", "slice": "Q01", "scope": "cc0009", "text": "I run cost centre cc0009. How much have we booked in total, including the centres under us?"},
+  {"id": "M02", "slice": "Q02", "scope": "cc0009", "text": "How much of our budget is left in cc0009?"},
+  {"id": "M03", "slice": "Q03", "scope": null, "text": "Up to what amount could a manager sign off a single request on 15 July?"},
+  {"id": "M04", "slice": "Q04", "scope": null, "text": "Up to what amount can a manager sign off a single request today?"},
+  {"id": "M05", "slice": "Q05", "scope": "cc0354", "text": "My request r000004 was raised on 10 July. Which manager signing limit applies to it?"},
+  {"id": "M06", "slice": "Q06", "scope": "cc0609", "text": "Request r000003 is an emergency order from fern, and fern is suspended. Does it get through the vendor check?"},
+  {"id": "M07", "slice": "Q07", "scope": "cc0760", "text": "Request r000002 is an emergency capital order of 90,000 from fern. Does it get through the vendor check?"},
+  {"id": "M08", "slice": "Q08", "scope": "cc0681", "text": "Has my request r000001 been approved?"},
+  {"id": "M09", "slice": "Q09", "scope": "cc1484", "text": "Has request r000005 from my team been approved?"},
+  {"id": "M10", "slice": "Q10", "scope": "cc0077", "text": "Which cost centre did e077 belong to on 15 July?"},
+  {"id": "M12", "slice": "Q12", "scope": "cc0078", "text": "Which cost centre did e077 belong to on 15 August?"},
+  {"id": "M13", "slice": "Q13", "scope": null, "text": "Could we use vendor bolt on 15 May, i.e. was it fit for use then?"},
+  {"id": "M14", "slice": "Q14", "scope": null, "text": "Was vendor bolt fit for use on 1 July?"},
+  {"id": "M15", "slice": "Q15", "scope": null, "text": "Is vendor cog fit for use?"},
+  {"id": "M16", "slice": "Q16", "scope": "cc0438", "text": "Why hasn't my request r000006 been approved?"},
+  {"id": "M17", "slice": "Q17", "scope": "cc0049", "text": "Which pending requests in my area, cost centre cc0049 and below, would push a centre over its cap?"},
+  {"id": "M18", "slice": "Q18", "scope": "cc1871", "text": "Does request r000008 pass the vendor check?"},
+  {"id": "M19", "slice": "Q19", "scope": "cc0009", "text": "What is our committed spend in cc0009?"},
+  {"id": "M20", "slice": "Q20", "scope": "cc0009", "text": "What is our travel budget in cc0009?"},
+  {"id": "M21", "slice": "Q21", "scope": null, "text": "When finance says \"booked total\", what exactly do they mean?"},
+  {"id": "M22", "slice": "Q22", "scope": null, "text": "What does \"travel budget\" mean here?"},
+  {"id": "M23", "slice": "Q23", "scope": null, "text": "How is \"department\" defined, when I'm asked about my department's spend?"},
+  {"id": "M44", "slice": "Q44", "scope": "cc0058", "text": "What is the total amount of approved pending requests in cc0058 and below?"},
+  {"id": "M45", "slice": "Q45", "scope": "cc0290", "text": "How many pending requests in cc0290 have been approved?"},
+  {"id": "M46", "slice": "Q46", "scope": "cc0105", "text": "What is the total amount of approved pending requests in cc0105 and below?"},
+  {"id": "M47", "slice": "Q47", "scope": "cc1484", "text": "Has request r000005 been denied?"},
+  {"id": "M49", "slice": "Q49", "scope": "cc0077", "text": "On 15 July, how much budget was left in e077's home cost centre?"},
+  {"id": "M50", "slice": "Q50", "scope": "cc0681", "text": "Has a purchase order been issued for my request r000001?"},
+  {"id": "M51", "slice": "Q51", "scope": "cc1484", "text": "Has a purchase order been issued for request r000005?"},
+  {"id": "M52", "slice": "Q52", "scope": "cc0438", "text": "Has a purchase order been issued for request r000006?"},
+  {"id": "M53", "slice": "Q53", "scope": "cc1484", "text": "Does request r000005 breach any cap?"}
+ ]
+}

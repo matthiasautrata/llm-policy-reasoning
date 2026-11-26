@@ -1,0 +1,42 @@
+{
+ "A2.K1": {
+  "value": 88
+ },
+ "A2.K10": {
+  "value": 25000
+ },
+ "A2.K11": {
+  "value": "approved"
+ },
+ "A2.K12": {
+  "value": {
+   "sides": null,
+   "status": "ANSWER",
+   "value": "cc0077"
+  }
+ },
+ "A2.K2": {
+  "value": 336
+ },
+ "A2.K3": {
+  "value": 1
+ },
+ "A2.K4": {
+  "value": 29
+ },
+ "A2.K5": {
+  "value": 0
+ },
+ "A2.K6": {
+  "value": 318
+ },
+ "A2.K7": {
+  "value": 78
+ },
+ "A2.K8": {
+  "value": 9
+ },
+ "A2.K9": {
+  "value": 68
+ }
+}

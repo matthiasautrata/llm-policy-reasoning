@@ -1,0 +1,44 @@
+{
+ "id": "A2",
+ "title": "approval report",
+ "source": "notes warrant-layer/benchmark-design.md §1, A2 (2026-11-25); GR3 at 10,000 (R311 kept, PLAN-v3-bench Decisions)",
+ "output": "Per turn, a design: the components, the rules each rests on, the SQL per component, and caveats.",
+ "turns": [
+  {"n": 1, "text": "Build a report for procurement: who can approve which requests, and why requests are not approved.",
+   "example": "As a worked example, give each component's figures for the pending requests of cost centre cc0049 and its subtree."},
+  {"n": 2, "text": "Show the requests nobody can approve.",
+   "example": "Give the figure for cc0049."},
+  {"n": 3, "text": "Break the not-approved requests down by reason, and show how long they have been waiting.",
+   "example": "Give the figures for cc0049."},
+  {"n": 4, "text": "Show it as it stood at the end of July 2026.",
+   "example": "Give the approval limit of a manager, the register status of vendor bolt, and the cost centre of employee e077 as they stood then."}
+ ],
+ "gold": [
+  {"id": "GR1", "text": "An approver is anyone in the requester's reporting chain with a high enough limit, not only the direct manager", "refs": ["R301"], "turns": [1]},
+  {"id": "GR2", "text": "The limit that counts is the version valid on the request date; a later limit change does not reclassify old requests", "refs": ["R202", "R203"], "turns": [1, 4]},
+  {"id": "GR3", "text": "Software requests under 10,000 are approved automatically, without an approver: a separate path, not attributed to anyone", "refs": ["R311", "R312"], "turns": [1]},
+  {"id": "GR4", "text": "Approved means eligible (approver, cap check, vendor check) and not denied; reasons co-occur, so a breakdown allows several reasons per request, not one bucket", "refs": ["R308", "R310"], "turns": [3]},
+  {"id": "GR5", "text": "Denied (a recorded policy violation, owned by compliance) is a different reason from not eligible (procurement, finance)", "refs": ["R309"], "turns": [3]},
+  {"id": "GR6", "text": "A request both denied and auto-approved is a conflict: show it as contested, in neither column", "refs": ["R312", "R314"], "turns": [1, 3]},
+  {"id": "GR7", "text": "A cap failure may come from an ancestor centre's cap, not the requester's own", "refs": ["R106", "R304"], "turns": [3]},
+  {"id": "GR8", "text": "Vendor check on the request date; emergency requests pass despite a suspended vendor, except big capital requests (R307 overrides the waiver)", "refs": ["R204", "R305", "R306", "R307"], "turns": [3]},
+  {"id": "GR9", "text": "The reporting chain depends on where the requester sits on the request date (e077 moved; hr and finance disagree, finance prevails)", "refs": ["C3", "C4", "C5", "R313"], "turns": [1, 4]},
+  {"id": "GR10", "text": "\"How long waiting\" is not defined by any rule (no SLA, no start event): ask, or state the assumption; do not invent one silently", "refs": [], "turns": [3]},
+  {"id": "GR11", "text": "\"Nobody can approve\" is a negative answer over known facts (chains and limits are not declared complete): label it", "refs": ["IR-005"], "turns": [2]},
+  {"id": "GR12", "text": "Period-end view needs \"as of\" throughout (limits, vendor status, chain), not today's data filtered by date", "refs": ["as_of"], "turns": [4]}
+ ],
+ "checks": [
+  {"id": "A2.K1", "gr": ["GR1", "GR4"], "turn": 1, "component": "pending requests of cc0049 approved", "call": ["request_outcomes", "cc0049"], "field": "approved"},
+  {"id": "A2.K2", "gr": ["GR4"], "turn": 1, "component": "pending requests of cc0049 not approved", "call": ["request_outcomes", "cc0049"], "field": "not_approved"},
+  {"id": "A2.K3", "gr": ["GR6"], "turn": 1, "component": "pending requests of cc0049 contested (approved and denied)", "call": ["request_outcomes", "cc0049"], "field": "contested"},
+  {"id": "A2.K4", "gr": ["GR3"], "turn": 1, "component": "pending requests of cc0049 approved automatically", "call": ["request_outcomes", "cc0049"], "field": "auto_approved"},
+  {"id": "A2.K5", "gr": ["GR1", "GR11"], "turn": 2, "component": "pending requests of cc0049 with no approver in the chain", "call": ["not_approved_reasons", "cc0049"], "field": "no_approver"},
+  {"id": "A2.K6", "gr": ["GR7"], "turn": 3, "component": "not approved: cap check fails (own centre or an ancestor)", "call": ["not_approved_reasons", "cc0049"], "field": "cap_breach"},
+  {"id": "A2.K7", "gr": ["GR8"], "turn": 3, "component": "not approved: vendor check fails", "call": ["not_approved_reasons", "cc0049"], "field": "vendor_not_cleared"},
+  {"id": "A2.K8", "gr": ["GR5"], "turn": 3, "component": "not approved: denied", "call": ["not_approved_reasons", "cc0049"], "field": "denied"},
+  {"id": "A2.K9", "gr": ["GR4"], "turn": 3, "component": "not approved with more than one reason", "call": ["not_approved_reasons", "cc0049"], "field": "several_reasons"},
+  {"id": "A2.K10", "gr": ["GR2", "GR12"], "turn": 4, "component": "approval limit of a manager at the end of July 2026", "call": ["role_limit", "manager"], "as_of": "2026-07-31"},
+  {"id": "A2.K11", "gr": ["GR8", "GR12"], "turn": 4, "component": "register status of vendor bolt at the end of July 2026", "call": ["vendor_status", "bolt"], "as_of": "2026-07-31"},
+  {"id": "A2.K12", "gr": ["GR9", "GR12"], "turn": 4, "component": "cost centre of e077 at the end of July 2026", "call": ["cost_centre_of", "e077"], "as_of": "2026-07-31"}
+ ]
+}
