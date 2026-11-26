@@ -172,7 +172,8 @@ T_TOOLS = [
         "or none (unknown), with each candidate's definition and owner.", {"text": "the phrase"}, ["text"]),
     _fn("describe", "An asset (vendor:<id>, emp:<id>): its doc, data bindings, and every claim about it with its "
         "standing on as_of: holds, holds_with_qualifier (a supporting sub-claim failed), rebutted (with the "
-        "defeater), contested (with sides) or not_in_force.", {"asset": "asset id", "as_of": AS_OF}, ["asset"]),
+        "defeater), contested (with sides) or not_in_force. A rule or claim id (R203, C10) gives its kind, doc and "
+        "record, and for a claim its standing.", {"asset": "asset id, or a rule or claim id", "as_of": AS_OF}, ["asset"]),
     _fn("decide", "For answers: decide one goal. Returns status (ANSWER, CONFLICT: rules or claims on both sides and none prevails, "
         "UNDERDETERMINED: a known term nothing defines, OUT_OF_SCOPE: an unknown predicate), value, sides of a "
         "conflict, the owners of the rules used, and qualifier (\"total over known facts in declared scope\" when "
@@ -181,11 +182,11 @@ T_TOOLS = [
         {"goal": "EDN goal", "as_of": AS_OF}, ["goal"]),
     _fn("why_not", "For a goal that does not hold: per rule that could conclude it, the conditions that failed.",
         {"goal": "EDN goal", "as_of": AS_OF}, ["goal"]),
-    _fn("rules", "For design: the rule base around a predicate, a term (term:<name>), a concept or an asset "
-        "(vendor:<id>, emp:<id>): every rule and claim that concludes, attacks or reads it, each with doc, owner, "
-        "kind, class, validity, which rules it prevails over or yields to and why, and what it depends on; and the "
+    _fn("rules", "For design: the rule base around a predicate, a term (term:<name>), a concept, an asset "
+        "(vendor:<id>, emp:<id>): every rule and claim that concludes, attacks or reads it (for a rule or claim id, "
+        "R203 or C10, that record and the conflicts it is in), each with doc, owner, kind, class, validity, which rules it prevails over or yields to and why, and what it depends on; and the "
         "conflicts the engine knows of (pairs with no priority either way, live wherever both bodies hold). "
-        "Reads the rules; evaluates nothing.", {"about": "predicate, term:<name>, concept, asset id, or an EDN goal "
+        "Reads the rules; evaluates nothing.", {"about": "predicate, term:<name>, concept, asset id, rule or claim id, or an EDN goal "
                                                 "pattern that narrows a predicate, e.g. [:capitalised \"K01\" ?a]"}, ["about"]),
     {"type": "function", "function": {"name": "summary", "description":
         "For design: decide an open goal over all its instances in one call: counts proven / refuted / contested, "

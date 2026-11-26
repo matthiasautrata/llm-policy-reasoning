@@ -99,8 +99,18 @@ def main():
     assert sm["counts"] == {"proven": 88, "refuted": 336, "contested": 1}, sm      # keys.json Q56
     er = json.loads(R.execute("T", 25, "summary", {"goal": "[:approved ?r]"})[0])
     assert er["status"] == "ERROR" and "filters" in er["error"], er
+    tr = json.loads(R.execute("T", 25, "summary", {"goal": "[:approved ?r]",
+                                                   "filters": json.dumps({"?r": {"concept": "request"}})})[0])
+    assert tr["status"] == "ERROR" and tr["error"].startswith("the domain request has more rows"), tr
+    ri = json.loads(R.execute("T", 25, "rules", {"about": "C10"})[0])                # PLAN-v3-bench-full §3a
+    assert [i["id"] for i in ri["rules"]] == ["C10"] and ri["predicates"] == ["complete"], ri
+    de = json.loads(R.execute("T", 25, "describe", {"asset": "R313"})[0])
+    assert de["kind"] == "superiority" and de["record"]["order"] == ["finance", "hr"], de
+    dc = json.loads(R.execute("T", 25, "describe", {"asset": "C10"})[0])
+    assert dc["kind"] == "claim" and [c["standing"] for c in dc["claims"]] == ["holds"], dc
     print("design tools: ok (T has rules and summary, described for design; decide and why for answers; "
-          "rules narrows to a pattern, summary takes a domain and explains a missing one)")
+          "rules narrows to a pattern, summary takes a domain and explains a missing or truncated one; "
+          "rules and describe take a rule or claim id)")
 
     from harness import openrouter as o, openai_batch as ob
     real = o.endpoint_prices

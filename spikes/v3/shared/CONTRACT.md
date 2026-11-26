@@ -25,12 +25,12 @@ the op) and `"sql_log"`: the SQL statements the op issued, each `{"concept", "sq
 | op | fields | result |
 |---|---|---|
 | `resolve_term` | `text` | `{status: concept\|none\|several, candidates: [{term, definition, owner}]}` |
-| `describe` | `asset` | `{asset, kind, doc, bindings, claims: [claim ids]}` |
+| `describe` | `asset` (or a rule or claim id) | `{asset, kind, doc, bindings, claims: [claim ids], record?}` |
 | `fetch` | `concept`, `filters` (object) | `{rows: [object], sql, params, row_count, truncated}` |
 | `decide` | `goal` (EDN text), `as_of`? | `{status, value, sides, why: [node], owners: [..], qualifier}` |
 | `why_not` | `goal`, `as_of`? | `{status, value, why_not: [node]}` |
-| `claims` | `asset`, `as_of`? | `{claims: [{id, standing, defeater, qualifier, sides, subclaims: [...]}]}` |
-| `rules` | `about` (predicate, `term:` id, concept, asset, or goal pattern) | `{status, about, predicates, concepts, rules: [item], read_by: [{id, head}], conflicts: [{predicate, sides}]}` |
+| `claims` | `asset` (or a claim id), `as_of`? | `{claims: [{id, standing, defeater, qualifier, sides, subclaims: [...]}]}` |
+| `rules` | `about` (predicate, `term:` id, concept, asset, rule or claim id, or goal pattern) | `{status, about, predicates, concepts, rules: [item], read_by: [{id, head}], conflicts: [{predicate, sides}]}` |
 | `summary` | `goal` (EDN text, open), `filters`? (domains), `sample`? (default 10), `as_of`? | `{status, goal, as_of, instances, counts, contested_roots, contested_roots_total, sample}` |
 | `add` | `edn` (EDN text: a vector of rule / claim records) | `{added: [ids]}` |
 | `with_hypothesis` | `add`? (EDN text), `withhold`? ([ids]), `ops` | `{results: [<result>, ...]}`; state afterwards is unchanged |
@@ -67,7 +67,10 @@ asset that no active claim links to; withholding a parent therefore lists its me
 predicate X; a concept by name or id, or the concept a term is bound to (`:concept`); an asset (claim
 `:about`), giving its active claims and their assertions' predicates; an EDN goal pattern
 (`[:capitalised "K01" ?a]`), its predicate narrowed to the records whose head (or read literal) unifies
-with the pattern. Nothing resolved: `UNDERDETERMINED` for a `term:` id or a known term's pattern, else
+with the pattern; an active rule or claim id (`R203`, `C10`), giving that one record as the item, the
+predicates it concludes, attacks or ranks (a claim: its assertion's), and the root conflicts it is a side of
+(PLAN-v3-bench-full §3a). The same id given to `describe` adds the item as `record` (kind is the rule's
+kind, or `claim`), and to `claims` gives that claim's standing on `as_of`. Nothing resolved: `UNDERDETERMINED` for a `term:` id or a known term's pattern, else
 `OUT_OF_SCOPE`. Items are the rules and claims with a role towards it:
 `concludes` (positive head), `attacks` (`:neg` head, defeater, incompatible), `reads` (a body literal,
 under `not` or an aggregate, uses the predicate or fetches the concept), `ranks` (a superiority rule
@@ -88,7 +91,8 @@ a list of values or `{concept, filters?, column?}` (rows of that concept, column
 instances are the cartesian product of the given domains; each is decided as a goal with the remaining
 variables open (proven: a binding exists; none: refuted). A goal whose candidates need fetch filters
 bound answers `ERROR` naming the concept, the keys and an example domain. A domain fetch that is
-truncated, or more than 20,000 instances, is an `ERROR`. `counts` is `{proven, refuted, contested}`.
+truncated (the message names the concept and says to narrow it by its filters or give a list of values), or
+more than 20,000 instances, is an `ERROR`. `counts` is `{proven, refuted, contested}`.
 `contested_roots` (at most 20, by instances descending) are `{goal, sides, instances}`: the conflicts the
 contested instances rest on. `sample` holds the first `sample` sorted bindings per status: a value for
 one variable, else `{"?v": value}`.

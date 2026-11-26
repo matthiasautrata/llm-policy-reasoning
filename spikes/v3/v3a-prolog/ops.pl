@@ -36,6 +36,11 @@ op_error(Op, defeat_cycle(Path), _{status:"ERROR", error:_{op:Op, violations:[V]
 op_error(_, E, _{status:"ERROR", error:S}) :- message_to_codes(E, S).
 
 message_to_codes(E, S) :- message_to_codes(E, [], Cs), !, string_codes(S, Cs).
+
+:- multifile prolog:error_message//1.
+prolog:error_message(domain_truncated(C)) -->
+    [ "the domain ~w has more rows than the fetch limit, so its instances cannot all be listed; narrow it with "-[C],
+      "its filters (e.g. a root centre or a status) or give a list of values" ].
 message_to_codes(E, S) :- format(string(S), "~q", [E]).
 message_to_codes(E, _, Cs) :- '$messages':translate_message(E, Ls, []), with_output_to(codes(Cs), print_message_lines(current_output, '', Ls)).
 
@@ -187,9 +192,10 @@ why_not(G, D, R) :-
 
 % ------------------------------------------------------------------ claims
 
-do_op("claims", Op, _{asset:A, claims:Cs}) :- !,
+do_op("claims", Op, _{asset:A, claims:Cs}) :- !,          % an asset's top claims, or one claim by id
     as_of(Op, D), A = Op.asset,
-    findall(C, ( top_claim(Id, A), active(Id), standing(Id, D, null, C) ), Cs).
+    (   rec_id(A, Id0), claim(Id0, _, _, _, _, _, _, _, _, _) -> Ids = [Id0] ; findall(Id, top_claim(Id, A), Ids) ),
+    findall(C, ( member(Id, Ids), active(Id), standing(Id, D, null, C) ), Cs).
 
 %!  standing(+Id, +D, +Role, -Dict): holds | holds_with_qualifier | rebutted | contested | not_in_force
 standing(Id, D, Role, R) :-
@@ -248,7 +254,18 @@ do_op("describe", Op, R) :- !, describe(Op.asset, R).
 describe(A, R) :-
     findall(C, top_claim(C, A), Cs),
     ( asset_meta(A, K, Doc, B) -> St = "ANSWER" ; K = null, Doc = null, B = null, St = "OUT_OF_SCOPE" ),
-    R = _{status:St, asset:A, kind:K, doc:Doc, bindings:B, claims:Cs}.
+    R0 = _{status:St, asset:A, kind:K, doc:Doc, bindings:B, claims:Cs},
+    ( rec_id(A, Id) -> rec_item(Id, I), R = R0.put(record, I) ; R = R0 ).    % a rule or claim id: its record
+
+%   rec_id(+Text, -Id): Text names an active rule or claim (R203, C10, C1.1).
+rec_id(T, Id) :- atom_string(Id, T), ( rule(Id, _, _, _, _) ; claim(Id, _, _, _, _, _, _, _, _, _) ), active(Id), !.
+
+%   rec_item(+Id, -Item): the record as `rules` lists it, with its roles on the predicates it concludes or ranks.
+rec_item(Id, I) :- rec_preds(Id, Ps), findall(Ro, ( member(P, Ps), role(P, Id, Ro) ), Rs0), sort(Rs0, Rs), item(Id-Rs, I).
+
+rec_preds(Id, Ps) :-
+    findall(P, (   rule(Id, K, H, _, M) -> ( K == superiority -> mget(pred, M, P) ; H \== none, pred_of(H, P) )
+               ;   claim(Id, A, _, _, _, _, _, _, _, _), pred_of(A, P) ), Ps0), sort(Ps0, Ps).
 
 asset_meta(A, K, Doc, null) :- asset(A, M), !, mget(kind, M, K), mget(doc, M, Doc).
 asset_meta(A, term, Doc, B) :- term(A, M), !, mget(definition, M, Doc), mget(concept, M, B, null).
@@ -260,6 +277,8 @@ asset_meta(A, table, Doc, null) :- slice(S), mget(tables, S, Ts), member(T, Ts),
 asset_meta(A, column, Doc, null) :-
     slice(S), mget(tables, S, Ts), member(T, Ts), mget(columns, T, Cols), member(M, Cols), mget(id, M, A), !,
     mget(doc, M, Doc).
+asset_meta(A, K, Doc, null) :- rec_id(A, Id), !,
+    ( rule(Id, K, _, _, M) -> true ; claim(Id, _, _, _, _, _, _, _, _, M), K = claim ), mget(doc, M, Doc, null).
 
 do_op("fetch", Op, _{concept:C, filters:Op.filters, rows:Rows, sql:Sql, params:Ps, row_count:N, truncated:Tr}) :- !,
     atom_string(C, Op.concept), dict_pairs(Op.filters, _, F),
@@ -272,6 +291,10 @@ do_op("fetch", Op, _{concept:C, filters:Op.filters, rows:Rows, sql:Sql, params:P
 %   it), from the loaded rule base alone (no evaluation). Rules that only read it are listed as id and head. conflicts: the opposing
 %   pairs (a supporter and an attacker of the same predicate whose heads can meet) with no superiority either
 %   way; each is a root conflict wherever both bodies hold (decide / summary find the instances).
+do_op("rules", Op, R) :- rec_id(Op.about, Id), !,            % a rule or claim by id: its record and its conflicts
+    rec_preds(Id, Ps), rec_item(Id, I),
+    findall(_{predicate:P, sides:[[X], [Y]]}, ( member(P, Ps), unresolved(P, X, Y), ( X == Id ; Y == Id ) ), Cf),
+    R = _{status:"ANSWER", about:Op.about, predicates:Ps, concepts:[], rules:[I], read_by:[], conflicts:Cf}.
 do_op("rules", Op, R) :- !,
     (   sub_string(Op.about, 0, _, _, "[")         % a goal pattern: only the records whose literal can meet it
     ->  edn_parse(Op.about, G0), edn_vars(G0, G, [], _), pred_of(G, P0),
