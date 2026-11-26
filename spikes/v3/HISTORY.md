@@ -433,6 +433,25 @@ Against the pilot (the pilot's 10 manager questions; gold reasons judged at medi
 5. Scoring: qualifier in correct, every decide key stating one (phase 17); strict and tolerant sides (17); numeric checks by subject and judge-confirmed (18); superseded failed records in cost only (19); gold reasons from keys where keys decide (20); a keyed verdict needs a core rule in its block, and a table row answers for its own id (20); refused calls cost nothing (21).
 6. The generator (phase 17): interactions grow with N, after §3b found programmes independent.
 
+### 22 Wrap-up (2026-11-26; 6ac7b00..`spike-v3-wrapup`)
+
+**Question.** Is the spike in a state to hand over: one record per topic, reproducible tables, a green gate, nothing secret, pushed?
+
+**Decisions and why.**
+- PLAN-v3-bench-full harvested into phases 12–21 and removed after tag `spike-v3-benchmark` (b3b6a35). This plan is harvested here and removed after tag `spike-v3-wrapup`.
+- RESULTS rewritten to the current state: System A briefly, then the benchmark (design, confirmatory runs, controls, judge validity, cost, post-hoc changes, limitations). The exploratory tables (pilot, batch 1, §3b) stay in phases 11, 14 and 16. The pre-fix memory table and the fetch "before" column are dropped (findings in phase 8, tables in RESULTS at `spike-v3-benchmark`).
+- Cost counts every record from the committed .gz, re-runs included, and both judgings of A4 in §3b′.
+- CLAUDE.md gains the bench gate (`selftest`, `check_bases`, `render_md`) and the rule "grade from keys where keys decide; the judge only where none does". bench/README gains the reproduction commands for every confirmatory run.
+- Effort (plan §4.3, answered, not run): OpenAI's model catalog (developers.openai.com/api/docs/models, read 2026-11-26) lists gpt-6.2-sol's efforts as low, medium, high, xhigh and max. RESULTS therefore says "up to effort high".
+
+**Removals (housekeeping rule).** No tracked file was uncited, so none was removed. Ignored local files removed: 22 judge-batch markers `bench/results/*.batch.json.batch_*.done` (score.py renames a collected batch to this and never reads it again), and the `__pycache__` directories under bench, harness, questions, render, verify, world, spikes/v3/shared and spikes/v3/v3a-prolog (with linkml). The plain `bench/results/*.jsonl` stay (score.py reads them, `gunzip -k` regenerates them).
+
+**Secrets.** `.env` is ignored (`git check-ignore`) and in no commit. No `sk-`, `sk-or-` or `Bearer` key pattern in the tree, in the diffs of the 77 unpushed commits, or in any of the 40 .gz blobs they add or change. The only raw hits are 2 substrings inside base64 `encrypted_content` (Responses API reasoning, b3f), preceded by base64 characters: chance matches, not keys.
+
+**Findings kept.** The full gate is green: reference (keys unchanged), accept checks 1, 3–8, the mutation run fails check 1, isolation (DuckDB), the negatives (`linkml/build.py`), the guard probe (2 of 2 guarded), `bench/selftest`, `check_bases` (N 200 slice 42/42), `render_md` (ids 156/156, 315/315). `make verify` and `make verify-v1` are green. Every confirmatory run re-scores from its .gz with `bench/score.py` (commands in bench/README), with no API calls.
+
+**Findings reversed.** "T is the cheapest arm per correct answer with every model" (draft RESULTS): at N 100, G costs $0.0007 against T's $0.0009.
+
 ## Platform lessons (platforms dropped, lessons kept)
 
 - **V3b, Clojure · Datahike · Malli.**
