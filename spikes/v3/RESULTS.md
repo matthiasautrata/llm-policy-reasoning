@@ -299,6 +299,116 @@ By the key's outcome, correct, at N 50 / N 200. Each cell reads 15/15 for true, 
 - Cost per correct family answer at N 200: T $0.0013, G $0.0017. Calls at the limit: F reaches it in 33 of 96 manager cells, T in 3, G in none.
 - Three repetitions on fixed items make this the first confirmatory comparison. It still covers one model and one generator; the strata at N 50 stop at k 4.
 
+## Variants, N 100 and a second model (PLAN-v3-bench-full §3c.2–4, §3d, 2026-11-26)
+
+Same items, scoring and judge as §3b′ (family F01–F16 and A4, 3 repetitions, A4 judged twice). The arms were frozen before these runs. Results: `bench/results/b3d-q`, `b3d-n100`, `b3d-glm`, `b3d-gtools`, `b3d-glm-a4` (`.jsonl.gz`, grades `.judge-medium.jsonl.gz` and `.2.jsonl.gz`). Refused or truncated records that were re-run count in cost only, shown as (+n).
+
+**The qualifier sentence (§3c.2, confirmatory; outcomes recorded before the run).** G-q and G+-q are G and G+ with one added sentence: "For every no, say whether it rests only on not finding something in the data." DeepSeek, N 200, family, of 48. Cost: $0.093.
+
+| arm | correct; tolerant | qualifier (of 42) | contested sides strict / tolerant (of 9) | false by absence (of 15) | by k: 1 / 2–3 / 4–5 / 6+ |
+|---|---|---|---|---|---|
+| G (§3b′) | 25; 26 | 27 | 2 / 3 | 0 | 9, 6, 7, 3 |
+| G-q | 26; 28 | 27 | 4 / 6 | 0 | 9, 6, 8, 3 |
+| G+ (§3b′) | 27; 28 | 27 | 3 / 4 | 0 | 9, 6, 9, 3 |
+| G+-q | 26; 28 | 27 | 2 / 4 | 0 | 9, 6, 8, 3 |
+| T (§3b′) | 46; 46 | 40 | 9 / 9 | 13 | 11, 11, 12, 12 |
+
+- The closure result stands: telling the model to qualify absence changes nothing. The plan's alternative ("the tags were nudged") does not apply.
+- The sentence only restates the task's own definition of `qualified` (`bench/run.py`, task instructions). The model reads it narrowly. It calls a "no" absence-based only when a record is missing. A "no" from a rule over known facts it calls plain: in F01, G-q writes "This is not an absence-based conclusion". The spec qualifies every such "no" ("total over known facts in declared scope", SEMANTICS.md). The gap is in applying the semantics, not in the wording of the request.
+
+**N 100 (§3c.3, replication).** DeepSeek, all arms. Family of 48. A4 has 3 sessions of 10 reasons; the first judging is given, the second in brackets. Cost: $0.327, judge $0.167. Self-agreement 0.96, kappa 0.93.
+
+| arm | correct; tolerant | qualifier (of 42) | sides strict (of 6) | by k: 1 / 2–3 / 4–5 / 6+ | A4 covered / missed / wrong (of 30) | manager cells at the limit |
+|---|---|---|---|---|---|---|
+| F | 3; 3 | 34 | 0 | 0, 3, 0, 0 | 0 / 11 / 19 (0 / 10 / 20) | 24 |
+| G | 40; 41 | 36 | 5 | 9, 8, 14, 9 | 20 / 0 / 10 (20 / 0 / 10) | 0 |
+| G+ | 39; 40 | 36 | 4 | 8, 7, 15, 9 | – | 0 |
+| T | 47; 47 | 42 | 6 | 11, 12, 15, 9 | 26 / 2 / 2 (27 / 1 / 2) | 1 |
+
+- G scores higher at N 100 than at N 50 or 200. This is the item mix, not an effect of N. N 100 has 2 absence items (6 cells) against 5 at N 200, and its disputes reach d 2–3 rather than d 4+ (strata below).
+- The absence result holds: G is 0 of 6 on false by absence, T 6 of 6. On contested keys G is 5 of 6, T 6 of 6. On true keys G is 26 of 27.
+- A4: G is wrong on GR7 (precedence; contested where no superior rule holds) and GR8 (the chain is contested, not false) in 6 of 6 gradings. T covers GR7 in 4 of 6, and GR8 in 1 of 6 (missed 3, wrong 2). F covers nothing.
+- Numeric checks reported, judge-confirmed: G 14, T 15, F 0 (of 15).
+
+**A second model (§3c.4 and §3d.1, replication).** GLM 5.3, N 200, arms G, G+ and T. Family: 3 repetitions, $1.82. A4: 1 repetition only, $0.408, judge $0.044. Self-agreement 0.90, kappa 0.74.
+
+| arm | correct; tolerant | qualifier (of 42) | sides strict (of 9) | by k: 1 / 2–3 / 4–5 / 6+ | true / absence / contested (of 15 / 15 / 9) | A4 covered / missed / wrong (of 10) | $ per correct |
+|---|---|---|---|---|---|---|---|
+| G | 25; 27 | 27 | 3 | 9, 6, 8, 2 | 13, 0, 3 | 6 / 0 / 4 (8 / 0 / 2) | 0.026 |
+| G+ | 21; 23 | 27 | 2 | 9, 6, 6, 0 | 10, 0, 2 | 7 / 0 / 3 (7 / 0 / 3) | 0.032 |
+| T | 40; 40 | 42 | 9 | 11, 12, 8, 9 | 12, 11, 9 | 9 / 0 / 1 (8 / 1 / 1) | 0.012 |
+
+- The pattern is DeepSeek's. G and G+ never qualify absence and lose contested sides. T qualifies every key and has every contested side.
+- GLM's T is weaker than DeepSeek's on true keys (12 of 15) and at k 4–5. G is wrong on GR2 and GR7 in A4 in both judgings; T only on GR7. With one A4 session per arm this is a signal.
+- Per correct family answer GLM costs about 9× DeepSeek for T ($0.012 against $0.0013) and 15× for G ($0.026 against $0.0017); T is the cheapest arm with either model.
+
+**Rules as a lookup tool (§3d.2, confirmatory; outcomes recorded before the run).** G-tools has G's material without the rules and claims sections. It looks them up with T's `rules` tool, which evaluates nothing, and applies them itself with `sql`. DeepSeek, N 200. Cost: $0.148, judge $0.068. Self-agreement 0.90, kappa 0.67.
+
+| arm | correct; tolerant | qualifier (of 42) | sides strict (of 9) | by k: 1 / 2–3 / 4–5 / 6+ | true / absence / contested | A4 covered / missed / wrong (of 30) |
+|---|---|---|---|---|---|---|
+| G (§3b′) | 25; 26 | 27 | 2 | 9, 6, 7, 3 | 14, 0, 2 | 25 / 0 / 5 (24 / 0 / 6) |
+| G-tools | 27; 29 | 27 | 3 | 9, 6, 9, 3 | 15, 0, 3 | 25 / 0 / 5 (24 / 0 / 6) |
+| T (§3b′) | 46; 46 | 40 | 9 | 11, 11, 12, 12 | 15, 13, 9 | 25 / 0 / 5 (25 / 0 / 5) |
+
+- G-tools scores with G, not with T. Being able to navigate the rule base is not what T gains. What T gains is exact evaluation, so the engine is needed.
+- G-tools is wrong on GR7 in 5 of 6 gradings, as G is. It reports 15 of 15 numeric checks and cites all 102 of its refs. 3 of 48 manager cells reach the call limit.
+
+**Strata by N (§3d.3).** Family items, of 16:
+
+| N | k 1 / 2–3 / 4–5 / 6+ | d 0 / 1 / 2–3 / 4+ |
+|---|---|---|
+| 50 | 4 / 10 / 2 / 0 | 11 / 5 / 0 / 0 |
+| 100 | 4 / 4 / 5 / 3 | 10 / 0 / 6 / 0 |
+| 200 | 4 / 4 / 4 / 4 | 9 / 0 / 0 / 7 |
+
+Each N fills different strata: d 1 occurs only at N 50, and d 4+ only at N 200. A comparison across N therefore compares item sets as well as N.
+
+**Checks on the arms (§3d.3).**
+- G+'s functions do not reach the families. `gplus.py` has five functions (request_status, approved_total, spend, role_limit, breaching_requests), all over the slice rules R1xx–R3xx. On the family items G+ is G with unused tools, as its scores show.
+- T's A4 sessions (§3b′) did not re-derive rules in SQL. Every SQL query flagged as inlining reads a governed table (cap, vendor_status, emp violation). T made 27–40 calls to rules, decide and why per session, and at most 9 SQL calls. Of the 5 turns that reached the limit, 4 used `summary`. T was not enumerating in SQL in place of `summary`.
+
+## State of the benchmark (PLAN-v3-bench-full §3c.5, 2026-11-26)
+
+| run | items | models, N | reps | status |
+|---|---|---|---|---|
+| pilot | M01–M10, A1–A3 | DeepSeek; 25, 200 | 1 | exploratory |
+| batch 1 (§3, §3a) | M01–M31, A1–A3 | DeepSeek; 25, 200 | 1 | exploratory |
+| §3b | F01–F12, A4 (old generator) | DeepSeek; 50, 200 | 1 | exploratory |
+| §3b′ | F01–F16, A4 | DeepSeek; 50, 200 | 3 | confirmatory (outcomes recorded before) |
+| §3c.2 G-q, G+-q | F01–F16 | DeepSeek; 200 | 3 | confirmatory (outcomes recorded before) |
+| §3d.2 G-tools | F01–F16, A4 | DeepSeek; 200 | 3 | confirmatory (outcomes recorded before) |
+| §3c.3 | F01–F16, A4 | DeepSeek; 100 | 3 | replication |
+| §3c.4, §3d.1 | F01–F16; A4 | GLM 5.3; 200 | 3; A4 1 | replication |
+
+**Main result.** Across two models and three N, the rule arms do not differ on values. They differ on closure:
+- a "no" that rests on absence is qualified by T in 13 of 15 (DeepSeek N 200), 6 of 6 (N 100) and 11 of 15 (GLM), and by G, G+, G-q, G+-q and G-tools in 0 of every count;
+- contested sides are complete for T on every contested key, and degrade for G as disputes accumulate.
+
+The two controls rule out the obvious explanations:
+- asking for the qualifier does not produce it (G-q);
+- giving G the rule lookup without the evaluator does not close the gap (G-tools).
+
+F answers almost nothing without the rules, which shows what the material contributes.
+
+**Changes made after seeing results**, each with its reason:
+1. Forced final answer (§1.4). A turn at the call limit gets one last call with tools forbidden, so it is scored rather than left empty.
+2. T's design tools `rules` and `summary` (§2). Evaluation-only tools could not navigate the rule base, a gap any deployment has. The pilot's T is reported as `T-eval`.
+3. Id resolution in `rules`, `describe` and `claims` (§3a). T asked for records by id and got OUT_OF_SCOPE. Four cells were re-run.
+4. Gold-reason rewrites:
+   - A1 GR2, A2 GR9 and GR12 (§3a): unsatisfiable, since they asked for a dated approver chain the data cannot give;
+   - A4 GR6 (§3c.1): worded for one dispute at N 50.
+5. Scoring fixes:
+   - the qualifier is part of correct, and every decide key states one (§3b′);
+   - strict and tolerant sides (§3b′);
+   - numeric checks name a subject and need the judge's confirmation (§3c.1; F's coincidental 8,000 and 0);
+   - failed records superseded by a re-run count in cost only (§3d.3).
+6. The generator (§3b′). Interactions now grow with N, after §3b found programmes independent. §3b is exploratory for this reason.
+
+**Open:**
+- GLM A4 has 1 repetition of the planned 3;
+- every confirmatory comparison uses one generator;
+- the judge is one model, not yet checked against hand grading (`bench/grading/grades.json`).
+
 ## Built vs native
 
 - **Native in SWI-Prolog:**
