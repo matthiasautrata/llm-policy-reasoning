@@ -93,6 +93,16 @@ def main():
         [x["function"]["name"] for x in R.tools_for("F")] == ["sql"], "F: the data model and sql, no rules (§3b′)"
     print("floor arm F: data model and sql only: ok")
 
+    g, q = R.system_prompt("G", 200, "manager"), R.system_prompt("G-q", 200, "manager")
+    assert q == g + " " + R.Q_SENTENCE and R.system_prompt("G+-q", 200, "analyst").endswith(R.Q_SENTENCE) and \
+        R.tools_for("G+-q") == R.tools_for("G+"), "G-q, G+-q: G and G+ with the one sentence (§3c.2)"
+    gt = R.system_prompt("G-tools", 200, "manager")
+    assert "## 4 Rules and claims" in gt and "**G001**" in g and "**G001**" not in gt and "## 6 Example" in gt and \
+        [x["function"]["name"] for x in R.tools_for("G-tools")] == ["rules", "sql"] and \
+        "error" in R.execute("G-tools", 200, "decide", {"goal": "x"})[0] and \
+        "rules" in json.loads(R.execute("G-tools", 200, "rules", {"about": "u02_cleared"})[0]), "G-tools (§3d.2)"
+    print("variants G-q, G+-q (one sentence more) and G-tools (rules lookup and sql, no rules text): ok")
+
     assert R.T_NAMES == ("resolve_term", "describe", "decide", "why", "why_not", "rules", "summary"), R.T_NAMES
     desc = {t["function"]["name"]: t["function"]["description"] for t in R.T_TOOLS}
     assert all(desc[n].startswith("For design") for n in ("rules", "summary")) and \

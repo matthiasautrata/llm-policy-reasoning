@@ -11,6 +11,11 @@ question (M..). Arms:
   G+   G plus the trusted functions of bench/gplus.py (fn_*)
   F    the floor (PLAN-v3-bench-full §3b′): the data model only (the material's section 1), no rules, claims or
        how they combine, and `sql`; what the data alone answers
+  G-q, G+-q   G and G+ with one sentence more in the task instructions (PLAN-v3-bench-full §3c.2): "For every
+       no, say whether it rests only on not finding something in the data."
+  G-tools  navigation without evaluation (§3d.2): G's material without its rules and claims (sections 4 and 5),
+       which it reaches through T's `rules` tool instead, with the predicates the rule base concludes; and `sql`.
+       No decide, why, why_not or summary: it applies the rules itself
   T    the data model only (the material's section 1), the goal vocabulary of the base, and the engine's
        tools resolve_term, describe, decide, why, why_not, and (PLAN-v3-bench-full §2, after the pilot) the
        design tools rules and summary, through spikes/v3/v3a-prolog/cli, plus `sql`
@@ -61,6 +66,8 @@ BENCH = ROOT / "bench"
 MODELS = ["deepseek/deepseek-v4.1-flash", "z-ai/glm-5.3"]
 JUDGE = "openai@gpt-6.2-sol"         # via the Batch API (half price), paid from OpenAI credits
 ARMS = ["G", "G+", "T", "F"]
+VARIANTS = ["G-q", "G+-q", "G-tools"]        # run only when named (PLAN-v3-bench-full §3c.2, §3d.2)
+BASE = {"G-q": "G", "G+-q": "G+"}            # the arm a variant's material and tools are
 NS = [25, 50, 100, 200]
 TASKS = ["A1", "A2", "A3", "A4"]
 ANALYST_ARMS = ["G", "T"]      # G+ targets manager questions (Matthias, 2026-11-26)
@@ -145,10 +152,29 @@ def vocabulary(n):
     return "\n".join(o), len(rules), len(claims), S["today"]
 
 
+Q_SENTENCE = "For every no, say whether it rests only on not finding something in the data."
+G_TOOLS_NOTE = """\
+## 4 Rules and claims
+
+The {rules} rules and {claims} claims are not listed here. The `rules` tool looks them up by predicate, term \
+(term:<name>), concept, asset (vendor:<id>, emp:<id>), or rule or claim id, and returns each with its doc, owner, kind, \
+validity, what it prevails over or yields to, and the conflicts it is in. It evaluates nothing: apply the rules \
+yourself with `sql`. The predicates the rules conclude: {preds}.
+
+"""
+
+
 def system_prompt(arm, n, kind):
     md = (BENCH / "material" / f"N{n:03d}.md").read_text()
     data_model = md[md.index("## 1 Data model"):md.index("## 2 Glossary")]
-    if arm == "F":
+    q, arm = arm in BASE, BASE.get(arm, arm)
+    if arm == "G-tools":
+        _, nr, nc, _ = vocabulary(n)
+        S, rules, _ = integrity.rule_base([str(stem(n).with_suffix(".edn")), EXT])
+        preds = sorted({(r["head"][1] if r["head"][0] == "neg" else r["head"])[0] for r in rules if r.get("head")})
+        s = (md[:md.index("## 4 Rules")] + G_TOOLS_NOTE.format(rules=nr, claims=nc, preds=", ".join(f"`{x}`" for x in preds))
+             + md[md.index("## 6 Example queries"):])
+    elif arm == "F":
         s = data_model
     elif arm in ("G", "G+"):
         s = md
@@ -159,7 +185,7 @@ def system_prompt(arm, n, kind):
         voc, nr, nc, today = vocabulary(n)
         s = T_HEAD.format(rules=nr, claims=nc, today=today) + "\n" + data_model + voc
     how = "SQL or engine call" if arm == "T" else "SQL"
-    return s + "\n## Your task\n\n" + (MANAGER if kind == "manager" else ANALYST.format(how=how))
+    return s + "\n## Your task\n\n" + (MANAGER if kind == "manager" else ANALYST.format(how=how)) + (" " + Q_SENTENCE if q else "")
 
 
 def _fn(name, desc, props, req):
@@ -208,7 +234,9 @@ T_NAMES = tuple(t["function"]["name"] for t in T_TOOLS if t is not SQL_TOOL)
 
 
 def tools_for(arm):
-    return {"G": [SQL_TOOL], "F": [SQL_TOOL], "G+": [SQL_TOOL] + gplus.tools(), "T": T_TOOLS}[arm]
+    arm = BASE.get(arm, arm)
+    return {"G": [SQL_TOOL], "F": [SQL_TOOL], "G+": [SQL_TOOL] + gplus.tools(), "T": T_TOOLS,
+            "G-tools": [t for t in T_TOOLS if t["function"]["name"] == "rules"] + [SQL_TOOL]}[arm]
 
 
 # ---------------------------------------------------------------- tool execution (logged here)
@@ -297,9 +325,9 @@ def execute(arm, n, name, args):
         a = json.loads(args) if isinstance(args, str) else (args or {})
         if name == "sql":
             out = run_sql(a["query"])
-        elif name.startswith("fn_") and arm == "G+":
+        elif name.startswith("fn_") and BASE.get(arm, arm) == "G+":
             out = run_fn(name[3:], a)
-        elif arm == "T" and name in T_NAMES:
+        elif arm == "T" and name in T_NAMES or arm == "G-tools" and name == "rules":
             out = run_t(n, name, a)
         else:
             raise KeyError(f"no tool {name} in arm {arm}")
@@ -671,6 +699,7 @@ def tok_cost(t, p):
 def cell_tokens(cal, kind, arm, n):
     """The pilot's mean cell; G+ analyst and F use G's (F's prompt is smaller: an upper bound); N between pilot sizes
     interpolated linearly in N."""
+    arm = {"G-tools": "T"}.get(arm, BASE.get(arm, arm))     # G-tools: T's figures, an upper bound on its tool results
     arm = "G" if (kind, arm) == ("analyst", "G+") or arm == "F" else arm
     ns = sorted(m for (k, a, m) in cal["cells"] if (k, a) == (kind, arm))
     lo = max([m for m in ns if m <= n] or ns[:1]); hi = min([m for m in ns if m >= n] or ns[-1:])
@@ -714,8 +743,8 @@ def main():
     openrouter.load_env()                 # first: refuses a .env that git does not ignore
     ap = argparse.ArgumentParser()
     ap.add_argument("--estimate", action="store_true", help="print the cost estimate of the selected cells and exit")
-    ap.add_argument("--arms", nargs="+", default=ARMS, choices=ARMS)
-    ap.add_argument("--analyst-arms", nargs="+", default=ANALYST_ARMS, choices=ARMS, help="arms for analyst tasks")
+    ap.add_argument("--arms", nargs="+", default=ARMS, choices=ARMS + VARIANTS)
+    ap.add_argument("--analyst-arms", nargs="+", default=ANALYST_ARMS, choices=ARMS + VARIANTS, help="arms for analyst tasks")
     ap.add_argument("--models", nargs="+", default=MODELS)
     ap.add_argument("--n", type=int, nargs="+", default=[25, 200])
     ap.add_argument("--items", nargs="*", help="A1 A2 A3 M01 ...; default all")
