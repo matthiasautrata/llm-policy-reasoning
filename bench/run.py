@@ -32,7 +32,9 @@ Clients that make no calls (tests, PLAN-v3-bench-run §1): stub:key answers with
 analyst figures in the text), stub:tool calls one tool first, stub:abstain answers UNDERDETERMINED;
 fake:<usd>[:<mode>] is stub:tool charging <usd> per call and sleeping 20 ms, with modes raise (on the second
 call), badargs (tool arguments not JSON), nofunc (a tool call without "function"), notools (a reply without a
-"tool_calls" field), trunc (reports 10 prompt tokens).
+"tool_calls" field), trunc (reports 10 prompt tokens), empty (an empty final reply).
+A turn whose final reply is empty is marked "empty" (score.py counts it as an empty reply): recorded, not retried,
+not an error (seen on gpt-oss:20b, PLAN-v3-bench-run §3).
 """
 import argparse, concurrent.futures as cf, datetime, decimal, json, pathlib, re, shlex, subprocess, sys, threading, time, traceback
 
@@ -352,7 +354,7 @@ def stub_client(model, item, arm):
                   {"id": f"call_{turn['n']}", "type": "function", "function": fn}]
             msg, content = {"role": "assistant", "content": "", "tool_calls": tc}, ""
         else:
-            content, tc = reply(msgs), []
+            content, tc = ("" if fault == "empty" else reply(msgs)), []
             msg = {"role": "assistant", "content": content}
         res = {"content": content, "reasoning": "", "finish_reason": "stop", "model_served": model, "provider": "stub",
                "prompt_tokens": 10 if fault == "trunc" else sum(len(json.dumps(x)) for x in msgs) // 4,
@@ -493,7 +495,7 @@ def session(client, model, arm, n, kind, item, budget, max_tokens, context=None)
                     tlog.append(dict(log, turn=t, call=len(calls)))
                     msgs.append({"role": "tool", "tool_call_id": tc["id"], "content": out})
             turns.append({"turn": t, "content": res["content"], "reasoning": res.get("reasoning") or "",
-                          "tool_limit": bool(tcs)})
+                          "tool_limit": bool(tcs), "empty": not tcs and not (res["content"] or "").strip()})
     except BudgetStop as e:
         err = "budget"
         print(f"  {e}", flush=True)

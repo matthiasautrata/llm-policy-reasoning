@@ -328,6 +328,7 @@ def report(recs, jpath, gradedir):
     for r in recs:
         k = (r["arm"], r["model"], r["n"])
         c = cells[k]
+        c["empty"] += sum(1 for x in r["turns"] if not x.get("tool_limit") and not (x["content"] or "").strip())
         c["cost"] += r["cost"]; c["tokens"] += r["prompt_tokens"] + r["completion_tokens"]; c["seconds"] += r["seconds"]
         if r["error"]:
             c["errors"] += 1
@@ -351,8 +352,8 @@ def report(recs, jpath, gradedir):
                 c["cite"] += got; c["cite_n"] += n
             if r["arm"] == "T":
                 g, n = inlining(r); c["inl"] += g; c["sql"] += n; c["inl_sessions"] += g > 0
-    L.append("| arm | model | N | manager correct | status | qualifier | silent | analyst checks reported / naive / computed / absent | gold covered / missed / wrong | refs cited | T inlining (sessions; SQL) | cost | $ per correct manager | $ per covered reason | errors |")
-    L.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
+    L.append("| arm | model | N | manager correct | status | qualifier | silent | analyst checks reported / naive / computed / absent | gold covered / missed / wrong | refs cited | T inlining (sessions; SQL) | cost | $ per correct manager | $ per covered reason | empty replies | errors |")
+    L.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
     for k in sorted(cells):
         c = cells[k]
         per_m = f"{c['m_cost'] / c['m_correct']:.4f}" if c["m_correct"] else "–"
@@ -361,7 +362,7 @@ def report(recs, jpath, gradedir):
         L.append(f"| {k[0]} | {k[1].split('/')[-1]} | {k[2]} | {c['m_correct']}/{c['m']} | {c['m_status']}/{c['m']} | "
                  f"{c['m_qual']}/{c['m_qual_n']} | {c['m_silent']} | {c['k_reported']} / {c['k_naive']} / {c['k_computed']} / {c['k_absent']} "
                  f"(judge {c['k_judge']}) | {c['gr_covered']} / {c['gr_missed']} / {c['gr_wrong']} ({c['a_judged']}/{c['a']} judged) | "
-                 f"{c['cite']}/{c['cite_n']} | {inl} | {c['cost']:.4f} | {per_m} | {per_a} | {c['errors']} |")
+                 f"{c['cite']}/{c['cite_n']} | {inl} | {c['cost']:.4f} | {per_m} | {per_a} | {c['empty']} | {c['errors']} |")
     L.append("\nConsistency (manager pairs that must agree): " + "; ".join(
         f"{a} {m.split('/')[-1]} N{n} {ok}/{tot}" for (a, m, n), (ok, tot) in sorted(consistency(recs).items())))
     # mechanical vs judge on the mechanically checkable checks

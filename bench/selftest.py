@@ -8,7 +8,7 @@
 3. Faults, each recorded with its cost and without losing the record: a client that raises (type, message and
    traceback recorded, the failed call's reservation counted); a tool call without "function"; tool arguments
    that are not JSON (returned to the model, the session goes on); a reply without "tool_calls" (taken as final);
-   a reply reporting far fewer prompt tokens than were sent ("truncated").
+   a reply reporting far fewer prompt tokens than were sent ("truncated"); an empty final reply (flagged, counted).
 4. Keys: .env is git-ignored; the loader refuses a file git does not ignore or others can read, loads the
    values, and leaves variables already set alone.
 5. Endpoints: the OpenRouter body is v2's; OpenAI's has no OpenRouter fields; a Batch output line parses into the
@@ -61,7 +61,11 @@ def main():
     assert r["error"] is None and r["answer"], r
     p, (r,) = cells(d, "trunc", "fake:0.01:trunc", ["M01"], 1)
     assert r["error"].startswith("truncated") and r["cost"] == 0.01, r
-    print("faults: ok (raise, nofunc, badargs, notools, trunc recorded with their cost)")
+    p, (r,) = cells(d, "empty", "fake:0.01:empty", ["M01"], 1)
+    assert r["error"] is None and r["turns"][0]["empty"], r
+    p = run("bench/score.py", str(d / "empty.jsonl"))
+    assert p.returncode == 0 and "| empty replies |" in p.stdout and "| 1 | 0 |" in p.stdout, p.stdout + p.stderr
+    print("faults: ok (raise, nofunc, badargs, notools, trunc recorded with their cost; empty reply flagged and counted)")
 
     from harness import openrouter as o, openai_batch as ob
     import os
