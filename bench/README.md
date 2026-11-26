@@ -10,7 +10,8 @@ From the repo root:
 .venv/bin/python bench/check_bases.py                                # gate, base keys, slice keys on every base
 .venv/bin/python bench/render_md.py                                  # material/N*.md for arm G, completeness check
 .venv/bin/python bench/gplus.py                                      # G+ trusted functions against the oracle
-.venv/bin/python spikes/v3/shared/reference.py --tasks bench/tasks/A1.json bench/tasks/A2.json bench/tasks/A3.json   # tasks/A*.keys.json
+.venv/bin/python bench/gen_items.py                                  # questions/family.json, tasks/A4.json (§3b)
+.venv/bin/python spikes/v3/shared/reference.py --tasks bench/tasks/A1.json bench/tasks/A2.json bench/tasks/A3.json bench/tasks/A4.json   # tasks/A*.keys.json
 ```
 
 ## Bases (§2)
@@ -58,6 +59,11 @@ Every turn adds one sentence naming the example (cc0049, its parent cc0009, e077
 
 The values do not depend on N, because generated rules never conclude a slice predicate.
 
+Since PLAN-v3-bench-full §3b, `gen_items.py` writes two item files on the generated families. Both hold one variant per N ≥ 50 under `by_n`, because N 25 has no generated families and gen.py seeds each N separately. An id names the same slot at every N:
+
+- `questions/family.json` holds 12 manager questions per N (F01–F12), two per pattern: dated limit version, exception, counter-exception, owner dispute without and with superiority, and claim tree. They are sampled from `bases/N*.questions.json` and keyed by `bases/N*.keys.json` under their `base` id, and each records k, the rules and claims on the key's proof path. A pattern with too few instances at an N (exception and counter at N 50) is filled from plain clearance, and the variant's `pattern` says so.
+- `tasks/A4.json` is an analyst task on programme P01, the only programme at every N. Its turns cover the dated limits, the clearance exception and counter-exception, capitalisation under the category disputes, and claims about the exception's vendor. Its gold reasons are derived from the family structure. Its checks are keyed per N by `reference.py --tasks` (`A4.keys.json`, by N), with naive values for one limit all year and for clearance without the exception. The family oracle is used only to pick the worked examples.
+
 `questions/manager.json` holds the slice questions rephrased as a manager would ask, with department scope. It has 31 questions. The keys stay in `spikes/v3/shared/keys.json` (extended), under the slice id. The file lists the six excluded questions and why: four hypothesis questions and two root-level totals.
 
 ## Arms, scoring and pilot (§5–§8)
@@ -74,7 +80,7 @@ The values do not depend on N, because generated rules never conclude a slice pr
 
 Each cell is one resumable JSONL record holding every call (model, provider, tokens, cost, time) and every tool call as executed. Prices are fetched at start from OpenRouter's public endpoints list and recorded in the config: per field, the highest over the endpoints the quantization filter (default fp8) admits is the reserve price, the lowest the typical one. Before each call the budget reserves the call's maximum cost (the prompt at 2.5 characters per token plus `max_tokens`, at the reserve price) and settles it with the actual cost after, so concurrent workers never exceed `--budget`. A live run first estimates its cells from the pilot's tokens and calls per cell (at the typical price times the pilot's charged-to-typical ratio, plus one forced call per turn the pilot ended at the limit) and refuses before any call if the estimate exceeds what is left of the budget. A turn that reaches the call limit (8 manager, 12 analyst calls with tools) ends with one more call with tools forbidden (`tool_choice: none`) asking for the answer from what was found (`forced_final`). `score.py` reports the cells and turns that reached it, by arm, as their own outcome. Every exception is recorded with its type, message, traceback and the cost already spent; a call that fails keeps its reservation as its cost. A reply whose reported prompt tokens are fewer than one per 8 characters sent, or (Ollama) that fills 98 % of the context, fails the cell with `truncated`.
 
-The judge is `openai@gpt-6.2-sol` through the OpenAI Batch API (`harness/openai_batch.py`, half price), with its own budget (the OpenAI credits); `stub:key`, `stub:tool`, `stub:abstain`, `stub:judge` and `fake:<usd>[:raise|badargs|nofunc|notools|trunc]` stand in for models in tests. `score.py` scores the manager answers against the keys and the analyst checks mechanically. It grades gold reasons with the judge (`judge_rubric.md`) and reports consistency, silent interpretation, inlining and cost per correct answer.
+The judge is `openai@gpt-6.2-sol` through the OpenAI Batch API (`harness/openai_batch.py`, half price), with its own budget (the OpenAI credits); `stub:key`, `stub:tool`, `stub:abstain`, `stub:judge` and `fake:<usd>[:raise|badargs|nofunc|notools|trunc]` stand in for models in tests. `score.py` scores the manager answers against the keys and the analyst checks mechanically. It grades gold reasons with the judge (`judge_rubric.md`) and reports consistency, silent interpretation, inlining and cost per correct answer. Since §3b, `--judge-out <results>.judge-medium.2.jsonl` writes a second, independent judging of the same sessions; the report finds it beside the first (or takes `--judge-second`), shows both coverages and the judge's agreement with itself (share and Cohen's kappa over the reasons). Rows are split by item group (core, family, A4), and family questions are also tabled by k.
 
 A contested check counts as reported only on a line that also says contested (or conflict, disputed); a plain figure counts as the naive answer. `--judge-reasoning` (default medium, HISTORY phase 11) sets the judge's `reasoning_effort`; grades go to `<results>.judge-<effort>.jsonl` (low: `<results>.judge.jsonl`), so levels can be compared on the same sessions. Results in `bench/results/` are committed gzipped (`gzip -k -9`; `gunzip -k` before scoring); the plain JSONL and the batch state stay local.
 

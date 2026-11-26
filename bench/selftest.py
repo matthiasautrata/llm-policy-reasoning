@@ -19,7 +19,8 @@
    and the typical the lowest over the endpoints the quantization filter admits; a model without one is refused;
    the estimate is calibrated from the pilot (G+ analyst as G, N interpolated).
 6. Scoring: the key stub scores every manager question, mechanical check and consistency pair as correct; the
-   abstaining stub does not. The stub judge writes parseable grades and the export runs.
+   abstaining stub does not, family items (F*, A4) are asked from N 50 only (PLAN-v3-bench-full §3b). The stub
+   judge writes parseable grades, a second judging is compared with the first, and the export runs.
 """
 import json, pathlib, subprocess, sys, tempfile
 
@@ -194,10 +195,17 @@ def main():
         full = all(m) and all(v == "reported" for v in k) and all(ok == n for ok, n in c)
         assert full == want, (model, sum(m), len(m), k.count("reported"), len(k), c)
         assert not any(r["kind"] == "analyst" and r["arm"] == "G+" for r in recs)
+        fam = {(r["n"], r["item"]) for r in recs if r["item"].startswith("F") or r["item"] == "A4"}
+        assert fam and not any(n == 25 for n, _ in fam), sorted(fam)[:5]      # families start at N 50 (§3b)
         print(f"scoring {model}: manager {sum(m)}/{len(m)}, checks {k.count('reported')}/{len(k)}: ok")
     out = d / "key.jsonl"
     p = run("bench/score.py", str(out), "--judge", "--judge-model", "stub:judge")
     assert p.returncode == 0 and "Mechanical checks vs judge" in p.stdout, p.stdout + p.stderr
+    p = run("bench/score.py", str(out), "--judge", "--judge-model", "stub:judge", "--judge-out", str(d / "key.judge-medium.2.jsonl"))
+    assert p.returncode == 0, p.stderr
+    p = run("bench/score.py", str(out))                 # finds the second judging beside the first
+    assert p.returncode == 0 and "Judge vs itself" in p.stdout and "kappa 1.00" in p.stdout, p.stdout[-800:] + p.stderr
+    assert "manager correct by k" in p.stdout and "| family |" in p.stdout and "| A4 |" in p.stdout, p.stdout[-800:]
     p = run("bench/score.py", str(out), "--export", str(d / "grading"))
     assert p.returncode == 0 and len(list((d / "grading").glob("S*.md"))) == 10, p.stdout + p.stderr
     print("judge (stub) and export: ok")

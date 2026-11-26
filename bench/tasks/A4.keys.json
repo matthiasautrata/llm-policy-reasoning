@@ -1,0 +1,241 @@
+{
+ "100": {
+  "A4.K1": {
+   "value": 8000
+  },
+  "A4.K10": {
+   "value": {
+    "defeater": null,
+    "qualifier": [],
+    "standing": "holds"
+   }
+  },
+  "A4.K11": {
+   "value": {
+    "defeater": null,
+    "qualifier": [
+     "H12.3"
+    ],
+    "standing": "holds_with_qualifier"
+   }
+  },
+  "A4.K12": {
+   "value": {
+    "defeater": null,
+    "qualifier": [],
+    "standing": "holds"
+   }
+  },
+  "A4.K2": {
+   "naive": 8000,
+   "value": 20000
+  },
+  "A4.K3": {
+   "value": {
+    "sides": null,
+    "status": "ANSWER",
+    "value": true
+   }
+  },
+  "A4.K4": {
+   "value": {
+    "sides": null,
+    "status": "ANSWER",
+    "value": false
+   }
+  },
+  "A4.K5": {
+   "value": {
+    "sides": null,
+    "status": "ANSWER",
+    "value": true
+   }
+  },
+  "A4.K6": {
+   "naive": 1206,
+   "value": 335
+  },
+  "A4.K7": {
+   "value": {
+    "sides": [
+     [
+      "G002"
+     ],
+     [
+      "G003"
+     ]
+    ],
+    "status": "CONFLICT",
+    "value": null
+   }
+  },
+  "A4.K8": {
+   "value": {
+    "sides": null,
+    "status": "ANSWER",
+    "value": true
+   }
+  },
+  "A4.K9": {
+   "value": {
+    "defeater": "H8.4",
+    "qualifier": [],
+    "standing": "rebutted"
+   }
+  }
+ },
+ "200": {
+  "A4.K1": {
+   "value": 8000
+  },
+  "A4.K10": {
+   "value": {
+    "defeater": null,
+    "qualifier": [],
+    "standing": "holds"
+   }
+  },
+  "A4.K11": {
+   "value": {
+    "defeater": null,
+    "qualifier": [],
+    "standing": "holds"
+   }
+  },
+  "A4.K12": {
+   "value": {
+    "sides": [
+     [
+      "H10.1"
+     ],
+     [
+      "H10.2"
+     ]
+    ],
+    "status": "CONFLICT",
+    "value": null
+   }
+  },
+  "A4.K2": {
+   "naive": 8000,
+   "value": 60000
+  },
+  "A4.K3": {
+   "value": {
+    "sides": null,
+    "status": "ANSWER",
+    "value": true
+   }
+  },
+  "A4.K4": {
+   "value": {
+    "sides": null,
+    "status": "ANSWER",
+    "value": false
+   }
+  },
+  "A4.K5": {
+   "value": {
+    "sides": null,
+    "status": "ANSWER",
+    "value": true
+   }
+  },
+  "A4.K6": {
+   "naive": 2399,
+   "value": 640
+  },
+  "A4.K7": {
+   "value": {
+    "sides": [
+     [
+      "G002"
+     ],
+     [
+      "G003"
+     ]
+    ],
+    "status": "CONFLICT",
+    "value": null
+   }
+  },
+  "A4.K8": {
+   "value": {
+    "sides": null,
+    "status": "ANSWER",
+    "value": true
+   }
+  },
+  "A4.K9": {
+   "value": {
+    "defeater": null,
+    "qualifier": [
+     "H13.3"
+    ],
+    "standing": "holds_with_qualifier"
+   }
+  }
+ },
+ "50": {
+  "A4.K1": {
+   "value": 30000
+  },
+  "A4.K2": {
+   "naive": 30000,
+   "value": 45000
+  },
+  "A4.K3": {
+   "value": {
+    "sides": null,
+    "status": "ANSWER",
+    "value": true
+   }
+  },
+  "A4.K4": {
+   "value": {
+    "sides": null,
+    "status": "ANSWER",
+    "value": false
+   }
+  },
+  "A4.K5": {
+   "value": {
+    "sides": null,
+    "status": "ANSWER",
+    "value": true
+   }
+  },
+  "A4.K6": {
+   "naive": 2258,
+   "value": 569
+  },
+  "A4.K7": {
+   "value": {
+    "sides": [
+     [
+      "G002"
+     ],
+     [
+      "G003"
+     ]
+    ],
+    "status": "CONFLICT",
+    "value": null
+   }
+  },
+  "A4.K8": {
+   "value": {
+    "sides": null,
+    "status": "ANSWER",
+    "value": true
+   }
+  },
+  "A4.K9": {
+   "value": {
+    "defeater": null,
+    "qualifier": [],
+    "standing": "holds"
+   }
+  }
+ }
+}

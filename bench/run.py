@@ -60,7 +60,7 @@ MODELS = ["deepseek/deepseek-v4.1-flash", "z-ai/glm-5.3"]
 JUDGE = "openai@gpt-6.2-sol"         # via the Batch API (half price), paid from OpenAI credits
 ARMS = ["G", "G+", "T"]
 NS = [25, 50, 100, 200]
-TASKS = ["A1", "A2", "A3"]
+TASKS = ["A1", "A2", "A3", "A4"]
 ANALYST_ARMS = ["G", "T"]      # G+ targets manager questions (Matthias, 2026-11-26)
 PRICES = {}             # OpenRouter model -> fetched prices (load_prices), recorded in each record's config
 CALIB = BENCH / "results" / "pilot.jsonl.gz"                 # the estimate's tokens and calls per cell (HISTORY 11)
@@ -313,21 +313,48 @@ def execute(arm, n, name, args):
 # ---------------------------------------------------------------- items and keys
 
 def items():
+    """every item by id; one on the generated families (family.json, A4) holds a variant per N under by_n (item())"""
     out = {t: json.loads((BENCH / "tasks" / f"{t}.json").read_text()) for t in TASKS}
-    for q in json.loads((BENCH / "questions/manager.json").read_text())["questions"]:
-        out[q["id"]] = q
+    for f in ("manager", "family"):
+        for q in json.loads((BENCH / "questions" / f"{f}.json").read_text())["questions"]:
+            out[q["id"]] = q
     return out
 
 
-def task_keys(t):
-    return json.loads((BENCH / "tasks" / f"{t}.keys.json").read_text())
+ITEMS = None
 
 
-SLICE_KEYS = None
+def _items():
+    global ITEMS
+    if ITEMS is None:
+        ITEMS = items()
+    return ITEMS
+
+
+def item(iid, n):
+    """the item as asked at N: its by_n variant merged in (with n), None if it has none at N (N 25: no families)"""
+    it = _items()[iid]
+    if "by_n" not in it:
+        return it
+    v = it["by_n"].get(str(n))
+    return None if v is None else {**{k: x for k, x in it.items() if k != "by_n"}, **v, "n": n}
+
+
+def task_keys(t, n=None):
+    k = json.loads((BENCH / "tasks" / f"{t}.keys.json").read_text())
+    return k[str(n)] if "by_n" in _items()[t] else k
+
+
+SLICE_KEYS, BASE_KEYS = None, {}
 
 
 def manager_key(q):
+    """the slice key (keys.json, extended) or, for a family question, the base question's key"""
     global SLICE_KEYS
+    if "base" in q:
+        if q["n"] not in BASE_KEYS:
+            BASE_KEYS[q["n"]] = json.loads((BENCH / "bases" / f"N{q['n']:03d}.keys.json").read_text())
+        return BASE_KEYS[q["n"]][q["base"]]
     if SLICE_KEYS is None:
         SLICE_KEYS = json.loads((ROOT / "spikes/v3/shared/keys.json").read_text())["extended"]
     return SLICE_KEYS[q["slice"]]
@@ -364,7 +391,7 @@ def stub_client(model, item, arm):
 
     def reply(msgs):
         if "turns" in item:
-            keys, t = task_keys(item["id"]), sum(m["role"] == "user" and m["content"] != FINAL_NOW for m in msgs)
+            keys, t = task_keys(item["id"], item.get("n")), sum(m["role"] == "user" and m["content"] != FINAL_NOW for m in msgs)
             figs = [f"{c['component']}: {json.dumps(keys[c['id']]['value'])}" for c in item["checks"] if c["turn"] == t]
             return "Design.\n" + "\n".join(figs) if mode != "abstain" else "I cannot design this."
         o = key_answer(manager_key(item)) if mode != "abstain" else {"status": "UNDERDETERMINED", "value": None}
@@ -718,8 +745,11 @@ def main():
         for arm in a.arms:
             for n in a.n:
                 for iid in (a.items or list(its)):
+                    it = item(iid, n)
+                    if it is None:                     # no variant at this N (family items start at N 50)
+                        continue
                     for rep in range(a.reps):
-                        kind = "analyst" if "turns" in its[iid] else "manager"
+                        kind = "analyst" if "turns" in it else "manager"
                         if kind == "analyst" and arm not in a.analyst_arms:
                             continue
                         base = {"bench": "v3", "kind": kind, "arm": arm, "model": model, "n": n, "item": iid, "rep": rep}
@@ -743,8 +773,8 @@ def main():
         m = base["model"]
         rec = dict(base, config=config, ts=time.strftime("%Y-%m-%dT%H:%M:%S"))
         try:
-            client = stub_client(m, its[base["item"]], base["arm"]) if m.startswith(("stub:", "fake:")) else live_client(config)
-            rec.update(session(client, m, base["arm"], base["n"], base["kind"], its[base["item"]], budget,
+            client = stub_client(m, item(base["item"], base["n"]), base["arm"]) if m.startswith(("stub:", "fake:")) else live_client(config)
+            rec.update(session(client, m, base["arm"], base["n"], base["kind"], item(base["item"], base["n"]), budget,
                                a.max_tokens, a.context if endpoint_of(m)[0] == "ollama" else None))
         except Exception as e:      # noqa: BLE001 — session() records its own; this is the last line of defence
             rec.update(error=f"{type(e).__name__}: {e}"[:600], cost=0.0, prompt_tokens=0, completion_tokens=0,

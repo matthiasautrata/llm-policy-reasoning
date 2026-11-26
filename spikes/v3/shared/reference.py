@@ -742,14 +742,19 @@ class Bench(Ref):
         return self.decide(q["goal"])
 
 
-def bench_keys(stem):
-    """bench/bases/N*.{params,questions}.json + the base's claims -> keys per question"""
+def bench_ref(stem):
+    """the family oracle for one base: bench/bases/N*.params.json + the base's claims"""
     stem = pathlib.Path(stem)
     S, X, _ = load()
     base = plain(E.loads(stem.with_suffix(".edn").read_text()))
     ours = {c["id"] for c in S["claims"]}
-    R = Bench(S, X, json.loads(stem.with_suffix(".params.json").read_text()), [c for c in base["claims"] if c["id"] not in ours])
-    return {q["id"]: R.answer(q) for q in json.loads(stem.with_suffix(".questions.json").read_text())}
+    return Bench(S, X, json.loads(stem.with_suffix(".params.json").read_text()), [c for c in base["claims"] if c["id"] not in ours])
+
+
+def bench_keys(stem):
+    """bench/bases/N*.{params,questions}.json + the base's claims -> keys per question"""
+    R = bench_ref(stem)
+    return {q["id"]: R.answer(q) for q in json.loads(pathlib.Path(stem).with_suffix(".questions.json").read_text())}
 
 
 # ---------------------------------------------------------------------------- analyst task components (PLAN-v3-bench §4)
@@ -799,23 +804,35 @@ TASK = {
     "own_cap_breaching_requests": lambda R, a, d: sum(                              # naive: own centre's cap only
         1 for r in _pending(R, a[0]) if R.booked_total(R.emp[R.req[r]["requester"]]["cc"]) + R.req[r]["amount"]
         > R.cc[R.emp[R.req[r]["requester"]]["cc"]]["cap"]),
-    "approved_total": lambda R, a, d: dict(zip(("status", "proven_part"), R.approved_agg(a[0], "sum")[:2])),
+    "approved_total": lambda R, a, d: dict(zip(("status", "value"), R.approved_agg(a[0], "sum")[:2])),
     "request_outcomes": lambda R, a, d: _outcomes(R, a[0]),
     "not_approved_reasons": lambda R, a, d: _reasons(R, a[0]),
     "role_limit": lambda R, a, d: R.limit_on(a[0], d),
     "cost_centre_of": lambda R, a, d: dict(zip(("status", "value", "sides"), R.cost_centre_of(a[0], d)[:3])),
     "vendor_status": lambda R, a, d: next((s for v, s, f, t in R.vstat if v == a[0] and f <= d <= t), None),
     "claim_standing": lambda R, a, d: {k: v for k, v in R.standing(a[0], d).items() if k in ("standing", "defeater", "qualifier")},
+    # on a generated base (Bench; a task with by_n, PLAN-v3-bench-full §3b)
+    "decide": lambda R, a, d: {k: v for k, v in R.decide(list(a)).items() if k in ("status", "value", "sides")},
+    "programme_limit": lambda R, a, d: next(v["limit"] for v in R.prog[a[0]]["versions"]
+                                            if v["valid_from"] <= R.req[a[1]]["date"] <= v["valid_to"]),
+    "programme_limit_first": lambda R, a, d: R.prog[a[0]]["versions"][0]["limit"],   # naive: one limit all year
+    "cleared_count": lambda R, a, d: _cleared(R, a[0], a[1]),
+    "cleared_count_no_exception": lambda R, a, d: _cleared(R, a[0], a[1], naive=True),  # naive: base rule only
 }
 
 
-def task_keys(path):
-    """bench/tasks/A*.json -> {check id: {value, naive?}} (as_of: valid time, default today; known_at: only the claims
-    asserted by then; field: one entry of a dict value; naive: the value of the named wrong design)"""
-    S, X, _ = load()
-    R = Ref(S, X)
+def _cleared(R, P, ven, naive=False):
+    """requests of the programme's category from vendor ven that are cleared under P (naive: by the base rule alone)"""
+    p = R.prog[P]
+    rs = [r for r, q in R.req.items() if q["category"] == p["category"] and q["vendor"] == ven]
+    if naive:
+        return sum(1 for r in rs if R.limit_ok(P, r) and R.vendor_cleared(r)[0])
+    return sum(1 for r in rs if R.decide(["programme_cleared", P, r])["value"] is True)
+
+
+def _check_keys(R, checks):
     out = {}
-    for k in json.loads(pathlib.Path(path).read_text())["checks"]:
+    for k in checks:
         RR = _known(R, k["known_at"]) if k.get("known_at") else R
         d = k.get("as_of") or k.get("known_at") or R.today
         v = TASK[k["call"][0]](RR, k["call"][1:], d)
@@ -823,6 +840,17 @@ def task_keys(path):
         if k.get("naive"):
             out[k["id"]]["naive"] = TASK[k["naive"][0]](RR, k["naive"][1:], d)
     return out
+
+
+def task_keys(path):
+    """bench/tasks/A*.json -> {check id: {value, naive?}}, per N for a task with by_n (as_of: valid time, default today; known_at: only the claims
+    asserted by then; field: one entry of a dict value; naive: the value of the named wrong design)"""
+    task = json.loads(pathlib.Path(path).read_text())
+    if "by_n" in task:                                  # one variant per generated base: {N: {check id: ...}}
+        bases = HERE.parents[2] / "bench/bases"
+        return {n: _check_keys(bench_ref(bases / f"N{int(n):03d}"), v["checks"]) for n, v in task["by_n"].items()}
+    S, X, _ = load()
+    return _check_keys(Ref(S, X), task["checks"])
 
 
 if __name__ == "__main__":

@@ -15,7 +15,10 @@ per gold reason are counted mechanically.
 Further measures: cross-question consistency (pairs of manager questions whose answers must agree whatever they
 are), silent interpretation (an undefined or ambiguous term answered as decided), inlining (T's own SQL over the
 tables the rules govern), cost and tokens per correct answer / covered reason.
-Judge agreement: bench/grading/grades.json, once Matthias fills it, against the judge's grades.
+Judge agreement: bench/grading/grades.json, once Matthias fills it, against the judge's grades; and the judge
+against itself when a second judging exists (--judge --judge-out <grades>.2.jsonl, PLAN-v3-bench-full §3b).
+Cells are reported per item set: core (the slice's, at every N), family (F*, on the generated families, with a
+table by k) and A4 (PLAN-v3-bench-full §3b).
 """
 import argparse, collections, json, pathlib, re, sys, time
 
@@ -58,7 +61,7 @@ def sides(x):
 
 
 def score_manager(rec):
-    key, a = B.manager_key(B.items()[rec["item"]]), rec.get("answer") or {}
+    key, a = B.manager_key(B.item(rec["item"], rec["n"])), rec.get("answer") or {}
     o = {"parsed": bool(a)}
     if "standing" in key:
         o.update(type="claim", status_ok=a.get("standing") == key["standing"],
@@ -135,7 +138,7 @@ def found(pats, text):
 
 
 def score_checks(rec):
-    task, keys = B.items()[rec["item"]], B.task_keys(rec["item"])
+    task, keys = B.item(rec["item"], rec["n"]), B.task_keys(rec["item"], rec["n"])
     text = {t["turn"]: t["content"] for t in rec["turns"]}
     tools = collections.defaultdict(str)
     for t in rec["tools"]:
@@ -161,7 +164,7 @@ def score_checks(rec):
 
 def cited(rec):
     """per gold reason: its refs (rules and claims) cited in any reply up to its last turn"""
-    task = B.items()[rec["item"]]
+    task = B.item(rec["item"], rec["n"])
     out = {}
     for g in task["gold"]:
         refs = {r for r in g["refs"] if IDS.fullmatch(r)}
@@ -179,7 +182,7 @@ def inlining(rec):
 # ---------------------------------------------------------------- judge
 
 def judge_messages(rec):
-    task, keys = B.items()[rec["item"]], B.task_keys(rec["item"])
+    task, keys = B.item(rec["item"], rec["n"]), B.task_keys(rec["item"], rec["n"])
     parts = ["# Task\n"]
     for t in task["turns"]:
         parts.append(f"Turn {t['n']}: {t['text']} {t['example']}")
@@ -200,7 +203,7 @@ def judge_messages(rec):
 def stub_judge(rec):
     """grades from the mechanical checks; every reason covered (tests only)"""
     mech = score_checks(rec)
-    o = {"status": "graded", "reasons": [{"id": g["id"], "grade": "covered", "evidence": ""} for g in B.items()[rec["item"]]["gold"]],
+    o = {"status": "graded", "reasons": [{"id": g["id"], "grade": "covered", "evidence": ""} for g in B.item(rec["item"], rec["n"])["gold"]],
          "checks": [{"id": k, "grade": {"reported": "reported", "naive": "wrong"}.get(v, "absent")} for k, v in mech.items()]}
     return {"content": json.dumps(o), "cost": 0.0, "model_served": "stub:judge", "provider": "stub",
             "prompt_tokens": 0, "completion_tokens": 0, "seconds": 0.0}
@@ -300,7 +303,7 @@ def export(recs, outdir, k=10):
     sheet = {}
     for j, r in enumerate(pick, 1):
         sid = f"S{j:02d}"
-        task = B.items()[r["item"]]
+        task = B.item(r["item"], r["n"])
         md = [f"# {sid}: task {r['item']} ({task['title']})\n",
               "Graded blind: the arm, model and N are in `index.json`, not here.\n"]
         for t, rep in zip(task["turns"], r["turns"]):
@@ -325,6 +328,20 @@ def agreement(gradedir, jg):
     for sid, grades in human.items():
         j = {x["id"]: x["grade"] for x in (jg.get(json.dumps(idx[sid])) or {}).get("reasons", [])}
         pairs += [(h, j.get(gid)) for gid, h in grades.items() if h]
+    return kappa(pairs)
+
+
+def self_agreement(jg, jg2):
+    """two judgings of the same sessions: per gold reason, the same grade?"""
+    pairs = []
+    for of, g in jg.items():
+        if of in jg2:
+            b = {x["id"]: x["grade"] for x in jg2[of].get("reasons", [])}
+            pairs += [(x["grade"], b.get(x["id"])) for x in g.get("reasons", [])]
+    return kappa(pairs)
+
+
+def kappa(pairs):
     if not pairs:
         return None
     po = sum(a == b for a, b in pairs) / len(pairs)
@@ -335,12 +352,17 @@ def agreement(gradedir, jg):
 
 # ---------------------------------------------------------------- report
 
-def report(recs, jpath, gradedir):
-    jg = judged(jpath)
+def group(iid):
+    """the item set: the slice's (core, at every N) or one on the generated families (§3b)"""
+    return "family" if iid.startswith("F") else "A4" if iid == "A4" else "core"
+
+
+def report(recs, jpath, gradedir, jpath2=None):
+    jg, jg2 = judged(jpath), judged(jpath2)
     L = []
     cells = collections.defaultdict(lambda: collections.Counter())
     for r in recs:
-        k = (arm(r), r["model"], r["n"])
+        k = (arm(r), r["model"], r["n"], group(r["item"]))
         c = cells[k]
         c["empty"] += sum(1 for x in r["turns"] if (x.get("forced_final") or not x.get("tool_limit"))   # pre-§1.4 records:
                           and not (x["content"] or "").strip())                                     # limit turns not final
@@ -362,22 +384,28 @@ def report(recs, jpath, gradedir):
             j = jg.get(json.dumps(B.cell(r)))
             for x in (j or {}).get("reasons", []):
                 c["gr_" + x["grade"]] += 1
+            for x in (jg2.get(json.dumps(B.cell(r))) or {}).get("reasons", []):
+                c["gr2_" + x["grade"]] += 1
             c["a_judged"] += bool(j)
             for got, n in cited(r).values():
                 c["cite"] += got; c["cite_n"] += n
             if r["arm"] == "T":
                 g, n = inlining(r); c["inl"] += g; c["sql"] += n; c["inl_sessions"] += g > 0
-    L.append("| arm | model | N | manager correct | status | qualifier | silent | analyst checks reported / naive / computed / absent | gold covered / missed / wrong | refs cited | T inlining (sessions; SQL) | cost | $ per correct manager | $ per covered reason | empty replies | errors |")
-    L.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
+    L.append("| arm | model | N | items | manager correct | status | qualifier | silent | analyst checks reported / naive / computed / absent | gold covered / missed / wrong | refs cited | T inlining (sessions; SQL) | cost | $ per correct manager | $ per covered reason | empty replies | errors |")
+    L.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
     for k in sorted(cells):
         c = cells[k]
         per_m = f"{c['m_cost'] / c['m_correct']:.4f}" if c["m_correct"] else "–"
         per_a = f"{c['a_cost'] / c['gr_covered']:.4f}" if c["gr_covered"] else "–"
         inl = f"{c['inl_sessions']}; {c['inl']}/{c['sql']}" if k[0] == "T" else "–"
-        L.append(f"| {k[0]} | {k[1].split('/')[-1]} | {k[2]} | {c['m_correct']}/{c['m']} | {c['m_status']}/{c['m']} | "
+        g2 = f"; 2nd {c['gr2_covered']} / {c['gr2_missed']} / {c['gr2_wrong']}" if jg2 else ""
+        L.append(f"| {k[0]} | {k[1].split('/')[-1]} | {k[2]} | {k[3]} | {c['m_correct']}/{c['m']} | {c['m_status']}/{c['m']} | "
                  f"{c['m_qual']}/{c['m_qual_n']} | {c['m_silent']} | {c['k_reported']} / {c['k_naive']} / {c['k_computed']} / {c['k_absent']} "
-                 f"(judge {c['k_judge']}) | {c['gr_covered']} / {c['gr_missed']} / {c['gr_wrong']} ({c['a_judged']}/{c['a']} judged) | "
+                 f"(judge {c['k_judge']}) | {c['gr_covered']} / {c['gr_missed']} / {c['gr_wrong']} ({c['a_judged']}/{c['a']} judged{g2}) | "
                  f"{c['cite']}/{c['cite_n']} | {inl} | {c['cost']:.4f} | {per_m} | {per_a} | {c['empty']} | {c['errors']} |")
+    kt = k_table(recs)
+    if kt:
+        L.append("\n" + kt)
     L.append("\n" + limit_table(recs))
     L.append("\nConsistency (manager pairs that must agree): " + "; ".join(
         f"{a} {m.split('/')[-1]} N{n} {ok}/{tot}" for (a, m, n), (ok, tot) in sorted(consistency(recs).items())))
@@ -393,6 +421,10 @@ def report(recs, jpath, gradedir):
                     agree += {"reported": "reported", "naive": "wrong"}.get(v, "absent") == jc[cid]
     if tot:
         L.append(f"\nMechanical checks vs judge: {agree}/{tot} agree.")
+    sa = self_agreement(jg, jg2) if jg2 else None
+    if sa:
+        L.append(f"\nJudge vs itself (a second judging, {jpath2}): {sa['agreement']:.2f} agreement, kappa {sa['kappa']:.2f} "
+                 f"over {sa['n']} reasons.")
     ag = agreement(gradedir, jg) if gradedir else None
     L.append(f"\nJudge vs hand grading: {ag['agreement']:.2f} agreement, kappa {ag['kappa']:.2f} over {ag['n']} reasons."
              if ag else "\nJudge vs hand grading: not graded yet (bench/grading/grades.json).")
@@ -404,6 +436,24 @@ def report(recs, jpath, gradedir):
 def arm(r):
     """T-eval: T before the design tools (the pilot; no rules / summary), reported apart (PLAN-v3-bench-full §2.3)."""
     return "T-eval" if r["arm"] == "T" and "rules" not in r.get("config", {}).get("t_tools", ()) else r["arm"]
+
+
+def k_table(recs):
+    """family questions (§3b): manager correct by k, the rules and claims on the key's proof path"""
+    c = collections.defaultdict(lambda: [0, 0])
+    for r in recs:
+        if r["kind"] == "manager" and not r["error"] and group(r["item"]) == "family":
+            x = c[(arm(r), r["model"], r["n"], B.item(r["item"], r["n"])["k"])]
+            x[0] += score_manager(r)["correct"]; x[1] += 1
+    if not c:
+        return ""
+    ks = sorted({k[3] for k in c})
+    L = ["Family questions, manager correct by k (rules and claims on the proof path):", "",
+         "| arm | model | N | " + " | ".join(f"k = {k}" for k in ks) + " |", "|---|---|---|" + "---|" * len(ks)]
+    for a, m, n in sorted({k[:3] for k in c}):
+        L.append(f"| {a} | {m.split('/')[-1]} | {n} | " + " | ".join(
+            (lambda x: f"{x[0]}/{x[1]}" if x[1] else "–")(c.get((a, m, n, k), [0, 0])) for k in ks) + " |")
+    return "\n".join(L)
 
 
 def limit_table(recs):
@@ -436,6 +486,8 @@ def main():
     ap.add_argument("--judge", action="store_true")
     ap.add_argument("--judge-model", default=B.JUDGE)
     ap.add_argument("--judge-out")
+    ap.add_argument("--judge-second", help="a second judging of the same sessions, for the judge's agreement with itself "
+                                           "(default <grades>.2.jsonl if it exists)")
     ap.add_argument("--judge-reasoning", default=JUDGE_REASONING, choices=["low", "medium", "high", "xhigh"],
                     help="reasoning_effort; grades go to <results>.judge-<effort>.jsonl (low: <results>.judge.jsonl, as the pilot)")
     ap.add_argument("--budget", type=float, default=2.0, help="USD cap on the judge's spend (OpenAI credits; its files only)")
@@ -453,7 +505,8 @@ def main():
     if a.export:
         export(recs, a.export)
         return
-    txt = report(recs, jpath, a.grading)
+    j2 = a.judge_second or (str(pathlib.Path(jpath).with_suffix(".2.jsonl")) if pathlib.Path(jpath).with_suffix(".2.jsonl").exists() else None)
+    txt = report(recs, jpath, a.grading, j2)
     print(txt)
     if a.report:
         pathlib.Path(a.report).write_text(txt + "\n")
