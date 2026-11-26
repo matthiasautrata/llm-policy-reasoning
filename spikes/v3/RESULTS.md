@@ -207,6 +207,31 @@ The reference keys `summary` (Q56–Q60, five new keys in `keys.json`, `changed`
 
 The call limit is the same for every arm; `score.py` reports the cells and turns that reach it as their own outcome, by arm (pilot: 21 of 108 turns).
 
+## Benchmark batch 1 (PLAN-v3-bench-full §3, 2026-11-26)
+
+DeepSeek v4.1 Flash, N 25 and 200, repetition 1, arms G, G+ and T on all 31 manager questions and A1–A3, judge `gpt-6.2-sol` at medium. 204 cells, no errors, no empty replies; $0.536 OpenRouter (estimate $1.20), judge $0.295 (estimate $0.20; one judge reply was invalid JSON and was graded again). Results: `bench/results/b1.jsonl.gz`, grades `b1.judge-medium.jsonl.gz`. One repetition: a signal, not a result.
+
+| arm | N | manager correct | gold reasons covered / missed / wrong (A1–A3, 34) | turns at the call limit (manager; analyst) |
+|---|---|---|---|---|
+| G | 25 | 27/31 | 30 / 0 / 4 | 2/31; 2/12 |
+| G | 200 | 25/31 | 30 / 0 / 4 | 4/31; 2/12 |
+| G+ | 25 | 28/31 | 29 / 0 / 5 | 1/31; 2/12 |
+| G+ | 200 | 28/31 | 28 / 2 / 4 | 1/31; 2/12 |
+| T | 25 | 30/31 | 25 / 3 / 6 | 2/31; 2/12 |
+| T | 200 | 28/31 | 23 / 2 / 9 | 1/31; 2/12 |
+
+Against the pilot (same model; the pilot's 10 manager questions, gold reasons judged at medium):
+
+| arm | manager N 25 / 200 (of 10) | gold covered N 25 / 200 |
+|---|---|---|
+| G, pilot → batch 1 | 5 / 6 → 7 / 6 | 26 / 23 → 30 / 30 |
+| T-eval (pilot) → T | 7 / 8 → 10 / 8 | 25 / 18 → 25 / 23 |
+
+- The forced final answer (§1.4) changed G most: every turn at the limit now has a reply, and G's A1 at N 200 went from 7/13 to 13/13. The pilot's "G degrades at N 200" does not recur in batch 1.
+- T uses the design tools (321 `rules`, 141 `summary` calls; none over the result cap). A2 at N 200: 12 `decide` calls instead of 238, gold 3/12 → 8/12. A1 GR6 and GR10 (vendor exceptions, mid-year transfer), missed by T-eval at both N, are covered at both N.
+- T leads on manager questions and trails G on analyst gold reasons (25 and 23 against 30 and 30). Its misses are spread (A1 GR2, GR11; A2 GR6, GR9, GR12; A3 GR6).
+- Every arm reaches the analyst call limit in 2 of 12 turns; manager turns at the limit are mostly wrong for G (0/6 correct) and mostly right for G+ and T (4/5).
+
 ## Built vs native
 
 - **Native in SWI-Prolog:**
