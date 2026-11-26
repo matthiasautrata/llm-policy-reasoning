@@ -211,7 +211,7 @@ The call limit is the same for every arm; `score.py` reports the cells and turns
 
 DeepSeek v4.1 Flash, N 25 and 200, repetition 1, arms G, G+ and T on all 31 manager questions and A1–A3, judge `gpt-6.2-sol` at medium. 204 cells, no errors, no empty replies. Results: `bench/results/b1.jsonl.gz`, grades `b1.judge-medium.jsonl.gz`. One repetition: a signal, not a result.
 
-§3a revised three gold reasons after the first judging (A1 GR2, A2 GR9 and GR12; `bench/tasks/A1.json`, `A2.json`), added rule and claim ids to T's `rules` and `describe`, re-ran T's two A1 cells (the only analyst cells where T asked for a record by id) and re-judged all 18 analyst sessions. The superseded T cells and grades are in `b1.pre3a.jsonl.gz` and `b1.judge-medium.pre3a.jsonl.gz`. Cost: $0.536 for the batch (estimate $1.20), $0.047 for the re-run; judge $0.295 and then $0.281 (estimate $0.20).
+§3a revised three gold reasons after the first judging (A1 GR2, A2 GR9 and GR12; `bench/tasks/A1.json`, `A2.json`), added rule and claim ids to T's `rules` and `describe`, re-ran the four T cells that had asked for a record by id (A1 at N 25 and 200; M14 and M21 at N 200, M21 wrong before, right after) and re-judged all 18 analyst sessions. The superseded T cells and grades are in `b1.pre3a.jsonl.gz` and `b1.judge-medium.pre3a.jsonl.gz`. Cost: $0.536 for the batch (estimate $1.20), $0.048 for the re-runs; judge $0.295 and then $0.281 (estimate $0.20).
 
 | arm | N | manager correct | gold reasons covered / missed / wrong (A1–A3, 34) | before §3a | turns at the call limit (manager; analyst) |
 |---|---|---|---|---|---|
@@ -220,7 +220,7 @@ DeepSeek v4.1 Flash, N 25 and 200, repetition 1, arms G, G+ and T on all 31 mana
 | G+ | 25 | 28/31 | 29 / 1 / 4 | 29 / 0 / 5 | 1/31; 2/12 |
 | G+ | 200 | 28/31 | 30 / 2 / 2 | 28 / 2 / 4 | 1/31; 2/12 |
 | T | 25 | 30/31 | 27 / 1 / 6 | 25 / 3 / 6 | 2/31; 2/12 |
-| T | 200 | 28/31 | 29 / 1 / 4 | 23 / 2 / 9 | 1/31; 2/12 |
+| T | 200 | 29/31 | 29 / 1 / 4 | 23 / 2 / 9 | 1/31; 2/12 |
 
 Against the pilot (same model; the pilot's 10 manager questions, gold reasons judged at medium before §3a):
 
