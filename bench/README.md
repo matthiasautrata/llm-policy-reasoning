@@ -1,6 +1,6 @@
 # v3 benchmark (PLAN-v3-bench)
 
-Built 2026-11-25 on branch spike/v3. The design is in `notes/warrant-layer/benchmark-design.md`; the build plan is HISTORY phase 10 (`PLAN-v3-bench.md` at tag `spike-v3-bench`), the current plan `spikes/v3/PLAN-v3-bench-run.md`. The engine is reached only through `spikes/v3/v3a-prolog/cli`.
+Built 2026-11-25 on branch spike/v3. The design is in `notes/warrant-layer/benchmark-design.md`; the build plan is HISTORY phase 10 (`PLAN-v3-bench.md` at tag `spike-v3-bench`), hardening and the pilot HISTORY phase 11 (`PLAN-v3-bench-run.md` at tag `spike-v3-bench-run`), the current plan `spikes/v3/PLAN-v3-bench-full.md`. The engine is reached only through `spikes/v3/v3a-prolog/cli`.
 
 From the repo root:
 
@@ -78,4 +78,4 @@ The judge is `openai@gpt-6.2-sol` through the OpenAI Batch API (`harness/openai_
 
 A contested check counts as reported only on a line that also says contested (or conflict, disputed); a plain figure counts as the naive answer. `--judge-reasoning` (default low) sets the judge's `reasoning_effort`; any other level writes `<results>.judge-<effort>.jsonl`, so levels can be compared on the same sessions. Results in `bench/results/` are committed gzipped (`gzip -k -9`; `gunzip -k` before scoring); the plain JSONL and the batch state stay local.
 
-Pilot (`PLAN-v3-bench-run.md` §5): DeepSeek, A1–A3 and ten manager questions, N = 25 and 200, 72 cells; estimate $1.22 OpenRouter ($0.76 with caching) and $0.53 judge. Not run yet.
+Pilot (HISTORY phase 11): DeepSeek, A1–A3 and ten manager questions, N = 25 and 200, 72 cells, run 2026-11-26 for $0.60 (`results/pilot*.jsonl.gz`); its analyst grades are withdrawn (empty replies at the call limit).

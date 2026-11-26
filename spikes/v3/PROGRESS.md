@@ -9,7 +9,8 @@ Newest first. `HISTORY.md` holds the earlier phases. `RESULTS.md` describes the 
 - [x] Memory and aggregate cost (2026-11-25; HISTORY phase 8, tag `spike-v3-memory`).
 - [x] One SQL form per concept; scope: the system answers questions about the data, the root aggregate is a documented residual (2026-11-25; HISTORY phase 9, tag `spike-v3-sqlform`).
 - [x] Benchmark build; pilot estimate over $3, not run (2026-11-25; HISTORY phase 10, tag `spike-v3-bench`).
-- [ ] Benchmark hardening, endpoints, smoke tests, pilot (`PLAN-v3-bench-run.md`).
+- [x] Benchmark hardening, endpoints, smoke tests, DeepSeek pilot (2026-11-26; HISTORY phase 11, tag `spike-v3-bench-run`).
+- [ ] Fixes from the pilot, T's design tools, DeepSeek full run (`PLAN-v3-bench-full.md`).
 
 ## Questions for Matthias
 

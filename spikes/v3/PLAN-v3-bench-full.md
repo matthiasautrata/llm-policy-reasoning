@@ -1,0 +1,58 @@
+# v3 benchmark — fixes from the pilot, T's design tools, model selection, re-pilot, full run
+
+Plan for Claude Code, 2026-11-26 (Matthias). Branch `spike/v3`. Standing rules: `CLAUDE.md`. First, harvest `PLAN-v3-bench-run.md` into `HISTORY.md` (one entry, with the pilot table) and delete it. **STOP after each marked step.** OpenRouter remaining: $9.33 (hard cap). OpenAI judge: from Matthias's credits.
+
+## 1 Fixes from the pilot (no calls)
+
+1. Reservation price per model: the highest fp8 price in the model's endpoints list, dated.
+2. `RESERVE_CHARS` 2.5.
+3. Calibrate `EST` from the pilot's actual tokens and calls per cell (analyst estimate was about 5× too low).
+4. **Final answer at the call limit (the largest defect found).** In the pilot every turn that hit the limit ended with an empty reply: 21 turns, all with 0 characters (one with 146). That includes turn 1, the main design turn, in 8 of the 12 analyst sessions, on both arms, so the pilot's analyst grades mostly reflect turns 2–4. Fix, the same for every arm: when a turn reaches its limit, make one more call with tools disabled (`tool_choice: none`) and the instruction to answer now from what was found, saying what was not checked. Record that the turn was closed this way (`forced_final: true`). Self-test: a fake client that always calls tools must still end each turn with a non-empty reply.
+5. Self-test green.
+6. The pilot's hand-grading export is withdrawn (its sessions are crippled by fix 4); a new export comes from batch 1.
+
+## 2 T's design tools (approved by Matthias 2026-11-26: learning from the pilot and restarting where needed is part of the method)
+
+### 2.1 Why
+
+Pilot (DeepSeek, one repetition, so a signal, not a result): T led on manager questions (7/10, 8/10 against G 5/10, 6/10) but not on analyst tasks (gold reasons covered: G 28 and 24, T 26 and 20 at N 25 and 200). Where T lost:
+- **A2 at N 200:** T made 238 `decide` calls, hit the call limit in turns 1 and 3, and missed seven reasons. It evaluated instance by instance.
+- **A1 GR6, GR10:** wrong at both N: the vendor exceptions and the mid-year transfer, which a design must see as *rules*, not as answers.
+
+T's tools only *evaluate* (`decide`, `why`, `why_not`, `describe`, `resolve_term`). A design partner must also *navigate the rules*: which rules govern a term, how they interact, where they conflict. G reads every rule as text; T has no way to list them. Meanwhile G degraded at N 200 on A1 (eight reasons missed or wrong), as the thesis predicts.
+
+### 2.2 Proposal
+
+Two engine ops (`CONTRACT.md`, V3a, `reference.py` where it computes results), exposed as T tools:
+- **`rules`** `{about: term | predicate | asset}` → the rules and claims that conclude, attack or read it, each with `doc`, owner, kind, class, validity, superiority edges, dependencies, and the conflicts the engine knows of (root conflicts touching it). Structure from the loaded rule base, no evaluation.
+- **`summary`** `{goal: open goal, filters?, as_of?}` → status counts over the goal's instances (proven / refuted / contested), the contested roots, and a bounded sample of ids per status. One call instead of hundreds of `decide`s.
+
+Tool descriptions say what each is for (design: `rules`, `summary`; answers: `decide`, `why`). No other change to T's prompt.
+
+### 2.3 Fairness note (record in RESULTS and HISTORY)
+
+This change is made after the pilot. It is legitimate only because it addresses a capability gap any real deployment has (navigating the rule base), not the gold reasons, and because it is frozen before the full run. Report both T versions; "evaluation-only tools are not enough for design work" is itself a finding.
+
+### 2.4 Call limit
+
+Keep the same limit for every arm (decided: one bound for all). Report cells that hit it as their own outcome, by arm.
+
+STOP: report the ops, the tool descriptions, and the gate.
+
+## 3 DeepSeek full run, in two batches (priority; decided 2026-11-26)
+
+The benchmark runs on DeepSeek first; other models come after (§4). The re-pilot is folded into the full run, so nothing is paid twice:
+
+- **Batch 1:** DeepSeek, N = 25 and 200, repetition 1, all arms (G+ on the analyst tasks too), all 31 manager questions and A1–A3. Judge at medium. STOP: report, compare with the pilot (T with and without the design tools), and recompute the rest. If batch 1 shows a defect that invalidates cells, fix it, mark those cells for re-run, and say so; otherwise continue.
+- **Batch 2:** N = 50 and 100 (repetition 1), then repetition 2 at all N, resumable, within the cap minus a reserve for §4.
+
+STOP after batch 2: results, cost, and the reassessment.
+
+## 4 Later: other models
+
+After the DeepSeek run, Matthias decides on a second family. Candidates: GLM, Ling Flash 3.1, Hy4 Flash. Selection by OpenRouter's Models and Benchmarks APIs, re-ranked by our cost per cell against the agentic index, then one A1 session per candidate on G and T at N = 25. Local column (gpt-oss:20b) likewise later: manager questions at all N; analyst tasks only at N = 25, or at 128k context if it fits in memory.
+
+## Decisions
+
+(Executor: append dated entries — what was decided, why.)
+- 2026-11-26 — `PLAN-v3-bench-run.md` harvested into HISTORY phase 11 under tag `spike-v3-bench-run` (at 3903015), then removed, together with the pilot's grading export (§1.6). Recounted from `pilot.jsonl`: of the 21 turns at the call limit, 20 ended empty and one with 144 characters (§1.4 says 146), and turn 1 hit the limit in 9 of 12 analyst sessions (§1.4 says 8). HISTORY uses the recount.

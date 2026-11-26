@@ -208,6 +208,40 @@ How spike v3 (System A: rules and claims as data, a defeasible engine, a bounded
 
 **Findings reversed.** None.
 
+### 11 Benchmark hardening, endpoints, smoke tests, pilot (2026-11-26; e63ddf0..3903015, tag `spike-v3-bench-run`)
+
+**Question.** Make the harness safe to pay for (no lost record, a hard cap, truncation caught), add the OpenAI and Ollama endpoints and an OpenAI Batch judge, then smoke-test locally and on DeepSeek and run a DeepSeek pilot. `PLAN-v3-bench-run.md` (at the tag) holds every Decision; `bench/README.md` describes the current state.
+
+**Decisions and why.**
+- Budget: $10 hard cap on OpenRouter for v3; the judge is OpenAI via Batch from Matthias's credits, with its own budget, so no tested family grades itself.
+- Hard cap as reserve and settle: each call reserves its maximum cost under the lock and settles with the actual; a failed call keeps its reservation. Every exception is recorded with its cost.
+- Truncation: fails when the reported prompt tokens are fewer than one per 8 characters sent, or (Ollama) when 98 % of the context is used.
+- Endpoints chosen by the model name (`openai@`, `ollama@`, otherwise OpenRouter); OpenRouter's body unchanged.
+- Keys in a git-ignored `.env` (mode 600, checked before reading); the environment wins; values never printed.
+- Judge `gpt-6.2-sol` on chat completions without tools (it rejects function tools with reasoning there).
+- Ollama 0.40.18 (brew), context set at the server (`OLLAMA_CONTEXT_LENGTH=65536`); one slot.
+- An empty final reply is flagged and counted, not retried. A contested check counts as reported only with the word contested (or conflict, disputed). Results committed gzipped.
+
+**Findings kept.**
+- Local smoke (gpt-oss:20b, 64k, $0): 5/5 cells, M01 right on every arm. Paid smoke (DeepSeek, N 25, M01 and A1): $0.0723, matching OpenRouter's charges; 96 % of A1's prompt cached; judge $0.0225 for two sessions.
+- Pilot (DeepSeek; A1–A3 and M01 M03 M08 M13 M16 M17 M19 M21 M46 M50; N 25 and 200; analyst arms G and T, manager arms G, G+, T; one repetition): 72/72 cells, $0.5976 over 557 calls, 94 % cached. Largest prompt 170k tokens; both models have 1M context on their fp8 providers.
+
+  | arm | N | manager correct | gold covered / missed / wrong | cost |
+  |---|---|---|---|---|
+  | G | 25 | 5/10 | 28 / 2 / 4 | $0.134 |
+  | G | 200 | 6/10 | 24 / 6 / 4 | $0.119 |
+  | G+ | 25 | 5/10 | – | $0.007 |
+  | G+ | 200 | 7/10 | – | $0.017 |
+  | T | 25 | 7/10 | 26 / 5 / 3 | $0.184 |
+  | T | 200 | 8/10 | 20 / 9 / 5 | $0.137 |
+
+- 21 of 108 turns hit the call limit; 20 ended with an empty reply and one with 144 characters (turn 1 in 9 of 12 analyst sessions), so the analyst grades mostly reflect turns 2–4. On G those turns repeat SQL; on T they make hundreds of distinct `decide` calls.
+- Judge at low reasons hardly at all (70 reasoning tokens over 12 sessions; medium 4,273, +20 % cost); same check grades, 125/136 reason grades agree, medium stricter. Mechanical checks agree with the judge on 98/104 (exact category).
+- Prompts ran down to 2.80 characters per token (below the reserve's 3); GLM's reservation price was its cheapest (fp4) listing, about 9× below the fp8 providers; GLM costs about 7× DeepSeek per cell.
+
+**Findings reversed.**
+- The pilot's analyst grades and hand-grading export are withdrawn: crippled by the empty replies at the call limit (PLAN-v3-bench-full §1.4).
+
 ## Platform lessons (platforms dropped, lessons kept)
 
 - **V3b, Clojure · Datahike · Malli.**
