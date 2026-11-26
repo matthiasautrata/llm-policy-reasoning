@@ -44,11 +44,11 @@ STOP: report actual cost per cell and per judge session; recompute the pilot est
 
 ## 5 Pilot
 
-- DeepSeek only; A1–A3 and the ten manager questions M01 M03 M08 M13 M16 M17 M19 M21 M46 M50; N = 25 and 200; arms G and T for the analyst tasks, G, G+ and T for the manager questions (G+ targets manager questions; dropped from analyst tasks, decided 2026-11-26).
+- DeepSeek only; A1–A3 and the ten manager questions M01 M03 M08 M13 M16 M17 M19 M21 M46 M50; N = 25 and 200; arms G and T for the analyst tasks, G, G+ and T for the manager questions (G+ left out of the analyst tasks in the pilot only, to save cost; it returns for the full run, at least at N = 25 and 200, because without it the baseline is a straw man: Databricks itself recommends trusted assets).
 - Judge: OpenAI Batch on the analyst sessions.
 - Export 10 sessions for Matthias's hand grading.
 
-STOP: report pilot results, actual costs, and a proposal for the full run (repetitions; whether GLM runs all N or a subset; local model column) within the remaining OpenRouter budget.
+STOP: report pilot results, actual costs, and a proposal for the full run (repetitions; G+ on analyst tasks, at least at N = 25 and 200; whether GLM runs all N or a subset; local model column) within the remaining OpenRouter budget.
 
 ## Gate
 
@@ -57,3 +57,12 @@ The `CLAUDE.md` gate for anything touching `spikes/v3/`; `bench/selftest.py` gre
 ## Decisions
 
 (Executor: append dated entries — what was decided, why.)
+
+- 2026-11-26 — PLAN-v3-bench harvested into HISTORY phase 10 under tag `spike-v3-bench`, then removed (standing rule).
+- 2026-11-26 — §1.2 hard cap as reserve and settle: the reservation is the call's maximum cost, the prompt at 3 characters per token (an over-estimate for English and JSON) plus `max_tokens` of completion, at list price without caching. A model without a known price is refused rather than run unbounded.
+- 2026-11-26 — §1.1 a call that raises keeps its reservation as its cost (`cost_estimated`): a failed paid call may still be charged, and the conservative figure keeps the cap hard.
+- 2026-11-26 — §2.3 truncation: fails when the reported prompt tokens are fewer than one per 8 characters sent (no tokenizer gives that, so input was dropped), or, for Ollama, when prompt plus completion reach 98 % of the context. `finish_reason` "length" is not a failure: it is recorded, and the cell's answer is scored as given.
+- 2026-11-26 — §2.1 endpoint chosen by the model name (`openai@`, `ollama@`, otherwise OpenRouter), so one run can mix them and each record names its endpoint; OpenRouter's request body is unchanged (selftest asserts it, `make verify` green).
+- 2026-11-26 — the judge has its own budget (`score.py --budget`, default $2), since it is paid from the OpenAI credits, not the $10 OpenRouter cap.
+- 2026-11-26 — §2.2 judge proposed: `gpt-6.2-sol`, Batch $1 / $0.05 / $5 per 1M input / cached / output (Standard $2 / $0.10 / $10), checked 2026-11-26 on developers.openai.com/api/docs/pricing; alternative `gpt-6.1-terra` at half that. The retired models are absent from the price table, so they cannot be run.
+- 2026-11-26 — `--pilot` now means §5 (DeepSeek, A1–A3 and the ten manager questions, N 25 and 200, analyst arms G and T); `--pilot-cap` removed, `--budget` is the cap and the pilot refuses to start when its estimate exceeds it.

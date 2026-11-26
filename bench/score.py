@@ -1,7 +1,7 @@
 """Score arm records (PLAN-v3-bench §6): manager answers against the keys, analyst sessions by checks and judge.
 
   .venv/bin/python bench/score.py bench/results/pilot.jsonl [--report bench/results/pilot.md]
-  .venv/bin/python bench/score.py bench/results/pilot.jsonl --judge --judge-out bench/results/pilot.judge.jsonl --budget 3.00
+  .venv/bin/python bench/score.py bench/results/pilot.jsonl --judge --budget 2.00   # submit the Batch; again to collect
   .venv/bin/python bench/score.py bench/results/pilot.jsonl --export bench/grading     # 10 sessions for hand grading
 
 Manager (mechanical), per question: status; value for ANSWER (lists as sets, a one-element list as its element);
@@ -9,7 +9,7 @@ sides for CONFLICT (as a set of id sets); qualifier (the "qualified" flag agains
 standing and defeater; for a term, its status and candidates. correct = status, value and sides.
 Analyst: each check is searched for mechanically when its value is a number or an id: "reported" (in that turn's
 reply), "naive" (only the known wrong value is), "computed" (only in that turn's tool results), "absent". Gold
-reasons are graded by the judge (bench/judge_rubric.md, a family not under test) as covered / missed / wrong; the
+reasons are graded by the judge (bench/judge_rubric.md; an OpenAI model via the Batch API, a family not under test) as covered / missed / wrong; the
 mechanical checks are also graded by it, which gives a mechanical-vs-judge agreement for free. Rule ids cited
 per gold reason are counted mechanically.
 Further measures: cross-question consistency (pairs of manager questions whose answers must agree whatever they
@@ -17,12 +17,12 @@ are), silent interpretation (an undefined or ambiguous term answered as decided)
 tables the rules govern), cost and tokens per correct answer / covered reason.
 Judge agreement: bench/grading/grades.json, once Matthias fills it, against the judge's grades.
 """
-import argparse, collections, json, pathlib, re, sys
+import argparse, collections, json, pathlib, re, sys, time
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT), str(ROOT / "bench")]
 import run as B                                   # noqa: E402
-from harness import openrouter                    # noqa: E402
+from harness import openai_batch                  # noqa: E402
 from harness.read import _last_json               # noqa: E402
 
 RUBRIC = ROOT / "bench/judge_rubric.md"
@@ -193,30 +193,66 @@ def stub_judge(rec):
             "prompt_tokens": 0, "completion_tokens": 0, "seconds": 0.0}
 
 
-def judge(recs, out, model, budget, also):
-    out = pathlib.Path(out)
-    done = set()
-    if out.exists():
-        done = {(r["of"]) for r in map(json.loads, out.read_text().splitlines()) if not r.get("error")}
-    spent = B.spent_in(out, *also)
+JUDGE_MAX_TOKENS = 16000     # a reasoning judge spends part of it before the JSON
+
+
+def _write(out, rec):
+    with pathlib.Path(out).open("a") as f:
+        f.write(json.dumps(rec) + "\n")
+
+
+def _judge_rec(of, model, res):
+    rec = {"of": of, "model": model, "ts": time.strftime("%Y-%m-%dT%H:%M:%S")}
+    if "error" in res:
+        return dict(rec, error=res["error"], cost=0.0)
+    rec.update({k: res.get(k) for k in ("model_served", "provider", "prompt_tokens", "completion_tokens",
+                                        "reasoning_tokens", "cached_tokens", "cost", "seconds", "finish_reason")},
+               content=res["content"], grades=_last_json(res["content"]), error=None)
+    if not rec["grades"]:
+        rec["error"] = "unparsed"
+    return rec
+
+
+def judge(recs, out, model, budget):
+    """Grade the analyst sessions not yet graded. stub:judge grades at once; openai@<id> goes through the Batch
+    API: the first call submits (reserving the batch's maximum cost against --budget, which counts the judge's
+    files only: the judge is paid from OpenAI credits, not the OpenRouter cap), later calls collect.
+    -> "done", "pending" or "budget"."""
+    out, state = pathlib.Path(out), pathlib.Path(str(out) + ".batch.json")
+    done = {r["of"] for r in map(json.loads, out.read_text().splitlines()) if not r.get("error")} if out.exists() else set()
+    if state.exists():
+        st = json.loads(state.read_text())
+        b = openai_batch.status(st["id"])
+        print(f"judge batch {st['id']}: {b['status']} {json.dumps(b.get('request_counts'))}")
+        if b["status"] not in ("completed", "failed", "expired", "cancelled"):
+            return "pending"
+        got = openai_batch.results(b) if b["status"] in ("completed", "expired", "cancelled") else {}
+        for cid, of in st["requests"].items():
+            _write(out, _judge_rec(of, st["model"], got.get(cid, {"error": f"batch {b['status']}: no result"})))
+        state.rename(str(state) + f".{st['id']}.done")
+        return "done"
     todo = [r for r in recs if r["kind"] == "analyst" and not r["error"] and json.dumps(B.cell(r)) not in done]
-    print(f"judge: {len(todo)} sessions to grade; spent ${spent:.4f} of ${budget:.2f}")
-    for r in todo:
-        if spent >= budget:
-            print(f"budget ${budget:.2f} reached; stopping"); return False
-        rec = {"of": json.dumps(B.cell(r)), "model": model, "ts": __import__("time").strftime("%Y-%m-%dT%H:%M:%S")}
-        try:
-            res = stub_judge(r) if model.startswith("stub:") else openrouter.chat(
-                model, judge_messages(r), temperature=0.0, max_tokens=4000)
-            rec.update({k: res.get(k) for k in ("model_served", "provider", "prompt_tokens", "completion_tokens", "cost", "seconds")},
-                       content=res["content"], grades=_last_json(res["content"]), error=None)
-            rec["cost"] = B.call_cost(res)
-        except openrouter.CallError as e:
-            rec.update(error=str(e), cost=0.0)
-        spent += rec["cost"] or 0.0
-        with out.open("a") as f:
-            f.write(json.dumps(rec) + "\n")
-    return True
+    spent = B.spent_in(out)
+    print(f"judge: {len(todo)} sessions to grade; judge spent ${spent:.4f} of ${budget:.2f}")
+    if not todo:
+        return "done"
+    if model.startswith("stub:"):
+        for r in todo:
+            _write(out, _judge_rec(json.dumps(B.cell(r)), model, stub_judge(r)))
+        return "done"
+    e, m = B.endpoint_of(model)
+    if e != "openai":
+        raise SystemExit(f"the judge runs on the OpenAI Batch API (openai@<id>), not {model}")
+    reqs = {f"j{i:04d}": r for i, r in enumerate(todo)}
+    held = sum(B.max_cost(model, judge_messages(r), None, JUDGE_MAX_TOKENS) for r in reqs.values()) / 2
+    if spent + held > budget:
+        print(f"judge batch could cost up to ${held:.4f}; with ${spent:.4f} spent that exceeds ${budget:.2f}: not submitted")
+        return "budget"
+    b = openai_batch.submit(openai_batch.lines([(c, judge_messages(r)) for c, r in reqs.items()], m, JUDGE_MAX_TOKENS))
+    state.write_text(json.dumps({"id": b["id"], "model": model, "held": held, "submitted": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                                 "requests": {c: json.dumps(B.cell(r)) for c, r in reqs.items()}}, indent=1) + "\n")
+    print(f"judge batch {b['id']} submitted: {len(reqs)} sessions, at most ${held:.4f}")
+    return "pending"
 
 
 def judged(path):
@@ -343,7 +379,7 @@ def report(recs, jpath, gradedir):
     L.append(f"\nJudge vs hand grading: {ag['agreement']:.2f} agreement, kappa {ag['kappa']:.2f} over {ag['n']} reasons."
              if ag else "\nJudge vs hand grading: not graded yet (bench/grading/grades.json).")
     L.append(f"\nTotal cost of the arms: ${sum(r['cost'] for r in recs):.4f} over {len(recs)} cells; judge "
-             f"${B.spent_in(jpath) if jpath else 0:.4f}.")
+             f"${B.spent_in(jpath) if jpath else 0:.4f} (OpenAI Batch).")
     return "\n".join(L)
 
 
@@ -357,15 +393,17 @@ def main():
     ap.add_argument("--judge", action="store_true")
     ap.add_argument("--judge-model", default=B.JUDGE)
     ap.add_argument("--judge-out")
-    ap.add_argument("--budget", type=float, default=1.0, help="USD cap on the judge file plus the results file")
+    ap.add_argument("--budget", type=float, default=2.0, help="USD cap on the judge's spend (OpenAI credits; its files only)")
     ap.add_argument("--export")
     ap.add_argument("--grading", default=str(ROOT / "bench/grading"))
     ap.add_argument("--report")
     a = ap.parse_args()
     recs = load(a.results)
     jpath = a.judge_out or str(pathlib.Path(a.results).with_suffix(".judge.jsonl"))
-    if a.judge and not judge(recs, jpath, a.judge_model, a.budget, [a.results]):
-        sys.exit(1)
+    if a.judge:
+        r = judge(recs, jpath, a.judge_model, a.budget)
+        if r != "done":
+            sys.exit(1 if r == "budget" else 3)
     if a.export:
         export(recs, a.export)
         return

@@ -63,13 +63,17 @@ The values do not depend on N, because generated rules never conclude a slice pr
 ## Arms, scoring and pilot (§5–§8)
 
 ```
-.venv/bin/python bench/run.py --estimate [--models ...] [--items ...]   # cost estimate, no calls
-.venv/bin/python bench/run.py --pilot --out bench/results/pilot.jsonl --budget 3.00   # refuses if the estimate exceeds $3
-.venv/bin/python bench/score.py bench/results/pilot.jsonl --judge --budget 3.00      # judge, budget shared with the arms
-.venv/bin/python bench/score.py bench/results/pilot.jsonl --export bench/grading     # 10 sessions for hand grading
-.venv/bin/python bench/selftest.py                                                   # budget stop and scoring, no calls
+.venv/bin/python bench/run.py --estimate --pilot                                       # cost estimate, no calls
+.venv/bin/python bench/run.py --pilot --out bench/results/pilot.jsonl --budget 10      # refuses if the estimate exceeds the cap
+.venv/bin/python bench/score.py bench/results/pilot.jsonl --judge --budget 2           # submits an OpenAI Batch; rerun to collect (exit 3 while pending)
+.venv/bin/python bench/score.py bench/results/pilot.jsonl --export bench/grading       # 10 sessions for hand grading
+.venv/bin/python bench/selftest.py                                                     # budget, faults, endpoints, scoring; no calls
 ```
 
-`run.py` runs the arms G, G+ and T on DeepSeek and GLM through `harness/openrouter.py`. It writes one resumable JSONL record per cell, holding every call (model, provider, tokens, cost, time) and every tool call as executed. The budget is checked before each model call. `stub:key`, `stub:tool`, `stub:abstain` and `fake:<usd>` stand in for models in tests. `score.py` scores the manager answers against the keys and the analyst checks mechanically. It grades gold reasons with the judge (`judge_rubric.md`) and reports consistency, silent interpretation, inlining and cost per correct answer.
+`run.py` runs the arms G, G+ and T (analyst tasks: G and T by default, `--analyst-arms`). A model is an OpenRouter id, `openai@<id>` or `ollama@<tag>` (`--context`, default 65536, recorded); `harness/openrouter.py` serves all three endpoints, keys from `OPENROUTER_API_KEY` and `OPENAI_API_KEY`, never logged. Cost is OpenRouter's charged cost, OpenAI's from tokens and `OPENAI_PRICE` (checked 2026-11-26), Ollama's 0.
 
-Pilot status (2026-11-25): **not run**. The estimate is $7.56, above the plan's $3 stop. The figures and the cheaper variants are in `PLAN-v3-bench.md` (tag `spike-v3-bench`); the pilot is now `PLAN-v3-bench-run.md` §5.
+Each cell is one resumable JSONL record holding every call (model, provider, tokens, cost, time) and every tool call as executed. Before each call the budget reserves the call's maximum cost (the prompt at 3 characters per token plus `max_tokens`, at list price) and settles it with the actual cost after, so concurrent workers never exceed `--budget`. Every exception is recorded with its type, message, traceback and the cost already spent; a call that fails keeps its reservation as its cost. A reply whose reported prompt tokens are fewer than one per 8 characters sent, or (Ollama) that fills 98 % of the context, fails the cell with `truncated`.
+
+The judge is `openai@gpt-6.2-sol` through the OpenAI Batch API (`harness/openai_batch.py`, half price), with its own budget (the OpenAI credits); `stub:key`, `stub:tool`, `stub:abstain`, `stub:judge` and `fake:<usd>[:raise|badargs|nofunc|notools|trunc]` stand in for models in tests. `score.py` scores the manager answers against the keys and the analyst checks mechanically. It grades gold reasons with the judge (`judge_rubric.md`) and reports consistency, silent interpretation, inlining and cost per correct answer.
+
+Pilot (`PLAN-v3-bench-run.md` §5): DeepSeek, A1–A3 and ten manager questions, N = 25 and 200, 72 cells; estimate $1.22 OpenRouter ($0.76 with caching) and $0.53 judge. Not run yet.

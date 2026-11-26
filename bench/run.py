@@ -1,7 +1,7 @@
-"""Arm runner for the v3 benchmark (PLAN-v3-bench §5, §7). One JSONL record per cell; resumable; budget-capped.
+"""Arm runner for the v3 benchmark (PLAN-v3-bench §5, §7; PLAN-v3-bench-run §1, §2). One JSONL record per cell; resumable; budget-capped.
 
   .venv/bin/python bench/run.py --estimate                       # pilot and full-design cost estimate, no calls
-  .venv/bin/python bench/run.py --pilot --out bench/results/pilot.jsonl --budget 3.00
+  .venv/bin/python bench/run.py --pilot --out bench/results/pilot.jsonl --budget 3.00   # PLAN-v3-bench-run §5
   .venv/bin/python bench/run.py --arms T --models stub:key --n 25 --items M01 A1 --out /tmp/x.jsonl
 
 A cell is (kind, arm, model, N, item, rep): an analyst session (A1-A3, four scripted turns) or a manager
@@ -14,15 +14,27 @@ question (M..). Arms:
 Every tool runs here and is logged here (name, args, seconds, result size, error), never read from model
 output. Every model call records model, provider, tokens, cost and time, as v2.
 
-Budget: --budget caps the summed cost of --out and of every --also file (the judge's records), earlier runs
-included. It is checked before every model call; a cell stopped by it is recorded with error "budget" and its
-cost, and is run again on resume. Cells without error are not run again.
+Models: an OpenRouter id (deepseek/deepseek-v4.1-flash), or openai@<id>, or ollama@<tag> (local, $0, with
+--context set and recorded; never mixed into the paid results).
 
-Clients that make no calls and cost nothing (tests, PLAN §8): stub:key answers with the oracle's keys
-(manager JSON; analyst figures in the text), stub:tool calls one tool first, stub:abstain answers
-UNDERDETERMINED; fake:<usd> is stub:tool charging <usd> per call (the budget-stop test).
+Budget: --budget caps the summed cost of --out and of every --also file (the judge's records), earlier runs
+included. Before every model call the call's maximum cost (prompt from its size at 3 characters per token, plus
+max_tokens of completion, at list price) is reserved under a lock and settled with the charged cost after, so
+concurrent cells cannot overshoot. A model without a known price is refused. A call that fails keeps its
+reservation as its cost (marked cost_estimated). A cell stopped by the budget is recorded with error "budget".
+Every other exception in a cell is recorded with its type, message and traceback, and with the cost spent so far.
+Cells with an error are run again on resume; cells without are not.
+
+Truncation: a call whose reported prompt tokens are fewer than its characters / TRUNC_CHARS, or (ollama) that
+fills the context, fails the cell with error "truncated".
+
+Clients that make no calls (tests, PLAN-v3-bench-run §1): stub:key answers with the oracle's keys (manager JSON;
+analyst figures in the text), stub:tool calls one tool first, stub:abstain answers UNDERDETERMINED;
+fake:<usd>[:<mode>] is stub:tool charging <usd> per call and sleeping 20 ms, with modes raise (on the second
+call), badargs (tool arguments not JSON), nofunc (a tool call without "function"), notools (a reply without a
+"tool_calls" field), trunc (reports 10 prompt tokens).
 """
-import argparse, concurrent.futures as cf, datetime, decimal, json, pathlib, re, shlex, subprocess, sys, threading, time
+import argparse, concurrent.futures as cf, datetime, decimal, json, pathlib, re, shlex, subprocess, sys, threading, time, traceback
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT), str(ROOT / "bench"), str(ROOT / "spikes/v3/shared")]
@@ -35,15 +47,19 @@ EXT = "spikes/v3/shared/extension.edn"
 CFG = {"backend": "duckdb", "duckdb": "spikes/v3/shared/slice.duckdb", "fetch_limit": 10000}
 BENCH = ROOT / "bench"
 MODELS = ["deepseek/deepseek-v4.1-flash", "z-ai/glm-5.3"]
-JUDGE = "anthropic/claude-sonnet-5.5"
+JUDGE = "openai@gpt-6.2-sol"         # via the Batch API (half price), paid from OpenAI credits
 ARMS = ["G", "G+", "T"]
 NS = [25, 50, 100, 200]
 TASKS = ["A1", "A2", "A3"]
+ANALYST_ARMS = ["G", "T"]      # G+ targets manager questions (Matthias, 2026-11-26)
+PILOT = {"models": ["deepseek/deepseek-v4.1-flash"], "n": [25, 200],
+         "items": TASKS + ["M01", "M03", "M08", "M13", "M16", "M17", "M19", "M21", "M46", "M50"]}
 # USD per token, OpenRouter public model list fetched 2026-11-25 (prompt, completion, cache read)
 PRICE = {"deepseek/deepseek-v4.1-flash": (1.4e-7, 4.2e-7, 4.2e-9),
-         "z-ai/glm-5.3": (6.99e-8, 1.4e-6, 6.89e-8),
-         "anthropic/claude-sonnet-5.5": (2e-6, 1e-5, 1e-7)}
+         "z-ai/glm-5.3": (6.99e-8, 1.4e-6, 6.89e-8)}
 SQL_ROWS, SQL_SECONDS, RESULT_CHARS = 200, 30, 12000
+TRUNC_CHARS = 8          # characters per reported prompt token above which a prompt counts as cut (tokenizers give 3-5)
+RESERVE_CHARS = 3        # characters per token when reserving a call's maximum prompt cost (an upper bound)
 ROUNDS = {"manager": 8, "analyst": 12}      # model calls per turn; the last reply stands if the limit is hit
 
 MANAGER = """\
@@ -304,7 +320,11 @@ def key_answer(key):
 
 def stub_client(model, item, arm):
     """A client function for a stub or fake model, scripted from the oracle's keys."""
-    mode, cost = (("tool", float(model.split(":", 1)[1])) if model.startswith("fake:") else (model.split(":", 1)[1], 0.0))
+    if model.startswith("fake:"):
+        f = model.split(":")
+        mode, cost, fault = "tool", float(f[1]), (f[2] if len(f) > 2 else None)
+    else:
+        mode, cost, fault = model.split(":", 1)[1], 0.0, None
     turn = {"n": 0}
 
     def reply(msgs):
@@ -319,25 +339,66 @@ def stub_client(model, item, arm):
         last = msgs[-1]
         tool_turn = mode in ("tool",) and last["role"] == "user"
         turn["n"] += 1
+        if model.startswith("fake:"):
+            time.sleep(0.02)
+        if fault == "raise" and turn["n"] == 2:
+            raise ValueError("fake client failure")
         if tool_turn:
             name = tools[-1 if arm != "T" else 2]["function"]["name"] if tools else "sql"
             args = {"sql": {"query": "SELECT COUNT(*) AS n FROM req"}, "decide": {"goal": '[:headroom "cc0009" ?v]'}}.get(
                 name, {"cc": "cc0009"})
-            tc = [{"id": f"call_{turn['n']}", "type": "function", "function": {"name": name, "arguments": json.dumps(args)}}]
+            fn = {"name": name, "arguments": "{not json" if fault == "badargs" else json.dumps(args)}
+            tc = [{"id": f"call_{turn['n']}", "type": "function"} if fault == "nofunc" else
+                  {"id": f"call_{turn['n']}", "type": "function", "function": fn}]
             msg, content = {"role": "assistant", "content": "", "tool_calls": tc}, ""
         else:
             content, tc = reply(msgs), []
             msg = {"role": "assistant", "content": content}
-        return {"content": content, "reasoning": "", "finish_reason": "stop", "model_served": model, "provider": "stub",
-                "prompt_tokens": sum(len(json.dumps(x)) for x in msgs) // 4, "completion_tokens": len(content) // 4,
-                "reasoning_tokens": 0, "cached_tokens": 0, "cost": cost, "seconds": 0.0, "attempts": 1,
-                "tool_calls": tc, "message": msg}
+        res = {"content": content, "reasoning": "", "finish_reason": "stop", "model_served": model, "provider": "stub",
+               "prompt_tokens": 10 if fault == "trunc" else sum(len(json.dumps(x)) for x in msgs) // 4,
+               "completion_tokens": len(content) // 4, "reasoning_tokens": 0, "cached_tokens": 0, "cost": cost,
+               "seconds": 0.0, "attempts": 1, "tool_calls": tc, "message": msg}
+        if fault == "notools" and not tc:
+            del res["tool_calls"]
+        return res
     return call
+
+
+def endpoint_of(model):
+    """-> (endpoint, model id at that endpoint)"""
+    for e in ("openai", "ollama"):
+        if model.startswith(e + "@"):
+            return e, model.split("@", 1)[1]
+    return "openrouter", model
+
+
+def price(model):
+    """USD per token (prompt, completion, cache read); KeyError for a model without a known price."""
+    e, m = endpoint_of(model)
+    if model.startswith("stub:") or e == "ollama":
+        return (0.0, 0.0, 0.0)
+    if e == "openai":
+        i, o, c = openrouter.OPENAI_PRICE[m]
+        return (i, o, c)
+    return PRICE[m]
+
+
+def max_cost(model, msgs, tools, max_tokens):
+    """The most a call can cost: its prompt at RESERVE_CHARS characters per token, plus max_tokens."""
+    if model.startswith("fake:"):
+        return float(model.split(":")[1])
+    p = price(model)
+    chars = len(json.dumps(msgs)) + len(json.dumps(tools or []))
+    return chars / RESERVE_CHARS * p[0] + max_tokens * p[1]
 
 
 def live_client(config):
     def call(model, msgs, tools):
-        return openrouter.chat(model, msgs, tools=tools, **config)
+        e, m = endpoint_of(model)
+        kw = {k: config[k] for k in ("temperature", "max_tokens")}
+        if e == "openrouter":
+            kw["provider"] = config.get("provider")
+        return openrouter.chat(m, msgs, tools=tools, endpoint=e, **kw)
     return call
 
 
@@ -347,64 +408,104 @@ class BudgetStop(Exception):
     pass
 
 
+class Truncated(Exception):
+    pass
+
+
 class Budget:
+    """A hard cap: each call reserves its maximum cost first and settles with the charged cost after."""
     def __init__(self, cap, spent):
-        self.cap, self.spent, self.lock, self.stop = cap, spent, threading.Lock(), threading.Event()
+        self.cap, self.spent, self.held = cap, spent, 0.0
+        self.lock, self.stop = threading.Lock(), threading.Event()
 
-    def check(self):
+    def reserve(self, usd):
         with self.lock:
-            if self.spent >= self.cap:
+            if self.stop.is_set() or self.spent + self.held + usd > self.cap + 1e-12:
                 self.stop.set()
-                raise BudgetStop(f"budget ${self.cap:.2f} reached (${self.spent:.4f})")
+                raise BudgetStop(f"budget ${self.cap:.2f} reached (spent ${self.spent:.4f}, held ${self.held:.4f}, "
+                                 f"next call up to ${usd:.4f})")
+            self.held += usd
+        return usd
 
-    def add(self, usd):
+    def settle(self, held, usd):
         with self.lock:
+            self.held -= held
             self.spent += usd or 0.0
 
 
-def call_cost(res):
-    """OpenRouter's charged cost; from tokens and the price list when the response lacks it."""
+def call_cost(res, model):
+    """The charged cost; from tokens and the price list when the response lacks it."""
     if res.get("cost") is not None:
         return res["cost"]
-    p = PRICE.get(res.get("model_served") or "", (0, 0, 0))
+    p = price(model)
     return (res.get("prompt_tokens") or 0) * p[0] + (res.get("completion_tokens") or 0) * p[1]
+
+
+def truncation(res, msgs, tools, context):
+    """A reason if the endpoint saw less prompt than was sent, else None."""
+    pt, chars = res.get("prompt_tokens"), len(json.dumps(msgs)) + len(json.dumps(tools or []))
+    if pt is not None and pt * TRUNC_CHARS < chars:
+        return f"truncated: {pt} prompt tokens reported for {chars} characters sent"
+    if context and pt is not None and pt + (res.get("completion_tokens") or 0) >= 0.98 * context:
+        return f"truncated: {pt} prompt + {res.get('completion_tokens')} completion tokens fill the context {context}"
+    return None
 
 
 CALL_FIELDS = ("model_served", "provider", "generation_id", "finish_reason", "prompt_tokens", "completion_tokens",
                "reasoning_tokens", "cached_tokens", "cost", "seconds", "attempts")
 
 
-def session(client, model, arm, n, kind, item, budget):
-    """Run one cell. -> record fields (raises nothing; a budget stop or an error is recorded)."""
-    msgs = [{"role": "system", "content": system_prompt(arm, n, kind)}]
-    tools, calls, tlog, turns, err = tools_for(arm), [], [], [], None
+def failure(e):
+    return {"error_type": type(e).__name__, "traceback": traceback.format_exc()[-4000:]}
+
+
+def session(client, model, arm, n, kind, item, budget, max_tokens, context=None):
+    """Run one cell. -> record fields. Raises nothing: a budget stop, a truncation or any exception is recorded,
+    with every call made so far and its cost."""
+    msgs, tools, calls, tlog, turns, err, extra = [], [], [], [], [], None, {}
     try:
+        msgs.append({"role": "system", "content": system_prompt(arm, n, kind)})
+        tools = tools_for(arm)
         for t, text in enumerate(user_turns(item), 1):
             msgs.append({"role": "user", "content": text})
             for i in range(ROUNDS[kind]):
-                budget.check()
-                res = client(model, msgs, tools)
-                res["cost"] = call_cost(res)
-                budget.add(res["cost"])
-                calls.append(dict({k: res.get(k) for k in CALL_FIELDS}, turn=t, tool_calls=len(res["tool_calls"])))
+                held = budget.reserve(max_cost(model, msgs, tools, max_tokens))
+                try:
+                    res = client(model, msgs, tools)
+                    res["cost"] = call_cost(res, model)
+                except BaseException:
+                    budget.settle(held, held)           # cost unknown: count the reservation
+                    calls.append({"turn": t, "cost": held, "cost_estimated": True, "prompt_tokens": None,
+                                  "completion_tokens": None, "seconds": None, "tool_calls": 0})
+                    raise
+                budget.settle(held, res["cost"])
+                tcs = res.get("tool_calls") or []
+                calls.append(dict({k: res.get(k) for k in CALL_FIELDS}, turn=t, tool_calls=len(tcs),
+                                  sent_chars=len(json.dumps(msgs)) + len(json.dumps(tools))))
+                cut = truncation(res, msgs, tools, context)
+                if cut:
+                    raise Truncated(cut)
                 msgs.append(res.get("message") or {"role": "assistant", "content": res["content"]})
-                if not res["tool_calls"]:
+                if not tcs:
                     break
-                for tc in res["tool_calls"]:
+                for tc in tcs:
                     out, log = execute(arm, n, tc["function"]["name"], tc["function"].get("arguments"))
                     tlog.append(dict(log, turn=t, call=len(calls)))
                     msgs.append({"role": "tool", "tool_call_id": tc["id"], "content": out})
             turns.append({"turn": t, "content": res["content"], "reasoning": res.get("reasoning") or "",
-                          "tool_limit": bool(res["tool_calls"])})
+                          "tool_limit": bool(tcs)})
     except BudgetStop as e:
         err = "budget"
         print(f"  {e}", flush=True)
-    except (openrouter.CallError, RuntimeError) as e:
-        err = str(e)[:600]
-    rec = {"calls": calls, "tools": tlog, "turns": turns, "messages": msgs[1:], "error": err,
+    except Truncated as e:
+        err = str(e)
+    except Exception as e:      # noqa: BLE001 — an unexpected error must never lose a record or its cost
+        err, extra = f"{type(e).__name__}: {e}"[:600], failure(e)
+    rec = {"calls": calls, "tools": tlog, "turns": turns, "messages": msgs[1:], "error": err, **extra,
            "cost": sum(c["cost"] or 0 for c in calls), "prompt_tokens": sum(c["prompt_tokens"] or 0 for c in calls),
            "completion_tokens": sum(c["completion_tokens"] or 0 for c in calls),
-           "seconds": round(sum(c["seconds"] or 0 for c in calls), 3), "system_chars": len(msgs[0]["content"])}
+           "seconds": round(sum(c["seconds"] or 0 for c in calls), 3),
+           "system_chars": len(msgs[0]["content"]) if msgs else 0}
     if kind == "manager" and turns:
         rec["answer"] = _last_json(turns[-1]["content"])
     return rec
@@ -429,7 +530,7 @@ def spent_in(*paths):
 # call adds to the context (tool results and replies), completion tokens per call (v2: 1.39M over 792 calls).
 EST = {"calls": {("manager", "G"): 3, ("manager", "G+"): 3, ("manager", "T"): 4,
                  ("analyst", "G"): 4, ("analyst", "G+"): 4, ("analyst", "T"): 5},
-       "grow": 1500, "completion": 1750, "judge_prompt": 14000, "judge_completion": 2000}
+       "grow": 1500, "completion": 1750, "judge_prompt": 14000, "judge_completion": 6000}
 
 
 def estimate_cell(model, arm, n, kind, cached=False):
@@ -437,19 +538,21 @@ def estimate_cell(model, arm, n, kind, cached=False):
     per_turn, turns = EST["calls"][(kind, arm)], (4 if kind == "analyst" else 1)
     k = per_turn * turns
     prompt = sum(sys_tok + i * EST["grow"] for i in range(k))
-    p = PRICE[model]
+    p = price(model)
     cost_prompt = (sys_tok * p[2] * k + (prompt - sys_tok * k) * p[0]) if cached else prompt * p[0]
     return k, prompt, k * EST["completion"], cost_prompt + k * EST["completion"] * p[1]
 
 
-def estimate(models, arms, ns, reps, cached=False, ids=None):
+def estimate(models, arms, ns, reps, cached=False, ids=None, analyst_arms=ANALYST_ARMS):
     its = [i for i in items() if not ids or i in ids]
     per, tot = {}, {"calls": 0, "prompt": 0, "completion": 0, "usd": 0.0, "cells": 0, "judge_usd": 0.0}
-    jp = PRICE[JUDGE]
+    jp = [x / 2 for x in price(JUDGE)]      # Batch tier
     for model in models:
         for arm in arms:
             for n in ns:
                 for kind in ("analyst", "manager"):
+                    if kind == "analyst" and arm not in analyst_arms:
+                        continue
                     m = len([i for i in its if i.startswith("A" if kind == "analyst" else "M")])
                     k, pr, co, usd = estimate_cell(model, arm, n, kind, cached)
                     per[(model, arm, n, kind)] = (m * reps, usd)
@@ -460,27 +563,28 @@ def estimate(models, arms, ns, reps, cached=False, ids=None):
     return per, tot
 
 
-def print_estimate(models, arms, ids=None):
+def print_estimate(models, arms, ids=None, analyst_arms=ANALYST_ARMS):
     print("Assumptions:", json.dumps({f"{k[0]}/{k[1]}": v for k, v in EST["calls"].items()}),
           f"calls per question or turn; +{EST['grow']} context tokens per call; {EST['completion']} completion tokens "
           f"per call; judge {EST['judge_prompt']}+{EST['judge_completion']} tokens per analyst session. Prices: OpenRouter "
           "list 2026-11-25.")
     print("\nPilot cells (one repetition), USD per cell, no caching:")
-    per, _ = estimate(models, arms, [25, 200], 1, ids=ids)
+    per, _ = estimate(models, arms, [25, 200], 1, ids=ids, analyst_arms=analyst_arms)
     print(f"  {'model':30} {'arm':3} {'N':>4} {'analyst':>9} {'manager':>9}")
     for model in models:
         for arm in arms:
             for n in (25, 200):
-                print(f"  {model:30} {arm:3} {n:4} {per[(model, arm, n, 'analyst')][1]:9.4f} {per[(model, arm, n, 'manager')][1]:9.4f}")
+                an = per.get((model, arm, n, "analyst"))
+                print(f"  {model:30} {arm:3} {n:4} {f'{an[1]:9.4f}' if an else '        –'} {per[(model, arm, n, 'manager')][1]:9.4f}")
     out = {}
     for label, ns, reps in (("pilot (N 25, 200; 1 rep)", [25, 200], 1), ("full, 1 rep (N 25-200)", NS, 1),
                             ("full, 3 reps (N 25-200)", NS, 3)):
         for cached in (False, True):
-            _, t = estimate(models, arms, ns, reps, cached, ids)
+            _, t = estimate(models, arms, ns, reps, cached, ids, analyst_arms)
             out[(label, cached)] = t
             print(f"{label:26} {'cached system prompt' if cached else 'no caching':21} cells {t['cells']:4}  calls "
                   f"{t['calls']:5}  prompt {t['prompt'] / 1e6:6.2f}M  completion {t['completion'] / 1e6:5.2f}M  "
-                  f"arms ${t['usd']:.2f} + judge ${t['judge_usd']:.2f} = ${t['usd'] + t['judge_usd']:.2f}")
+                  f"OpenRouter ${t['usd']:.2f}; judge (OpenAI Batch) ${t['judge_usd']:.2f}")
     return out
 
 
@@ -489,9 +593,9 @@ def print_estimate(models, arms, ids=None):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--estimate", action="store_true", help="print the cost estimate and exit; no calls")
-    ap.add_argument("--pilot", action="store_true", help="PLAN §7 cells: N 25 and 200, both models, all arms, all items")
-    ap.add_argument("--pilot-cap", type=float, default=3.0, help="refuse the pilot if its estimate exceeds this")
+    ap.add_argument("--pilot", action="store_true", help="the pilot cells (PILOT; PLAN-v3-bench-run §5)")
     ap.add_argument("--arms", nargs="+", default=ARMS, choices=ARMS)
+    ap.add_argument("--analyst-arms", nargs="+", default=ANALYST_ARMS, choices=ARMS, help="arms for analyst tasks")
     ap.add_argument("--models", nargs="+", default=MODELS)
     ap.add_argument("--n", type=int, nargs="+", default=[25, 200])
     ap.add_argument("--items", nargs="*", help="A1 A2 A3 M01 ...; default all")
@@ -503,20 +607,20 @@ def main():
     ap.add_argument("--temperature", type=float, default=1.0)
     ap.add_argument("--max-tokens", type=int, default=16000)
     ap.add_argument("--quantization", default="fp8", help="provider quantization filter; 'any' to disable")
+    ap.add_argument("--context", type=int, default=65536, help="ollama context length (recorded; checked per call)")
     a = ap.parse_args()
+    if a.pilot:
+        a.models, a.n, a.items, a.reps = PILOT["models"], PILOT["n"], PILOT["items"], 1
     live = [m for m in a.models if not m.startswith(("stub:", "fake:"))]
     if a.estimate or (a.pilot and live):
-        est = print_estimate(live or MODELS, a.arms, None if a.pilot else a.items)
-        pilot = est[("pilot (N 25, 200; 1 rep)", False)]
+        est = print_estimate(live or MODELS, a.arms, a.items, a.analyst_arms)
         if a.estimate:
             return
-        if pilot["usd"] + pilot["judge_usd"] > a.pilot_cap:
-            print(f"\npilot estimate exceeds ${a.pilot_cap:.2f}: stopping before any call (PLAN-v3-bench §7)")
+        if est[("pilot (N 25, 200; 1 rep)", False)]["usd"] > a.budget:
+            print(f"\npilot estimate exceeds the budget ${a.budget:.2f}: stopping before any call")
             sys.exit(2)
     if not a.out:
         ap.error("--out is required to run")
-    if a.pilot:
-        a.n, a.items, a.reps = [25, 200], None, 1
     out = pathlib.Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     done = set()
@@ -525,6 +629,8 @@ def main():
     budget = Budget(a.budget, spent_in(out, *a.also))
     provider = None if a.quantization == "any" else {"quantizations": [a.quantization], "sort": "price"}
     config = {"temperature": a.temperature, "max_tokens": a.max_tokens, "provider": provider}
+    if any(endpoint_of(m)[0] == "ollama" for m in a.models):
+        config["context"] = a.context
     its = items()
     jobs = []
     for model in a.models:
@@ -533,6 +639,8 @@ def main():
                 for iid in (a.items or list(its)):
                     for rep in range(a.reps):
                         kind = "analyst" if "turns" in its[iid] else "manager"
+                        if kind == "analyst" and arm not in a.analyst_arms:
+                            continue
                         base = {"bench": "v3", "kind": kind, "arm": arm, "model": model, "n": n, "item": iid, "rep": rep}
                         if cell(base) not in done:
                             jobs.append(base)
@@ -545,9 +653,14 @@ def main():
         if budget.stop.is_set():
             return
         m = base["model"]
-        client = stub_client(m, its[base["item"]], base["arm"]) if m.startswith(("stub:", "fake:")) else live_client(config)
         rec = dict(base, config=config, ts=time.strftime("%Y-%m-%dT%H:%M:%S"))
-        rec.update(session(client, m, base["arm"], base["n"], base["kind"], its[base["item"]], budget))
+        try:
+            client = stub_client(m, its[base["item"]], base["arm"]) if m.startswith(("stub:", "fake:")) else live_client(config)
+            rec.update(session(client, m, base["arm"], base["n"], base["kind"], its[base["item"]], budget,
+                               a.max_tokens, a.context if endpoint_of(m)[0] == "ollama" else None))
+        except Exception as e:      # noqa: BLE001 — session() records its own; this is the last line of defence
+            rec.update(error=f"{type(e).__name__}: {e}"[:600], cost=0.0, prompt_tokens=0, completion_tokens=0,
+                       seconds=0.0, calls=[], tools=[], turns=[], **failure(e))
         with lock:
             with out.open("a") as f:
                 f.write(json.dumps(rec, default=str) + "\n")
