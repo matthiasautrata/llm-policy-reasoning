@@ -699,7 +699,8 @@ def calibrate(path=CALIB, judge=JUDGE_CALIB):
         per[key] = {"calls": (k + lim) / m, "uncached": u / m * (1 + lim / k), "cached": ca / m * (1 + lim / k),
                     "completion": co / m * (1 + lim / k)}
     model = recs[0]["model"]
-    load_prices([model], recs[0]["config"]["provider"]["quantizations"][0])
+    if endpoint_of(model)[0] == "openrouter":       # an OpenAI run (§3f) is priced from OPENAI_PRICE
+        load_prices([model], recs[0]["config"]["provider"]["quantizations"][0])
     p = price(model, "typical")
     tok = sum(tok_cost(r_tokens(r), p) for r in recs)
     j = [x for x in _read(judge) if not x.get("error")]

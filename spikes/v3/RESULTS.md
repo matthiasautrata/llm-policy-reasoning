@@ -385,8 +385,25 @@ Each N fills different strata: d 1 occurs only at N 50, and d 4+ only at N 200. 
 - **The closure result holds for the stronger model.** G and G-q qualify a "no" that rests on absence in 0 of 15 each, with the value right in 15 of 15. T qualifies all 15. This is the plan's first expected outcome; the second (G near T) does not occur.
 - Values are not the gap. G and G-q are right on all 15 true keys and all 3 false-by-defeat keys. They lose on contested sides (2 and 1 of 9) and on qualifiers. T is right on all 48 cells.
 - G-q's sentence does nothing here either (0 of 15, as G).
-- **The model barely reasons.** At effort medium it averages 28 (G), 21 (G-q) and 9 (T) reasoning tokens per cell, and 255–281 completion tokens, against DeepSeek's 2,500–3,800 and 3,200–4,200. A higher effort was not tried. So "a frontier model gets closure right by itself" is refuted at medium effort, not at its highest.
+- **The model barely reasons.** At effort medium it averages 28 (G), 21 (G-q) and 9 (T) reasoning tokens per cell, and 255–281 completion tokens, against DeepSeek's 2,500–3,800 and 3,200–4,200. At effort high (§3f, next section) the result is the same.
 - **Cost.** Charged $1.25 for the 144 cells: G $0.43, G-q $0.45, T $0.36 (from the calls charged, §3f.1). That is $0.009 per cell for G against DeepSeek's $0.0009. The prompt was 99% cached for G and G-q and 82% for T. The estimate, $7.15, assumed DeepSeek's completion lengths. Nine cells were stopped by OpenAI's rate limit (1M tokens per minute, 6 workers) and re-run with 2 workers; their calls before the refusal count, the refused calls cost nothing. (The run itself booked each refused call at its reserve, $2.10 in all; since §3f.1 the runner and score.py count a refused call at $0, older records included.)
+
+## The stronger model at effort high (PLAN-v3-bench-full §3f, 2026-11-26)
+
+**Setup.** As §3e.2 (gpt-6.2-sol on OpenAI, F01–F16, N 200, 3 repetitions, scored mechanically), with reasoning effort **high**, the highest the runner offers. All three arms, since T fit the estimate. Effort high was served and echoed on every call (336). The expected outcomes were recorded in the plan before the run.
+
+| effort | arm | correct; tolerant | qualifier (of 42) | absence qualified (of 15) | sides strict / tolerant (of 9) | by k: 1 / 2–3 / 4–5 / 6+ | reasoning tokens per cell | completion per cell | cost | $ per correct |
+|---|---|---|---|---|---|---|---|---|---|---|
+| high | G | 26; 26 | 27 | 0 | 2 / 2 | 9, 6, 8, 3 | 110 | 377 | $0.49 | 0.019 |
+| high | G-q | 25; 28 | 27 | 0 | 1 / 4 | 9, 6, 7, 3 | 105 | 378 | $0.48 | 0.019 |
+| high | T | 48; 48 | 42 | 15 | 9 / 9 | 12, 12, 12, 12 | 60 | 349 | $0.54 | 0.011 |
+| medium | G | 26; 27 | 27 | 0 | 2 / 3 | 9, 6, 8, 3 | 28 | 282 | $0.43 | 0.017 |
+| medium | G-q | 25; 25 | 27 | 0 | 1 / 1 | 9, 6, 7, 3 | 21 | 277 | $0.45 | 0.017 |
+| medium | T | 48; 48 | 42 | 15 | 9 / 9 | 12, 12, 12, 12 | 10 | 255 | $0.36 | 0.008 |
+
+- **Closure without an engine fails at effort high too.** G and G-q qualify absence in 0 of 15, with the value right in 15 of 15; T qualifies all 15. This is the plan's first expected outcome. By key type the arms are as at medium: G and G-q right on all 15 true, 3 false-by-defeat and 6 claim/term keys, wrong on every absence qualifier, and on most contested sides.
+- **More effort buys reasoning, not closure.** Reasoning tokens rose about 4× for G and G-q and 6× for T, but stay small (60–110 per cell; about 60% of G's calls still report none). The strict correct counts are identical to medium's; the tolerant ones moved by 1 (G) and 3 (G-q, sides).
+- **Cost.** Charged $1.51 for 144 cells. T now costs the most per cell ($0.011 against G's $0.010) because it makes more calls and caches less (76% of prompt tokens against 99%). It still costs less per correct answer, 0.011 against 0.019. Two workers, with no rate-limit refusals.
 
 ## Gold reasons graded from keys (PLAN-v3-bench-full §3e.1, 2026-11-26)
 
@@ -443,9 +460,10 @@ After the change F covers no reason by keys at any N (N 50: 0 / 11 / 16; N 100: 
 | §3c.3 | F01–F16, A4 | DeepSeek; 100 | 3 | replication |
 | §3c.4, §3d.1 | F01–F16; A4 | GLM 5.3; 200 | 3 | replication |
 | §3e.2 | F01–F16 | gpt-6.2-sol; 200 | 3 | confirmatory (outcomes recorded before) |
+| §3f | F01–F16 | gpt-6.2-sol, effort high; 200 | 3 | confirmatory (outcomes recorded before) |
 
 **Main result.** Across three models and three N, the rule arms do not differ on values. They differ on closure:
-- a "no" that rests on absence is qualified by T in 13 of 15 (DeepSeek N 200), 6 of 6 (N 100), 11 of 15 (GLM) and 15 of 15 (gpt-6.2-sol, §3e.2), and by G, G+, G-q, G+-q and G-tools in 0 of every count, the stronger model's G and G-q included;
+- a "no" that rests on absence is qualified by T in 13 of 15 (DeepSeek N 200), 6 of 6 (N 100), 11 of 15 (GLM) and 15 of 15 (gpt-6.2-sol at medium and at high effort, §3e.2, §3f), and by G, G+, G-q, G+-q and G-tools in 0 of every count, the stronger model's G and G-q included;
 - contested sides are complete for T on every contested key, and degrade for G as disputes accumulate.
 
 The two controls rule out the obvious explanations:
