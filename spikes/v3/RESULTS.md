@@ -236,6 +236,23 @@ Against the pilot (same model; the pilot's 10 manager questions, gold reasons ju
 - T uses the design tools (319 `rules`, 121 `summary` calls; none over the result cap). A2 at N 200: 12 `decide` calls instead of 238.
 - Every arm reaches the analyst call limit in 2 of 12 turns; manager turns at the limit are mostly wrong for G (0/6 correct) and mostly right for G+ and T (4/5).
 
+## Rule count on the generated families (PLAN-v3-bench-full §3b, 2026-11-26)
+
+DeepSeek v4.1 Flash, N 50 and 200, repetition 1, arms G, G+ and T, on the family questions F01–F12 and the analyst task A4 (`bench/questions/family.json`, `bench/tasks/A4.json`, one variant per N). 78 cells, no failed cell, $0.110. Three cells were refused by the budget's worst-case reservations at 6 workers before any call; they were run on resume at 2 workers, and their refusal records stay in the file. Judge `gpt-6.2-sol` at medium, twice: $0.075 and $0.033. Results: `bench/results/b3b.jsonl.gz`, grades `b3b.judge-medium.jsonl.gz` and `.2.jsonl.gz`. One repetition: a signal, not a result.
+
+| arm | N | family correct (of 12) | qualifier | k = 1 / 2 / 3 | A4 gold covered / missed / wrong | A4 numbers reported (of 3) |
+|---|---|---|---|---|---|---|
+| G | 50 | 11 | 7/10 | 7/7, 2/3, 2/2 | 8 / 0 / 1 (of 9) | 3 |
+| G | 200 | 12 | 8/10 | 9/9, 2/2, 1/1 | 8 / 0 / 3 (of 11) | 3 |
+| G+ | 50 | 12 | 7/10 | 7/7, 3/3, 2/2 | 8 / 0 / 1 | 3 |
+| G+ | 200 | 12 | 8/10 | 9/9, 2/2, 1/1 | 8 / 0 / 3 | 3 |
+| T | 50 | 12 | 9/10 | 7/7, 3/3, 2/2 | 8 / 0 / 1 | 3 |
+| T | 200 | 12 | 10/10 | 9/9, 2/2, 1/1 | 11 / 0 / 0 | 3 |
+
+- Manager accuracy moves with neither N nor k: 71 of 72 are correct. k is only 1–3, because the generator keeps programmes independent (PLAN-v3-bench-full Decisions, §3b finding): what N adds is distraction, not interaction. G's only miss (F07 at N 50) answers an owner dispute without superiority as a plain yes or no rather than contested. The qualifier misses (G and G+ on F02, F04, F06 and F08) leave out the limit version or the conflict note while the answer is right; T misses one.
+- A4 does not separate the arms at N 50 (8 of 9 each). At N 200, G and G+ each have 3 wrong reasons and T has none. The reason that separates them is GR6: under K01 (no superiority) a request is contested, and G and G+ answer "expensed" or "not capitalised" in 3 of 4 sessions, while T reports the conflict in both. GR2 (a request outside P01's category is outside the limit: false, not unknown) is wrong for G at both N and for G+ at N 200; they answer null or "not covered". All three numeric checks are reported in all six sessions; none gives the naive limit or the count without the exception. N 200's variant has two more reasons (on claims), so the comparison across N is not on the same items.
+- The judge agrees with itself: 60 of 60 grades on §3b, kappa 1.00; 198 of 204 on batch 1's 18 sessions judged a second time, kappa 0.90 (second judging $0.283). Batch 1's two judgings give G 28 and 26 at N 25, and 30 and 28 at N 200, against 28 at both N in the table above; the other arms differ by at most one reason. Mechanical checks and the judge agree 24 of 24 on §3b.
+
 ## Built vs native
 
 - **Native in SWI-Prolog:**
