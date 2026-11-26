@@ -258,6 +258,47 @@ Scored as in batch 1 (§3b′: qualifier in correct; strict and tolerant sides a
 - A4 does not separate the arms at N 50 (8 of 9 each). At N 200, G and G+ each have 3 wrong reasons and T has none. The reason that separates them is GR6: under K01 (no superiority) a request is contested, and G and G+ answer "expensed" or "not capitalised" in 3 of 4 sessions, while T reports the conflict in both. GR2 (a request outside P01's category is outside the limit: false, not unknown) is wrong for G at both N and for G+ at N 200; they answer null or "not covered". All three numeric checks are reported in all six sessions; none gives the naive limit or the count without the exception. N 200's variant has two more reasons (on claims), so the comparison across N is not on the same items.
 - The judge agrees with itself: 60 of 60 grades on §3b, kappa 1.00; 198 of 204 on batch 1's 18 sessions judged a second time, kappa 0.90 (second judging $0.283). Batch 1's two judgings give G 28 and 26 at N 25, and 30 and 28 at N 200, against 28 at both N in the table above; the other arms differ by at most one reason. Mechanical checks and the judge agree 24 of 24 on §3b.
 
+## Interacting rules and the floor arm (PLAN-v3-bench-full §3b′, 2026-11-26)
+
+DeepSeek v4.1 Flash, N 50 and 200, 3 repetitions on all items. Manager arms are G, G+, T and F, the floor (data model and `sql`, no rules); analyst arms are G, T and F. The items are the family questions F01–F16, stratified by k, and A4. A4 asks about the same nine requests at every N, while N adds disputes over P01's category (1 at N 50, 4 at N 200, with superiority across disputes) and sub-programme levels (2 and 4). The run has 402 cells and cost $0.674. One F cell failed the truncation check and was re-run on resume. The judge, `gpt-6.2-sol` at medium, graded twice for $0.340; it agrees with itself on 0.95 of 171 reasons (kappa 0.91). Results: `bench/results/b3c.jsonl.gz`, grades `b3c.judge-medium.jsonl.gz` and `.2.jsonl.gz`. The expected outcomes were recorded in the plan's Decisions before the run.
+
+Family questions: 48 cells per arm and N (16 items × 3). Correct means status, value, sides and qualifier; tolerant sides are given after the `;`.
+
+| arm | N | correct | status | qualifier | contested keys: sides strict / tolerant (of 9) | by k: 1 / 2–3 / 4–5 / 6+ |
+|---|---|---|---|---|---|---|
+| F | 50 | 0; 0 | 6 | 24/39 | 0 / 0 | 0/12, 0/30, 0/6, – |
+| F | 200 | 6; 6 | 12 | 27/42 | 0 / 0 | 0/12, 0/12, 3/12, 3/12 |
+| G | 50 | 33; 33 | 44 | 27/39 | 6 / 6 | 9/12, 18/30, 6/6, – |
+| G | 200 | 25; 26 | 46 | 27/42 | 2 / 3 | 9/12, 6/12, 7/12, 3/12 |
+| G+ | 50 | 30; 30 | 42 | 27/39 | 3 / 3 | 9/12, 15/30, 6/6, – |
+| G+ | 200 | 27; 28 | 46 | 27/42 | 3 / 4 | 9/12, 6/12, 9/12, 3/12 |
+| T | 50 | 43; 43 | 48 | 35/39 | 9 / 9 | 10/12, 27/30, 6/6, – |
+| T | 200 | 46; 46 | 48 | 40/42 | 9 / 9 | 11/12, 11/12, 12/12, 12/12 |
+
+By the key's outcome, correct, at N 50 / N 200. Each cell reads 15/15 for true, 12/15 for false by absence, 3/3 for false by defeat, 9/9 for contested, and 9/6 for claims:
+
+| arm | true | false (absence) | false (defeat) | contested | claim |
+|---|---|---|---|---|---|
+| G | 15 / 14 | 0 / 0 | 3 / 3 | 6 / 2 | 9 / 6 |
+| G+ | 15 / 15 | 0 / 0 | 3 / 3 | 3 / 3 | 9 / 6 |
+| T | 14 / 15 | 8 / 13 | 3 / 3 | 9 / 9 | 9 / 6 |
+| F | 0 / 6 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+
+- The expected outcomes hold. (b) T's difference is closure. G and G+ never qualify a "no" that rests on absence: 0 of 27 at both N, and in 25 of 27 misses the value is right and only the qualifier is missing. T qualifies 21 of 27. On contested keys, G's sides get worse with the dispute count: strict 6 of 9 at N 50 (one dispute), 2 of 9 at N 200 (d 4–7). T has all 18. (c) There is no accuracy difference on values: G's status is right in 90 of 96, its value wrong on 1 of 30 true keys, and false by defeat is 6 of 6 for every rule arm. (a) G does not stay flat by k (9/12 at k 1, 3/12 at k 6+ at N 200), but the fall is closure, not wrong values. The k ≥ 6 slots at N 200 are contested or absence keys, and G misses their sides and qualifiers. (d) F answers almost nothing: 6 of 96, all "true" keys at N 200, which it answered "yes" without the rules.
+- G+ (trusted functions) is not better than G here: none of its functions covers the families.
+- A4, gold reasons covered / missed / wrong, from the first judging (second in brackets); 9 reasons per session at N 50 and 10 at N 200, 3 sessions:
+
+| arm | N 50 (of 27) | N 200 (of 30) | numeric checks reported (of 15) |
+|---|---|---|---|
+| F | 0 / 5 / 22 (0 / 5 / 22) | 1 / 6 / 23 (1 / 3 / 26) | 7 and 3, by coincidence (see below) |
+| G | 15 / 0 / 12 (15 / 0 / 12) | 24 / 0 / 6 (23 / 0 / 7) | 14 and 15 |
+| T | 24 / 0 / 3 (23 / 0 / 4) | 24 / 0 / 6 (25 / 0 / 5) | 15 and 15 |
+
+- The A4 reason that separates the arms is GR7 (precedence, and contested where no superior rule holds). G gets it wrong in 6 of 6 sessions at both N: it lets the expensing defeater decide ("not capitalised", "expensed") where the outcome is contested. T covers it in 4 of 6 at N 50 and 2 of 6 at N 200; at N 200, with superiority across four disputes, T too misreads which rule survives. GR2 (outside P01's category the limit answer is false, not unknown) is wrong for G in 11 of 12 sessions and for T in 4 of 12. At N 50, G misses GR8 and GR9 (the chain) in 4 of 6 sessions and covers them in all at N 200. GR6 at N 50 is a gold defect: it speaks of "1 policy … they conclude the same thing", which is ill-posed with one dispute, and T is graded wrong on it 5 of 6 times.
+- Every G and T session reports every numeric check, including the chain counts (N 200: 2,050 cleared and 3,692 contested under U04). None gives the naive value. The mechanical check is a number found in the text. For F the judge disagrees with it on 22 of 24 differing grades: F prints 8,000 and 0 for other reasons, and at N 50 the key 0 for K12 is trivially matched. Without F, mechanical and judge differ on 2 of the numeric grades.
+- Cost per correct family answer at N 200: T $0.0013, G $0.0017. Calls at the limit: F reaches it in 33 of 96 manager cells, T in 3, G in none.
+- Three repetitions on fixed items make this the first confirmatory comparison. It still covers one model and one generator; the strata at N 50 stop at k 4.
+
 ## Built vs native
 
 - **Native in SWI-Prolog:**
