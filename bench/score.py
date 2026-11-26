@@ -471,22 +471,33 @@ def arm(r):
     return "T-eval" if r["arm"] == "T" and "rules" not in r.get("config", {}).get("t_tools", ()) else r["arm"]
 
 
+def _bin(x, bins):
+    return next(f"{lo}" + (f"-{hi}" if hi != lo and hi < 99 else "+" if hi == 99 else "") for lo, hi in bins if lo <= x <= hi)
+
+
 def k_table(recs):
-    """family questions (§3b): manager correct by k, the rules and claims on the key's proof path"""
-    c = collections.defaultdict(lambda: [0, 0, 0])
-    for r in recs:
-        if r["kind"] == "manager" and not r["error"] and group(r["item"]) == "family":
-            x = c[(arm(r), r["model"], r["n"], B.item(r["item"], r["n"])["k"])]
-            s = score_manager(r); x[0] += s["correct"]; x[1] += 1; x[2] += s["tolerant"]
-    if not c:
-        return ""
-    ks = sorted({k[3] for k in c})
-    L = ["Family questions, manager correct by k (rules and claims on the proof path), strict; tolerant sides:", "",
-         "| arm | model | N | " + " | ".join(f"k = {k}" for k in ks) + " |", "|---|---|---|" + "---|" * len(ks)]
-    for a, m, n in sorted({k[:3] for k in c}):
-        L.append(f"| {a} | {m.split('/')[-1]} | {n} | " + " | ".join(
-            (lambda x: f"{x[0]}/{x[1]}; {x[2]}" if x[1] else "–")(c.get((a, m, n, k), [0, 0, 0])) for k in ks) + " |")
-    return "\n".join(L)
+    """family questions (§3b, §3b′): manager correct by k, the rules and claims on the key's proof path, and by d,
+    the capitalisation disputes with a rule on it; binned as gen_items.STRATA (the actual k, also for a filled slot)"""
+    by = {"k": [(1, 1), (2, 3), (4, 5), (6, 99)], "d": [(0, 0), (1, 1), (2, 3), (4, 99)]}
+    L = []
+    for f, bins in by.items():
+        c = collections.defaultdict(lambda: [0, 0, 0])
+        for r in recs:
+            if r["kind"] == "manager" and not r["error"] and group(r["item"]) == "family":
+                x = c[(arm(r), r["model"], r["n"], _bin(B.item(r["item"], r["n"])[f], bins))]
+                s = score_manager(r); x[0] += s["correct"]; x[1] += 1; x[2] += s["tolerant"]
+        if not c:
+            return ""
+        ks = [_bin(lo, bins) for lo, _ in bins]
+        L += [("Family questions, manager correct by k (rules and claims on the proof path)" if f == "k" else
+               "Family questions, manager correct by d (capitalisation disputes with a rule on the proof path)")
+              + ", strict; tolerant sides:", "",
+              "| arm | model | N | " + " | ".join(f"{f} {k}" for k in ks) + " |", "|---|---|---|" + "---|" * len(ks)]
+        for a_, m, n in sorted({k[:3] for k in c}):
+            L.append(f"| {a_} | {m.split('/')[-1]} | {n} | " + " | ".join(
+                (lambda x: f"{x[0]}/{x[1]}; {x[2]}" if x[1] else "–")(c.get((a_, m, n, k), [0, 0, 0])) for k in ks) + " |")
+        L.append("")
+    return "\n".join(L).rstrip()
 
 
 def limit_table(recs):

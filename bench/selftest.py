@@ -88,6 +88,11 @@ def main():
     print("call limit: ok (a client that always calls tools ends every turn with a forced, non-empty final reply; "
           "score.py reports the cells at the limit by arm)")
 
+    f = R.system_prompt("F", 200, "manager")
+    assert "## 1 Data model" in f and "## 2 Glossary" not in f and "G004" not in f and \
+        [x["function"]["name"] for x in R.tools_for("F")] == ["sql"], "F: the data model and sql, no rules (§3b′)"
+    print("floor arm F: data model and sql only: ok")
+
     assert R.T_NAMES == ("resolve_term", "describe", "decide", "why", "why_not", "rules", "summary"), R.T_NAMES
     desc = {t["function"]["name"]: t["function"]["description"] for t in R.T_TOOLS}
     assert all(desc[n].startswith("For design") for n in ("rules", "summary")) and \
@@ -212,6 +217,7 @@ def main():
         assert not any(r["kind"] == "analyst" and r["arm"] == "G+" for r in recs)
         fam = {(r["n"], r["item"]) for r in recs if r["item"].startswith("F") or r["item"] == "A4"}
         assert fam and not any(n == 25 for n, _ in fam), sorted(fam)[:5]      # families start at N 50 (§3b)
+        assert {r["arm"] for r in recs if r["kind"] == "manager"} >= {"F"}, "floor arm F has manager cells (§3b′)"
         print(f"scoring {model}: manager {sum(m)}/{len(m)}, checks {k.count('reported')}/{len(k)}: ok")
     out = d / "key.jsonl"
     p = run("bench/score.py", str(out), "--judge", "--judge-model", "stub:judge")

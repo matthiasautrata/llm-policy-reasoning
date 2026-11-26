@@ -9,6 +9,8 @@ question (M..). Arms:
   G    bench/material/N*.md in the system prompt (data model, glossary, how rules combine, rules, claims,
        example SQL) and a read-only `sql` tool
   G+   G plus the trusted functions of bench/gplus.py (fn_*)
+  F    the floor (PLAN-v3-bench-full §3b′): the data model only (the material's section 1), no rules, claims or
+       how they combine, and `sql`; what the data alone answers
   T    the data model only (the material's section 1), the goal vocabulary of the base, and the engine's
        tools resolve_term, describe, decide, why, why_not, and (PLAN-v3-bench-full §2, after the pilot) the
        design tools rules and summary, through spikes/v3/v3a-prolog/cli, plus `sql`
@@ -58,7 +60,7 @@ CFG = {"backend": "duckdb", "duckdb": "spikes/v3/shared/slice.duckdb", "fetch_li
 BENCH = ROOT / "bench"
 MODELS = ["deepseek/deepseek-v4.1-flash", "z-ai/glm-5.3"]
 JUDGE = "openai@gpt-6.2-sol"         # via the Batch API (half price), paid from OpenAI credits
-ARMS = ["G", "G+", "T"]
+ARMS = ["G", "G+", "T", "F"]
 NS = [25, 50, 100, 200]
 TASKS = ["A1", "A2", "A3", "A4"]
 ANALYST_ARMS = ["G", "T"]      # G+ targets manager questions (Matthias, 2026-11-26)
@@ -145,14 +147,16 @@ def vocabulary(n):
 
 def system_prompt(arm, n, kind):
     md = (BENCH / "material" / f"N{n:03d}.md").read_text()
-    if arm in ("G", "G+"):
+    data_model = md[md.index("## 1 Data model"):md.index("## 2 Glossary")]
+    if arm == "F":
+        s = data_model
+    elif arm in ("G", "G+"):
         s = md
         if arm == "G+":
             s += ("\n## 7 Trusted functions\n\nThe fn_* tools are certified SQL for frequent questions, checked against "
                   "the policy. Prefer them where they answer the question; use `sql` otherwise.\n")
     else:
         voc, nr, nc, today = vocabulary(n)
-        data_model = md[md.index("## 1 Data model"):md.index("## 2 Glossary")]
         s = T_HEAD.format(rules=nr, claims=nc, today=today) + "\n" + data_model + voc
     how = "SQL or engine call" if arm == "T" else "SQL"
     return s + "\n## Your task\n\n" + (MANAGER if kind == "manager" else ANALYST.format(how=how))
@@ -187,7 +191,7 @@ T_TOOLS = [
         "R203 or C10, that record and the conflicts it is in), each with doc, owner, kind, class, validity, which rules it prevails over or yields to and why, and what it depends on; and the "
         "conflicts the engine knows of (pairs with no priority either way, live wherever both bodies hold). "
         "Reads the rules; evaluates nothing.", {"about": "predicate, term:<name>, concept, asset id, rule or claim id, or an EDN goal "
-                                                "pattern that narrows a predicate, e.g. [:capitalised \"K01\" ?a]"}, ["about"]),
+                                                "pattern that narrows a predicate, e.g. [:capitalised \"capital\" ?a]"}, ["about"]),
     {"type": "function", "function": {"name": "summary", "description":
         "For design: decide an open goal over all its instances in one call: counts proven / refuted / contested, "
         "the conflicts the contested ones rest on, and up to 10 ids per status. filters gives each variable a "
@@ -204,7 +208,7 @@ T_NAMES = tuple(t["function"]["name"] for t in T_TOOLS if t is not SQL_TOOL)
 
 
 def tools_for(arm):
-    return {"G": [SQL_TOOL], "G+": [SQL_TOOL] + gplus.tools(), "T": T_TOOLS}[arm]
+    return {"G": [SQL_TOOL], "F": [SQL_TOOL], "G+": [SQL_TOOL] + gplus.tools(), "T": T_TOOLS}[arm]
 
 
 # ---------------------------------------------------------------- tool execution (logged here)
@@ -665,8 +669,9 @@ def tok_cost(t, p):
 
 
 def cell_tokens(cal, kind, arm, n):
-    """The pilot's mean cell; G+ analyst uses G's; N between pilot sizes interpolated linearly in N."""
-    arm = "G" if (kind, arm) == ("analyst", "G+") else arm
+    """The pilot's mean cell; G+ analyst and F use G's (F's prompt is smaller: an upper bound); N between pilot sizes
+    interpolated linearly in N."""
+    arm = "G" if (kind, arm) == ("analyst", "G+") or arm == "F" else arm
     ns = sorted(m for (k, a, m) in cal["cells"] if (k, a) == (kind, arm))
     lo = max([m for m in ns if m <= n] or ns[:1]); hi = min([m for m in ns if m >= n] or ns[-1:])
     a, b = cal["cells"][(kind, arm, lo)], cal["cells"][(kind, arm, hi)]
