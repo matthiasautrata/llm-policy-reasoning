@@ -133,7 +133,7 @@ def main():
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     from matplotlib.lines import Line2D
-    plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 8, "svg.fonttype": "path", "svg.hashsalt": "v3"})
+    plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 8, "svg.fonttype": "path", "svg.hashsalt": "v3", "pdf.fonttype": 42})
     W = 6.5                                          # inches: the width of a text column, so figures render at text width
     d = tally()
     (HERE / "fig").mkdir(exist_ok=True)
