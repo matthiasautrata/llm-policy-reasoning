@@ -452,13 +452,27 @@ Against the pilot (the pilot's 10 manager questions; gold reasons judged at medi
 
 **Findings reversed.** "T is the cheapest arm per correct answer with every model" (draft RESULTS): at N 100, G costs $0.0007 against T's $0.0009.
 
-### 23 gpt-6.2-sol at effort max (2026-11-26; PLAN-v3-max)
+### 23 gpt-6.2-sol at effort max (2026-11-26; 68221ed..`spike-v3-max`)
 
 **Question.** RESULTS states the closure result "up to effort high", and OpenAI lists xhigh and max above it. Does G or G-q qualify absence at max?
 
 **Expected outcomes, recorded before the run.**
 - If G and G-q at max still qualify absence near 0, closure without an engine fails at this model's maximum effort. RESULTS then drops the "up to effort high" qualification.
 - If they qualify it near T, closure depends on maximum reasoning effort. RESULTS then reports it with its cost per correct answer beside T's.
+
+**Decisions and why.**
+- `run.py --reasoning` gains xhigh and max, the values OpenAI's catalog lists. This is a runner flag, not an arm change. Records: `b3g`.
+- Cap $11.2: the $13.2 of credit left after phase 21, less $2.
+- The estimate scales b3f's cost by a check cell at max (F01, G, rep 0, kept in `b3g`). The cell was served at max with 234 reasoning tokens, where the same cell at high had 0, and cost $0.057 against $0.054. That gives an estimate of about $1.6, so nothing was dropped: T, G and G-q, 3 repetitions. The actual charge was $2.48 ($0.017 per cell against high's $0.010), because reasoning rose more on later cells.
+
+**Findings kept.**
+- The first expected outcome holds. At max, G and G-q qualify absence in 0 of 15, with the value right in 15 of 15. T qualifies 15 of 15.
+- Correct cells: G 27, G-q 27, T 48 of 48. Contested sides strict: 3, 3 and 9 of 9.
+- All 341 calls were served at max. Reasoning tokens per cell were 738, 789 and 535, about 7–9× high's.
+- T is the cheapest arm per cell ($0.0168) and per correct answer ($0.017 against $0.030).
+- RESULTS drops "up to effort high" (xhigh was not run). About $10.7 of the OpenAI credit remains.
+
+**Findings reversed.** None. The claim "up to effort high" (phase 22) is widened to the maximum effort, not reversed.
 
 ## Platform lessons (platforms dropped, lessons kept)
 

@@ -1,10 +1,10 @@
 # Spike v3 progress (branch spike/v3)
 
-`RESULTS.md` describes the current state. `HISTORY.md` holds every phase so far (1–22) and names the tags.
+`RESULTS.md` describes the current state. `HISTORY.md` holds every phase so far (1–23) and names the tags.
 
 ## Status
 
-- [x] System A, the benchmark and its confirmatory runs, wrapped up (2026-11-26; HISTORY phases 1–22, last tag `spike-v3-wrapup`). No plan is open.
+- [x] System A, the benchmark and its confirmatory runs, wrapped up (2026-11-26; HISTORY phases 1–22). The closure result checked at gpt-6.2-sol's maximum effort (phase 23, last tag `spike-v3-max`). No plan is open.
 
 ## Questions for Matthias
 

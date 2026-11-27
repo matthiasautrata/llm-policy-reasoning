@@ -97,8 +97,8 @@ Generation is deterministic. A regenerated key that differs from the committed o
 
 **Runs.** Each command writes one record file. The run resumes: run it again and it skips the cells already done and re-runs failed ones. `--estimate` prints the cost and makes no call.
 - **Budget.** `--budget` caps the summed cost of `--out` and `--also`, and the run refuses before any call if its estimate exceeds what is left.
-- **Calibration.** The OpenAI runs calibrate their estimate on the DeepSeek run (`--calibrate`).
-- **Workers.** §3e.2 ran at 6 workers and re-ran its rate-limited cells at 2. §3f ran at 2 workers.
+- **Calibration.** §3e.2 and §3f calibrate their estimate on the DeepSeek run (`--calibrate`), max on §3f.
+- **Workers.** §3e.2 ran at 6 workers and re-ran its rate-limited cells at 2. §3f and max ran at 2 workers.
 - **GLM caps.** GLM was run one repetition at a time (`--reps 1`, then 2, then 3), with caps of $2.5, $3.2 and $3.8 at 2 workers. The A4 run's caps went up to $4.2.
 
 Endpoints:
@@ -120,9 +120,10 @@ DS=deepseek/deepseek-v4.1-flash
 # §3c.4 (b3d-glm) and §3d.1 (b3d-glm-a4): GLM 5.3
 .venv/bin/python bench/run.py --models z-ai/glm-5.3 --n 200 --arms G G+ T --items ${=F} --reps 3 --out bench/results/b3d-glm.jsonl --budget 3.8 --workers 2
 .venv/bin/python bench/run.py --models z-ai/glm-5.3 --n 200 --analyst-arms G G+ T --items A4 --reps 3 --out bench/results/b3d-glm-a4.jsonl --budget 4.2 --workers 2
-# §3e.2 (b3e) and §3f (b3f): gpt-6.2-sol at effort medium and high
+# §3e.2 (b3e), §3f (b3f) and max (b3g): gpt-6.2-sol at effort medium, high and max
 .venv/bin/python bench/run.py --models openai@gpt-6.2-sol --reasoning medium --n 200 --arms G G-q T --items ${=F} --reps 3 --out bench/results/b3e.jsonl --budget 16 --calibrate bench/results/b3c.jsonl
 .venv/bin/python bench/run.py --models openai@gpt-6.2-sol --reasoning high --n 200 --arms G G-q T --items ${=F} --reps 3 --out bench/results/b3f.jsonl --budget 12.75 --workers 2 --calibrate bench/results/b3c.jsonl
+.venv/bin/python bench/run.py --models openai@gpt-6.2-sol --reasoning max --n 200 --arms G G-q T --items ${=F} --reps 3 --out bench/results/b3g.jsonl --budget 11.2 --workers 2 --calibrate bench/results/b3f.jsonl
 ```
 
 (`${=F}` splits the list in zsh; in bash write `$F`.)
@@ -151,6 +152,7 @@ Decompress the committed files first (`gunzip -k bench/results/*.gz`). Then scor
 .venv/bin/python bench/score.py bench/results/b3d-glm-a4.jsonl   # §3d.1
 .venv/bin/python bench/score.py bench/results/b3e.jsonl          # §3e.2
 .venv/bin/python bench/score.py bench/results/b3f.jsonl          # §3f
+.venv/bin/python bench/score.py bench/results/b3g.jsonl          # max
 ```
 
 Each report also gives:

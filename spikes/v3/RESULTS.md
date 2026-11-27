@@ -189,7 +189,7 @@ The design note is `notes/warrant-layer/benchmark-design.md`. The build and the 
 **Models.** The judge model and the arms are fixed across models:
 - DeepSeek v4.1 Flash (`deepseek/deepseek-v4.1-flash`, OpenRouter, providers admitted by the fp8 quantization filter);
 - GLM 5.3 (`z-ai/glm-5.3`, OpenRouter);
-- gpt-6.2-sol (`openai@gpt-6.2-sol`, OpenAI Responses API), at reasoning effort medium and high.
+- gpt-6.2-sol (`openai@gpt-6.2-sol`, OpenAI Responses API), at reasoning effort medium, high and max.
 
 **Scoring.** Grades come from oracle keys wherever keys decide. The LLM judge is used only where no key does.
 - **Manager answers.** A manager answer is correct when status, value, sides and qualifier all match the key. Every key states its qualifier, null when none applies. Sides are scored two ways:
@@ -218,6 +218,7 @@ The design note is `notes/warrant-layer/benchmark-design.md`. The build and the 
 | §3c.4, §3d.1 | F01–F16; A4 | G, G+, T; G, G+, T | GLM 5.3; 200 | replication | `b3d-glm`, `b3d-glm-a4` |
 | §3e.2 | F01–F16 | G, G-q, T | gpt-6.2-sol, effort medium; 200 | confirmatory | `b3e` |
 | §3f | F01–F16 | G, G-q, T | gpt-6.2-sol, effort high; 200 | confirmatory | `b3f` |
+| max | F01–F16 | G, G-q, T | gpt-6.2-sol, effort max; 200 | confirmatory | `b3g` |
 
 Each run's files are in `bench/results/`: `<records>.jsonl.gz` holds the cells, and `.judge-medium.jsonl.gz` and `.2.jsonl.gz` hold the grades. For §3b′ the grades are `b3c.rejudge-medium*`. In the tables, a refused or truncated record that was re-run counts in cost only.
 
@@ -336,12 +337,12 @@ Gold reasons covered / missed / wrong, over 3 sessions: 9 reasons per session at
   - Unlike with DeepSeek, G+ does better than G here, though none of its functions reaches the families.
 - **Cost.** Per correct family answer, GLM costs about 9× DeepSeek for T and 15× for G. T is the cheapest arm with either model.
 
-## A stronger model: gpt-6.2-sol at effort medium and high (§3e.2, §3f)
+## A stronger model: gpt-6.2-sol at effort medium, high and max (§3e.2, §3f, max)
 
 - **Model.** gpt-6.2-sol on OpenAI's API. It was the strongest model on OpenAI's pricing page (read 2026-11-26) whose estimate fit the budget, and it is not deprecated.
 - **Serving.** Every call was served as `gpt-6.2-sol` at the effort requested and echoed. Calls with tools go through the Responses API, statelessly, with the encrypted reasoning sent back between tool calls (`harness/openrouter.py`), because Chat Completions refuses function tools with reasoning effort for this model.
 - **Scoring.** Mechanical, with no judge. gpt-6.2-sol is also the judge's model, but no judge grade enters these results.
-- **Effort levels.** The model also accepts xhigh and max (OpenAI's model catalog, read 2026-11-26). The runner offers low, medium and high, so the claim holds *up to effort high*.
+- **Effort levels.** The model accepts low, medium, high, xhigh and max (OpenAI's model catalog, read 2026-11-26). Max is its highest setting; xhigh was not run.
 
 | effort | arm | correct; tolerant | qualifier (of 42) | absence qualified (of 15) | sides strict / tolerant (of 9) | true / defeat (of 15 / 3) | by k: 1 / 2–3 / 4–5 / 6+ | reasoning / completion tokens per cell | cost | $ per correct |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -351,16 +352,19 @@ Gold reasons covered / missed / wrong, over 3 sessions: 9 reasons per session at
 | high | G | 26; 26 | 27 | 0 | 2 / 2 | 15 / 3 | 9, 6, 8, 3 | 110 / 377 | $0.49 | 0.019 |
 | high | G-q | 25; 28 | 27 | 0 | 1 / 4 | 15 / 3 | 9, 6, 7, 3 | 105 / 378 | $0.48 | 0.019 |
 | high | T | 48; 48 | 42 | 15 | 9 / 9 | 15 / 3 | 12, 12, 12, 12 | 60 / 349 | $0.54 | 0.011 |
+| max | G | 27; 28 | 27 | 0 | 3 / 4 | 15 / 3 | 9, 6, 9, 3 | 738 / 1043 | $0.82 | 0.030 |
+| max | G-q | 27; 28 | 27 | 0 | 3 / 4 | 15 / 3 | 9, 6, 9, 3 | 789 / 1091 | $0.84 | 0.031 |
+| max | T | 48; 48 | 42 | 15 | 9 / 9 | 15 / 3 | 12, 12, 12, 12 | 535 / 846 | $0.81 | 0.017 |
 
 For comparison, DeepSeek at N 200 (§3b′, §3c.2):
 - G 25; 26, absence 0 of 15;
 - G-q 26; 28, absence 0 of 15;
 - T 46; 46, absence 13 of 15.
 
-- **The closure result holds for the stronger model at both efforts.** G and G-q qualify absence in 0 of 15, with the value right in 15 of 15. T qualifies all 15 and is right on all 48 cells.
+- **The closure result holds for the stronger model at every effort run, up to its maximum.** G and G-q qualify absence in 0 of 15, with the value right in 15 of 15. T qualifies all 15 and is right on all 48 cells.
 - **Values are not the gap.** G and G-q are right on every true, false-by-defeat and claim key. They lose on qualifiers and contested sides.
-- **More effort buys reasoning, not closure.** Reasoning tokens rose about 4× for G and 6× for T, but stay small (60–110 per cell). The strict counts are identical to medium's.
-- **Cost.** T costs the most per cell at high ($0.011 against G's $0.010), because it makes more calls and caches less (76 % of prompt tokens against 99 %). It still costs the least per correct answer.
+- **More effort buys reasoning, not closure.** From medium to high, reasoning tokens rose about 4× for G and 6× for T (60–110 per cell), and the strict counts are identical. From high to max they rose about 7× for G and 9× for T (535–789 per cell). G gains one correct cell and one contested side, G-q two of each, and neither gains an absence qualifier.
+- **Cost.** T costs the most per cell at high ($0.011 against G's $0.010), because it makes more calls and caches less (76 % of prompt tokens against 99 %). At max it costs the least per cell ($0.0168 against G's $0.0172 and G-q's $0.0176), because G's added reasoning outweighs T's extra calls. It costs the least per correct answer at every effort, $0.017 at max against G's $0.030.
 - **Refusals.** At medium, nine cells were stopped by OpenAI's rate limit at 6 workers and re-run at 2. Refused calls cost nothing.
 
 ## Judge validity: keys against the judge (§3e.1)
@@ -403,22 +407,22 @@ After these two rules, F covers no reason by keys at any N.
 
 ## Main result
 
-Across three models (DeepSeek v4.1 Flash, GLM 5.3, gpt-6.2-sol up to effort high) and three N, the rule arms do not differ on values. They differ on closure:
+Across three models (DeepSeek v4.1 Flash, GLM 5.3, gpt-6.2-sol at effort medium, high and max) and three N, the rule arms do not differ on values. They differ on closure:
 - **Absence.** A "no" that rests on absence is qualified by T in:
   - 13 of 15 (DeepSeek, N 200);
   - 6 of 6 (DeepSeek, N 100);
   - 11 of 15 (GLM);
-  - 15 of 15 (gpt-6.2-sol, at medium and at high).
+  - 15 of 15 (gpt-6.2-sol, at medium, high and max).
 
   G, G+, G-q, G+-q and G-tools qualify it in 0 of every count.
 - **Contested sides.** They are complete for T on every contested key and every model. For G they degrade as disputes accumulate.
 
 **Controls.**
-- Asking for the qualifier does not produce it (G-q, two models, two efforts).
+- Asking for the qualifier does not produce it (G-q, two models, three efforts up to max).
 - Rule lookup without the evaluator does not close the gap (G-tools).
 - F answers almost nothing without the rules, which shows what the material contributes.
 
-**Cost.** T is the cheapest arm per correct family answer at N 50 and 200 with every model (DeepSeek $0.0013, GLM $0.012, gpt-6.2-sol $0.008–0.011 at N 200). At N 100, G and G+ are cheaper than T, at $0.0007 against $0.0009.
+**Cost.** T is the cheapest arm per correct family answer at N 50 and 200 with every model (DeepSeek $0.0013, GLM $0.012, gpt-6.2-sol $0.008–0.017 at N 200). At N 100, G and G+ are cheaper than T, at $0.0007 against $0.0009.
 
 | run | cells | arms $ | judge $ |
 |---|---|---|---|
@@ -430,7 +434,8 @@ Across three models (DeepSeek v4.1 Flash, GLM 5.3, gpt-6.2-sol up to effort high
 | §3d.2 (`b3d-gtools`) | 51 | 0.148 | 0.068 |
 | §3e.2 (`b3e`) | 153 | 1.245 | – |
 | §3f (`b3f`) | 144 | 1.506 | – |
-| confirmatory runs | 1 208 | 7.095 | 1.219 |
+| max (`b3g`) | 144 | 2.475 | – |
+| confirmatory runs | 1 352 | 9.570 | 1.219 |
 
 - **Exploratory runs.** The pilot ($0.598, judge $0.242), batch 1 ($0.585 with its re-runs, judge $0.859), §3b ($0.110, judge $0.108) and the smoke tests ($0.072, judge $0.022) add $1.37 for arms and $1.23 for the judge.
 - **Cell counts.** They include refused and truncated records that were re-run.
@@ -463,7 +468,7 @@ Across three models (DeepSeek v4.1 Flash, GLM 5.3, gpt-6.2-sol up to effort high
 - **Judge-only reasons.** Some reasons have no keys, unread keys, or nothing contested to test at that N. They rest on the judge alone.
   - The judge is one model, which agrees with itself but agrees with the keys on only 0.47–0.95 of grades.
   - It has not been checked against hand grading. No hand grades exist.
-- **Effort.** gpt-6.2-sol was tested at effort medium and high. The levels above high that it accepts (xhigh, max) were not run, so the result holds up to effort high.
+- **Effort.** gpt-6.2-sol was tested at effort medium, high and max, its highest setting. Xhigh, between high and max, was not run.
 - **Models.** Three models, with three repetitions each. OpenRouter routes a model to any admitted provider, and the provider is recorded per call.
 
 # Built vs native
