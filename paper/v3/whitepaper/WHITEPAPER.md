@@ -152,7 +152,7 @@ We gave three models the same 16 questions about a procurement domain with 100,0
 three times each. DeepSeek v4.1 Flash and GLM 5.3 are low-cost models; GPT-6.2 Sol, a widely used frontier model,
 ran at medium, high and maximum reasoning effort. Every set-up had the same data, schema documentation and
 read-only SQL access. One had the rules as a document generated from the rule base; the other had an engine that
-evaluates the same rule base. Expected answers we computed and double checked. An answer counts as fully correct
+evaluates the same rule base. Expected answers were computed and double checked. An answer counts as fully correct
 only if its value, its status, the sides of any conflict and its missing-data flag are all right. The companion
 paper gives the full design.
 
