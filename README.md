@@ -1,22 +1,41 @@
 # llm-policy-reasoning
 
-Which layer of meaning does a question about a rule-based policy need, and in which representation and mode does a language model use it reliably?
+When a language model answers questions that depend on business rules, does it matter how the rules are written,
+and does it matter who applies them: the model, reading them, or an engine it calls?
 
-v2, "Layers of Meaning", is finished: paper [`paper/v2/PAPER.md`](paper/v2/PAPER.md); plan and decision log [`REWORK.md`](REWORK.md).
-It crosses four cumulative layers (L0 schema, L1 ontology, L2 context, L3 warrant) with three representations (text, structured, formal) and two modes (*read*: the model answers from the material; *compile*: the model writes a Prolog goal that an engine executes), on a synthetic procurement-approval policy whose answer keys are computed by SWI-Prolog and checked by an independent Python implementation.
+Three studies on synthetic procurement policies with machine-checked answer keys. Short answer: notation is
+secondary; evaluation is not. Models reading the rules get the values right and lose the standing of their answers
+(a "no" that rests only on missing data, the sides of a conflict between owners); models calling an engine that
+evaluates the same rules keep it, at lower model cost.
 
-## v1
+## Papers
 
-v1, "Rules in Context", asked whether notation matters and when an engine is needed. Written decisions mattered, notation did not; the engine earned its place at scale.
-Paper: [`paper/v1/PAPER.md`](paper/v1/PAPER.md) · PDF: [`paper/v1/whitepaper.pdf`](paper/v1/whitepaper.pdf).
-Its studies, transcripts and results are at git tag `v1` (see [`paper/v1/README.md`](paper/v1/README.md)).
+- **White paper:** [*Beyond Context Graphs and Layers: The Warrant Dimension for Data Agents*](paper/v3/whitepaper/WHITEPAPER.md).
+- **Companion (arXiv preprint, LaTeX):** *AI-Ready Data: Syntax, Ontology and Computed Warrants Compared*,
+  [`paper/v3/companion/`](paper/v3/companion/) (`make -C paper/v3/companion`). It consolidates the three studies.
+- Earlier reports: v1 [`paper/v1/PAPER.md`](paper/v1/PAPER.md), v2 [`paper/v2/PAPER.md`](paper/v2/PAPER.md).
 
-The v3 spike (`spikes/v3/`, branch `spike/v3`) builds System A: rules and claims as data, a defeasible engine (SWI-Prolog via janus) over bounded SQL fetch on DuckDB. Current state: [`spikes/v3/RESULTS.md`](spikes/v3/RESULTS.md). How the repo got here: [`HISTORY.md`](HISTORY.md).
+How the papers are built, reviewed and kept free of internal names: [`paper/v3/README.md`](paper/v3/README.md).
+
+## The three studies
+
+- **v3, warrants evaluated** (`spikes/v3/`, `bench/`). System A keeps rules and claims as data, checks them at load
+  time and evaluates them as defeasible logic in SWI-Prolog (via janus) over bounded SQL on DuckDB. A benchmark
+  compares models reading the rules as a document with models calling the engine, across three models and up to
+  200 rules. Current state: [`spikes/v3/RESULTS.md`](spikes/v3/RESULTS.md); how to rebuild and rescore:
+  [`bench/README.md`](bench/README.md); how the spike got here: [`spikes/v3/HISTORY.md`](spikes/v3/HISTORY.md).
+- **v2, "Layers of Meaning"**: four cumulative layers (L0 schema, L1 ontology, L2 context, L3 warrant) × three
+  representations (text, structured, formal) × two modes (*read*: the model answers from the material; *compile*:
+  the model writes a Prolog goal that an engine executes). Plan and decision log: [`REWORK.md`](REWORK.md).
+- **v1, "Rules in Context"**: English, Datalog and OWL + SHACL-AF, with and without written interpretation
+  decisions, and at growing scale. Frozen at git tag `v1` (see [`paper/v1/README.md`](paper/v1/README.md)).
+
+The repository's history, one line per phase with tags and commit ranges: [`HISTORY.md`](HISTORY.md).
 
 ## Layout
 
 ```
-HISTORY.md    v1, v2, v3 spike: one line each, with tags and commit ranges
+HISTORY.md    v1, v2, v3: one line each, with tags and commit ranges
 REWORK.md     v2 plan and decision log
 world/        world generator and domain model
 rules/        rules.yaml: rule records (id, layer, class, conservative, owner, english, prolog)
@@ -24,11 +43,12 @@ render/       projections per representation × layer (text, structured, prolog)
 engine/       SWI-Prolog engine, why/2, capability registry, ./ask
 verify/       independent Python reference; engine == reference check
 questions/    question bank (kind, min_layer, forks, type) → per-world questions and keys
-harness/      model runs, compile-mode IM validation, scoring
+harness/      v2 model runs, compile-mode IM validation, scoring; the shared chat client
 worlds/       generated worlds used in runs (committed)
-results/      run records
-paper/        v2 paper sources; paper/v1/ holds the frozen v1 report
-spikes/v3/    System A spike (engine, oracle, integrity gate, acceptance tests)
+results/      v2 run records
+paper/        v1 and v2 reports; paper/v3/ the white paper, the companion and the review tooling
+spikes/v3/    System A (engine, oracle, integrity gate, acceptance tests)
+bench/        v3 benchmark: rule-base generator, items, set-ups, runs, scoring, committed run records
 ```
 
 ## Prerequisites
@@ -39,13 +59,13 @@ spikes/v3/    System A spike (engine, oracle, integrity gate, acceptance tests)
 - For `make verify-v1` only: [Soufflé](https://souffle-lang.github.io) 2.4+ on `PATH`, and `pip install pyshacl rdflib`
 
 ```
-make worlds       # regenerate worlds/ (sizes S M L × seeds 1 2 3): relations, projections, questions, keys
+make worlds       # v2: regenerate worlds/ (sizes S M L × seeds 1 2 3): relations, projections, questions, keys
 make verify       # worlds/ is fresh, the Python reference reproduces every engine key, and the rendered
                   # L1 formal.pl (decided and open) reproduces the L1 keys on its own
 make verify-v1    # check the frozen v1 tree (tag v1) still verifies
 ```
 
-The engine can be queried directly; this is the tool the compile mode will give a model:
+The v2 engine can be queried directly; this is the tool compile mode gives a model:
 
 ```
 engine/ask --world worlds/S-s1 --layer 1 'headroom(cc1, V)'
@@ -55,7 +75,7 @@ engine/ask --capabilities --layer 2        # predicates available at a layer, wi
 
 It prints one line of bindings per solution (or `true` / `false`). It exits 2 on an error, for example a predicate that is not defined at the requested layer. Every call is logged as JSONL to `$ASK_LOG` or `WORLD/ask.log.jsonl`.
 
-### Model runs
+### Model runs (v2)
 
 Read mode puts one layer's material in context and asks one question per call. The model ends its reply with a JSON object holding a status (`ANSWER`, `AMBIGUOUS`, `CONFLICT`, `UNDERDETERMINED`, `OUT_OF_SCOPE`) and a value. Calls go through [OpenRouter](https://openrouter.ai), with the key read from `OPENROUTER_API_KEY`.
 

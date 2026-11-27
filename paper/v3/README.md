@@ -5,7 +5,7 @@ Two documents, one evidence base.
 | Document | Reader | Form | Claim |
 | --- | --- | --- | --- |
 | [`whitepaper/`](whitepaper/WHITEPAPER.md) | data and AI leaders, architects | Markdown, ~3,000 words, three charts (`figures.py`) | Context graphs and layers name exceptions and policy but leave them to precedent or to the model; the warrant dimension must be computed. |
-| [`companion/`](companion/main.tex) | technical reviewers | LaTeX, full references | RQ1: representation is secondary (v1, v2). RQ2: warrants computed by an engine beat warrants read from text (v2, v3). |
+| [`companion/`](companion/main.tex) | technical reviewers | LaTeX arXiv preprint, full references | RQ1: representation is secondary (v1, v2). RQ2: warrants computed by an engine beat warrants read from text (v2, v3). |
 
 Every number in either document comes from `spikes/v3/RESULTS.md` (v3), `paper/v2/PAPER.md` (v2) or
 `paper/v1/PAPER.md` (v1), and each RESULTS table reproduces from the committed results with `bench/score.py`,
