@@ -1,69 +1,590 @@
-% Companion paper to the warrant-layer white paper. Outline: each section states its claim and its sources.
-% Every number is cited to RESULTS (v3) or PAPER (v1, v2) and reproduces with bench/score.py.
+% Companion paper to the white paper (paper/v3/whitepaper/WHITEPAPER.md).
+% Numbers: v1 and v2 from paper/v1/PAPER.md and paper/v2/PAPER.md; v3 from spikes/v3/RESULTS.md, and Table 4 and
+% the figures from paper/v3/whitepaper/figures.py over bench/results (no API calls). Paths relative to main.
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
-\usepackage{booktabs,graphicx,hyperref}
-\usepackage[authoryear]{natbib}
-\newcommand{\todo}[1]{\textcolor{red}{[#1]}}
-\usepackage{xcolor}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern,microtype}
+\usepackage{booktabs,tabularx,graphicx,xcolor}
+\usepackage[authoryear,round]{natbib}
+\usepackage[hidelinks]{hyperref}
 
-% Alternatives: "AI-Ready Data: Efficacy of Syntax, Ontology and Warrants";
-% "Value Accuracy Overstates Reliability: Syntax, Ontology and Warrants in LLM Data Agents".
+\newcommand{\repo}[1]{\texttt{#1}}
+\newcommand{\st}[1]{\textsc{#1}}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\input{table-v3.tex}  % \vthreerows: generated rows of Table 4
+
 \title{AI-Ready Data:\\Syntax, Ontology and Computed Warrants Compared}
-\author{Matthias Autrata}
-\date{\todo{date}}
+\author{Matthias Autrata\\Independent researcher\\\texttt{matthias@autrata.net}}
+\date{November 2026}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-\todo{Moves: (1) agents are given business rules as text; (2) RQ1: does the notation of those rules matter?
-(3) RQ2: does evaluating them with an engine, called as a tool, change reliability? (4) design in one sentence:
-same questions, data and rules across schema-only, rules-as-document and rules-as-engine set-ups, three models,
-rule sets from 25 to 200; (5) RQ1 result: notation does not decide correctness once decisions are written down;
-(6) RQ2 result: value accuracy ties, reliability does not: missing-data flags 0/45 vs 11--15/15 per model,
-conflict sides 1--6/9 vs 9/9; (7) cost per correct answer 24--54\% lower with the engine.}
+Data agents are increasingly given the business rules that decide their answers, as text in instruction files or
+as context retrieved at question time. We ask whether the notation of those rules changes whether a language model
+answers correctly, and whether evaluating the rules with an engine the model calls as a tool, instead of letting
+the model read and apply them, changes reliability. Three studies on synthetic procurement domains with
+machine-checked keys address the two questions. On notation: once the interpretation decisions were written down,
+449 of 453 answers, pooled across English, Datalog and OWL with SHACL rules, were correct; with the needed layer of
+material present, questions with a settled answer were 99--100\% correct in Markdown, YAML and Prolog alike.
+Notation moved where models abstained, not whether settled answers were read correctly. On evaluation: in a
+benchmark with 200 rules and five model settings (three models, one at three reasoning efforts), models given the
+rules as a document got the values of undisputed answers right but never reported that a ``no'' rested only on
+missing data (0 of 75 answers) and named every side of a rule conflict in 2 or 3 of 9. Calling an engine that
+evaluates the same rules as defeasible logic, they reported missing data correctly in 11--15 of 15 answers per
+setting and named every side in 9 of 9. One added instruction, a 26-fold increase in reasoning, and a rule-lookup
+tool each left the gap open. At 200 rules the engine set-up also had 21--56\% lower model cost per fully correct
+answer; the cost of converting the rules was not measured. The results argue for measuring agents on the standing
+of their answers, which value accuracy does not see.
 \end{abstract}
 
 \section{Introduction}
-\todo{The gap between context and warrant \citep{gupta2025context,cui2026context,klahr2026context,plumb2026rippletide};
-Toulmin's warrant \citep{toulmin1958}. State RQ1 and RQ2, and why RQ1 comes first: if notation decided
-correctness, the engine would be one notation among others.}
 
-\section{Related work}
-\todo{Text-to-SQL and enterprise benchmarks \citep{beaver2024,akgul2026schemafree}; semantic and context layers, context engines \citep{waselnuk2026engine};
-defeasible logic programming \citep{antoniou2006,maier2011}; inferentialism and the tonk objection
-\citep{sellars1953,prior1960,dummett1993,brandom2007,schroederheister2023}.}
+A question to a data agent often depends on rules that are not in the data: which approval limit applied on a
+date, which exception overrides which policy, whether an empty result means ``no'' or ``unknown''. The industry's
+answer has been to supply that knowledge as context. Context layers gather definitions, metrics and tribal
+knowledge \citep{cui2026context}; context graphs record decision traces, so that agents can search precedent
+\citep{gupta2025context}; agent context layers add policies, playbooks and decision memory
+\citep{klahr2026context}. These designs make the rules visible to an agent. They say little about what evaluates
+them.
 
-\section{Definitions}
-\todo{Layers L0--L3 (schema, ontology, context, warrant). Conservative vs non-conservative rules. Claim, warrant,
-contested, defeat. Three-valued semantics with ambiguity propagation (spikes/v3/shared/SEMANTICS.md).}
+Two design choices sit behind that question. The first is representation: if rules are supplied, does their
+notation matter? Ontology languages, rule languages and prose all compete for the role. The second is evaluation:
+should the model read the rules and apply them, or should an engine evaluate them and return answers that the model
+explains? We take the questions in that order, because if notation decided correctness, an engine would be one
+notation among others.
 
-\section{RQ1: Representation is secondary}
-\todo{v1: notation comparisons (prose, Datalog, OWL); v2: layers by representation by mode.
-Finding: written decisions matter, notation does not. Read vs compile on conflicts (v2): 9/20 vs 29/30.}
+\textbf{RQ1.} Does the representation of rules and definitions change whether a model answers policy questions
+correctly?
+\textbf{RQ2.} Given the same rules, does a model calling an engine that evaluates them answer more reliably than a
+model reading them, and at what cost?
 
-\section{RQ2: Computed vs read}
-\subsection{System}
-\todo{Architecture figure; engine (SWI-Prolog via janus); oracle independent of the engine; load-time integrity
-gate; CLI contract decide / why / resolve\_term as the tool interface.}
-\subsection{Benchmark}
-\todo{Domain, bases N025--N200, set-ups floor / G / G+ / T, question families, keys from the oracle,
-judge only where keys do not decide, judge validity.}
-\subsection{Results}
-\todo{Main table; growth; controls (rule index, explicit instruction, reasoning effort up to max); replications.}
-\subsection{Cost}
-\todo{Cost per correct answer by model and effort; response times not compared.}
+The paper consolidates three studies of the same kind of domain, a synthetic procurement organisation with cost
+centres, requests, approval limits, budget caps, vendor checks and capitalisation policies (Table~\ref{tab:studies}).
+Studies~1 and~2 were reported separately \citep{autrata2026v1,autrata2026v2} and are summarised here as far as RQ1
+and RQ2 need them. Study~3 is new. RQ1 draws on Studies 1 and 2, RQ2 on Studies 2 and 3.
+
+\begin{table}[t]
+\centering\small
+\caption{The three studies. All use synthetic procurement domains, keys computed by an engine and reproduced by an
+independent implementation, and repetitions of the same items.}
+\label{tab:studies}
+\begin{tabularx}{\textwidth}{lL{3.1cm}L{3.0cm}XL{2.2cm}}
+\toprule
+Study & Varies & Models & Items and repetitions & Scored on\\
+\midrule
+1 (v1) & notation (English, Datalog, OWL\,+\,SHACL-AF); decisions stated or absent; size to 1,336 facts & DeepSeek V4 Pro, GLM~5.3, three Claude models & 469 graded scenarios (decisions stated), 87 (absent); 9 questions per generated world & status, value\\
+2 (v2) & layer (L0--L3) $\times$ representation (Markdown, YAML, Prolog) $\times$ mode (read, compile) & DeepSeek V4.1 Flash; GLM~5.3 for comparison & 50 questions per world, $n=1$--3; 8,198 calls & status, value\\
+3 (v3) & rules as a document vs an engine; controls; 50--200 rules & DeepSeek V4.1 Flash, GLM~5.3, GPT-6.2 Sol (3 efforts) & 16 questions per rule base $\times$ 3; a four-turn design task $\times$ 3 & status, value, sides, qualifier\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Contributions.}
+(i) Evidence across two studies and five notations that, for questions with a settled answer, notation mattered
+less than whether the decisions and the needed layer of material were present (Section~\ref{sec:rq1}).
+(ii) A benchmark with oracle keys for questions whose answers depend on precedence, disputes between owners, valid
+time and completeness, with a floor, a document set-up, two controls and an engine set-up (Section~\ref{sec:v3}).
+(iii) Evidence that, given the same rules, reading and evaluating them differed in the standing of answers, not
+their values, and that the tested interventions on the reading side did not close the difference
+(Section~\ref{sec:rq2}).
+(iv) An engine design in which rules and claims are data, checked at load time and evaluated under an
+ambiguity-propagating defeasible logic, with answers that carry status, sides, a qualifier and a proof tree
+(Section~\ref{sec:system}).
+
+\section{Background and related work}
+\label{sec:related}
+
+\paragraph{Reasoning over rules in language.} Transformers can emulate deduction over natural-language rules
+\citep{clark2020ruletaker,tafjord2021proofwriter}, with accuracy falling as proofs grow; errors compound over the
+number of reasoning steps \citep{dziri2023faith}. BoardgameQA \citep{kazemi2023boardgameqa} studies contradictory
+rules with preferences, the closest analogue to our disputes between owners. Usable context is shorter than
+nominal context \citep{liu2024lost,hsieh2024ruler}, and shorter still when question and evidence share no literal
+cue \citep{modarressi2025nolima}; a rule document read in full is such a context.
+
+\paragraph{Programs and solvers as tools.} Program-aided reasoning \citep{gao2023pal,chen2023pot} has the model
+write code that an interpreter runs, and Logic-LM \citep{pan2023logiclm} and LINC \citep{olausson2023linc} have it
+translate a problem into a formal language for a solver. Study~2's compile mode is of this kind, with the rules
+given. Study~3 removes translation of the rules from the model's task: the rules are already formal, and the model
+only asks.
+
+\paragraph{Abstention.} Study~2's main failure, answering where the material does not settle a question, is the
+problem of selective prediction and abstention in question answering \citep{kamath2020selective}.
+
+\paragraph{Enterprise data and context.} Enterprise text-to-SQL benchmarks show that schemas alone leave models far
+from reliable \citep{beaver2024}, and query logs recover much of a database's structure \citep{akgul2026schemafree}.
+Our floor set-up, with schema and SQL but no rules, is a small version of that setting. The recent essays on
+context layers and graphs \citep{gupta2025context,cui2026context,klahr2026context}, and reports of products built on
+them \citep{plumb2026rippletide}, recognise exceptions, overrides and approvals as the knowledge agents lack. They
+route it to precedent search, to context the agent reads, or to policies described as machine-enforceable without a
+stated mechanism, and report no measurements of the kind given here.
+
+\paragraph{Rules, defeat and argumentation.} Production-rule systems and their match algorithms
+\citep{forgy1982rete} execute rules with conflict-resolution strategies. Defeasible logic describes rules defeated
+by superior rules, in variants that block or propagate ambiguity \citep{antoniou2006,billington2010,maher2021}; the
+propagating variant matches the well-founded semantics of a direct translation into a logic program
+\citep{maier2011}. Defeasible logic programming \citep{garcia2004delp}, structured argumentation such as ASPIC+
+\citep{modgil2014aspic} and Carneades \citep{gordon2007carneades} keep opposing arguments and explain outcomes, and
+LegalRuleML \citep{legalruleml} represents legal norms with temporal applicability, defeasibility and authority.
+Decision tables have hit policies for overlapping rules \citep{dmn}, XACML has rule-combining algorithms and an
+indeterminate result \citep{xacml}, and OPA returns ``undefined'' when no rule applies \citep{opa}. Semantic-web rule
+languages such as SWRL \citep{swrl} extend ontologies with Horn rules but not with defeat. Our engine's semantics
+come from this literature; what we add is a combination for data agents (owners and authority as precedence,
+claims gated by valid time, aggregates over contested members, and a completeness qualifier) and a measurement of
+what it changes.
+
+\paragraph{Absence and completeness.} Treating absence as falsity is the closed-world assumption
+\citep{reiter1978cwa}. Completeness statements make it local: a query's answer is complete when the sources it reads
+are declared complete for it \citep{levy1996complete,razniewski2011complete,darari2013rdf}. Explanations of missing
+answers \citep{chapman2009whynot} address why a tuple is absent. Our qualifier is a simple instance: an answer that
+rests on absence is marked unless every name it reads is covered by a completeness claim.
+
+\paragraph{Warrants.} We borrow the term from \citet{toulmin1958}: a warrant is what entitles one to move from data
+to a claim, together with its backing, qualifier and possible rebuttals.
+
+\section{Definitions and a worked example}
+\label{sec:defs}
+
+Following Study~2, the material an agent may receive is split into four cumulative layers: \emph{schema} (L0;
+tables, columns, types, keys), \emph{ontology} (L1; concepts, definitions, bindings from concepts to columns),
+\emph{context} (L2; claims with a source, a valid time and a status, including claims that disagree) and
+\emph{warrant} (L3; rules with owners that license conclusions the facts do not contain, with exceptions,
+precedence, entitlements and incompatibilities). A question has a minimum layer, below which the correct answer is
+that the material does not settle it.
+
+Answers carry a status. \st{answer} gives a value; \st{conflict}, or contested, gives the sides as sets of rules and
+claims; \st{underdetermined} means the material does not settle the question; \st{ambiguous} (Studies 1 and 2)
+means the material admits several readings and decides none; \st{out\_of\_scope} means the question is outside the
+material. In Study~3 every \st{answer} also carries a \emph{qualifier}, set when the answer rests on the absence of
+a record in a scope not declared complete. An answer is \emph{fully correct} when status, value, sides and
+qualifier all match the key. Sides are scored strictly (the same sets) and, as a check, tolerantly (each key side
+inside one reported side, extra ids allowed); results use strict sides.
+
+\begin{table}[t]
+\centering\small
+\caption{The six capitalisation policies that apply to a capital request of 8,000 at 200 rules (request
+\texttt{r000059}). Precedence is stated in the rules; nothing else orders them.}
+\label{tab:example}
+\begin{tabular}{lll}
+\toprule
+Policy owner & Says & Stated to prevail over\\
+\midrule
+Finance & capitalise & tax rules 1 and 2\\
+Controller & capitalise & nothing\\
+Audit & expense & finance's rule\\
+Tax, rule 1 & expense & nothing\\
+Tax, rule 2 & expense & nothing\\
+Tax, rule 3 & expense & nothing\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:example} shows a case from the benchmark. Under team defeat a conclusion holds only if every
+applicable attacker is beaten by a superior supporter. Nothing beats the controller's rule, so ``expense'' does not
+hold; nothing on the capitalise side beats audit's rule or tax rule 3, so ``capitalise'' does not hold. The key is
+\st{conflict} with two sides, finance and the controller against audit and tax, each listing every applicable rule
+that supports it. ``Expensed'' and ``capitalised'' are both wrong. In the four-turn design task, the engine set-up
+reported this request as contested with both sides in 3 of 3 sessions; the document set-up did so in 1, gave a plain
+value in 1 and was unclear in 1. A second kind of case is a ``no'' that holds only because a record was not found,
+for example a check that fails only because no matching record was found: the key is \st{answer} \emph{no} with the qualifier, and
+a plain ``no'' is not fully correct.
+
+\section{RQ1: Representation}
+\label{sec:rq1}
+
+\subsection{Study 1: notation under ambiguity}
+
+Study~1 wrote one procurement policy three ways: an English handbook, a Datalog program and an OWL~2 ontology
+\citep{owl2} with SHACL-AF rules \citep{shacl,shaclaf}. Keys were computed by Souffl\'e \citep{jordan2016souffle}
+and reproduced by an independent Python implementation of the English rules and by pySHACL \citep{pyshacl}. The
+material either stated the interpretation decisions, for example whether a cap check counts pending requests, or
+left them open.
+
+With the decisions stated, 449 of the 453 answered scenarios were correct, pooled across English, Datalog and OWL
+with SHACL rules; the four misses were slips of arithmetic or reading, and no notation stood out. Without them,
+models silently picked one reading in 15 of 87 answers, in every model family. The decisions in question needed
+arithmetic, negation as failure and rule precedence, which OWL~2 alone cannot express, so a plain OWL~2 ontology
+could not state them and failed like undecided English. With SHACL-AF rules added, it performed like the others.
+
+\subsection{Study 2: layers and representations}
+
+Study~2 rendered four cumulative layers as Markdown, YAML and Prolog, generated from one source, and keyed every
+question at every layer: 3,600 keys computed by a SWI-Prolog engine \citep{wielemaker2012swi} and reproduced by an
+independent reference.
+
+\begin{table}[t]
+\centering\small
+\caption{Study 2, read mode, decided material (DeepSeek V4.1 Flash). Top: correct by the question's minimum layer
+and the layer shown. Bottom: correct by representation, all questions pooled. Source: \repo{paper/v2/PAPER.md},
+\S5.1--5.2.}
+\label{tab:v2}
+\begin{tabular}{lllll}
+\toprule
+Minimum layer & L0 & L1 & L2 & L3\\
+\midrule
+1 (ontology) & 39\% (170/432) & 99\% (501/504) & -- & --\\
+2 (context) & 53\% & 50\% (72/144) & 90\% (387/432) & 100\%\\
+3 (warrant) & 85\% & 58\% & 69\% & 90\% (390/432)\\
+\bottomrule
+\end{tabular}
+
+\medskip
+\begin{tabular}{llll}
+\toprule
+Layer shown & Prolog & YAML & Markdown\\
+\midrule
+L0 & 71\% & 70\% & 66\%\\
+L1 & 89\% & 91\% & 87\%\\
+L2 & 92\% & 91\% & 85\%\\
+L3 & 95\% & 95\% & 95\%\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The step between layers was large (Table~\ref{tab:v2}): on questions needing the ontology layer, accuracy rose from
+39\% with the schema alone to 99\% with the ontology present. The differences between representations were small,
+and they came from abstention. On keys with a settled answer, with the needed layer present, all three
+representations were 99--100\% correct; the pooled differences in the lower table come from questions where the
+right status was to abstain or to report a conflict. There representation did matter: Markdown overreached most
+(35\% at L0 on questions needing L1, against 28\% for Prolog), and rewording one comment in the open-reading Prolog
+material moved a cell from 16\% to 87\% correct. At 1,543 facts the longest representation was the slowest and
+costliest; accuracy did not change.
+
+Below the needed layer every error was overreach, and most overreach was lucky: the model guessed the definition the
+next layer would state. In DeepSeek's reasoning traces, 89\% of 401 overreaching answers showed that the gap was
+noticed, against an 11\% control rate; 2 of 401 replies said so. Asking for the assumptions behind an answer turned
+overreach into stated assumptions, and a stronger model, GLM~5.3, overreached more (96\% against 74\% on 11
+templates).
+
+\subsection{Finding for RQ1}
+
+In these domains, notation affected cost, length and where a model abstained. It did not affect whether a settled
+answer was read correctly, and it was sensitive to wording in ways that argue against treating any one notation as
+a fix. What decided correctness on settled answers was whether the interpretation decisions were written down and
+whether the needed layer was present. We do not claim that notation is unimportant elsewhere, for example for
+models of other families or for very long rule bodies, which neither study tested.
+
+\section{RQ2: Evaluation}
+\label{sec:rq2}
+
+\subsection{Study 1: scale}
+
+Study~1's second part stated all decisions and grew the worlds from 76 to 1,336 facts. Reading arms evaluated the
+rules themselves; engine arms could only query Souffl\'e or a pySHACL-materialised graph. The engine arms answered 9
+of 9 questions at every size, in 12--56 seconds, with one error in 126 answers (a miscounted list). Reading arms lost
+answers by omission in exhaustive questions, and at 1,336 facts two of three Claude Sonnet reading runs exhausted a
+64k-token output budget without answering; the third took 21 minutes.
+
+\subsection{Study 2: contradiction}
+
+Study~2 planted a rule-level contradiction: a denied request that also qualified for automatic approval, with an
+explicit incompatibility between approval and denial. In read mode DeepSeek returned the correct \st{conflict} in 5
+of 24 cases, often after reasoning to its output limit; GLM~5.3 returned it in 9 of 20 and resolved the rest
+silently, mostly with denial winning. In compile mode, where DeepSeek wrote Prolog plans and the engine compared the
+program with its incompatibility-enforced variant, the conflict was found in 29 of 30 cases. Where the material was
+consistent the modes tied (82 of 84 for GLM reading and for DeepSeek compiling), and compile errors were errors of
+plan shape (58 of 62 first-pass errors). Compile mode did not help with abstention: where the needed layer was
+missing, the model wrote the missing concept out of base relations and overreached more (33 of 44 against 22 of 48
+in Prolog at L0). Read mode was nearly perfect on defeasible and deontic rules without conflicts (286 of 288), and 85
+of its 106 errors at or above the needed layer were on \st{conflict} keys.
+
+\subsection{Study 3: system}
+\label{sec:system}
+
+Study~3 asks whether the advantage on contradiction holds for a rule body with many interacting rules, owners,
+valid time and completeness, and what a model needs from an engine to keep it.
+
+Rules, defeaters, claims and precedence statements are authored once as data and interpreted at runtime; a changed
+rule needs no compile or deploy step. Each record carries an owner, a valid time and its relations to other records.
+Detail data stays in DuckDB \citep{raasveldt2019duckdb} and is reached only through bounded \texttt{fetch} calls,
+with bindings from concepts to SQL.
+
+Evaluation is defeasible logic with team defeat and ambiguity propagation, the $\delta$/$\sigma$ variant in
+\citet{maher2021}. Each literal is proven, refuted or contested. A body with a contested literal is contested, so a
+conclusion is contested when every live derivation of it passes through a contested literal and no proven supporter
+beats its attackers. Superiority is ordered: explicit statements, then authority rules, then later assertions by the
+same asserter, then strict over defeasible rules. Claims are empty-body rules gated by valid time. Aggregates range
+over proven solutions and are contested if any member is. An answer resting on absence carries the qualifier unless
+every name it reads is covered by an in-force completeness claim. The extensions for claims, functional rivals,
+authority-based superiority and aggregates are ours; no published result covers them.
+
+A rule base is checked before it is loaded, before every addition, and inside every hypothetical change
+(Appendix~\ref{app:gate}). The checks reject negative dependency cycles and cycles in superiority, a second
+definition of a term, a record that orders rivals through a priority or weight field instead of a stated
+superiority, a measure
+without declared additivity, a rule that concludes from absence without a completeness claim, an unbound call, and
+an aggregation that would double-count a semi-additive measure. A dispute between owners with no stated precedence
+is not rejected; it is evaluated as contested. The completeness check is existential: it requires a completeness
+claim but does not check that the claim's scope covers the query.
+
+The model reaches the engine through seven tools: \texttt{resolve\_term}, \texttt{describe}, \texttt{decide},
+\texttt{why} and \texttt{why\_not}, and the design tools \texttt{rules} and \texttt{summary}. A \texttt{decide} returns
+status, value or sides, qualifier, owners and a proof tree. Keys come from a reference program that shares the
+semantics specification but no code with the engine; a checker re-derives every proof tree and re-runs its SQL, and
+a mutation test guards the checker. The engine is SWI-Prolog hosted from Python, about 1,000 lines with its reader
+and SQL boundary. A decision takes 4.9~ms at the median and 10.1~ms at the 95th percentile over 100,000 requests; a
+contested aggregate over a large subtree takes longer (1.1~s at the 95th percentile).
+
+\subsection{Study 3: benchmark}
+\label{sec:v3}
+
+A generator builds rule bases of 50, 100 and 200 rules over the procurement domain (100,000 requests in a hierarchy
+of cost centres): dated limits, exceptions and counter-exceptions, capitalisation ranges disputed between owners
+with or without stated precedence, and chains of sub-programmes. Every base passes the integrity gate. Its keys come
+from the reference program, which reads the generator's parameters, never the rule data.
+
+All set-ups have the data model and read-only SQL over the same data, the same call limit and one shared task
+instruction. The instruction defines the qualifier and asks every set-up for the same structured answer: status,
+value, sides and the qualifier. The set-ups differ in what else they receive (Table~\ref{tab:arms}). The document is
+rendered from the same rule base as the engine's, and a check confirms that every rule and claim appears in it.
+
+\begin{table}[t]
+\centering\small
+\caption{Study 3 set-ups. Source: \repo{spikes/v3/RESULTS.md}, Design.}
+\label{tab:arms}
+\begin{tabularx}{\textwidth}{L{3.6cm}XL{3.4cm}}
+\toprule
+Set-up & Adds & Role\\
+\midrule
+Floor (F) & nothing & what the rules contribute\\
+Document (G) & every rule and claim as Markdown & rules as text\\
+Document + functions (G+) & G plus five SQL functions for the most frequent questions (request status, approved
+total, spend, role limit, cap breaches), checked against the oracle & the usual deployment\\
+Document + instruction (G-q) & G plus one sentence: flag every ``no'' that rests only on not finding something & control: asking for it\\
+Rule index (G-tools) & G's material without its rules, which are looked up through the engine's \texttt{rules} tool & control: lookup without evaluation\\
+Engine (T) & the engine's seven tools & rules evaluated\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The items are sixteen family questions per base, sampled and stratified by $k$, the number of rules and claims on
+the key's proof path (four each in 1, 2--3, 4--5 and 6+ at 200 rules), with outcomes spread over true, false by
+absence (which needs the qualifier), false by defeat, contested (which needs the sides) and claims. At 200 rules six
+questions are undisputed, five rest on absence, three are contested and two are about claims. Each was asked three
+times per set-up and model setting, so each question contributes three correlated answers to every count. A second
+item, a four-turn analyst design task, has gold reasons derived from the generator's parameters.
+
+The models were DeepSeek V4.1 Flash and GLM~5.3 through OpenRouter, and GPT-6.2 Sol through OpenAI's API at
+reasoning effort medium, high and maximum. Manager answers are graded against keys. Analyst reasons are graded from
+keys wherever keys decide them; an LLM judge (GPT-6.2 Sol, two judgings) grades only reasons that no key decides
+(Appendix~\ref{app:judge}). Each confirmatory run had its expected outcomes written into the plan and committed
+before it ran; this is not external preregistration. Exploratory runs before them shaped the set-ups and scoring,
+and six changes followed (Appendix~\ref{app:changes}); no result below rests on them.
+
+\subsection{Study 3: results}
+
+\begin{table}[t]
+\centering\small
+\caption{Study 3, family questions at 200 rules, 16 questions asked three times. ``Value right'': the six
+undisputed questions, status and value right. ``Missing data'': the five questions whose ``no'' rests only on
+absence, fully correct including the qualifier. ``Sides'': the three contested questions, every side named. Cost:
+model cost at list price per fully correct answer, USD. Generated by \repo{paper/v3/whitepaper/figures.py}.}
+\label{tab:v3}
+\begin{tabular}{llrrrrr}
+\toprule
+Model setting & Set-up & Fully correct & Value right & Missing data & Sides & Cost\\
+\midrule
+\vthreerows
+\bottomrule
+\end{tabular}
+\end{table}
+
+Without rules, DeepSeek answered 6 of 96 policy questions correctly across 50 and 200 rules, all of them ``yes''
+answers reachable from the data. In a third of its sessions it used up its calls searching the data for rules that
+are not there, and on the design task it covered none of the gold reasons.
+
+With the rules, both set-ups found the values of undisputed answers (Table~\ref{tab:v3}): 16--18 of 18 for the
+document, 15--18 for the engine, with GLM~5.3 slightly weaker with the engine than without it. They differed in the
+standing of answers. The document set-up never qualified a ``no'' that rested only on absence, for any model or
+effort: 0 of 75 answers. Across DeepSeek's runs at 50 and 200 rules, 25 of 27 such misses had the right value and
+lacked only the qualifier. On the three contested questions the document set-up named every side in 2 or 3 of 9
+answers. The engine set-up answered 11--15 of 15 absence questions fully correctly; GLM~5.3 set the qualifier on all
+15 but got another field wrong on 4. It named every side in 9 of 9 for every model. GPT-6.2 Sol with the engine was
+fully correct on all 48 cells at every effort.
+
+The controls test three explanations other than evaluation, each in one configuration. One added sentence asking
+for the qualifier (G-q) produced none: 0 of 15 for DeepSeek and for GPT-6.2 Sol at every effort. The models read it
+narrowly, as a missing record, and called a ``no'' from a rule over known facts plain. Raising Sol's effort from
+medium to maximum multiplied its reasoning tokens per cell about 26-fold (28 to 738), and added one correct cell and
+one contested side but no qualifier. A tool that let DeepSeek look up any rule without evaluating it (G-tools)
+scored with the document (27 of 48 fully correct, against 25) and far from the engine (46). The function set-up
+(G+) was not better than the document, because none of its functions reaches the families. These controls rule out
+the simplest explanations; they do not test few-shot examples, retrieval of relevant rules into the prompt, or a
+model that writes its own program over the rules.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.85\textwidth]{fig/growth.pdf}
+\caption{Fully correct answers by the number of rules and claims on the key's proof path, 200 rules, five model
+settings pooled; each point is four questions $\times$ 3 repetitions $\times$ 5 settings. Every question with six or
+more is contested or rests on absence, so the chart does not separate path length from question type.}
+\label{fig:growth}
+\end{figure}
+
+Figure~\ref{fig:growth} shows where the document set-up loses. Pooled over the five settings, it was fully correct
+on 75\% of answers resting on one rule and 23\% of those resting on six or more, while the engine set-up stayed at
+93--98\%. Because the highest stratum consists of contested and absence questions, this is a description of the
+item set, not a separate effect of path length. Disputes point the same way within one model: with one dispute on
+the path (50 rules) the document set-up named every side in 6 of 9 answers for DeepSeek; with four to seven (200
+rules), in 2 of 9.
+
+At 100 rules (DeepSeek) the absence result held (document 0 of 6, engine 6 of 6); the document set-up scored
+higher overall (40 of 48) because that base has fewer absence and dispute questions. With GLM~5.3 at 200 rules the
+pattern was DeepSeek's.
+
+In the design task at 200 rules (DeepSeek), graded from keys where keys decide, the engine set-up covered 28 of 30
+gold reasons, the rule index 27, the document 23 and the floor none; with GLM~5.3, the engine covered 29, the
+document with functions 23 and the document 16. This task is a single scenario and partly judge-graded, so we treat
+it as supporting evidence only. Its pattern differs from the family questions in one respect: the rule index nearly
+matches the engine, because each session applies looked-up rules to a few named requests.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.85\textwidth]{fig/cost.pdf}
+\caption{Model cost at list price per fully correct answer, 200 rules. Excludes building the engine and converting
+the rules.}
+\label{fig:cost}
+\end{figure}
+
+At 200 rules the engine set-up had lower model cost per fully correct answer with every model and at every effort,
+by 21--56\% (Figure~\ref{fig:cost}). The document set-up re-reads the whole rule document at every step; the engine
+set-up fetches what a question needs and gets more answers right. Per cell the engine set-up was not always
+cheaper: at high effort it cost slightly more (\$0.011 against \$0.010), because it makes more calls and caches
+less. At 100 rules with DeepSeek the document set-up was cheaper per correct answer (\$0.0007 against \$0.0009). All
+confirmatory runs together cost \$9.57 for the set-ups and \$1.22 for the judge. We did not compare end-to-end
+response times.
+
+\section{Discussion}
+\label{sec:discussion}
+
+\paragraph{What the comparison isolates.} The engine and document set-ups received the same rules, data, task
+instruction and answer format. They differed in who applied the rules, and in what came with the engine: term
+resolution, scoped retrieval of the rules a question needs, and statuses, sides and qualifiers computed for the
+model to report. The comparison measures that bundle against the document, not evaluation alone. The rule-index
+control separates one part, retrieval of rules, and it did not close the gap; a set-up that gives the model the
+relevant rules and resolved inputs without computed statuses would separate another. The keys encode the same
+semantics the engine implements, so agreement with them shows that the engine implements the specification and
+that models reading the rules did not; whether the specification is what a domain owner would demand is a separate
+question, which the explicit definition of the qualifier in every set-up's instruction only partly answers.
+
+\paragraph{Value accuracy and standing.} In Study~2, overreach below the needed layer was mostly lucky; in Study~3,
+the document set-up got undisputed values right and lost qualifiers and sides. A metric that checks values alone
+would rate the set-ups as close, and the difference it misses is what a reader of an answer acts on: whether a
+``no'' is a fact or a silence, and whether a dispute between owners was decided or resolved by the model.
+
+\paragraph{Missing layers and inexact application.} The studies separate two failures. Without the needed layer, a
+model fills the gap with a plausible definition; asking for assumptions, a stronger model and compile mode did not
+prevent it (Study~2), and the remedy has to come from outside the model, by supplying the layer or checking that a
+definition was supplied. With the rules present, a model applies them inexactly as they interact (Study~3); in the
+configurations tested, an engine did and the reading-side interventions did not.
+
+\paragraph{The boundary between model and engine.} Study~1 proposed that the model interprets and formulates queries
+while an engine evaluates. In Study~3 the engine decides whether a rule applies, which owner prevails, whether a
+dispute remains and whether an answer rests on absence; the model decides what to ask, supplies the inputs and
+explains. Errors at that boundary were not measured separately: in Study~2 they appeared as plan-shape errors, in
+Study~3 they are among the 0--8 of 48 engine answers per setting that were not fully correct.
+
+\paragraph{The integrity gate.} The gate moves some interpretation errors, which Study~1 showed an engine cannot
+remove, to the moment rules are loaded, where an owner can resolve them. We did not ablate it, so its share of the
+engine set-up's results is unknown.
 
 \section{Threats to validity}
-\todo{One synthetic domain; rule authoring by the authors; judge; model versions and dates; N.}
+\label{sec:threats}
+
+\paragraph{Construct.} All three studies use synthetic procurement domains from our own generators; Study~3 uses
+one generator and one task instruction. The rules have realistic shapes (dated versions, exceptions to exceptions,
+disputes between owners) but not realistic frequencies, ambiguity or authoring quality. The reference program
+shares the semantics specification with the engine (Section~\ref{sec:discussion}).
+
+\paragraph{Sample.} Study~3 has 16 questions per base, asked three times; repetitions are correlated, effort
+settings of one model are not independent models, and we report counts without confidence intervals. Each
+rule-set size is one generated base, and strata differ by size, so comparisons across sizes compare item mixes as
+well. Study~2's cells are $n=1$--3 under a \$10 cap, and some runs stopped at their caps.
+
+\paragraph{Models.} Three model families in Study~3, one at three efforts; Study~2 rests mainly on one model;
+Study~1 used DeepSeek, GLM and Claude models. Providers were recorded but not balanced. The judge is one of the
+tested models and is used only where keys do not decide.
+
+\paragraph{Baselines.} The document set-up is a complete, generated document, not a team's instruction file. We did
+not test few-shot examples, retrieval of relevant rules, a model-written program over the rules, or a commercial
+rules engine. The floor had schema documentation but no vendor semantic layer, and the schema is small.
+
+\paragraph{Cost.} The cost figures are model cost per fully correct answer at list prices; the denominators differ
+between set-ups by design. Conversion of the rules, maintenance and latency were not measured. Every rule was written
+in plain language and converted into a rule record by the author with model assistance; that effort is the main
+cost of the method in practice.
 
 \section{Conclusion}
-\todo{}
+
+In three studies of synthetic procurement policies, the notation of rules mattered less than whether the decisions
+behind them were written down and whether the layer a question needs was present. Once the rules were present, who
+applied them made the difference. Models reading a 200-rule document got undisputed values right, reported a plain
+``no'' where the data was only silent, and rarely named every side of a dispute between owners; the same models
+calling an engine evaluating the same rules named every side and reported missing data in 11--15 of 15 answers, at
+lower model cost per correct answer at that size. The reading-side interventions we tested did not close the gap.
+What these results support is a design in which rules are checked data evaluated by a program, with the model asking
+and explaining, and an evaluation practice that scores the standing of answers as well as their values. Testing that
+design on real instruction files, with the conversion effort measured, is the next step.
 
 \appendix
+
 \section{Reproduction}
-\todo{Tag, commands, the gate from CLAUDE.md, score.py without API calls.}
+\label{app:repro}
+
+Everything is in the repository at \url{https://github.com/matthiasautrata/llm-policy-reasoning}; paths are
+relative to its main branch, and the results reported here are those at commit \texttt{d9c1ce6}. Study~1 is frozen at
+tag \repo{v1} (\repo{make verify-v1}); Study~2's records are in \repo{results/} and its report in \repo{paper/v2/}.
+For Study~3, \repo{spikes/v3/RESULTS.md} lists the commands that regenerate keys and run the acceptance and isolation
+checks, and \repo{bench/README.md} those that rebuild the items and rescore every run from the committed records in
+\repo{bench/results/} with \repo{bench/score.py}, without API calls. Rerunning the experiments needs API access and
+reproduces the design, not the exact model outputs. Table~\ref{tab:v3} and the figures are generated by
+\repo{paper/v3/whitepaper/figures.py}. Versions: SWI-Prolog 11.0.1, janus-swi 1.5.3, DuckDB 2.0.1, LinkML 1.12.1.
+
+\section{Integrity checks}
+\label{app:gate}
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{ll}
+\toprule
+Id & Rejects\\
+\midrule
+IR-001a & a negative dependency cycle (defeat cycle)\\
+IR-001b & a cycle in superiority\\
+IR-002 & a second definition of a term\\
+IR-003 & an ordering field (priority, weight, rank) that would order rivals outside superiority\\
+IR-004 & a measure without declared additivity\\
+IR-005 & a rule concluding from absence without a completeness claim (existence only, not scope)\\
+IR-006 & a call with an unbound required argument\\
+IR-007 & a sum of a semi-additive measure across one of its parameters\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Changes made after seeing results}
+\label{app:changes}
+
+Six changes followed the exploratory runs, each frozen before any confirmatory run: (1) a turn at the call limit gets
+one forced final answer, so it is scored rather than left empty; (2) the engine set-up gained the design tools
+\texttt{rules} and \texttt{summary}, without which it could not navigate the rule base; (3) the engine resolves
+records requested by id; (4) four gold reasons were rewritten, three because they asked for a dated approval chain
+the data cannot give; (5) scoring: the qualifier is part of ``fully correct'', sides are scored strictly and
+tolerantly, numeric checks need a named subject and the judge's confirmation, and gold reasons are graded from keys
+where keys decide; (6) the generator was changed so that rule interactions grow with the rule-set size, after an
+exploratory run found the programmes independent.
+
+\section{Judge validity}
+\label{app:judge}
+
+The judge agreed with itself on 90--97\% of reasons per run (kappa 0.67--0.93). Its agreement with the keys, where
+both grade, was 0.88--0.94 where the set-up has the rules and explains them, and 0.47--0.68 where answers and
+explanations come apart. Disagreements fall into four kinds: a right answer with a rejected explanation; a correct
+explanation misread by the judge, such as stated precedence graded wrong; a reason stated in words without the
+key's value; and limits of the key readers. The judge grades the stated rule and the keys grade the answers the rule
+produces, so neither alone grades ``the reason is covered''. Graded on answers, the engine stays ahead of the
+document at 200 rules for both models tested on the design task. No hand grades exist.
 
 \bibliographystyle{plainnat}
 \bibliography{refs}
