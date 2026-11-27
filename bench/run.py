@@ -781,7 +781,8 @@ def main():
     ap.add_argument("--quantization", default="fp8", help="provider quantization filter; 'any' to disable")
     ap.add_argument("--context", type=int, default=65536, help="ollama context length (recorded; checked per call)")
     ap.add_argument("--calibrate", default=str(CALIB), help="run whose tokens per cell the estimate uses (default: the pilot)")
-    ap.add_argument("--reasoning", choices=["low", "medium", "high"], help="reasoning effort (recorded); default: the endpoint's")
+    ap.add_argument("--reasoning", choices=["low", "medium", "high", "xhigh", "max"],
+                    help="reasoning effort (recorded; xhigh and max: OpenAI's gpt-6.2 catalog, PLAN-v3-max); default: the endpoint's")
     a = ap.parse_args()
     live = [m for m in a.models if not m.startswith(("stub:", "fake:"))]
     prices = load_prices(live, a.quantization)            # refuses a model without a priced endpoint

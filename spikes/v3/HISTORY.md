@@ -452,6 +452,14 @@ Against the pilot (the pilot's 10 manager questions; gold reasons judged at medi
 
 **Findings reversed.** "T is the cheapest arm per correct answer with every model" (draft RESULTS): at N 100, G costs $0.0007 against T's $0.0009.
 
+### 23 gpt-6.2-sol at effort max (2026-11-26; PLAN-v3-max)
+
+**Question.** RESULTS states the closure result "up to effort high", and OpenAI lists xhigh and max above it. Does G or G-q qualify absence at max?
+
+**Expected outcomes, recorded before the run.**
+- If G and G-q at max still qualify absence near 0, closure without an engine fails at this model's maximum effort. RESULTS then drops the "up to effort high" qualification.
+- If they qualify it near T, closure depends on maximum reasoning effort. RESULTS then reports it with its cost per correct answer beside T's.
+
 ## Platform lessons (platforms dropped, lessons kept)
 
 - **V3b, Clojure · Datahike · Malli.**
