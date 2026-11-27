@@ -18,4 +18,5 @@ bench/results/*.batch.json*
 
 # v3 papers: LaTeX build and model reviews are local
 paper/v3/companion/build/
+paper/v3/whitepaper/build/
 paper/v3/review/out/
