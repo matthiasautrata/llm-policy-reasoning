@@ -508,7 +508,7 @@ Across three models (DeepSeek v4.1 Flash, GLM 5.3, gpt-6.2-sol at effort medium,
 
 # Fallback
 
-If SWI-Prolog is refused at JPMC, the fallback is a separate Python engine written from `SEMANTICS.md` against `CONTRACT.md`.
+If SWI-Prolog is refused at a big US bank, the fallback is a separate Python engine written from `SEMANTICS.md` against `CONTRACT.md`.
 - It must stay distinct from `reference.py`, which remains the oracle.
 - It is documented only, not built.
 - Everything else stays as it is: the gate, the oracle, `accept.py`, `check_why.py`, the fixtures and the DuckDB backend. The engine is the only part that would be replaced.

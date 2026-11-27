@@ -510,8 +510,8 @@ Against the pilot (the pilot's 10 manager questions; gold reasons judged at medi
 
 **Rationale.**
 - With cycles rejected and propagation specified, semantics no longer separates the platforms.
-- V3a has the shortest evaluator, the lightest footprint and native top-down demand. Prolog's standing at JPMC has improved, because another team already uses it.
+- V3a has the shortest evaluator, the lightest footprint and native top-down demand. Prolog's standing at a big US bank has improved, because another team already uses it.
 - Clingo costs a demand rewrite and about 3× latency.
 - Clojure's JVM operation and Elixir's admissibility count against them, and Flix is too niche to staff.
 
-**Fallback (documented, not built).** If SWI-Prolog is refused at JPMC, a separate Python engine written from `SEMANTICS.md`, distinct from `reference.py`.
+**Fallback (documented, not built).** If SWI-Prolog is refused at a big US bank, a separate Python engine written from `SEMANTICS.md`, distinct from `reference.py`.
