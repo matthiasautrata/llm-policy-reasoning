@@ -32,12 +32,9 @@ material present, questions with a settled answer were 99--100\% correct in Mark
 Notation moved where models abstained, not whether settled answers were read correctly. On evaluation: in a
 benchmark with 200 rules and five model settings (three models, one at three reasoning efforts), models given the
 rules as a document got the values of undisputed answers right but never reported that a ``no'' rested only on
-missing data (0 of 75 answers) and named every side of a rule conflict in 2 or 3 of 9. Calling an engine that
-evaluates the same rules as defeasible logic, they reported missing data correctly in 11--15 of 15 answers per
-setting and named every side in 9 of 9. One added instruction, a 26-fold increase in reasoning, and a rule-lookup
+missing data (0 of 75 answers) and named every side of a rule conflict in 2 or 3 of 9. Calling an engine that evaluates the same rules as defeasible logic and returns computed statuses, they reported missing data correctly in 11--15 of 15 answers per setting and named every side in 9 of 9. The engine set-up bundles evaluation with term resolution and scoped retrieval; a lookup control separates retrieval, not the rest. One added instruction, a 26-fold increase in reasoning, and a rule-lookup
 tool each left the gap open. At 200 rules the engine set-up also had 21--56\% lower model cost per fully correct
-answer; the cost of converting the rules was not measured. The results argue for measuring agents on the standing
-of their answers, which value accuracy does not see.
+answer; the cost of converting the rules was not measured. Within this benchmark, the results identify a failure mode that value accuracy does not see, and an architectural change that removes most of it.
 \end{abstract}
 
 \section{Introduction}
@@ -87,9 +84,7 @@ Study & Varies & Models & Items and repetitions & Scored on\\
 less than whether the decisions and the needed layer of material were present (Section~\ref{sec:rq1}).
 (ii) A benchmark with oracle keys for questions whose answers depend on precedence, disputes between owners, valid
 time and completeness, with a floor, a document set-up, two controls and an engine set-up (Section~\ref{sec:v3}).
-(iii) Evidence that, given the same rules, reading and evaluating them differed in the standing of answers, not
-their values, and that the tested interventions on the reading side did not close the difference
-(Section~\ref{sec:rq2}).
+(iii) Evidence that, given the same rules, a document set-up and an engine set-up differed in the standing of answers, not their values, and that the tested interventions on the reading side did not close the difference; the comparison is between set-ups, and the share due to evaluation alone remains open (Section~\ref{sec:rq2}).
 (iv) An engine design in which rules and claims are data, checked at load time and evaluated under an
 ambiguity-propagating defeasible logic, with answers that carry status, sides, a qualifier and a proof tree
 (Section~\ref{sec:system}).
@@ -185,11 +180,10 @@ Table~\ref{tab:example} shows a case from the benchmark. Under team defeat a con
 applicable attacker is beaten by a superior supporter. Nothing beats the controller's rule, so ``expense'' does not
 hold; nothing on the capitalise side beats audit's rule or tax rule 3, so ``capitalise'' does not hold. The key is
 \st{conflict} with two sides, finance and the controller against audit and tax, each listing every applicable rule
-that supports it. ``Expensed'' and ``capitalised'' are both wrong. In the four-turn design task, the engine set-up
+that supports it. ``Expensed'' and ``capitalised'' are both wrong. Abridged, the engine's answer to \texttt{decide} for this request reads: status \st{conflict}; sides \{finance, controller\} against \{audit, tax 1--3\}; why: audit's rule outranks finance's, nothing outranks the controller's, nothing on the capitalise side outranks audit's or tax rule 3. The model's task is to report this, not to derive it. In the four-turn design task, the engine set-up
 reported this request as contested with both sides in 3 of 3 sessions; the document set-up did so in 1, gave a plain
 value in 1 and was unclear in 1. A second kind of case is a ``no'' that holds only because a record was not found,
-for example a check that fails only because no matching record was found: the key is \st{answer} \emph{no} with the qualifier, and
-a plain ``no'' is not fully correct.
+for example a check that fails only because no matching record was found: the key is \st{answer} \emph{no} with the qualifier ``total over known facts in declared scope'', and a plain ``no'' is not fully correct. Section~\ref{sec:system} and Appendix~\ref{app:gate} give the machinery behind both cases; the rest of the paper needs only these two.
 
 \section{RQ1: Representation}
 \label{sec:rq1}
@@ -463,11 +457,27 @@ response times.
 instruction and answer format. They differed in who applied the rules, and in what came with the engine: term
 resolution, scoped retrieval of the rules a question needs, and statuses, sides and qualifiers computed for the
 model to report. The comparison measures that bundle against the document, not evaluation alone. The rule-index
-control separates one part, retrieval of rules, and it did not close the gap; a set-up that gives the model the
-relevant rules and resolved inputs without computed statuses would separate another. The keys encode the same
+control separates one part, retrieval of rules, and it did not close the gap; the design in Table~\ref{tab:ablation} would separate the rest. The keys encode the same
 semantics the engine implements, so agreement with them shows that the engine implements the specification and
 that models reading the rules did not; whether the specification is what a domain owner would demand is a separate
 question, which the explicit definition of the qualifier in every set-up's instruction only partly answers.
+
+\begin{table}[t]
+\centering\small
+\caption{An ablation that would separate the parts of the engine set-up. A and D correspond to the document and
+engine set-ups tested here; B and C were not run and may be only partly realizable.}
+\label{tab:ablation}
+\begin{tabular}{llllll}
+\toprule
+Set-up & Rules & Retrieval & Inputs resolved & Status computed & Evaluation\\
+\midrule
+A (document) & document & model & model & model & model\\
+B & document & scoped & external & -- & model\\
+C & document & scoped & external & external & model\\
+D (engine) & engine & scoped & external & external & engine\\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \paragraph{Value accuracy and standing.} In Study~2, overreach below the needed layer was mostly lucky; in Study~3,
 the document set-up got undisputed values right and lost qualifiers and sides. A metric that checks values alone
@@ -519,14 +529,11 @@ cost of the method in practice.
 \section{Conclusion}
 
 In three studies of synthetic procurement policies, the notation of rules mattered less than whether the decisions
-behind them were written down and whether the layer a question needs was present. Once the rules were present, who
-applied them made the difference. Models reading a 200-rule document got undisputed values right, reported a plain
+behind them were written down and whether the layer a question needs was present. Once the rules were present, the engine set-up made the difference. Models reading a 200-rule document got undisputed values right, reported a plain
 ``no'' where the data was only silent, and rarely named every side of a dispute between owners; the same models
 calling an engine evaluating the same rules named every side and reported missing data in 11--15 of 15 answers, at
 lower model cost per correct answer at that size. The reading-side interventions we tested did not close the gap.
-What these results support is a design in which rules are checked data evaluated by a program, with the model asking
-and explaining, and an evaluation practice that scores the standing of answers as well as their values. Testing that
-design on real instruction files, with the conversion effort measured, is the next step.
+The results establish a failure mode, a reproducible experiment that exhibits it, and an architectural change that substantially changes the outcome; the effect sizes belong to this benchmark and should not be read as properties of production systems. They support a design in which rules are checked data evaluated by a program, with the model asking and explaining, and an evaluation practice that scores the standing of answers as well as their values. The next steps are the ablation in Table~\ref{tab:ablation}, which would separate evaluation from the rest of the bundle, and a test on real instruction files with the conversion effort measured.
 
 \appendix
 

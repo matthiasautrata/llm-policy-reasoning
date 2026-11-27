@@ -21,11 +21,13 @@ To measure the difference, we gave three models, from low-cost to frontier, iden
 domain with 200 rules. They had the rules either as a well-written instruction document, or formalized and
 evaluated by a deterministic engine they called as a tool.
 
-With the document, the models usually found the right number, but they treated unknown as false. Five of the
-questions had a "no" that rested only on missing data. Asked three times in each of five model settings, the
-document set-up flagged this in none of the 75 answers. The engine set-up flagged it, with the rest of the answer
-right, in 11-15 of 15 per setting. Where rules conflicted, the document set-up named every side in 2-3 of 9
-answers, the engine set-up in all 9. At this size a fully correct answer also cost 21% to 56% less.
+With the document, the models usually found the right number, but they treated unknown as false:
+
+| Five model settings, 200 rules | Rules as a document | Rules evaluated by the engine |
+| --- | --- | --- |
+| A "no" resting only on missing data, flagged (rest of answer right) | 0 of 75 answers | 11-15 of 15 per setting |
+| A conflict between rules, every side named | 2-3 of 9 per setting | 9 of 9 per setting |
+| Model cost per fully correct answer | baseline | 21% to 56% lower |
 
 Teams already write these rules in Genie (Databricks) and Cortex (Snowflake) instruction files and internal notes.
 We propose to change where that writing ends up: in records a machine can check and evaluate, instead of prose left
@@ -51,9 +53,10 @@ them.
 ## 2 What a warrant is
 
 The data model says what the data is. A warrant says what follows from it, who says so, and how firm the result is.
-The warrants a domain needs are its warrant dimension. We call it a dimension because it runs alongside the data
-model instead of sitting on top of it: a table, a column, a measure or a business term can each carry claims and
-rules, with their own owners and dates.
+The warrants a domain needs are its warrant dimension, which runs alongside the data model rather than on top of
+it: a table, a column, a measure or a business term can each carry claims and rules, with their own owners and
+dates. The name matters less than what it requires: an explicit semantics for deriving conclusions, evaluated by a
+program.
 
 Here is the healthcare rule written as a record. The notation is illustrative; what matters is which questions it
 answers.
@@ -108,18 +111,20 @@ the rules as text, every model we tested reported inaccurately.
 
 The essays that defined this category already contain warrants. Foundation Capital's first example is one. Its
 remedy is to capture such exceptions as decision traces, so that agents can search precedent. It says that rules
-must be evaluated and conflicts resolved, without describing how. The a16z essay on context layers (Cui and Li
+must be evaluated and conflicts resolved, but describes no mechanism. The a16z essay on context layers (Cui and Li
 2026) treats business logic and tribal knowledge as context for the agent to read, much like a rules file for a
 coding agent. Snowflake's essay on an agent context layer (Klahr and Samdani 2026) goes furthest: policy as
-machine-enforceable rules, managed playbooks, and decision memory that keeps justifications. It names no mechanism
-for evaluating them, and does not discuss conflicts between rules or answers that rest on missing data.
+machine-enforceable rules, managed playbooks, and decision memory that keeps justifications. The essay describes no
+mechanism for evaluating them, and does not discuss conflicts between rules or answers that rest on missing data.
 Rippletide's decision context graph, as VentureBeat reports it (Plumb 2026), holds formal, time-scoped rules that
-an agent checks before acting; the report gives no method for precedence and no measurements.
+an agent checks before acting; the report describes no method for precedence and gives no measurements. None of
+this says what these products do internally; it says what the published descriptions establish.
 
 Their vision is right. Exceptions, overrides, and approvals are where enterprise knowledge lives, and agents need
 them. We sharpen one point: agents can rely on these rules only if they are formalized and evaluated. Handed to the
 model, as text or as precedent to imitate, they remain rules for an LLM to interpret. A context graph can store
-rules as well as traces. What matters is how something evaluates them.
+rules as well as traces. Representing and retrieving rules does not, by itself, establish that they are evaluated
+correctly.
 
 The distinction is between retrieval and evaluation. Context is testimony: something asserted, with a source and a
 date, which retrieval can return. A precedent is testimony too, since it records what was allowed in an earlier
@@ -165,8 +170,9 @@ both set-ups scored the same.*
 
 The document set-up never flagged a "no" that rested only on missing data: none of 75 answers across five model
 settings. Telling the model to flag it, raising its reasoning effort 26-fold, and giving it a tool to look up any
-rule each left the gap open. The engine's advantage came from applying the rules exactly, and looking them up did
-not reproduce it.
+rule each left the gap open. Finding the rules was not what the engine set-up added, since looking them up did not
+reproduce its results. What it added came with the engine: exact evaluation, with statuses, sides and qualifiers
+computed for the model to report.
 
 ![Share of fully correct answers by the number of rules and claims an answer depends on](fig/growth.svg)
 
@@ -219,13 +225,16 @@ three answers to every count, and we report counts, not confidence intervals. We
 effort levels. The schema is small; enterprise schemas reach more than a thousand tables, which is a separate
 problem. Our no-rules baseline had schema documentation but not a vendor's semantic layer of predefined measures,
 and we did not compare against a stronger document set-up with retrieval of relevant rules or against a commercial
-rules engine. We did not measure separately how often the model chose the wrong question for the engine or
-misreported its answer; in the engine set-up such errors are among the 0-8 of 48 answers per setting that were not
-fully correct.
+rules engine. The engine set-up is a bundle (evaluation, term resolution, scoped retrieval of rules, computed
+statuses); the controls separate retrieval, not the rest, so the results show what this engine-mediated set-up
+changes, not the share due to evaluation alone. We did not measure separately how often the model chose the wrong
+question for the engine or misreported its answer; in the engine set-up such errors are among the 0-8 of 48 answers
+per setting that were not fully correct.
 
 Given those limits, our next steps are to convert a production team's existing instruction files and measure the
-effort and the errors found; to repeat the comparison at production schema sizes; and to add a stronger document
-baseline and a semantic layer to the no-rules baseline.
+effort and the errors found; to repeat the comparison at production schema sizes; to add a stronger document
+baseline and a semantic layer to the no-rules baseline; and to separate the parts of the bundle, giving a model the
+relevant rules and resolved inputs with and without computed statuses.
 
 The companion paper reports the design, every result and how to reproduce it. All data, rules, prompts, run records
 and scoring code are in the repository, and every number here can be reproduced from the stored run records without
@@ -247,12 +256,17 @@ precedence. Check the rule base when it is loaded, so that conflicting definitio
 reach an answer. Let an engine evaluate the rules, and let the model ask the engine and explain what it returns.
 Every answer then states its standing and the rules it rests on.
 
+In practice the distinction gives a test for any agent architecture. Ask what evaluates the rules, and whether an
+answer can say that it rests on missing data or on a dispute between owners. If the rules are applied by the model
+reading them, expect answers that are right on values and silent on standing, however good the context.
+
 The case for doing this is practical. Teams already spend the effort of writing these rules down, in instruction
 files that a model reads and may or may not apply. The same rules, kept as checked records, give answers that say
 when they rest on missing data and who disagrees when rules conflict, which is what an analyst, an auditor or a
-manager reading a dashboard needs to know. The gap was widest on answers that depend on many rules, and enterprise
-rule bases only grow. At 200 rules the engine set-up also cost less per correct answer. The context layer tells an
-agent what is known; the warrant dimension lets it say, with reasons, what follows.
+manager reading a dashboard needs to know. The gap was widest on questions involving several interacting rules, and
+enterprise rule bases contain exactly such interactions, which makes them the natural place to test the approach.
+At 200 rules the engine set-up also cost less per correct answer. The context layer tells an agent what is known;
+the warrant dimension lets it say, with reasons, what follows.
 
 ## References
 

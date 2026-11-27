@@ -170,7 +170,8 @@ def main():
                     va="center", color=INK, fontsize=8)
     ax.set_ylim(0, 105); ax.set_ylabel("answers fully correct (%)", color=INK2)
     ax.set_xlabel("rules and claims the answer depends on", color=INK2)
-    ax.set_title("Fully correct answers by rules involved\n200 rules, five model settings pooled", loc="left",
+    ax.set_title("Fully correct answers by rules involved\n200 rules, five model settings pooled\n"
+                 "Note: every 6+ question is contested or rests on missing data", loc="left",
                  color=INK, fontsize=8.5, pad=8)
     style(ax); ax.grid(axis="x", visible=False); ax.grid(axis="y", color=GRID, linewidth=0.8)
     fig.tight_layout()
