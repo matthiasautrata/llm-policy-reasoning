@@ -1,0 +1,70 @@
+% Companion paper to the warrant-layer white paper. Outline: each section states its claim and its sources.
+% Every number is cited to RESULTS (v3) or PAPER (v1, v2) and reproduces with bench/score.py.
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs,graphicx,hyperref}
+\usepackage[authoryear]{natbib}
+\newcommand{\todo}[1]{\textcolor{red}{[#1]}}
+\usepackage{xcolor}
+
+% Alternatives: "AI-Ready Data: Efficacy of Syntax, Ontology and Warrants";
+% "Value Accuracy Overstates Reliability: Syntax, Ontology and Warrants in LLM Data Agents".
+\title{AI-Ready Data:\\Syntax, Ontology and Computed Warrants Compared}
+\author{Matthias Autrata}
+\date{\todo{date}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\todo{Moves: (1) agents are given business rules as text; (2) RQ1: does the notation of those rules matter?
+(3) RQ2: does evaluating them with an engine, called as a tool, change reliability? (4) design in one sentence:
+same questions, data and rules across schema-only, rules-as-document and rules-as-engine set-ups, three models,
+rule sets from 25 to 200; (5) RQ1 result: notation does not decide correctness once decisions are written down;
+(6) RQ2 result: value accuracy ties, reliability does not: missing-data flags 0/45 vs 11--15/15 per model,
+conflict sides 1--6/9 vs 9/9; (7) cost per correct answer 24--54\% lower with the engine.}
+\end{abstract}
+
+\section{Introduction}
+\todo{The gap between context and warrant \citep{gupta2025context,cui2026context,klahr2026context,plumb2026rippletide};
+Toulmin's warrant \citep{toulmin1958}. State RQ1 and RQ2, and why RQ1 comes first: if notation decided
+correctness, the engine would be one notation among others.}
+
+\section{Related work}
+\todo{Text-to-SQL and enterprise benchmarks \citep{beaver2024,akgul2026schemafree}; semantic and context layers, context engines \citep{waselnuk2026engine};
+defeasible logic programming \citep{antoniou2006,maier2011}; inferentialism and the tonk objection
+\citep{sellars1953,prior1960,dummett1993,brandom2007,schroederheister2023}.}
+
+\section{Definitions}
+\todo{Layers L0--L3 (schema, ontology, context, warrant). Conservative vs non-conservative rules. Claim, warrant,
+contested, defeat. Three-valued semantics with ambiguity propagation (spikes/v3/shared/SEMANTICS.md).}
+
+\section{RQ1: Representation is secondary}
+\todo{v1: notation comparisons (prose, Datalog, OWL); v2: layers by representation by mode.
+Finding: written decisions matter, notation does not. Read vs compile on conflicts (v2): 9/20 vs 29/30.}
+
+\section{RQ2: Computed vs read}
+\subsection{System}
+\todo{Architecture figure; engine (SWI-Prolog via janus); oracle independent of the engine; load-time integrity
+gate; CLI contract decide / why / resolve\_term as the tool interface.}
+\subsection{Benchmark}
+\todo{Domain, bases N025--N200, set-ups floor / G / G+ / T, question families, keys from the oracle,
+judge only where keys do not decide, judge validity.}
+\subsection{Results}
+\todo{Main table; growth; controls (rule index, explicit instruction, reasoning effort up to max); replications.}
+\subsection{Cost}
+\todo{Cost per correct answer by model and effort; response times not compared.}
+
+\section{Threats to validity}
+\todo{One synthetic domain; rule authoring by the authors; judge; model versions and dates; N.}
+
+\section{Conclusion}
+\todo{}
+
+\appendix
+\section{Reproduction}
+\todo{Tag, commands, the gate from CLAUDE.md, score.py without API calls.}
+
+\bibliographystyle{plainnat}
+\bibliography{refs}
+\end{document}
